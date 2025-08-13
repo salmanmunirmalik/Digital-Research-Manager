@@ -1,0 +1,6 @@
+{
+  "name": "ResearchLabSync",
+  "description": "A collaborative platform for experiment planning, calculation, training, and knowledge sharing. RLS provides a digital protocol library, smart experiment planner, and built-in scientific calculators to streamline lab work.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}

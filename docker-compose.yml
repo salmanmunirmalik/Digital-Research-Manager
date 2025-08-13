@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  researchlabsync:
+    build: .
+    ports:
+      - "5001:5001"
+    environment:
+      - NODE_ENV=production
+      - PORT=5001
+      - FRONTEND_URL=http://localhost:3000
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+      - DB_PATH=./data/researchlab.db
+      - VITE_SUPABASE_URL=https://yjsdjybucqyuieqjiycg.supabase.co
+      - VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlqc2RqeWJ1Y3F5dWllcWppeWNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5NTMzODMsImV4cCI6MjA3MDUyOTM4M30.aBBn1_a-0k7umwC7xjVmslUc9NEaMZPrWB2O0ERX2wc
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add a reverse proxy with nginx
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - researchlabsync
+    restart: unless-stopped
+    profiles:
+      - proxy
