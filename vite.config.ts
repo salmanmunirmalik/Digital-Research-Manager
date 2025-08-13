@@ -14,6 +14,15 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      build: {
+        // Preserve the server directory during build
+        emptyOutDir: false,
+        rollupOptions: {
+          input: {
+            main: path.resolve(__dirname, 'index.html')
+          }
+        }
       }
     };
 });

@@ -67,6 +67,12 @@ if [ -d "dist" ] && [ -d "dist/server" ] && [ -f "dist/server/index.js" ]; then
     print_status 0 "Build output verified"
 else
     print_status 1 "Build output incomplete"
+    echo "Expected: dist/server/index.js"
+    echo "Found:"
+    ls -la dist/ 2>/dev/null || echo "dist/ directory not found"
+    if [ -d "dist/server" ]; then
+        ls -la dist/server/ 2>/dev/null || echo "dist/server/ directory not found"
+    fi
 fi
 
 echo -e "\n${YELLOW}🌐 Checking Environment...${NC}"
