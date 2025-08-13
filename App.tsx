@@ -14,8 +14,11 @@ import DataPage from './pages/DataPage';
 import TeamPage from './pages/TeamPage';
 import HelpForumPage from './pages/HelpForumPage';
 import GlobalDataSharingPage from './pages/GlobalDataSharingPage';
+import ResearchIntelligenceHub from './pages/ResearchIntelligenceHub';
+import ConferenceNewsPage from './pages/ConferenceNewsPage';
 import { Project, ResultEntry, Protocol } from './types';
 import { mockNotebookProjects } from './data/mockNotebookData';
+
 import { mockResults as initialMockResults } from './data/mockResultsData';
 import { mockProtocols as initialMockProtocols } from './data/mockData';
 import ProtocolFormPage from './pages/ProtocolFormPage';
@@ -67,9 +70,11 @@ const App: React.FC = () => {
             <Route path="/data" element={<DataPage results={results} onUpdateResult={handleUpdateResult} />} />
             <Route path="/calculators" element={<CalculatorHubPage />} />
             <Route path="/help" element={<HelpPage />} />
-            <Route path="/help-forum" element={<HelpForumPage />} />
-            <Route path="/data-sharing" element={<GlobalDataSharingPage />} />
-            <Route path="*" element={<Navigate to="/" />} />
+                    <Route path="/help-forum" element={<HelpForumPage />} />
+        <Route path="/data-sharing" element={<GlobalDataSharingPage />} />
+        <Route path="/research-intelligence" element={<ResearchIntelligenceHub />} />
+        <Route path="/conferences" element={<ConferenceNewsPage />} />
+        <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>
       </div>

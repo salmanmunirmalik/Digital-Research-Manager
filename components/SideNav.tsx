@@ -49,9 +49,9 @@ const SideNav: React.FC = () => {
                 <UsersIcon className="h-5 w-5 mr-3" />
                 Team & Collaborators
             </NavItem>
-            <NavItem to="/data">
+            <NavItem to="/research-intelligence">
                 <BarChartIcon className="h-5 w-5 mr-3" />
-                Data & Results
+                Research Intelligence Hub
             </NavItem>
             <NavItem to="/calculators">
                 <CalculatorIcon className="h-5 w-5 mr-3" />
@@ -64,14 +64,6 @@ const SideNav: React.FC = () => {
             <NavItem to="/data-sharing">
                 <BoxesIcon className="h-5 w-5 mr-3" />
                 Global Data Sharing
-            </NavItem>
-            <NavItem to="/ai-papers">
-                <JournalIcon className="h-5 w-5 mr-3" />
-                AI Paper Suggestions
-            </NavItem>
-            <NavItem to="/presentations">
-                <BarChartIcon className="h-5 w-5 mr-3" />
-                Auto Presentations
             </NavItem>
             <NavItem to="/conferences">
                 <CalendarClockIcon className="h-5 w-5 mr-3" />
