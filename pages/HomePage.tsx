@@ -318,7 +318,7 @@ const HomePage: React.FC = () => {
       <div>
         <h1 className="text-3xl font-bold text-slate-900">Good Morning, Dr. Reed!</h1>
         <p className="mt-1 text-md text-slate-600">
-            Here's your overview for {today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
+            Welcome to Digital Research Manager - Your AI-powered research platform. Here's your overview for {today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
         </p>
       </div>
 

@@ -22,7 +22,7 @@ const SideNav: React.FC = () => {
     <div className="flex h-full w-64 flex-col bg-slate-800 text-white shadow-lg">
         <div className="flex items-center justify-center h-20 border-b border-slate-700">
              <FlaskConicalIcon className="h-8 w-8 text-cyan-400" />
-            <h1 className="ml-3 text-2xl font-bold tracking-wider">ResearchLabSync</h1>
+            <h1 className="ml-3 text-2xl font-bold tracking-wider">Digital Research Manager</h1>
         </div>
         <nav className="flex-1 p-4 space-y-2">
             <NavItem to="/">
@@ -57,14 +57,30 @@ const SideNav: React.FC = () => {
                 <CalculatorIcon className="h-5 w-5 mr-3" />
                 Calculators
             </NavItem>
-            <NavItem to="/help">
+            <NavItem to="/help-forum">
                 <MessageSquareQuestionIcon className="h-5 w-5 mr-3" />
                 Help Forum
             </NavItem>
+            <NavItem to="/data-sharing">
+                <BoxesIcon className="h-5 w-5 mr-3" />
+                Global Data Sharing
+            </NavItem>
+            <NavItem to="/ai-papers">
+                <JournalIcon className="h-5 w-5 mr-3" />
+                AI Paper Suggestions
+            </NavItem>
+            <NavItem to="/presentations">
+                <BarChartIcon className="h-5 w-5 mr-3" />
+                Auto Presentations
+            </NavItem>
+            <NavItem to="/conferences">
+                <CalendarClockIcon className="h-5 w-5 mr-3" />
+                Conference News
+            </NavItem>
         </nav>
         <div className="p-4 border-t border-slate-700">
-            <p className="text-xs text-slate-400">&copy; 2024 ResearchLabSync</p>
-            <p className="text-xs text-slate-400">The Digital Lab Companion</p>
+            <p className="text-xs text-slate-400">&copy; 2024 Digital Research Manager</p>
+            <p className="text-xs text-slate-400">The Advanced Research Platform</p>
         </div>
     </div>
   );

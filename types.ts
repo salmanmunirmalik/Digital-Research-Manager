@@ -370,15 +370,342 @@ export interface Project {
 // --- END NEW LAB NOTEBOOK TYPES ---
 
 
+// Enhanced User Interface for Digital Research Manager
+export type UserRole = 'Principal Investigator' | 'Research Scientist' | 'Postdoctoral Fellow' | 'Graduate Student' | 'Research Assistant' | 'Lab Manager' | 'Technician' | 'Collaborator';
+
+export type UserStatus = 'Active' | 'Away' | 'Busy' | 'Available' | 'In Meeting' | 'On Leave';
+
+export interface EnhancedUser {
+  id: string;
+  username: string;
+  email: string;
+  role: UserRole;
+  expertise: string[];
+  status: UserStatus;
+  researchInterests: string[];
+  collaborationPreferences: CollaborationPreferences;
+  globalSharingEnabled: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CollaborationPreferences {
+  allowGlobalSharing: boolean;
+  allowLabSharing: boolean;
+  allowTeamSharing: boolean;
+  trustedCollaborators: string[];
+  sharingLevel: 'Personal' | 'Lab' | 'Team' | 'Global';
+}
+
+// Help Forum System
 export interface HelpRequest {
   id: string;
   title: string;
-  author: string;
-  date: string;
-  protocolId?: string;
   description: string;
-  status: 'Open' | 'Resolved';
+  category: HelpCategory;
+  urgency: 'Low' | 'Medium' | 'High' | 'Critical';
+  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
+  authorId: string;
+  authorName: string;
+  labId?: string;
+  teamId?: string;
+  visibility: 'Personal' | 'Lab' | 'Team' | 'Global';
   tags: string[];
+  attachments: HelpAttachment[];
+  createdAt: Date;
+  updatedAt: Date;
+  resolvedAt?: Date;
+  solution?: HelpSolution;
+  responses: HelpResponse[];
+  upvotes: number;
+  views: number;
+}
+
+export interface HelpResponse {
+  id: string;
+  requestId: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  isSolution: boolean;
+  upvotes: number;
+  createdAt: Date;
+  attachments: HelpAttachment[];
+}
+
+export interface HelpSolution {
+  id: string;
+  requestId: string;
+  responseId: string;
+  description: string;
+  steps: string[];
+  resources: string[];
+  verifiedBy: string[];
+  verifiedAt: Date;
+}
+
+export interface HelpAttachment {
+  id: string;
+  name: string;
+  url: string;
+  type: 'image' | 'document' | 'video' | 'data';
+  size: number;
+  uploadedAt: Date;
+}
+
+export type HelpCategory = 
+  | 'Protocol Issues'
+  | 'Equipment Problems'
+  | 'Data Analysis'
+  | 'Reagent Issues'
+  | 'Safety Concerns'
+  | 'Methodology'
+  | 'Results Interpretation'
+  | 'General Lab Questions';
+
+// Global Data Sharing System
+export interface SharedData {
+  id: string;
+  title: string;
+  description: string;
+  dataType: DataType;
+  category: string;
+  subcategory: string;
+  authorId: string;
+  authorName: string;
+  labId?: string;
+  institution: string;
+  visibility: 'Personal' | 'Lab' | 'Team' | 'Global' | 'Collaborators';
+  accessLevel: 'View' | 'Download' | 'Collaborate' | 'Full Access';
+  tags: string[];
+  keywords: string[];
+  dataSize: number;
+  fileFormat: string;
+  version: string;
+  citation: string;
+  license: string;
+  embargoDate?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  downloadCount: number;
+  citationCount: number;
+  collaborators: string[];
+  requests: DataRequest[];
+}
+
+export interface DataRequest {
+  id: string;
+  dataId: string;
+  requesterId: string;
+  requesterName: string;
+  institution: string;
+  purpose: string;
+  intendedUse: string;
+  collaborationProposed: boolean;
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Under Review';
+  createdAt: Date;
+  respondedAt?: Date;
+  response?: string;
+}
+
+export type DataType = 
+  | 'Experimental Results'
+  | 'Protocol Data'
+  | 'Analysis Scripts'
+  | 'Raw Data'
+  | 'Processed Data'
+  | 'Metadata'
+  | 'Literature Review'
+  | 'Methodology'
+  | 'Software Tools';
+
+// AI Paper Suggestions
+export interface PaperSuggestion {
+  id: string;
+  title: string;
+  abstract: string;
+  authors: string[];
+  journal: string;
+  year: number;
+  doi: string;
+  relevanceScore: number;
+  relevanceFactors: string[];
+  userInterests: string[];
+  researchContext: string;
+  suggestedAt: Date;
+  read: boolean;
+  saved: boolean;
+  notes?: string;
+}
+
+export interface ResearchInterest {
+  id: string;
+  userId: string;
+  topic: string;
+  keywords: string[];
+  priority: 'High' | 'Medium' | 'Low';
+  lastUpdated: Date;
+}
+
+// Automated Presentations and Reports
+export interface Presentation {
+  id: string;
+  title: string;
+  description: string;
+  template: PresentationTemplate;
+  slides: PresentationSlide[];
+  dataSources: string[];
+  generatedAt: Date;
+  lastModified: Date;
+  exportedFormats: string[];
+  sharedWith: string[];
+}
+
+export interface PresentationSlide {
+  id: string;
+  slideNumber: number;
+  title: string;
+  content: SlideContent;
+  layout: SlideLayout;
+  animations: SlideAnimation[];
+}
+
+export interface ChartData {
+  id: string;
+  type: 'line' | 'bar' | 'pie' | 'scatter' | 'histogram';
+  title: string;
+  data: any[];
+  options: any;
+}
+
+export interface TableData {
+  id: string;
+  title: string;
+  headers: string[];
+  rows: any[][];
+  summary?: any;
+}
+
+export interface SlideContent {
+  text: string[];
+  images: string[];
+  charts: ChartData[];
+  tables: TableData[];
+}
+
+export type SlideLayout = 
+  | 'Title'
+  | 'Content'
+  | 'Two Column'
+  | 'Image Focus'
+  | 'Data Chart'
+  | 'Comparison'
+  | 'Conclusion';
+
+export interface SlideAnimation {
+  type: 'Fade' | 'Slide' | 'Zoom' | 'None';
+  duration: number;
+  delay: number;
+}
+
+export type PresentationTemplate = 
+  | 'Research Update'
+  | 'Conference Talk'
+  | 'Lab Meeting'
+  | 'Grant Proposal'
+  | 'Thesis Defense'
+  | 'Journal Club'
+  | 'Custom';
+
+// Conference and Workshop News
+export interface ConferenceEvent {
+  id: string;
+  title: string;
+  description: string;
+  type: 'Conference' | 'Workshop' | 'Symposium' | 'Webinar' | 'Training';
+  category: string;
+  subcategory: string;
+  startDate: Date;
+  endDate: Date;
+  location: string;
+  virtual: boolean;
+  website: string;
+  registrationDeadline: Date;
+  abstractDeadline: Date;
+  earlyBirdDeadline?: Date;
+  organizers: string[];
+  keynoteSpeakers: string[];
+  topics: string[];
+  targetAudience: string[];
+  registrationFee: {
+    early: number;
+    regular: number;
+    student: number;
+    virtual: number;
+  };
+  currency: string;
+  relevanceScore: number;
+  userInterests: string[];
+  saved: boolean;
+  reminderSet: boolean;
+}
+
+// AI-Generated Content
+export interface AIGeneratedContent {
+  id: string;
+  type: 'Paper' | 'Presentation' | 'Report' | 'Abstract' | 'Discussion';
+  title: string;
+  content: string;
+  dataSources: string[];
+  generatedAt: Date;
+  quality: 'Draft' | 'Review' | 'Final';
+  userFeedback: UserFeedback[];
+  version: string;
+  lastModified: Date;
+}
+
+export interface UserFeedback {
+  id: string;
+  contentId: string;
+  userId: string;
+  feedback: string;
+  rating: number;
+  category: 'Content' | 'Structure' | 'Accuracy' | 'Style';
+  createdAt: Date;
+}
+
+// Enhanced Protocol with Global Sharing
+export interface EnhancedProtocol extends Protocol {
+  globalSharing: {
+    enabled: boolean;
+    visibility: 'Personal' | 'Lab' | 'Team' | 'Global';
+    collaborators: string[];
+    citation: string;
+    license: string;
+    embargoDate?: Date;
+  };
+  aiInsights: {
+    suggestedImprovements: string[];
+    relatedPapers: string[];
+    potentialCollaborators: string[];
+    impactScore: number;
+  };
+}
+
+// Enhanced Lab Notebook with AI
+export interface EnhancedNotebookEntry extends NotebookEntry {
+  aiAnalysis: {
+    insights: string[];
+    suggestions: string[];
+    relatedLiterature: string[];
+    potentialIssues: string[];
+    nextSteps: string[];
+  };
+  globalSharing: {
+    enabled: boolean;
+    visibility: 'Personal' | 'Lab' | 'Team' | 'Global';
+    collaborators: string[];
+  };
 }
 
 export interface InventoryItem {
