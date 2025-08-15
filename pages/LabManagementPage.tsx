@@ -10,7 +10,8 @@ import {
   BuildingOfficeIcon,
   CalendarIcon,
   ChartBarIcon,
-  SaveIcon
+  SaveIcon,
+  BeakerIcon
 } from '../components/icons';
 
 interface LabMember {
@@ -179,53 +180,298 @@ const LabManagementPage: React.FC = () => {
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Stats Cards */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <UsersIcon className="w-6 h-6 text-blue-600" />
+        <div className="space-y-6">
+          {/* Stats Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <UsersIcon className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Team Members</p>
+                  <p className="text-2xl font-bold text-gray-900">{mockMembers.length}</p>
+                </div>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Team Members</p>
-                <p className="text-2xl font-bold text-gray-900">{mockMembers.length}</p>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <BuildingOfficeIcon className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Active Projects</p>
+                  <p className="text-2xl font-bold text-gray-900">{mockProjects.filter(p => p.status === 'In Progress' || p.status === 'Active').length}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <CalendarIcon className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Today's Updates</p>
+                  <p className="text-2xl font-bold text-gray-900">8</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <ChartBarIcon className="w-6 h-6 text-orange-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Open Issues</p>
+                  <p className="text-2xl font-bold text-gray-900">3</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <BuildingOfficeIcon className="w-6 h-6 text-green-600" />
+          {/* Team Updates & Achievements */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Team Updates & Achievements</h2>
+                <p className="text-gray-600">Share your daily progress, achievements, and experiment updates</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Active Projects</p>
-                <p className="text-2xl font-bold text-gray-900">{mockProjects.filter(p => p.status === 'In Progress' || p.status === 'Active').length}</p>
-              </div>
+              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <PlusIcon className="w-4 h-4 inline mr-2" />
+                Share Update
+              </button>
+            </div>
+
+            {/* Mock Team Updates */}
+            <div className="space-y-4">
+              {[
+                {
+                  id: '1',
+                  member: 'Dr. Sarah Johnson',
+                  role: 'Principal Investigator',
+                  avatar: 'SJ',
+                  update: 'Successfully completed CRISPR-Cas9 gene editing optimization experiment. Achieved 85% efficiency in mammalian cells. Ready for next phase testing.',
+                  type: 'achievement',
+                  timestamp: '2 hours ago',
+                  reactions: { '🎉': 3, '👏': 2, '🔬': 1 },
+                  comments: 2
+                },
+                {
+                  id: '2',
+                  member: 'Dr. Michael Chen',
+                  role: 'Postdoctoral Researcher',
+                  avatar: 'MC',
+                  update: 'Started live cell imaging session for drug response study. Using confocal microscope to track cellular changes over 24 hours.',
+                  type: 'experiment',
+                  timestamp: '4 hours ago',
+                  reactions: { '🔬': 2, '📊': 1 },
+                  comments: 1
+                },
+                {
+                  id: '3',
+                  member: 'Emily Rodriguez',
+                  role: 'Graduate Student',
+                  avatar: 'ER',
+                  update: 'Encountered unexpected results in PCR amplification. Getting multiple bands instead of single target. Will troubleshoot tomorrow.',
+                  type: 'issue',
+                  timestamp: '6 hours ago',
+                  reactions: { '🤔': 2, '💪': 1 },
+                  comments: 4
+                },
+                {
+                  id: '4',
+                  member: 'Alex Thompson',
+                  role: 'Research Assistant',
+                  avatar: 'AT',
+                  update: 'Completed protein extraction protocol optimization. Reduced processing time by 30% while maintaining yield quality.',
+                  type: 'achievement',
+                  timestamp: '8 hours ago',
+                  reactions: { '🎯': 2, '⚡': 1, '👏': 1 },
+                  comments: 1
+                }
+              ].map((update) => (
+                <div key={update.id} className={`p-4 rounded-lg border-l-4 transition-all hover:shadow-md ${
+                  update.type === 'achievement' ? 'bg-green-50 border-green-400' :
+                  update.type === 'experiment' ? 'bg-blue-50 border-blue-400' :
+                  'bg-yellow-50 border-yellow-400'
+                }`}>
+                  <div className="flex items-start space-x-3">
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-white font-medium text-sm">{update.avatar}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h4 className="font-semibold text-gray-900">{update.member}</h4>
+                        <span className="text-sm text-gray-500">{update.role}</span>
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          update.type === 'achievement' ? 'bg-green-100 text-green-800' :
+                          update.type === 'experiment' ? 'bg-blue-100 text-blue-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {update.type}
+                        </span>
+                      </div>
+                      <p className="text-gray-700 mb-3">{update.update}</p>
+                      
+                      {/* Reactions */}
+                      <div className="flex items-center space-x-4 text-sm">
+                        <div className="flex items-center space-x-1">
+                          {Object.entries(update.reactions).map(([emoji, count]) => (
+                            <button key={emoji} className="hover:scale-110 transition-transform">
+                              <span className="text-lg">{emoji}</span>
+                              <span className="ml-1 text-gray-600">{count}</span>
+                            </button>
+                          ))}
+                        </div>
+                        <span className="text-gray-500">{update.timestamp}</span>
+                        <button className="text-blue-600 hover:text-blue-700">
+                          {update.comments} comments
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <CalendarIcon className="w-6 h-6 text-purple-600" />
+          {/* Experiment Discussion & Problem Solving */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Experiment Discussion & Problem Solving</h2>
+                <p className="text-gray-600">Collaborate on experimental challenges and share solutions</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Upcoming Events</p>
-                <p className="text-2xl font-bold text-gray-900">3</p>
-              </div>
+              <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                <PlusIcon className="w-4 h-4 inline mr-2" />
+                Post Issue
+              </button>
+            </div>
+
+            {/* Mock Discussion Threads */}
+            <div className="space-y-4">
+              {[
+                {
+                  id: '1',
+                  title: 'PCR Multiple Bands Issue - Need Help!',
+                  author: 'Emily Rodriguez',
+                  status: 'open',
+                  priority: 'medium',
+                  description: 'Getting multiple bands in PCR instead of single target. Using standard protocol with 60°C annealing temp.',
+                  replies: 3,
+                  lastActivity: '1 hour ago',
+                  tags: ['PCR', 'Troubleshooting', 'Molecular Biology']
+                },
+                {
+                  id: '2',
+                  title: 'Cell Culture Contamination Solution',
+                  author: 'Dr. Michael Chen',
+                  status: 'resolved',
+                  priority: 'high',
+                  description: 'Found effective method to prevent mycoplasma contamination using regular testing and antibiotics.',
+                  replies: 5,
+                  lastActivity: '3 hours ago',
+                  tags: ['Cell Culture', 'Contamination', 'Solutions']
+                },
+                {
+                  id: '3',
+                  title: 'Protein Concentration Measurement',
+                  author: 'Alex Thompson',
+                  status: 'open',
+                  priority: 'low',
+                  description: 'Looking for alternative methods to BCA assay for protein concentration measurement.',
+                  replies: 2,
+                  lastActivity: '5 hours ago',
+                  tags: ['Protein Analysis', 'BCA Assay', 'Alternatives']
+                }
+              ].map((thread) => (
+                <div key={thread.id} className={`p-4 rounded-lg border transition-all hover:shadow-md ${
+                  thread.status === 'resolved' ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
+                }`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h4 className="font-semibold text-gray-900">{thread.title}</h4>
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          thread.status === 'resolved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {thread.status}
+                        </span>
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          thread.priority === 'high' ? 'bg-red-100 text-red-800' :
+                          thread.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {thread.priority}
+                        </span>
+                      </div>
+                      <p className="text-gray-700 mb-3">{thread.description}</p>
+                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <span>By {thread.author}</span>
+                        <span>{thread.replies} replies</span>
+                        <span>Last activity: {thread.lastActivity}</span>
+                      </div>
+                      <div className="flex items-center space-x-2 mt-3">
+                        {thread.tags.map((tag) => (
+                          <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="ml-4">
+                      <button className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
+                        View Discussion
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <ChartBarIcon className="w-6 h-6 text-orange-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Publications</p>
-                <p className="text-2xl font-bold text-gray-900">12</p>
-              </div>
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg hover:from-blue-100 hover:to-indigo-100 transition-all text-left">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <UsersIcon className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-blue-900">Schedule Team Meeting</p>
+                    <p className="text-sm text-blue-700">Coordinate with team members</p>
+                  </div>
+                </div>
+              </button>
+              
+              <button className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg hover:from-green-100 hover:to-emerald-100 transition-all text-left">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <BeakerIcon className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-green-900">Report Experiment Issue</p>
+                    <p className="text-sm text-green-700">Get help from the team</p>
+                  </div>
+                </div>
+              </button>
+              
+              <button className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg hover:from-purple-100 hover:to-indigo-100 transition-all text-left">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <ChartBarIcon className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-purple-900">Share Achievement</p>
+                    <p className="text-sm text-purple-700">Celebrate team success</p>
+                  </div>
+                </div>
+              </button>
             </div>
           </div>
         </div>
