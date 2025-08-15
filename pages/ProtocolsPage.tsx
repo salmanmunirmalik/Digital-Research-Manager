@@ -992,24 +992,7 @@ const ProtocolsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Protocols Overview */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Protocol Categories Overview</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {[
-            { name: 'Molecular Biology', count: mockProtocols.filter(p => p.category === 'Molecular Biology').length, color: 'from-blue-500 to-blue-600' },
-            { name: 'Cell Biology', count: mockProtocols.filter(p => p.category === 'Cell Biology').length, color: 'from-green-500 to-green-600' },
-            { name: 'Protein Analysis', count: mockProtocols.filter(p => p.category === 'Protein Analysis').length, color: 'from-purple-500 to-purple-600' },
-            { name: 'Microscopy', count: mockProtocols.filter(p => p.category === 'Microscopy').length, color: 'from-orange-500 to-orange-600' },
-            { name: 'Advanced Techniques', count: mockProtocols.filter(p => ['Proteomics', 'Genomics', 'Flow Cytometry', 'Analytical Chemistry'].includes(p.category)).length, color: 'from-red-500 to-red-600' }
-          ].map((category) => (
-            <div key={category.name} className={`bg-gradient-to-r ${category.color} text-white p-4 rounded-lg text-center`}>
-              <p className="text-2xl font-bold">{category.count}</p>
-              <p className="text-sm opacity-90">{category.name}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+
 
       {/* Protocols Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

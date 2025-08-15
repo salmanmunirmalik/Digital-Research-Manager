@@ -6,8 +6,8 @@ import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
 import { ResultEntry, DataPreview } from '../types';
-import { compileSummaries, analyzeResultData } from '../services/geminiService';
-import { SearchIcon, BarChartIcon, ChevronRightIcon, FilesIcon, SparklesIcon, FilterIcon, LineChartIcon, LightbulbIcon, CheckCircleIcon, Wand2Icon, AlertTriangleIcon, PencilIcon, DatabaseIcon } from '../components/icons';
+
+import { SearchIcon, BarChartIcon, ChevronRightIcon, FilesIcon, FilterIcon, LineChartIcon, LightbulbIcon, CheckCircleIcon, PencilIcon, DatabaseIcon } from '../components/icons';
 
 const LoadingSpinner: React.FC<{className?: string}> = ({className}) => (
     <div className={`flex items-center justify-center space-x-2 ${className}`}>
@@ -61,22 +61,6 @@ const BarChart: FC<{ data: { label: string, value: number }[], title: string }> 
 
 
 const ResultDetailModal: FC<{ result: ResultEntry, onClose: () => void, onUpdate: (result: ResultEntry) => void }> = ({ result, onClose, onUpdate }) => {
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [error, setError] = useState('');
-
-    const handleAnalyze = async () => {
-        setIsAnalyzing(true);
-        setError('');
-        try {
-            const analysis = await analyzeResultData(result);
-            onUpdate({ ...result, analysis });
-        } catch (err) {
-            setError('Failed to get analysis. Please check your API key and network connection.');
-            console.error(err);
-        } finally {
-            setIsAnalyzing(false);
-        }
-    }
 
     const renderDataPreview = (preview: DataPreview) => {
         switch(preview.type) {
@@ -128,35 +112,7 @@ const ResultDetailModal: FC<{ result: ResultEntry, onClose: () => void, onUpdate
                      {renderDataPreview(result.dataPreview)}
                 </div>
 
-                <div className="pt-4 border-t">
-                    <h3 className="font-semibold text-slate-800 mb-2">AI Insight Engine</h3>
-                    {!result.analysis && (
-                        <div className="p-4 bg-white rounded-lg border text-center">
-                            <p className="text-slate-600">Analyze this result to generate key insights, suggest next steps, and identify potential pitfalls.</p>
-                            <Button onClick={handleAnalyze} disabled={isAnalyzing} className="mt-3">
-                                {isAnalyzing ? <LoadingSpinner className="text-white"/> : <SparklesIcon className="h-4 w-4 mr-2"/>}
-                                {isAnalyzing ? 'Analyzing...' : 'Analyze with AI'}
-                            </Button>
-                            {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
-                        </div>
-                    )}
-                    {result.analysis && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <Card className="bg-white">
-                                <CardHeader className="p-4"><CardTitle className="text-base flex items-center"><LightbulbIcon className="h-5 w-5 mr-2 text-yellow-500"/>Key Insights</CardTitle></CardHeader>
-                                <CardContent className="p-4 text-sm text-slate-700">{result.analysis.insights}</CardContent>
-                            </Card>
-                             <Card className="bg-white">
-                                <CardHeader className="p-4"><CardTitle className="text-base flex items-center"><ChevronRightIcon className="h-5 w-5 mr-2 text-blue-500"/>Suggested Next Steps</CardTitle></CardHeader>
-                                <CardContent className="p-4 text-sm text-slate-700">{result.analysis.nextSteps}</CardContent>
-                            </Card>
-                             <Card className="bg-white">
-                                <CardHeader className="p-4"><CardTitle className="text-base flex items-center"><AlertTriangleIcon className="h-5 w-5 mr-2 text-red-500"/>Potential Pitfalls</CardTitle></CardHeader>
-                                <CardContent className="p-4 text-sm text-slate-700">{result.analysis.pitfalls}</CardContent>
-                            </Card>
-                        </div>
-                    )}
-                </div>
+
             </div>
              <div className="p-4 bg-slate-100 flex justify-end gap-3 rounded-b-lg border-t">
                 <Button variant="secondary" onClick={onClose}>Close</Button>
@@ -168,23 +124,12 @@ const ResultDetailModal: FC<{ result: ResultEntry, onClose: () => void, onUpdate
 
 // --- CARD & MAIN PAGE COMPONENTS ---
 
-const ResultEntryCard: React.FC<{ entry: ResultEntry, isSelected: boolean, onToggleSelect: (id: string) => void, onViewDetails: (entry: ResultEntry) => void }> = ({ entry, isSelected, onToggleSelect, onViewDetails }) => (
+const ResultEntryCard: React.FC<{ entry: ResultEntry, onViewDetails: (entry: ResultEntry) => void }> = ({ entry, onViewDetails }) => (
     <Card className="h-full relative hover:shadow-lg transition-shadow">
-         {entry.source === 'Notebook Summary' && (
-            <div className="absolute top-4 left-4 z-10">
-                <input 
-                    type="checkbox" 
-                    checked={isSelected}
-                    onChange={() => onToggleSelect(entry.id)}
-                    className="h-5 w-5 rounded border-slate-400 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                    aria-label={`Select result ${entry.title}`}
-                />
-            </div>
-        )}
         <CardContent className="flex flex-col h-full">
             <div className="flex-grow">
                 <div className="flex justify-between items-start">
-                    <p className={`text-sm text-slate-500 ${entry.source === 'Notebook Summary' ? 'pl-8' : ''}`}>{entry.date}</p>
+                    <p className="text-sm text-slate-500">{entry.date}</p>
                     <div className="flex flex-wrap gap-1">
                         {entry.tags.slice(0, 2).map(tag => (
                             <span key={tag} className={`px-2 py-0.5 text-xs font-medium rounded-full ${
@@ -199,7 +144,6 @@ const ResultEntryCard: React.FC<{ entry: ResultEntry, isSelected: boolean, onTog
             <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between items-center">
                 <div className="text-xs text-slate-500 flex items-center gap-2">
                     <span>By {entry.author}</span>
-                    {entry.analysis && <span title="AI Analysis available"><Wand2Icon className="h-4 w-4 text-purple-500"/></span>}
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => onViewDetails(entry)}>
                     View Details <ChevronRightIcon className="ml-1 h-4 w-4" />
@@ -226,12 +170,7 @@ const DataPage: FC<DataPageProps> = ({ results, onUpdateResult }) => {
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [currentResult, setCurrentResult] = useState<ResultEntry | null>(null);
     
-    // Compiler State
-    const [selectedResultIds, setSelectedResultIds] = useState<Set<string>>(new Set());
-    const [compilationFormat, setCompilationFormat] = useState<'Weekly Report' | 'Paper Section'>('Weekly Report');
-    const [isCompiling, setIsCompiling] = useState(false);
-    const [compiledText, setCompiledText] = useState('');
-    const [compilerError, setCompilerError] = useState('');
+
     
     const uniqueAuthors = useMemo(() => ['All', ...new Set(results.map(r => r.author))], [results]);
     const uniqueTags = useMemo(() => ['All', ...new Set(results.flatMap(r => r.tags))], [results]);
@@ -262,18 +201,6 @@ const DataPage: FC<DataPageProps> = ({ results, onUpdateResult }) => {
         });
     }, [searchTerm, results, authorFilter, tagFilter, dateFilter, sourceFilter]);
 
-    const handleToggleSelect = (id: string) => {
-        setSelectedResultIds(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(id)) {
-                newSet.delete(id);
-            } else {
-                newSet.add(id);
-            }
-            return newSet;
-        });
-    };
-    
     const handleViewDetails = (entry: ResultEntry) => {
         setCurrentResult(entry);
         setIsDetailOpen(true);
@@ -283,33 +210,13 @@ const DataPage: FC<DataPageProps> = ({ results, onUpdateResult }) => {
         onUpdateResult(updatedResult);
         setCurrentResult(updatedResult); // Keep modal updated
     };
-    
-    const handleCompile = async () => {
-        setIsCompiling(true);
-        setCompiledText('');
-        setCompilerError('');
-        const selectedSummaries = results
-            .filter(r => selectedResultIds.has(r.id))
-            .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-            .map(r => `Date: ${r.date}\nTitle: ${r.title}\nAuthor: ${r.author}\n\nSummary:\n${r.summary}\n---\n`);
-        
-        try {
-            const result = await compileSummaries(selectedSummaries, compilationFormat);
-            setCompiledText(result);
-        } catch(err) {
-            setCompilerError('Failed to compile summaries. Please check the console and your API key.');
-            console.error(err);
-        } finally {
-            setIsCompiling(false);
-        }
-    };
 
     return (
         <div className="space-y-6">
             {isDetailOpen && currentResult && <ResultDetailModal result={currentResult} onClose={() => setIsDetailOpen(false)} onUpdate={handleUpdateAndClose} />}
             <div>
                 <h1 className="text-3xl font-bold text-slate-900">Data & Results</h1>
-                <p className="mt-1 text-md text-slate-600">Your intelligent repository for experimental data, conclusions, and AI-powered analysis.</p>
+                <p className="mt-1 text-md text-slate-600">Your comprehensive repository for experimental data, conclusions, and research results.</p>
             </div>
 
             {/* --- DATA ENTRY TOOLS --- */}
@@ -581,27 +488,7 @@ const DataPage: FC<DataPageProps> = ({ results, onUpdateResult }) => {
                         </div>
                     </div>
 
-                    {/* AI-Powered Insights */}
-                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg border border-indigo-200">
-                        <h4 className="font-semibold text-indigo-800 mb-3 flex items-center">
-                            <SparklesIcon className="h-5 w-5 mr-2 text-indigo-600" />
-                            AI-Powered Data Insights
-                        </h4>
-                        <p className="text-sm text-indigo-700 mb-3">
-                            Leverage artificial intelligence to discover patterns, anomalies, and insights in your research data.
-                        </p>
-                        <div className="flex space-x-3">
-                            <button className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors">
-                                Pattern Recognition
-                            </button>
-                            <button className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors">
-                                Anomaly Detection
-                            </button>
-                            <button className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors">
-                                Predictive Analysis
-                            </button>
-                        </div>
-                    </div>
+
                 </CardContent>
             </Card>
 
@@ -641,8 +528,6 @@ const DataPage: FC<DataPageProps> = ({ results, onUpdateResult }) => {
                         <ResultEntryCard 
                             key={entry.id} 
                             entry={entry}
-                            isSelected={selectedResultIds.has(entry.id)}
-                            onToggleSelect={handleToggleSelect}
                             onViewDetails={handleViewDetails}
                         />
                     ))}
