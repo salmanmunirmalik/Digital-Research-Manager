@@ -11,8 +11,6 @@ import {
   LightbulbIcon, 
   CheckCircleIcon, 
   PencilIcon, 
-  DatabaseIcon,
-  CloudIcon,
   DocumentIcon,
   ImageIcon,
   TableIcon,
@@ -27,7 +25,7 @@ import {
 } from '../components/icons';
 
 const DataResultsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'spreadsheet' | 'images' | 'database' | 'manual'>('spreadsheet');
+  const [activeTab, setActiveTab] = useState<'spreadsheet' | 'images' | 'manual'>('spreadsheet');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'importing' | 'success' | 'error'>('idle');
@@ -257,96 +255,7 @@ const DataResultsPage: React.FC = () => {
     </div>
   );
 
-  const renderDatabaseTools = () => (
-    <div className="space-y-6">
-      {/* Database Connection Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <DatabaseIcon className="h-6 w-6 text-indigo-600" />
-            <div>
-              <CardTitle>Database & API Connections</CardTitle>
-              <CardDescription>Connect to external data sources and APIs</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Database Type</label>
-              <Select>
-                <option>PostgreSQL</option>
-                <option>MySQL</option>
-                <option>SQLite</option>
-                <option>MongoDB</option>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Connection String</label>
-              <Input placeholder="postgresql://user:pass@host:port/db" />
-            </div>
-          </div>
-          <Button className="w-full">
-            <DatabaseIcon className="h-4 w-4 mr-2" />
-            Test Connection
-          </Button>
-        </CardContent>
-      </Card>
 
-      {/* Connection Tools Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <DatabaseIcon className="h-5 w-5 text-indigo-600" />
-              <CardTitle>Database Connections</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {[
-              { name: 'SQL Databases', desc: 'Connect to external databases', icon: '🗄️' },
-              { name: 'REST APIs', desc: 'Import from web services', icon: '🌐' },
-              { name: 'GraphQL', desc: 'Query-based data import', icon: '🔗' },
-              { name: 'Data Warehouses', desc: 'Connect to data warehouses', icon: '🏢' }
-            ].map((tool) => (
-              <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <span className="text-2xl">{tool.icon}</span>
-                <div>
-                  <p className="font-medium text-gray-900">{tool.name}</p>
-                  <p className="text-sm text-gray-600">{tool.desc}</p>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <CloudIcon className="h-5 w-5 text-blue-600" />
-              <CardTitle>Cloud & Sync</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {[
-              { name: 'Cloud Storage', desc: 'Import from cloud platforms', icon: '☁️' },
-              { name: 'Data Sync', desc: 'Automated data synchronization', icon: '🔄' },
-              { name: 'Version Control', desc: 'Track data changes over time', icon: '📝' },
-              { name: 'Backup & Restore', desc: 'Data backup and recovery', icon: '💾' }
-            ].map((tool) => (
-              <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <span className="text-2xl">{tool.icon}</span>
-                <div>
-                  <p className="font-medium text-gray-900">{tool.name}</p>
-                  <p className="text-sm text-gray-600">{tool.desc}</p>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
 
   const renderManualEntry = () => (
     <div className="space-y-6">
@@ -487,16 +396,7 @@ const DataResultsPage: React.FC = () => {
             >
               🖼️ Image & Documents
             </button>
-            <button
-              onClick={() => setActiveTab('database')}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'database'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-            >
-              🗄️ Database & APIs
-            </button>
+
             <button
               onClick={() => setActiveTab('manual')}
               className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -513,7 +413,7 @@ const DataResultsPage: React.FC = () => {
         {/* Tab Content */}
         {activeTab === 'spreadsheet' && renderSpreadsheetTools()}
         {activeTab === 'images' && renderImageTools()}
-        {activeTab === 'database' && renderDatabaseTools()}
+
         {activeTab === 'manual' && renderManualEntry()}
       </div>
     </div>

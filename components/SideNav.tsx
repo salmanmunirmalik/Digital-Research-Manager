@@ -48,9 +48,9 @@ const SideNav: React.FC = () => {
         ]
       },
       {
-        title: 'Research Intelligence',
+        title: 'Data & Results',
         items: [
-          { name: 'Data & Results', to: '/research-intelligence', icon: ChartBarIcon, description: 'Research data and analysis' },
+          { name: 'Data & Results', to: '/data-results', icon: ChartBarIcon, description: 'Research data and analysis' },
           { name: 'Research Assistant', to: '/research-assistant', icon: LightbulbIcon, description: 'AI-powered research helper' }
         ]
       },

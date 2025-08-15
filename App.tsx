@@ -11,7 +11,7 @@ import LabNotebookPage from './pages/LabNotebookPage';
 import ProtocolsPage from './pages/ProtocolsPage';
 import InventoryPage from './pages/InventoryPage';
 import InstrumentsPage from './pages/InstrumentsPage';
-import ResearchIntelligenceHub from './pages/ResearchIntelligenceHub';
+import DataResultsPage from './pages/DataResultsPage';
 import AutomatedPresentationsPage from './pages/AutomatedPresentationsPage';
 import GlobalDataSharingPage from './pages/GlobalDataSharingPage';
 import HelpForumPage from './pages/HelpForumPage';
@@ -99,7 +99,7 @@ const AppContent: React.FC = () => {
       <Route path="/protocols" element={<DemoLayout><ProtocolsPage /></DemoLayout>} />
       <Route path="/inventory" element={<DemoLayout><InventoryPage /></DemoLayout>} />
       <Route path="/instruments" element={<DemoLayout><InstrumentsPage /></DemoLayout>} />
-      <Route path="/research-intelligence" element={<DemoLayout><ResearchIntelligenceHub /></DemoLayout>} />
+      <Route path="/data-results" element={<DemoLayout><DataResultsPage /></DemoLayout>} />
 
       <Route path="/presentations" element={<DemoLayout><AutomatedPresentationsPage /></DemoLayout>} />
       <Route path="/data-sharing" element={<DemoLayout><GlobalDataSharingPage /></DemoLayout>} />
