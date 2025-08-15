@@ -1,870 +1,705 @@
+// Digital Research Manager - TypeScript Types
+// Based on PostgreSQL database schema
 
+export type UserRole = 'admin' | 'principal_researcher' | 'co_supervisor' | 'researcher' | 'student';
+export type UserStatus = 'active' | 'inactive' | 'suspended' | 'pending_verification';
+export type PrivacyLevel = 'personal' | 'lab' | 'global';
+export type DataType = 'protocol' | 'experiment' | 'inventory' | 'instrument' | 'result' | 'note' | 'attachment';
 
-export interface VersionHistory {
-  version: string;
-  date: string;
-  author: string;
-  changes: string;
+// Core User Types
+export interface User {
+  id: string;
+  email: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  status: UserStatus;
+  avatar_url?: string;
+  bio?: string;
+  research_interests?: string[];
+  created_at: string;
+  updated_at: string;
+  last_login?: string;
+  email_verified: boolean;
 }
 
-export interface ProtocolAttachment {
-    name: string;
-    url: string;
-    type: 'pdf' | 'image' | 'video' | 'spreadsheet' | 'other';
-    size?: number;
-    uploadedAt: string;
+export interface UserCreate {
+  email: string;
+  username: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  role?: UserRole;
+  bio?: string;
+  research_interests?: string[];
 }
 
-export interface ProtocolStep {
-  step: number;
-  description: string;
-  details?: string;
-  safetyWarning?: string;
-  materials?: string[]; // For the Reagents & Equipment checklist
-  durationMinutes?: number; // For the integrated timer
-  temperature?: {
-    value: number;
-    unit: 'C' | 'F' | 'K';
-    tolerance?: number;
-  };
-  pH?: {
-    value: number;
-    tolerance?: number;
-  };
-  calculator?: {
-    name: CalculatorName;
-    inputs: { [key: string]: string | number };
-  };
-  videoTimestamp?: {
-      url: string;
-      time: number; // in seconds
-      label: string;
-  };
-  conditional?: {
-      condition: string;
-      ifTrue: string;
-      ifFalse: string;
-  };
-  qualityControl?: {
-    expectedOutcome: string;
-    successCriteria: string[];
-    troubleshooting: string[];
-  };
-  wasteDisposal?: string;
-  references?: string[];
+export interface UserUpdate {
+  first_name?: string;
+  last_name?: string;
+  bio?: string;
+  research_interests?: string[];
+  avatar_url?: string;
 }
 
+export interface UserLogin {
+  email: string;
+  password: string;
+}
+
+export interface UserAuth {
+  user: User;
+  token: string;
+  refresh_token: string;
+}
+
+// Lab Management Types
+export interface Lab {
+  id: string;
+  name: string;
+  description?: string;
+  institution?: string;
+  department?: string;
+  principal_researcher_id: string;
+  co_supervisor_id?: string;
+  logo_url?: string;
+  website_url?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  address?: string;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
+
+export interface LabCreate {
+  name: string;
+  description?: string;
+  institution?: string;
+  department?: string;
+  co_supervisor_id?: string;
+  logo_url?: string;
+  website_url?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  address?: string;
+}
+
+export interface LabMember {
+  id: string;
+  lab_id: string;
+  user_id: string;
+  role: UserRole;
+  joined_at: string;
+  permissions: Record<string, any>;
+  is_active: boolean;
+  user?: User;
+}
+
+export interface LabMemberCreate {
+  lab_id: string;
+  user_id: string;
+  role: UserRole;
+  permissions?: Record<string, any>;
+}
+
+// Project Management Types
+export interface Project {
+  id: string;
+  title: string;
+  description?: string;
+  lab_id: string;
+  lead_researcher_id: string;
+  status: string;
+  start_date?: string;
+  end_date?: string;
+  budget?: number;
+  objectives?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectCreate {
+  title: string;
+  description?: string;
+  lab_id: string;
+  status?: string;
+  start_date?: string;
+  end_date?: string;
+  budget?: number;
+  objectives?: string[];
+}
+
+export interface ProjectMember {
+  id: string;
+  project_id: string;
+  user_id: string;
+  role: string;
+  joined_at: string;
+  permissions: Record<string, any>;
+  user?: User;
+}
+
+// Protocol Management Types
 export interface Protocol {
   id: string;
   title: string;
-  description: string;
-  abstract?: string;
-  tags: string[];
-  author: string;
-  lastUpdated: string;
+  description?: string;
+  category?: string;
   version: string;
-  versionHistory: VersionHistory[];
-  access: 'Public' | 'Lab Only' | 'Private' | 'Collaborative';
-  discussionCount?: number;
-  steps: ProtocolStep[];
-  videoUrl?: string;
-  attachments: ProtocolAttachment[];
-  forkedFrom?: string; // ID of the protocol it was duplicated from
-  
-  // Enhanced fields for scientists
-  category: ProtocolCategory;
-  subcategory: ProtocolSubcategory;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
-  estimatedTime: {
-    preparation: number; // minutes
-    execution: number; // minutes
-    analysis: number; // minutes
-    total: number; // minutes
-  };
-  equipment: {
-    essential: string[];
-    optional: string[];
-    shared: string[];
-  };
-  reagents: {
-    essential: ReagentInfo[];
-    optional: ReagentInfo[];
-    alternatives: ReagentAlternative[];
-  };
-  safety: {
-    riskLevel: 'Low' | 'Medium' | 'High' | 'Extreme';
-    hazards: string[];
-    ppe: string[];
-    emergencyProcedures: string[];
-    disposalRequirements: string[];
-  };
-  validation: {
-    testedBy: string[];
-    validationDate: string;
-    successRate: number; // percentage
-    notes: string;
-  };
-  publications: {
-    doi?: string;
-    journal?: string;
-    year?: number;
-    authors?: string[];
-  };
-  relatedProtocols: string[]; // IDs of related protocols
-  keywords: string[];
-  language: string;
-  lastValidated: string;
-  citationCount: number;
-  rating: number; // 1-5 stars
-  reviewCount: number;
-}
-
-export type ProtocolCategory = 
-  | 'Molecular Biology'
-  | 'Cell Biology'
-  | 'Biochemistry'
-  | 'Genetics'
-  | 'Microbiology'
-  | 'Immunology'
-  | 'Neuroscience'
-  | 'Bioinformatics'
-  | 'Chemistry'
-  | 'Physics'
-  | 'Engineering'
-  | 'Other';
-
-export type ProtocolSubcategory = 
-  | 'DNA/RNA Extraction'
-  | 'PCR & Amplification'
-  | 'Cloning & Transformation'
-  | 'Protein Expression'
-  | 'Cell Culture'
-  | 'Flow Cytometry'
-  | 'Microscopy'
-  | 'Western Blot'
-  | 'ELISA'
-  | 'Sequencing'
-  | 'CRISPR/Cas9'
-  | 'Single Cell Analysis'
-  | 'Proteomics'
-  | 'Metabolomics'
-  | 'Bioinformatics Analysis'
-  | 'Data Visualization'
-  | 'Other';
-
-export interface ReagentInfo {
-  name: string;
-  concentration?: string;
-  volume: string;
-  supplier?: string;
-  catalogNumber?: string;
-  storage: string;
-  stability: string;
-  alternatives?: string[];
-}
-
-export interface ReagentAlternative {
-  original: string;
-  alternatives: {
-    name: string;
-    supplier: string;
-    catalogNumber: string;
-    notes: string;
-  }[];
-}
-
-// Enhanced Calculator Types
-export type CalculatorCategory = 
-    | 'Chemistry & Biochemistry'
-    | 'Molecular & Cell Biology'
-    | 'Physiology & Neuroscience'
-    | 'Bioinformatics'
-    | 'Statistics & Data Analysis'
-    | 'Engineering & Physics';
-
-export type CalculatorSubCategory = 
-    | 'General Chemistry'
-    | 'Nucleic Acid Tools'
-    | 'Primers & Oligos'
-    | 'Cloning & Reactions'
-    | 'Protein & Assays'
-    | 'Cell Biology'
-    | 'Genetics & Physiology'
-    | 'Bioinformatics & Sequencing'
-    | 'Statistical Analysis'
-    | 'Data Visualization'
-    | 'Unit Conversion'
-    | 'Dilution Series';
-
-export type CalculatorName =
-    // Chemistry & Biochemistry
-    | 'Molarity Calculator'
-    | 'Dilution Calculator (M1V1=M2V2)'
-    | 'Molecular Weight Calculator'
-    | 'Buffer pH Calculator (Henderson-Hasselbalch)'
-    | 'Unit Converter'
-    | 'Concentration Calculator'
-    | 'pH Calculator'
-    | 'Buffer Preparation'
-    | 'Titration Calculator'
-    | 'Reaction Stoichiometry'
-    
-    // Molecular & Cell Biology
-    | 'Primer Tm Calculator'
-    | 'Oligo Resuspension Calculator'
-    | 'Ligation Ratio Calculator'
-    | 'Transformation Efficiency Calculator'
-    | 'PCR Master Mix Calculator'
-    | 'Cell Viability Calculator'
-    | 'Serial Dilution Calculator'
-    | 'Primer Designer'
-    | 'Restriction Digest Calculator'
-    | 'DNA Concentration Calculator'
-    | 'RNA Concentration Calculator'
-    | 'Protein Concentration Calculator'
-    | 'Cell Counting Calculator'
-    | 'Doubling Time Calculator'
-    
-    // Physiology & Neuroscience
-    | 'Nernst Potential Calculator'
-    | 'Action Potential Calculator'
-    | 'Synaptic Strength Calculator'
-    | 'Ion Concentration Calculator'
-    | 'Membrane Potential Calculator'
-    
-    // Bioinformatics
-    | 'Sequence Alignment Calculator'
-    | 'GC Content Calculator'
-    | 'Codon Usage Calculator'
-    | 'Restriction Site Finder'
-    | 'Primer Pair Analyzer'
-    | 'Sequence Similarity Calculator'
-    
-    // Statistics & Data Analysis
-    | 'Standard Deviation Calculator'
-    | 'T-Test Calculator'
-    | 'ANOVA Calculator'
-    | 'Correlation Calculator'
-    | 'Linear Regression Calculator'
-    | 'Sample Size Calculator'
-    | 'P-Value Calculator'
-    | 'Confidence Interval Calculator'
-    
-    // Engineering & Physics
-    | 'Centrifugation Calculator'
-    | 'Flow Rate Calculator'
-    | 'Pressure Calculator'
-    | 'Temperature Conversion'
-    | 'Volume Calculator'
-    | 'Density Calculator';
-
-export interface CalculatorInfo {
-    name: CalculatorName;
-    category: CalculatorCategory;
-    subCategory: CalculatorSubCategory;
-    description: string;
-    formula?: string;
-    units: {
-        inputs: { [key: string]: string };
-        output: string;
-    };
-    examples: CalculatorExample[];
-    references?: string[];
-    tags: string[];
-}
-
-export interface CalculatorExample {
-    title: string;
-    inputs: { [key: string]: string | number };
-    expectedOutput: string | number;
-    explanation: string;
-}
-
-export interface CalculatorInput {
-    name: string;
-    label: string;
-    type: 'number' | 'text' | 'select' | 'checkbox';
-    unit?: string;
-    required: boolean;
-    min?: number;
-    max?: number;
-    step?: number;
-    options?: { value: string; label: string }[];
-    placeholder?: string;
-    helpText?: string;
-    validation?: {
-        pattern?: string;
-        message?: string;
-    };
-}
-
-export interface CalculatorResult {
-    value: number | string;
-    unit: string;
-    confidence?: number;
-    explanation?: string;
-    warnings?: string[];
-    suggestions?: string[];
-}
-
-// --- NEW LAB NOTEBOOK TYPES ---
-
-export type ContentBlockType = 'text' | 'table' | 'image' | 'file' | 'protocol_step' | 'summary';
-
-export interface ContentBlock {
-    id: string;
-    type: ContentBlockType;
-    data: any; // 'text': { html: string }, 'table': { headers: string[], rows: string[][] }, 'image': { url: string, caption: string }, 'summary': { text: string, isStored?: boolean } etc.
-}
-
-export interface NotebookComment {
-    id: string;
-    author: string;
-    date: string;
-    content: string;
-}
-
-export interface EntryVersion {
-    version: number;
-    date: string;
-    author: string;
-    content: ContentBlock[];
-}
-
-export interface DigitalSignature {
-    signedBy: string; // User ID or Name of the PI
-    date: string; // ISO 8601 timestamp
-}
-
-export interface NotebookEntry {
-  id: string;
-  title: string;
-  author: string;
-  createdDate: string;
-  lastModified: string;
-  protocolId?: string;
-  tags: string[];
-  status: 'In Progress' | 'Completed' | 'Awaiting Review' | 'Signed';
-  content: ContentBlock[];
-  summary?: string; // AI generated summary
-  versionHistory: EntryVersion[];
-  comments: NotebookComment[];
-  signature?: DigitalSignature;
-}
-
-export interface Experiment {
-    id: string;
-    name: string;
-    goal?: string;
-    entries: NotebookEntry[];
-}
-
-export interface Project {
-    id: string;
-    name: string;
-    description: string;
-    owner: string; // User ID or Name of PI
-    experiments: Experiment[];
-}
-
-// --- END NEW LAB NOTEBOOK TYPES ---
-
-
-// Enhanced User Interface for Digital Research Manager
-export type UserRole = 'Principal Investigator' | 'Research Scientist' | 'Postdoctoral Fellow' | 'Graduate Student' | 'Research Assistant' | 'Lab Manager' | 'Technician' | 'Collaborator';
-
-export type UserStatus = 'Active' | 'Away' | 'Busy' | 'Available' | 'In Meeting' | 'On Leave';
-
-export interface EnhancedUser {
-  id: string;
-  username: string;
-  email: string;
-  role: UserRole;
-  expertise: string[];
-  status: UserStatus;
-  researchInterests: string[];
-  collaborationPreferences: CollaborationPreferences;
-  globalSharingEnabled: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CollaborationPreferences {
-  allowGlobalSharing: boolean;
-  allowLabSharing: boolean;
-  allowTeamSharing: boolean;
-  trustedCollaborators: string[];
-  sharingLevel: 'Personal' | 'Lab' | 'Team' | 'Global';
-}
-
-// Help Forum System
-export interface HelpRequest {
-  id: string;
-  title: string;
-  description: string;
-  category: HelpCategory;
-  urgency: 'Low' | 'Medium' | 'High' | 'Critical';
-  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
-  authorId: string;
-  authorName: string;
-  labId?: string;
-  teamId?: string;
-  visibility: 'Personal' | 'Lab' | 'Team' | 'Global';
-  tags: string[];
-  attachments: HelpAttachment[];
-  createdAt: Date;
-  updatedAt: Date;
-  resolvedAt?: Date;
-  solution?: HelpSolution;
-  responses: HelpResponse[];
-  upvotes: number;
-  views: number;
-}
-
-export interface HelpResponse {
-  id: string;
-  requestId: string;
-  authorId: string;
-  authorName: string;
+  author_id: string;
+  lab_id?: string;
+  project_id?: string;
+  privacy_level: PrivacyLevel;
   content: string;
-  isSolution: boolean;
-  upvotes: number;
-  createdAt: Date;
-  attachments: HelpAttachment[];
+  materials?: string[];
+  equipment?: string[];
+  safety_notes?: string;
+  estimated_duration?: number;
+  difficulty_level?: string;
+  tags?: string[];
+  is_approved: boolean;
+  approved_by?: string;
+  approved_at?: string;
+  created_at: string;
+  updated_at: string;
+  author?: User;
+  lab?: Lab;
+  project?: Project;
 }
 
-export interface HelpSolution {
+export interface ProtocolCreate {
+  title: string;
+  description?: string;
+  category?: string;
+  content: string;
+  materials?: string[];
+  equipment?: string[];
+  safety_notes?: string;
+  estimated_duration?: number;
+  difficulty_level?: string;
+  tags?: string[];
+  privacy_level?: PrivacyLevel;
+  lab_id?: string;
+  project_id?: string;
+}
+
+export interface ProtocolSharing {
   id: string;
-  requestId: string;
-  responseId: string;
-  description: string;
-  steps: string[];
-  resources: string[];
-  verifiedBy: string[];
-  verifiedAt: Date;
+  protocol_id: string;
+  shared_with_user_id?: string;
+  shared_with_lab_id?: string;
+  permission_level: string;
+  shared_at: string;
+  expires_at?: string;
 }
 
-export interface HelpAttachment {
+// Lab Notebook Types
+export interface LabNotebookEntry {
+  id: string;
+  title: string;
+  content: string;
+  author_id: string;
+  lab_id?: string;
+  project_id?: string;
+  entry_type: string;
+  privacy_level: PrivacyLevel;
+  tags?: string[];
+  experiment_date?: string;
+  results?: string;
+  conclusions?: string;
+  next_steps?: string;
+  attachments?: string[];
+  created_at: string;
+  updated_at: string;
+  author?: User;
+  lab?: Lab;
+  project?: Project;
+}
+
+export interface LabNotebookEntryCreate {
+  title: string;
+  content: string;
+  entry_type?: string;
+  privacy_level?: PrivacyLevel;
+  tags?: string[];
+  experiment_date?: string;
+  results?: string;
+  conclusions?: string;
+  next_steps?: string;
+  attachments?: string[];
+  lab_id?: string;
+  project_id?: string;
+}
+
+// Inventory Management Types
+export interface InventoryItem {
   id: string;
   name: string;
-  url: string;
-  type: 'image' | 'document' | 'video' | 'data';
-  size: number;
-  uploadedAt: Date;
+  description?: string;
+  category?: string;
+  lab_id: string;
+  location?: string;
+  quantity: number;
+  unit?: string;
+  min_quantity: number;
+  supplier?: string;
+  supplier_contact?: string;
+  cost_per_unit?: number;
+  last_restocked?: string;
+  expiry_date?: string;
+  storage_conditions?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  lab?: Lab;
 }
 
-export type HelpCategory = 
-  | 'Protocol Issues'
-  | 'Equipment Problems'
-  | 'Data Analysis'
-  | 'Reagent Issues'
-  | 'Safety Concerns'
-  | 'Methodology'
-  | 'Results Interpretation'
-  | 'General Lab Questions';
-
-// Global Data Sharing System
-export interface SharedData {
-  id: string;
-  title: string;
-  description: string;
-  dataType: DataType;
-  category: string;
-  subcategory: string;
-  authorId: string;
-  authorName: string;
-  labId?: string;
-  institution: string;
-  visibility: 'Personal' | 'Lab' | 'Team' | 'Global' | 'Collaborators';
-  accessLevel: 'View' | 'Download' | 'Collaborate' | 'Full Access';
-  tags: string[];
-  keywords: string[];
-  dataSize: number;
-  fileFormat: string;
-  version: string;
-  citation: string;
-  license: string;
-  embargoDate?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  downloadCount: number;
-  citationCount: number;
-  collaborators: string[];
-  requests: DataRequest[];
-}
-
-export interface DataRequest {
-  id: string;
-  dataId: string;
-  requesterId: string;
-  requesterName: string;
-  institution: string;
-  purpose: string;
-  intendedUse: string;
-  collaborationProposed: boolean;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Under Review';
-  createdAt: Date;
-  respondedAt?: Date;
-  response?: string;
-}
-
-export type DataType = 
-  | 'Experimental Results'
-  | 'Protocol Data'
-  | 'Analysis Scripts'
-  | 'Raw Data'
-  | 'Processed Data'
-  | 'Metadata'
-  | 'Literature Review'
-  | 'Methodology'
-  | 'Software Tools';
-
-// AI Paper Suggestions
-export interface PaperSuggestion {
-  id: string;
-  title: string;
-  abstract: string;
-  authors: string[];
-  journal: string;
-  year: number;
-  doi: string;
-  relevanceScore: number;
-  relevanceFactors: string[];
-  userInterests: string[];
-  researchContext: string;
-  suggestedAt: Date;
-  read: boolean;
-  saved: boolean;
+export interface InventoryItemCreate {
+  name: string;
+  description?: string;
+  category?: string;
+  location?: string;
+  quantity: number;
+  unit?: string;
+  min_quantity?: number;
+  supplier?: string;
+  supplier_contact?: string;
+  cost_per_unit?: number;
+  last_restocked?: string;
+  expiry_date?: string;
+  storage_conditions?: string;
   notes?: string;
 }
 
-export interface ResearchInterest {
-  id: string;
-  userId: string;
-  topic: string;
-  keywords: string[];
-  priority: 'High' | 'Medium' | 'Low';
-  lastUpdated: Date;
-}
-
-// Automated Presentations and Reports
-export interface Presentation {
-  id: string;
-  title: string;
-  description: string;
-  template: PresentationTemplate;
-  slides: PresentationSlide[];
-  dataSources: string[];
-  generatedAt: Date;
-  lastModified: Date;
-  exportedFormats: string[];
-  sharedWith: string[];
-}
-
-export interface PresentationSlide {
-  id: string;
-  slideNumber: number;
-  title: string;
-  content: SlideContent;
-  layout: SlideLayout;
-  animations: SlideAnimation[];
-}
-
-export interface ChartData {
-  id: string;
-  type: 'line' | 'bar' | 'pie' | 'scatter' | 'histogram';
-  title: string;
-  data: any[];
-  options: any;
-}
-
-export interface TableData {
-  id: string;
-  title: string;
-  headers: string[];
-  rows: any[][];
-  summary?: any;
-}
-
-export interface SlideContent {
-  text: string[];
-  images: string[];
-  charts: ChartData[];
-  tables: TableData[];
-}
-
-export type SlideLayout = 
-  | 'Title'
-  | 'Content'
-  | 'Two Column'
-  | 'Image Focus'
-  | 'Data Chart'
-  | 'Comparison'
-  | 'Conclusion';
-
-export interface SlideAnimation {
-  type: 'Fade' | 'Slide' | 'Zoom' | 'None';
-  duration: number;
-  delay: number;
-}
-
-export type PresentationTemplate = 
-  | 'Research Update'
-  | 'Conference Talk'
-  | 'Lab Meeting'
-  | 'Grant Proposal'
-  | 'Thesis Defense'
-  | 'Journal Club'
-  | 'Custom';
-
-// Conference and Workshop News
-export interface ConferenceEvent {
-  id: string;
-  title: string;
-  description: string;
-  type: 'Conference' | 'Workshop' | 'Symposium' | 'Webinar' | 'Training';
-  category: string;
-  subcategory: string;
-  startDate: Date;
-  endDate: Date;
-  location: string;
-  virtual: boolean;
-  website: string;
-  registrationDeadline: Date;
-  abstractDeadline: Date;
-  earlyBirdDeadline?: Date;
-  organizers: string[];
-  keynoteSpeakers: string[];
-  topics: string[];
-  targetAudience: string[];
-  registrationFee: {
-    early: number;
-    regular: number;
-    student: number;
-    virtual: number;
-  };
-  currency: string;
-  relevanceScore: number;
-  userInterests: string[];
-  saved: boolean;
-  reminderSet: boolean;
-}
-
-// AI-Generated Content
-export interface AIGeneratedContent {
-  id: string;
-  type: 'Paper' | 'Presentation' | 'Report' | 'Abstract' | 'Discussion';
-  title: string;
-  content: string;
-  dataSources: string[];
-  generatedAt: Date;
-  quality: 'Draft' | 'Review' | 'Final';
-  userFeedback: UserFeedback[];
-  version: string;
-  lastModified: Date;
-}
-
-export interface UserFeedback {
-  id: string;
-  contentId: string;
-  userId: string;
-  feedback: string;
-  rating: number;
-  category: 'Content' | 'Structure' | 'Accuracy' | 'Style';
-  createdAt: Date;
-}
-
-// Enhanced Protocol with Global Sharing
-export interface EnhancedProtocol extends Protocol {
-  globalSharing: {
-    enabled: boolean;
-    visibility: 'Personal' | 'Lab' | 'Team' | 'Global';
-    collaborators: string[];
-    citation: string;
-    license: string;
-    embargoDate?: Date;
-  };
-  aiInsights: {
-    suggestedImprovements: string[];
-    relatedPapers: string[];
-    potentialCollaborators: string[];
-    impactScore: number;
-  };
-}
-
-// Enhanced Lab Notebook with AI
-export interface EnhancedNotebookEntry extends NotebookEntry {
-  aiAnalysis: {
-    insights: string[];
-    suggestions: string[];
-    relatedLiterature: string[];
-    potentialIssues: string[];
-    nextSteps: string[];
-  };
-  globalSharing: {
-    enabled: boolean;
-    visibility: 'Personal' | 'Lab' | 'Team' | 'Global';
-    collaborators: string[];
-  };
-}
-
-export interface InventoryItem {
-    id: string;
-    name: string;
-    type: 'Reagent' | 'Antibody' | 'Plasmid' | 'Consumable' | 'Sample';
-    supplier: string;
-    catalogNumber: string;
-    location: string;
-    quantity: {
-        value: number;
-        unit: string;
-    };
-    lotNumber: string;
-    expirationDate: string; // YYYY-MM-DD
-    lowStockThreshold?: number;
-    sdsUrl?: string;
-    lastUpdated: string;
-}
-
-export type DataPreview = 
-    | { type: 'table'; content: { headers: string[]; rows: (string|number)[][] } }
-    | { type: 'graph'; content: { type: 'bar' | 'line'; title: string; data: { label: string; value: number }[] } }
-    | { type: 'text'; content: string };
-
-export interface ResultEntry {
-    id:string;
-    title: string;
-    date: string;
-    author: string;
-    protocolId?: string;
-    summary: string;
-    tags: string[];
-    dataPreview: DataPreview;
-    source?: 'Notebook Summary' | 'Manual';
-    notebookEntryId?: string;
-    analysis?: {
-        insights: string;
-        nextSteps: string;
-        pitfalls: string;
-    };
-}
-
-
-// --- Dashboard Types ---
-export interface ActiveExperiment {
-  id: string;
-  name: string;
-  status: string;
-  progress: number; // 0-100
-  timeLeftMs?: number; // duration in milliseconds
-  link: string;
-}
-
-export interface DashboardTask {
-  id: string;
-  text: string;
-  isCompleted: boolean;
-  priority: 'High' | 'Medium' | 'Low';
-}
-
-export interface DashboardNotification {
-  id: string;
-  type: 'Alert' | 'Info' | 'Help' | 'Booking';
-  message: string;
-  link: string;
-  date: string;
-}
-
-export interface CalendarEvent {
-  id: string;
-  title: string;
-  date: string; // YYYY-MM-DD
-  time: string; // HH:mm
-  type: 'Experiment' | 'Meeting' | 'Booking';
-}
-
-// --- Instrument Booking Types ---
+// Instrument Management Types
 export interface Instrument {
   id: string;
   name: string;
-  type: 'Microscope' | 'Sequencer' | 'Centrifuge' | 'FACS' | 'PCR Machine';
-  location: string;
-  status: 'Operational' | 'Under Maintenance' | 'Offline';
+  description?: string;
+  category?: string;
+  lab_id: string;
+  location?: string;
+  model?: string;
+  serial_number?: string;
+  manufacturer?: string;
+  purchase_date?: string;
+  warranty_expiry?: string;
+  calibration_due_date?: string;
+  status: string;
+  maintenance_notes?: string;
+  user_manual_url?: string;
+  created_at: string;
+  updated_at: string;
+  lab?: Lab;
 }
 
-export interface Booking {
-  id: string;
-  instrumentId: string;
-  userId: string; // Could be name for simplicity
-  title: string;
-  startTime: string; // ISO 8601 format: 'YYYY-MM-DDTHH:mm:ss.sssZ'
-  endTime: string; // ISO 8601 format
-}
-
-export interface UsageLogEntry {
-  id: string;
-  instrumentId: string;
-  userId: string;
-  startTime: string; // ISO 8601
-  endTime: string; // ISO 8601
-  type: 'Usage' | 'Maintenance' | 'Issue Reported';
-  notes: string;
-}
-
-// --- Team Types ---
-export interface TeamMember {
-  id: string;
+export interface InstrumentCreate {
   name: string;
-  role: 'Principal Investigator' | 'Postdoctoral Fellow' | 'PhD Student' | 'Lab Manager' | 'Research Assistant';
-  avatarUrl?: string; // Using a generic icon for now
-  email: string;
-  status: 'Online' | 'In Lab' | 'Away' | 'Offline';
-  expertise: string[];
-  currentProjects: {
-    name: string;
-    protocolId: string;
+  description?: string;
+  category?: string;
+  location?: string;
+  model?: string;
+  serial_number?: string;
+  manufacturer?: string;
+  purchase_date?: string;
+  warranty_expiry?: string;
+  calibration_due_date?: string;
+  status?: string;
+  maintenance_notes?: string;
+  user_manual_url?: string;
+}
+
+export interface InstrumentBooking {
+  id: string;
+  instrument_id: string;
+  user_id: string;
+  start_time: string;
+  end_time: string;
+  purpose?: string;
+  status: string;
+  approved_by?: string;
+  approved_at?: string;
+  created_at: string;
+  instrument?: Instrument;
+  user?: User;
+}
+
+export interface InstrumentBookingCreate {
+  instrument_id: string;
+  start_time: string;
+  end_time: string;
+  purpose?: string;
+}
+
+// Task Management Types
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  user_id: string;
+  assigned_by?: string;
+  lab_id?: string;
+  project_id?: string;
+  priority: string;
+  status: string;
+  due_date?: string;
+  completed_at?: string;
+  tags?: string[];
+  created_at: string;
+  updated_at: string;
+  user?: User;
+  assigned_by_user?: User;
+  lab?: Lab;
+  project?: Project;
+}
+
+export interface TaskCreate {
+  title: string;
+  description?: string;
+  priority?: string;
+  due_date?: string;
+  tags?: string[];
+  lab_id?: string;
+  project_id?: string;
+}
+
+// Sticky Notes Types
+export interface StickyNote {
+  id: string;
+  user_id: string;
+  content: string;
+  color: string;
+  position_x: number;
+  position_y: number;
+  is_pinned: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StickyNoteCreate {
+  content: string;
+  color?: string;
+  position_x?: number;
+  position_y?: number;
+  is_pinned?: boolean;
+}
+
+export interface StickyNoteUpdate {
+  content?: string;
+  color?: string;
+  position_x?: number;
+  position_y?: number;
+  is_pinned?: boolean;
+}
+
+// Calendar Types
+export interface CalendarEvent {
+  id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  start_time: string;
+  end_time: string;
+  all_day: boolean;
+  location?: string;
+  event_type: string;
+  lab_id?: string;
+  project_id?: string;
+  attendees?: string[];
+  reminder_minutes: number;
+  created_at: string;
+  updated_at: string;
+  user?: User;
+  lab?: Lab;
+  project?: Project;
+}
+
+export interface CalendarEventCreate {
+  title: string;
+  description?: string;
+  start_time: string;
+  end_time: string;
+  all_day?: boolean;
+  location?: string;
+  event_type?: string;
+  lab_id?: string;
+  project_id?: string;
+  attendees?: string[];
+  reminder_minutes?: number;
+}
+
+// Experiment Updates Types
+export interface ExperimentUpdate {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  experiment_id?: string;
+  lab_id?: string;
+  project_id?: string;
+  update_type: string;
+  progress_percentage: number;
+  challenges?: string;
+  solutions?: string;
+  next_milestone?: string;
+  due_date?: string;
+  tags?: string[];
+  created_at: string;
+  updated_at: string;
+  user?: User;
+  lab?: Lab;
+  project?: Project;
+}
+
+export interface ExperimentUpdateCreate {
+  title: string;
+  content: string;
+  experiment_id?: string;
+  update_type?: string;
+  progress_percentage?: number;
+  challenges?: string;
+  solutions?: string;
+  next_milestone?: string;
+  due_date?: string;
+  tags?: string[];
+  lab_id?: string;
+  project_id?: string;
+}
+
+// Data Sharing Types
+export interface DataSharing {
+  id: string;
+  data_type: DataType;
+  data_id: string;
+  owner_id: string;
+  privacy_level: PrivacyLevel;
+  shared_with_users?: string[];
+  shared_with_labs?: string[];
+  is_public: boolean;
+  access_requests?: string[];
+  created_at: string;
+  updated_at: string;
+  owner?: User;
+}
+
+export interface DataSharingCreate {
+  data_type: DataType;
+  data_id: string;
+  privacy_level: PrivacyLevel;
+  shared_with_users?: string[];
+  shared_with_labs?: string[];
+  is_public?: boolean;
+}
+
+// Audit Log Types
+export interface AuditLog {
+  id: string;
+  user_id?: string;
+  action: string;
+  table_name?: string;
+  record_id?: string;
+  old_values?: Record<string, any>;
+  new_values?: Record<string, any>;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+  user?: User;
+}
+
+// Dashboard Types
+export interface DashboardStats {
+  total_protocols: number;
+  total_experiments: number;
+  pending_tasks: number;
+  upcoming_events: number;
+  lab_members: number;
+  active_projects: number;
+}
+
+export interface QuickAction {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  route: string;
+  color: string;
+}
+
+// API Response Types
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
+// Search and Filter Types
+export interface SearchFilters {
+  query?: string;
+  category?: string;
+  tags?: string[];
+  date_from?: string;
+  date_to?: string;
+  privacy_level?: PrivacyLevel;
+  lab_id?: string;
+  project_id?: string;
+  user_id?: string;
+}
+
+export interface SortOptions {
+  field: string;
+  direction: 'asc' | 'desc';
+}
+
+// Notification Types
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  read: boolean;
+  created_at: string;
+  action_url?: string;
+}
+
+// Permission Types
+export interface Permission {
+  resource: string;
+  actions: string[];
+}
+
+export interface RolePermissions {
+  role: UserRole;
+  permissions: Permission[];
+}
+
+// Form Types
+export interface FormField {
+  name: string;
+  label: string;
+  type: 'text' | 'email' | 'password' | 'textarea' | 'select' | 'date' | 'number' | 'checkbox' | 'radio';
+  required?: boolean;
+  placeholder?: string;
+  options?: { value: string; label: string }[];
+  validation?: {
+    min?: number;
+    max?: number;
+    pattern?: string;
+    message?: string;
+  };
+}
+
+export interface FormConfig {
+  fields: FormField[];
+  submitText?: string;
+  cancelText?: string;
+}
+
+// UI Component Types
+export interface NavItem {
+  id: string;
+  title: string;
+  route: string;
+  icon: string;
+  badge?: number;
+  children?: NavItem[];
+}
+
+export interface Breadcrumb {
+  title: string;
+  route?: string;
+  active?: boolean;
+}
+
+// Chart and Analytics Types
+export interface ChartData {
+  labels: string[];
+  datasets: {
+    label: string;
+    data: number[];
+    backgroundColor?: string;
+    borderColor?: string;
+    borderWidth?: number;
   }[];
 }
 
-// --- CALCULATOR ENHANCEMENT TYPES ---
+export interface TableData {
+  columns: {
+    key: string;
+    label: string;
+    sortable?: boolean;
+    width?: string;
+  }[];
+  rows: Record<string, any>[];
+}
 
-export interface ScratchpadItem {
+// File Upload Types
+export interface FileUpload {
   id: string;
-  calculatorName: CalculatorName;
-  inputs: { label: string; value: string | number; unit?: string }[];
-  result: { label: string; value: string | number; unit?: string };
+  filename: string;
+  original_name: string;
+  mime_type: string;
+  size: number;
+  url: string;
+  uploaded_by: string;
+  uploaded_at: string;
+}
+
+export interface FileUploadCreate {
+  file: File;
+  description?: string;
+  tags?: string[];
+}
+
+// Export Types
+export interface ExportOptions {
+  format: 'pdf' | 'csv' | 'excel' | 'json';
+  include_attachments?: boolean;
+  date_range?: {
+    from: string;
+    to: string;
+  };
+  filters?: SearchFilters;
+}
+
+// Import Types
+export interface ImportOptions {
+  format: 'csv' | 'excel' | 'json';
+  file: File;
+  mapping?: Record<string, string>;
+  update_existing?: boolean;
+}
+
+// WebSocket Types
+export interface WebSocketMessage {
+  type: 'notification' | 'update' | 'chat' | 'system';
+  payload: any;
+  timestamp: string;
+  user_id?: string;
+}
+
+// Error Types
+export interface ApiError {
+  code: string;
+  message: string;
+  details?: any;
   timestamp: string;
 }
 
-export interface WorkflowStep {
-  id: string;
-  calculatorName: CalculatorName;
-}
-
-// --- BIOINFORMATICS TYPES ---
-
-export interface PrimerPair {
-  forward: {
-    sequence: string;
-    tm: number;
-    gc: number;
-    start: number;
-  };
-  reverse: {
-    sequence: string;
-    tm: number;
-    gc: number;
-    start: number;
-  };
-  productSize: number;
-}
-
-export interface RestrictionCut {
-  enzyme: string;
-  cutPositions: number[];
-}
-
-export interface RestrictionResult {
-  cuts: RestrictionCut[];
-  fragments: number[];
+// Success Types
+export interface SuccessMessage {
+  message: string;
+  data?: any;
+  timestamp: string;
 }

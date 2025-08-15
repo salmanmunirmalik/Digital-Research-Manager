@@ -10,14 +10,16 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "../dist/server",
-    "rootDir": ".",
+    "rootDir": "..",
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true
   },
   "include": [
-    "**/*.ts"
+    "**/*.ts",
+    "../database/**/*.ts",
+    "../types.ts"
   ],
   "exclude": [
     "node_modules",

@@ -1,17 +1,198 @@
-/* Basic styles for ResearchLabSync */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* Custom scrollbar for a cleaner look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-#root {
-  height: 100vh;
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+/* Layout utilities */
+@layer utilities {
+  .layout-container {
+    @apply flex h-screen overflow-hidden;
+  }
+  
+  .facebook-layout {
+    @apply flex flex-row;
+  }
+  
+  .sidebar-width {
+    @apply w-64 flex-shrink-0;
+  }
+  
+  .main-content-width {
+    @apply flex-1;
+  }
+  
+  .content-wrapper-side-by-side {
+    @apply h-full overflow-y-auto p-4 md:p-6 max-w-7xl mx-auto w-full;
+  }
+  
+  .page-container {
+    @apply min-h-full space-y-6;
+  }
+  
+  .page-section {
+    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
+  }
+  
+  .page-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6;
+  }
+  
+  .no-overlap {
+    @apply relative z-10;
+  }
+  
+  .layout-separator {
+    @apply border-l border-gray-200;
+  }
+  
+  .responsive-container {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  
+  .content-max-width {
+    @apply max-w-7xl mx-auto;
+  }
+  
+  .mobile-layout {
+    @apply flex-col md:flex-row;
+  }
+  
+  .mobile-sidebar {
+    @apply w-full md:w-64;
+  }
+  
+  .mobile-content {
+    @apply w-full md:flex-1;
+  }
+  
+  .side-by-side-container {
+    @apply flex flex-row w-full h-full;
+  }
+  
+  .sidebar-container {
+    @apply w-64 flex-shrink-0 h-full;
+  }
+  
+  .content-container {
+    @apply flex-1 h-full overflow-hidden;
+  }
+  
+  .visual-separator {
+    @apply w-px bg-gray-200 flex-shrink-0;
+  }
+  
+  .header-fixed {
+    @apply fixed top-0 left-0 right-0 z-50;
+  }
+  
+  .content-below-header {
+    @apply pt-16;
+  }
+  
+  .consistent-background {
+    @apply bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20;
+  }
+  
+  .sidebar-background {
+    @apply bg-white/80 backdrop-blur-md;
+  }
+  
+  .content-background {
+    @apply bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20;
+  }
+  
+  /* New positioning utilities */
+  .perfect-layout {
+    @apply flex flex-row h-screen;
+  }
+  
+  .perfect-sidebar {
+    @apply w-64 bg-white/80 backdrop-blur-md border-r border-gray-200 shadow-lg flex-shrink-0;
+  }
+  
+  .perfect-content {
+    @apply flex-1 p-4 overflow-y-auto;
+  }
+  
+  .header-perfect {
+    @apply fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm;
+  }
+  
+  .main-container-perfect {
+    @apply flex flex-row h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20;
+  }
+  
+  /* Fixed layout utilities */
+  .layout-root {
+    @apply min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20;
+  }
+  
+  .header-container {
+    @apply fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm;
+  }
+  
+  .main-layout-wrapper {
+    @apply flex flex-row pt-16 min-h-screen;
+  }
+  
+  .sidebar-wrapper {
+    @apply w-64 bg-white/80 backdrop-blur-md border-r border-gray-200 shadow-lg flex-shrink-0;
+  }
+  
+  .content-wrapper {
+    @apply flex-1 p-4 overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20;
+  }
+}
+
+/* Custom component styles */
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200;
+  }
+  
+  .page-header {
+    @apply mb-8;
+  }
+  
+  .page-title {
+    @apply text-2xl font-bold text-gray-900;
+  }
+  
+  .page-subtitle {
+    @apply text-gray-600;
+  }
 }

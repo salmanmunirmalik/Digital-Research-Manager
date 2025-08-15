@@ -6,10 +6,20 @@ import Select from '../components/ui/Select';
 import { 
   CALCULATOR_DEFINITIONS, 
   CALCULATOR_INPUTS, 
-  CalculatorEngine,
-  CalculatorName 
+  CalculatorEngine
 } from '../services/calculators';
-import { CalculatorResult } from '../types';
+
+// Define types locally since they're not exported
+type CalculatorName = keyof typeof CALCULATOR_DEFINITIONS;
+
+interface CalculatorResult {
+  value: number;
+  unit: string;
+  confidence?: number;
+  explanation?: string;
+  warnings?: string[];
+  suggestions?: string[];
+}
 import { 
   BeakerIcon, 
   CalculatorIcon, 
@@ -18,7 +28,13 @@ import {
   MessageSquareQuestionIcon,
   BookOpenIcon,
   BrainCircuitIcon,
-  LightbulbIcon
+  LightbulbIcon,
+  StarIcon,
+  ClockIcon,
+  SaveIcon,
+  ShareIcon,
+  DownloadIcon,
+  RefreshCwIcon
 } from '../components/icons';
 
 interface CalculatorState {
@@ -27,6 +43,23 @@ interface CalculatorState {
   result: CalculatorResult | null;
   error: string | null;
   showHistory: boolean;
+  favorites: CalculatorName[];
+  recentCalculations: Array<{
+    id: string;
+    calculator: CalculatorName;
+    inputs: Record<string, any>;
+    result: CalculatorResult;
+    timestamp: Date;
+  }>;
+  savedCalculations: Array<{
+    id: string;
+    name: string;
+    calculator: CalculatorName;
+    inputs: Record<string, any>;
+    result: CalculatorResult;
+    notes: string;
+    timestamp: Date;
+  }>;
 }
 
 const CalculatorHubPage: React.FC = () => {
@@ -35,7 +68,10 @@ const CalculatorHubPage: React.FC = () => {
     inputs: {},
     result: null,
     error: null,
-    showHistory: false
+    showHistory: false,
+    favorites: [],
+    recentCalculations: [],
+    savedCalculations: []
   });
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,13 +88,14 @@ const CalculatorHubPage: React.FC = () => {
 
   const filteredCalculators = Object.entries(calculatorsByCategory)
     .filter(([category]) => selectedCategory === 'all' || category === selectedCategory)
-    .filter(([_, calcs]) => 
-      calcs.some(calc => 
+    .filter(([_, calcs]) => {
+      const calcArray = calcs as Array<typeof CALCULATOR_DEFINITIONS[keyof typeof CALCULATOR_DEFINITIONS]>;
+      return calcArray.some(calc => 
         calc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         calc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         calc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-    );
+      );
+    });
 
   const handleCalculatorSelect = (calculatorName: CalculatorName) => {
     setState(prev => ({
@@ -82,10 +119,19 @@ const CalculatorHubPage: React.FC = () => {
 
     try {
       const result = CalculatorEngine.calculate(state.selectedCalculator, state.inputs);
+      const calculationRecord = {
+        id: `calc-${Date.now()}`,
+        calculator: state.selectedCalculator,
+        inputs: { ...state.inputs },
+        result,
+        timestamp: new Date()
+      };
+
       setState(prev => ({
         ...prev,
         result,
-        error: null
+        error: null,
+        recentCalculations: [calculationRecord, ...prev.recentCalculations.slice(0, 9)] // Keep only 10 most recent
       }));
 
       // Save to scratchpad (you can implement this with your API)
@@ -97,6 +143,65 @@ const CalculatorHubPage: React.FC = () => {
         error: error instanceof Error ? error.message : 'Calculation failed'
       }));
     }
+  };
+
+  const toggleFavorite = (calculatorName: CalculatorName) => {
+    setState(prev => ({
+      ...prev,
+      favorites: prev.favorites.includes(calculatorName)
+        ? prev.favorites.filter(fav => fav !== calculatorName)
+        : [...prev.favorites, calculatorName]
+    }));
+  };
+
+  const saveCalculation = (name: string, notes: string = '') => {
+    if (!state.selectedCalculator || !state.result) return;
+
+    const savedRecord = {
+      id: `saved-${Date.now()}`,
+      name,
+      calculator: state.selectedCalculator,
+      inputs: { ...state.inputs },
+      result: state.result,
+      notes,
+      timestamp: new Date()
+    };
+
+    setState(prev => ({
+      ...prev,
+      savedCalculations: [savedRecord, ...prev.savedCalculations]
+    }));
+  };
+
+  const loadCalculation = (inputs: Record<string, any>) => {
+    setState(prev => ({
+      ...prev,
+      inputs,
+      result: null,
+      error: null
+    }));
+  };
+
+  const exportResults = () => {
+    if (!state.result || !state.selectedCalculator) return;
+
+    const exportData = {
+      calculator: state.selectedCalculator,
+      inputs: state.inputs,
+      result: state.result,
+      timestamp: new Date(),
+      formula: CALCULATOR_DEFINITIONS[state.selectedCalculator].formula
+    };
+
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+
+    const exportFileDefaultName = `${state.selectedCalculator}_${new Date().toISOString().split('T')[0]}.json`;
+
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
   };
 
   const resetCalculator = () => {
@@ -169,16 +274,36 @@ const CalculatorHubPage: React.FC = () => {
 
     return (
     <div className="space-y-6">
-      {/* Header */}
+            {/* Header */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Scientific Calculator Hub
         </h1>
-        <p className="text-gray-600 max-w-2xl mx-auto">
+        <p className="text-gray-600 max-w-2xl mx-auto mb-4">
           Advanced scientific calculators for molecular biology, chemistry, statistics, and more. 
           Built by scientists, for scientists.
         </p>
-                </div>
+        
+        {/* Quick Stats */}
+        <div className="flex justify-center space-x-6 text-sm text-gray-500 mb-4">
+          <div className="flex items-center space-x-1">
+            <CalculatorIcon className="w-4 h-4" />
+            <span>{Object.keys(CALCULATOR_DEFINITIONS).length} Calculators</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <StarIcon className="w-4 h-4" />
+            <span>{state.favorites.length} Favorites</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <ClockIcon className="w-4 h-4" />
+            <span>{state.recentCalculations.length} Recent</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <SaveIcon className="w-4 h-4" />
+            <span>{state.savedCalculations.length} Saved</span>
+          </div>
+        </div>
+      </div>
 
       {/* Search and Filter */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -219,22 +344,41 @@ const CalculatorHubPage: React.FC = () => {
                     {category}
                   </h3>
                   <div className="space-y-1 ml-4">
-                    {calculators.map(calc => (
-                      <button
-                        key={calc.name}
-                        onClick={() => handleCalculatorSelect(calc.name)}
-                        className={`w-full text-left p-2 rounded-md text-sm transition-colors ${
-                          state.selectedCalculator === calc.name
-                            ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                            : 'hover:bg-gray-50 text-gray-700'
-                        }`}
-                      >
-                        <div className="font-medium">{calc.name}</div>
-                        <div className="text-xs text-gray-500 truncate">
-                          {calc.description}
-                                </div>
-                      </button>
-                            ))}
+                                        {(calculators as Array<typeof CALCULATOR_DEFINITIONS[keyof typeof CALCULATOR_DEFINITIONS]>).map(calc => (
+                      <div key={calc.name} className={`relative group rounded-md border transition-colors ${
+                        state.selectedCalculator === calc.name
+                          ? 'bg-blue-100 border-blue-200'
+                          : 'hover:bg-gray-50 border-transparent'
+                      }`}>
+                        <button
+                          onClick={() => handleCalculatorSelect(calc.name)}
+                          className="w-full text-left p-2 text-sm"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-gray-900 truncate">{calc.name}</div>
+                              <div className="text-xs text-gray-500 truncate">
+                                {calc.description}
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleFavorite(calc.name);
+                              }}
+                              className={`ml-2 p-1 rounded transition-colors ${
+                                state.favorites.includes(calc.name)
+                                  ? 'text-yellow-500 hover:text-yellow-600'
+                                  : 'text-gray-400 hover:text-yellow-500'
+                              }`}
+                              title={state.favorites.includes(calc.name) ? 'Remove from favorites' : 'Add to favorites'}
+                            >
+                              <StarIcon className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </button>
+                      </div>
+                    ))}
                         </div>
                     </div>
               ))}
@@ -255,9 +399,23 @@ const CalculatorHubPage: React.FC = () => {
                     {CALCULATOR_DEFINITIONS[state.selectedCalculator].description}
                   </p>
                     </div>
-                <Button onClick={resetCalculator} variant="outline">
-                  Reset
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => toggleFavorite(state.selectedCalculator)}
+                    className={`p-2 rounded-lg border transition-colors ${
+                      state.favorites.includes(state.selectedCalculator!)
+                        ? 'bg-yellow-50 border-yellow-200 text-yellow-600'
+                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-yellow-50'
+                    }`}
+                    title={state.favorites.includes(state.selectedCalculator!) ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    <StarIcon className="w-4 h-4" />
+                  </button>
+                  <Button onClick={resetCalculator} variant="outline">
+                    <RefreshCwIcon className="w-4 h-4 mr-1" />
+                    Reset
+                  </Button>
+                </div>
                  </div>
 
               {/* Calculator Info */}
@@ -329,7 +487,47 @@ const CalculatorHubPage: React.FC = () => {
 
               {state.result && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-green-800 mb-4">Results</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-green-800">Results</h3>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => {
+                          const name = prompt('Save this calculation as:');
+                          if (name) {
+                            const notes = prompt('Add notes (optional):') || '';
+                            saveCalculation(name, notes);
+                          }
+                        }}
+                        className="p-2 text-green-600 hover:text-green-700 hover:bg-green-100 rounded-lg transition-colors"
+                        title="Save calculation"
+                      >
+                        <SaveIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={exportResults}
+                        className="p-2 text-green-600 hover:text-green-700 hover:bg-green-100 rounded-lg transition-colors"
+                        title="Export results"
+                      >
+                        <DownloadIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (navigator.share) {
+                            navigator.share({
+                              title: `${state.selectedCalculator} Result`,
+                              text: `Result: ${state.result?.value} ${state.result?.unit}`,
+                            });
+                          } else {
+                            navigator.clipboard.writeText(`${state.selectedCalculator}: ${state.result?.value} ${state.result?.unit}`);
+                          }
+                        }}
+                        className="p-2 text-green-600 hover:text-green-700 hover:bg-green-100 rounded-lg transition-colors"
+                        title="Share results"
+                      >
+                        <ShareIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                   <div className="space-y-4">
                     <div className="text-center">
                       <div className="text-3xl font-bold text-green-700">
@@ -429,6 +627,103 @@ const CalculatorHubPage: React.FC = () => {
                                         </div>
                                     </div>
 
+      {/* Recent & Saved Calculations */}
+      {(state.recentCalculations.length > 0 || state.savedCalculations.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Calculations */}
+          {state.recentCalculations.length > 0 && (
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <ClockIcon className="w-5 h-5" />
+                Recent Calculations
+              </h3>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {state.recentCalculations.map((calc) => (
+                  <div key={calc.id} className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-medium text-sm text-gray-900">{calc.calculator}</div>
+                      <div className="text-xs text-gray-500">
+                        {calc.timestamp.toLocaleDateString()} {calc.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </div>
+                    </div>
+                    <div className="text-sm text-blue-600 font-medium mb-1">
+                      Result: {calc.result.value} {calc.result.unit}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Inputs: {Object.entries(calc.inputs).map(([key, value]) => `${key}: ${value}`).join(', ')}
+                    </div>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <button
+                        onClick={() => {
+                          handleCalculatorSelect(calc.calculator);
+                          loadCalculation(calc.inputs);
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-700"
+                      >
+                        Load
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Saved Calculations */}
+          {state.savedCalculations.length > 0 && (
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <SaveIcon className="w-5 h-5" />
+                Saved Calculations
+              </h3>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {state.savedCalculations.map((calc) => (
+                  <div key={calc.id} className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-medium text-sm text-gray-900">{calc.name}</div>
+                      <div className="text-xs text-gray-500">
+                        {calc.timestamp.toLocaleDateString()}
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-600 mb-1">{calc.calculator}</div>
+                    <div className="text-sm text-green-600 font-medium mb-1">
+                      Result: {calc.result.value} {calc.result.unit}
+                    </div>
+                    {calc.notes && (
+                      <div className="text-xs text-gray-500 mb-2 italic">
+                        Notes: {calc.notes}
+                      </div>
+                    )}
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => {
+                          handleCalculatorSelect(calc.calculator);
+                          loadCalculation(calc.inputs);
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-700"
+                      >
+                        Load
+                      </button>
+                      <button
+                        onClick={() => {
+                          setState(prev => ({
+                            ...prev,
+                            savedCalculations: prev.savedCalculations.filter(s => s.id !== calc.id)
+                          }));
+                        }}
+                        className="text-xs text-red-600 hover:text-red-700"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
       {/* Quick Tips */}
       <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50">
         <div className="flex items-start gap-3">
@@ -439,7 +734,9 @@ const CalculatorHubPage: React.FC = () => {
               <li>• Always verify calculator results with manual calculations for critical experiments</li>
               <li>• Use the examples provided to validate your inputs and expected outputs</li>
               <li>• Consider the confidence levels and warnings when interpreting results</li>
-              <li>• Save frequently used calculations to your scratchpad for quick access</li>
+              <li>• Save frequently used calculations for quick access and collaboration</li>
+              <li>• Export results in JSON format for integration with analysis software</li>
+              <li>• Add calculators to favorites for faster access to your most-used tools</li>
               <li>• Check the references for detailed explanations of the underlying science</li>
             </ul>
                 </div>

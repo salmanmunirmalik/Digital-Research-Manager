@@ -1,336 +1,248 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
 import { 
-    AlertTriangleIcon, BellIcon, CalendarDaysIcon, CheckCircleIcon, ChevronLeftIcon, 
-    ChevronRightIcon, LightbulbIcon, MessageSquareQuestionIcon, BookOpenIcon
+    BookOpenIcon, JournalIcon, BoxesIcon, CalendarClockIcon, 
+    UsersIcon, BarChart3Icon, LightbulbIcon, MessageSquareQuestionIcon,
+    ArrowRightIcon, PlayIcon, ClockIcon, TrendingUpIcon, SparklesIcon
 } from '../components/icons';
-import { ActiveExperiment, DashboardTask, DashboardNotification, CalendarEvent, DashboardNotification as DashboardNotificationType } from '../types';
-import { mockActiveExperiments, mockTasks, mockCalendarEvents } from '../data/mockDashboardData';
-import { mockInventory } from '../data/mockInventoryData';
-import { mockHelpRequests } from '../data/mockHelpData';
-import { mockBookings } from '../data/mockInstrumentData';
-import { mockInstruments } from '../data/mockInstrumentData';
-
-
-// --- WIDGETS ---
-
-const CurrentExperimentsWidget: React.FC = () => {
-    const [experiments, setExperiments] = useState(mockActiveExperiments);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setExperiments(prev => prev.map(exp => {
-                if (exp.timeLeftMs && exp.timeLeftMs > 0) {
-                    return { ...exp, timeLeftMs: exp.timeLeftMs - 1000 };
-                }
-                return exp;
-            }));
-        }, 1000);
-        return () => clearInterval(interval);
-    }, []);
-
-    const formatTime = (ms: number) => {
-        const totalSeconds = Math.floor(ms / 1000);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        return `${minutes}m ${seconds.toString().padStart(2, '0')}s left`;
-    };
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Current Experiments</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-4">
-                    {experiments.map(exp => (
-                        <div key={exp.id}>
-                            <div className="flex justify-between items-center mb-1">
-                                <Link to={exp.link} className="font-semibold text-slate-800 hover:text-blue-600 transition-colors">{exp.name}</Link>
-                                <span className="text-sm text-slate-500">{exp.status}</span>
-                            </div>
-                            <div className="w-full bg-slate-200 rounded-full h-2.5">
-                                <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${exp.progress}%` }}></div>
-                            </div>
-                            {exp.timeLeftMs && exp.timeLeftMs > 0 && (
-                                <p className="text-right text-sm text-blue-700 font-medium mt-1">{formatTime(exp.timeLeftMs)}</p>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
-    );
-};
-
-const TasksWidget: React.FC = () => {
-    const [tasks, setTasks] = useState(mockTasks);
-    const [newTask, setNewTask] = useState('');
-
-    const toggleTask = (id: string) => {
-        setTasks(tasks.map(t => t.id === id ? { ...t, isCompleted: !t.isCompleted } : t));
-    };
-
-    const addTask = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (newTask.trim() === '') return;
-        const newTaskObj: DashboardTask = {
-            id: `task-${Date.now()}`,
-            text: newTask,
-            isCompleted: false,
-            priority: 'Medium'
-        };
-        setTasks([newTaskObj, ...tasks]);
-        setNewTask('');
-    };
-    
-    const priorityColors = { High: 'border-red-500', Medium: 'border-yellow-500', Low: 'border-slate-300' };
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Today's Tasks</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-                {tasks.map(task => (
-                    <div key={task.id} className="flex items-center">
-                        <input
-                            type="checkbox"
-                            id={task.id}
-                            checked={task.isCompleted}
-                            onChange={() => toggleTask(task.id)}
-                            className={`h-5 w-5 rounded border-2 ${priorityColors[task.priority]} text-slate-600 focus:ring-slate-500 cursor-pointer`}
-                        />
-                        <label htmlFor={task.id} className={`ml-3 text-sm font-medium ${task.isCompleted ? 'text-slate-400 line-through' : 'text-slate-700'} `}>
-                            {task.text}
-                        </label>
-                    </div>
-                ))}
-                <form onSubmit={addTask} className="flex gap-2 pt-4 border-t">
-                    <Input value={newTask} onChange={e => setNewTask(e.target.value)} placeholder="Add a new task..." className="h-9"/>
-                    <Button type="submit" size="sm">Add</Button>
-                </form>
-            </CardContent>
-        </Card>
-    );
-};
-
-const NotificationsWidget: React.FC = () => {
-    const notifications = useMemo((): DashboardNotificationType[] => {
-        const generated: DashboardNotificationType[] = [];
-        const currentUser = 'Dr. Evelyn Reed';
-        const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-
-        // Upcoming bookings notification
-        const upcomingBookings = mockBookings.filter(b => {
-            const startTime = new Date(b.startTime);
-            return b.userId === currentUser && startTime >= todayStart && startTime < todayEnd && startTime > now;
-        });
-
-        if (upcomingBookings.length > 0) {
-            const soonestBooking = upcomingBookings.sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0];
-            const instrument = mockInstruments.find(i => i.id === soonestBooking.instrumentId);
-            const time = new Date(soonestBooking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            generated.push({
-                id: `notif-booking-${soonestBooking.id}`,
-                type: 'Booking',
-                message: `Upcoming: ${instrument?.name || 'Instrument'} at ${time}`,
-                link: '/instruments',
-                date: 'Today',
-            });
-        }
-        
-        // Low stock notification
-        const lowStockItems = mockInventory.filter(item => 
-            item.lowStockThreshold !== undefined && item.quantity.value < item.lowStockThreshold
-        );
-
-        if (lowStockItems.length > 0) {
-            const message = lowStockItems.length === 1 
-                ? `Low Stock: "${lowStockItems[0].name}" is running low.`
-                : `${lowStockItems.length} items are running low. Check inventory.`
-
-            generated.push({
-                id: 'notif-stock',
-                type: 'Alert',
-                message: message,
-                link: '/inventory',
-                date: 'Just now',
-            });
-        }
-
-        // Help request notification
-        const openHelpRequest = mockHelpRequests.find(req => req.status === 'Open');
-        if (openHelpRequest) {
-            generated.push({
-                id: 'notif-help',
-                type: 'Help',
-                message: `New request in Help Forum: "${openHelpRequest.title}"`,
-                link: '/help',
-                date: '2 hours ago'
-            });
-        }
-        
-        // Protocol update notification
-        generated.push({
-            id: 'notif-protocol',
-            type: 'Info',
-            message: 'Protocol "Western Blot" was updated to v2.2.',
-            link: '/protocols/western-blot-101',
-            date: '1 day ago'
-        });
-        
-        return generated.sort((a, b) => {
-            if (a.type === 'Alert') return -1;
-            if (b.type === 'Alert') return 1;
-            if (a.type === 'Booking') return -1;
-            if (b.type === 'Booking') return 1;
-            return 0;
-        });
-    }, []);
-
-    const notificationIcons: Record<DashboardNotificationType['type'], React.ReactElement> = {
-        Alert: <AlertTriangleIcon className="h-5 w-5 text-red-500" />,
-        Info: <BookOpenIcon className="h-5 w-5 text-blue-500" />,
-        Help: <MessageSquareQuestionIcon className="h-5 w-5 text-green-500" />,
-        Booking: <CalendarDaysIcon className="h-5 w-5 text-purple-500" />,
-    };
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Notifications & Alerts</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <ul className="space-y-4">
-                    {notifications.map(n => (
-                        <li key={n.id} className="flex items-start gap-3">
-                            <div className="flex-shrink-0 mt-0.5">{notificationIcons[n.type]}</div>
-                            <div>
-                                <Link to={n.link} className="text-sm font-medium text-slate-800 hover:underline">{n.message}</Link>
-                                <p className="text-xs text-slate-500">{n.date}</p>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            </CardContent>
-        </Card>
-    );
-};
-
-const CalendarWidget: React.FC = () => {
-    const [currentDate, setCurrentDate] = useState(new Date());
-    const [selectedDate, setSelectedDate] = useState(new Date());
-
-    const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-    const startDay = startOfMonth.getDay();
-    const daysInMonth = endOfMonth.getDate();
-    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-    const blanks = Array.from({ length: startDay }, (_, i) => i);
-
-    const eventsByDate = useMemo(() => {
-        return mockCalendarEvents.reduce((acc, event) => {
-            (acc[event.date] = acc[event.date] || []).push(event);
-            return acc;
-        }, {} as Record<string, CalendarEvent[]>);
-    }, []);
-
-    const changeMonth = (offset: number) => {
-        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 1));
-    };
-    
-    const formatDateKey = (date: Date) => date.toISOString().split('T')[0];
-
-    const selectedDayEvents = eventsByDate[formatDateKey(selectedDate)] || [];
-    
-    const eventTypeStyles = {
-        Meeting: 'bg-purple-500',
-        Experiment: 'bg-blue-500',
-        Booking: 'bg-green-500',
-    };
-
-    return (
-        <Card>
-            <CardContent>
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-slate-800">{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => changeMonth(-1)}><ChevronLeftIcon className="h-5 w-5"/></Button>
-                        <Button variant="ghost" size="sm" onClick={() => changeMonth(1)}><ChevronRightIcon className="h-5 w-5"/></Button>
-                    </div>
-                </div>
-                <div className="grid grid-cols-7 gap-1 text-center text-sm">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => <div key={day} className="font-medium text-slate-500">{day}</div>)}
-                    {blanks.map(b => <div key={`blank-${b}`}></div>)}
-                    {days.map(day => {
-                        const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-                        const dateKey = formatDateKey(date);
-                        const isToday = dateKey === formatDateKey(new Date());
-                        const isSelected = dateKey === formatDateKey(selectedDate);
-                        const hasEvents = eventsByDate[dateKey];
-                        
-                        return (
-                            <div key={day} onClick={() => setSelectedDate(date)} className={`p-2 rounded-full cursor-pointer transition-colors relative ${isSelected ? 'bg-slate-800 text-white' : isToday ? 'bg-slate-200' : 'hover:bg-slate-100'}`}>
-                                {day}
-                                {hasEvents && <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-1.5 w-1.5 bg-red-500 rounded-full"></div>}
-                            </div>
-                        );
-                    })}
-                </div>
-                <div className="mt-4 pt-4 border-t">
-                    <h4 className="font-semibold text-slate-700 mb-2">Events for {selectedDate.toLocaleDateString('default', { weekday: 'long', month: 'long', day: 'numeric' })}</h4>
-                     {selectedDayEvents.length > 0 ? (
-                         <ul className="space-y-2">
-                            {selectedDayEvents.map(event => (
-                                <li key={event.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-md">
-                                    <div className={`flex-shrink-0 h-2 w-2 rounded-full ${eventTypeStyles[event.type]}`}></div>
-                                    <div className="flex-grow">
-                                        <p className="font-medium text-sm text-slate-800">{event.title}</p>
-                                        <p className="text-xs text-slate-500">{event.time}</p>
-                                    </div>
-                                </li>
-                            ))}
-                         </ul>
-                    ) : (
-                        <p className="text-sm text-slate-500">No events scheduled for this day.</p>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
-    );
-};
-
-// --- MAIN PAGE COMPONENT ---
 
 const HomePage: React.FC = () => {
   const today = new Date();
   
+  const quickActions = [
+    {
+      title: "Lab Notebook",
+      description: "Record your experiments and findings",
+      icon: <JournalIcon className="h-8 w-8 text-blue-600" />,
+      link: "/notebook",
+      color: "bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200 hover:from-blue-100 hover:to-blue-200/50",
+      gradient: "from-blue-500 to-blue-600"
+    },
+    {
+      title: "Protocol Library",
+      description: "Access and manage lab protocols",
+      icon: <BookOpenIcon className="h-8 w-8 text-green-600" />,
+      link: "/protocols",
+      color: "bg-gradient-to-br from-green-50 to-green-100/50 border-green-200 hover:from-green-100 hover:to-green-200/50",
+      gradient: "from-green-500 to-green-600"
+    },
+    {
+      title: "Research Intelligence",
+      description: "AI-powered insights and presentations",
+      icon: <LightbulbIcon className="h-8 w-8 text-purple-600" />,
+      link: "/research-intelligence",
+      color: "bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200 hover:from-purple-100 hover:to-purple-200/50",
+      gradient: "from-purple-500 to-purple-600"
+    },
+    {
+      title: "Team Collaboration",
+      description: "Connect with your lab team",
+      icon: <UsersIcon className="h-8 w-8 text-orange-600" />,
+      link: "/team",
+      color: "bg-gradient-to-br from-orange-50 to-orange-100/50 border-orange-200 hover:from-orange-100 hover:to-orange-200/50",
+      gradient: "from-orange-500 to-orange-600"
+    }
+  ];
+
+  const stats = [
+    { label: "Active Projects", value: "12", change: "+2", changeType: "positive", icon: "📊" },
+    { label: "Completed Protocols", value: "47", change: "+5", changeType: "positive", icon: "📋" },
+    { label: "Team Members", value: "8", change: "+1", changeType: "positive", icon: "👥" },
+    { label: "Data Sets", value: "156", change: "+23", changeType: "positive", icon: "💾" }
+  ];
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Good Morning, Dr. Reed!</h1>
-        <p className="mt-1 text-md text-slate-600">
-            Welcome to Digital Research Manager - Your AI-powered research platform. Here's your overview for {today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
-        </p>
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <div className="relative text-center py-20 px-6 overflow-hidden">
+        {/* Background Elements */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-indigo-50/30 to-purple-50/50" />
+        <div className="absolute top-20 left-10 w-32 h-32 bg-blue-200/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-40 h-40 bg-purple-200/20 rounded-full blur-3xl animate-pulse delay-1000" />
+        
+        <div className="relative max-w-5xl mx-auto">
+          <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full border border-blue-200/50 mb-6">
+            <SparklesIcon className="h-4 w-4 text-blue-600 mr-2" />
+            <span className="text-sm font-medium text-blue-700">AI-Powered Research Platform</span>
+          </div>
+          
+          <h1 className="text-6xl font-bold text-slate-900 mb-6 leading-tight">
+            Welcome to{' '}
+            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              Digital Research Manager
+            </span>
+          </h1>
+          
+          <p className="text-xl text-slate-600 mb-10 leading-relaxed max-w-3xl mx-auto">
+            Your comprehensive research platform for seamless lab management, collaboration, and discovery. 
+            Streamline your research workflow with intelligent tools and AI-powered insights.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link 
+              to="/notebook"
+              className="group inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+            >
+              <PlayIcon className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform duration-200" />
+              Start Your Research
+            </Link>
+            <Link 
+              to="/research-intelligence"
+              className="group inline-flex items-center px-8 py-4 bg-white text-slate-700 font-semibold rounded-xl border-2 border-slate-200 hover:border-slate-300 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+            >
+              <LightbulbIcon className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform duration-200" />
+              Explore AI Features
+            </Link>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 space-y-6">
-            <CalendarWidget />
-            <CurrentExperimentsWidget />
+      {/* Stats Section */}
+      <div className="max-w-7xl mx-auto px-6 mb-20">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {stats.map((stat, index) => (
+            <div 
+              key={index} 
+              className="group bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-slate-100/50 text-center hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+            >
+              <div className="text-4xl mb-2">{stat.icon}</div>
+              <div className="text-3xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors duration-200">
+                {stat.value}
+              </div>
+              <div className="text-sm text-slate-600 mb-2">{stat.label}</div>
+              <div className={`inline-flex items-center text-xs font-medium ${
+                stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
+              }`}>
+                <TrendingUpIcon className="h-3 w-3 mr-1" />
+                {stat.change} this month
+              </div>
+            </div>
+          ))}
         </div>
+      </div>
 
-        <div className="xl:col-span-1 space-y-6">
-            <NotificationsWidget />
-            <TasksWidget />
+      {/* Quick Actions */}
+      <div className="max-w-7xl mx-auto px-6 mb-20">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold text-slate-900 mb-4">Quick Actions</h2>
+          <p className="text-lg text-slate-600">Get started with your research workflow</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {quickActions.map((action, index) => (
+            <Link 
+              key={index} 
+              to={action.link}
+              className={`group p-8 rounded-2xl border-2 transition-all duration-300 ${action.color} hover:shadow-xl transform hover:-translate-y-2`}
+            >
+              <div className="text-center">
+                <div className="mb-6 group-hover:scale-110 transition-transform duration-300">
+                  {action.icon}
+                </div>
+                <h3 className="text-xl font-semibold text-slate-900 mb-3">{action.title}</h3>
+                <p className="text-sm text-slate-600 mb-6 leading-relaxed">{action.description}</p>
+                <div className={`inline-flex items-center text-sm font-medium bg-gradient-to-r ${action.gradient} bg-clip-text text-transparent group-hover:from-blue-600 group-hover:to-purple-600 transition-all duration-300`}>
+                  Get Started
+                  <ArrowRightIcon className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Features Preview */}
+      <div className="max-w-7xl mx-auto px-6 mb-20">
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-100/50 p-12">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">Platform Features</h2>
+            <p className="text-lg text-slate-600">Discover what makes Digital Research Manager powerful</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div className="text-center group">
+              <div className="bg-gradient-to-br from-blue-100 to-blue-200 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                <LightbulbIcon className="h-10 w-10 text-blue-600" />
+              </div>
+              <h3 className="text-2xl font-semibold text-slate-900 mb-3">AI-Powered Insights</h3>
+              <p className="text-slate-600 leading-relaxed">Get intelligent suggestions for papers, presentations, and research directions based on your data.</p>
+            </div>
+            <div className="text-center group">
+              <div className="bg-gradient-to-br from-green-100 to-green-200 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                <UsersIcon className="h-10 w-10 text-green-600" />
+              </div>
+              <h3 className="text-2xl font-semibold text-slate-900 mb-3">Team Collaboration</h3>
+              <p className="text-slate-600 leading-relaxed">Share protocols, collaborate on experiments, and manage team resources efficiently.</p>
+            </div>
+            <div className="text-center group">
+              <div className="bg-gradient-to-br from-purple-100 to-purple-200 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                <BarChart3Icon className="h-10 w-10 text-purple-600" />
+              </div>
+              <h3 className="text-2xl font-semibold text-slate-900 mb-3">Data Management</h3>
+              <p className="text-slate-600 leading-relaxed">Organize, analyze, and visualize your research data with powerful tools.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="max-w-7xl mx-auto px-6 mb-20">
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-100/50 p-12">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-bold text-slate-900">Recent Activity</h2>
+            <Link to="/notebook" className="text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors duration-200">
+              View All
+            </Link>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center p-6 bg-gradient-to-r from-blue-50 to-blue-100/50 rounded-2xl hover:from-blue-100 hover:to-blue-200/50 transition-all duration-200">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 w-12 h-12 rounded-xl flex items-center justify-center mr-6">
+                <ClockIcon className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-slate-900 text-lg">New experiment recorded in Lab Notebook</p>
+                <p className="text-sm text-slate-500">2 hours ago</p>
+              </div>
+            </div>
+            <div className="flex items-center p-6 bg-gradient-to-r from-green-50 to-green-100/50 rounded-2xl hover:from-green-100 hover:to-green-200/50 transition-all duration-200">
+              <div className="bg-gradient-to-br from-green-500 to-green-600 w-12 h-12 rounded-xl flex items-center justify-center mr-6">
+                <BookOpenIcon className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-slate-900 text-lg">Protocol "Western Blot" updated to v2.2</p>
+                <p className="text-sm text-slate-500">1 day ago</p>
+              </div>
+            </div>
+            <div className="flex items-center p-6 bg-gradient-to-r from-purple-50 to-purple-100/50 rounded-2xl hover:from-purple-100 hover:to-purple-200/50 transition-all duration-200">
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 w-12 h-12 rounded-xl flex items-center justify-center mr-6">
+                <MessageSquareQuestionIcon className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-slate-900 text-lg">New question posted in Help Forum</p>
+                <p className="text-sm text-slate-500">2 days ago</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer CTA */}
+      <div className="max-w-5xl mx-auto px-6 pb-20 text-center">
+        <div className="relative overflow-hidden rounded-3xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600" />
+          <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/5 to-white/10 opacity-30" />
+          <div className="relative p-12 text-white">
+            <h2 className="text-4xl font-bold mb-6">Ready to Transform Your Research?</h2>
+            <p className="text-xl mb-8 opacity-90 leading-relaxed">
+              Join thousands of researchers who are already using Digital Research Manager to accelerate their discoveries.
+            </p>
+            <Link 
+              to="/notebook"
+              className="group inline-flex items-center px-10 py-5 bg-white text-blue-600 font-semibold rounded-xl hover:bg-slate-50 transition-all duration-300 shadow-2xl hover:shadow-3xl transform hover:-translate-y-1"
+            >
+              Start Your Free Trial
+              <ArrowRightIcon className="h-5 w-5 ml-3 group-hover:translate-x-1 transition-transform duration-200" />
+            </Link>
+          </div>
         </div>
       </div>
     </div>
