@@ -1,31 +1,47 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '../types';
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  lab_id?: string;
+  created_at: string;
+}
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (userData: RegisterData) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (userData: any) => Promise<void>;
   logout: () => void;
-  updateUser: (userData: Partial<User>) => void;
+  updateProfile: (data: Partial<User>) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
-interface RegisterData {
-  email: string;
-  username: string;
-  password: string;
-  first_name: string;
-  last_name: string;
-  role?: string;
-}
+// Mock demo user data
+const mockUser: User = {
+  id: 'demo-user-123',
+  username: 'demo_user',
+  email: 'demo@researchlab.com',
+  first_name: 'Demo',
+  last_name: 'User',
+  role: 'Principal Investigator',
+  lab_id: 'demo-lab-123',
+  created_at: new Date().toISOString()
+};
+
+const mockToken = 'demo-token-123';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
@@ -36,118 +52,76 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(mockUser);
+  const [token, setToken] = useState<string | null>(mockToken);
+  const [isLoading, setLoading] = useState(false);
 
-  // Check if user is authenticated on mount
+  // Simulate loading state
   useEffect(() => {
-    const checkAuth = async () => {
-      const storedToken = localStorage.getItem('authToken');
-      if (storedToken) {
-        try {
-          // Add timeout to prevent hanging on backend connection issues
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-          const response = await fetch('http://localhost:5001/api/auth/me', {
-            headers: {
-              'Authorization': `Bearer ${storedToken}`
-            },
-            signal: controller.signal
-          });
-
-          clearTimeout(timeoutId);
-
-          if (response.ok) {
-            const data = await response.json();
-            setUser(data.user);
-            setToken(storedToken);
-          } else {
-            // Token is invalid, remove it
-            localStorage.removeItem('authToken');
-          }
-        } catch (error) {
-          console.warn('Auth check failed (backend not available):', error);
-          // Don't remove token on network errors, just proceed as unauthenticated for now
-          // localStorage.removeItem('authToken');
-        }
-      }
-      setIsLoading(false);
-    };
-
-    checkAuth();
+    setLoading(true);
+    // Simulate API call delay
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string) => {
+    setLoading(true);
     try {
-      setIsLoading(true);
-      
-      const response = await fetch('http://localhost:5001/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-        setToken(data.token);
-        localStorage.setItem('authToken', data.token);
-        return true;
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Login failed');
-      }
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setUser(mockUser);
+      setToken(mockToken);
     } catch (error) {
       console.error('Login error:', error);
-      throw error;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const register = async (userData: RegisterData): Promise<boolean> => {
+  const register = async (userData: any) => {
+    setLoading(true);
     try {
-      setIsLoading(true);
-      
-      const response = await fetch('http://localhost:5001/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-        setToken(data.token);
-        localStorage.setItem('authToken', data.token);
-        return true;
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Registration failed');
-      }
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setUser(mockUser);
+      setToken(mockToken);
     } catch (error) {
       console.error('Registration error:', error);
-      throw error;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('authToken');
   };
 
-  const updateUser = (userData: Partial<User>) => {
-    if (user) {
-      setUser({ ...user, ...userData });
+  const updateProfile = async (data: Partial<User>) => {
+    setLoading(true);
+    try {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setUser(prev => prev ? { ...prev, ...data } : null);
+    } catch (error) {
+      console.error('Profile update error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    setLoading(true);
+    try {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      // Mock success
+    } catch (error) {
+      console.error('Password change error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -159,7 +133,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     register,
     logout,
-    updateUser,
+    updateProfile,
+    changePassword,
   };
 
   return (

@@ -303,13 +303,19 @@ export const calculatorsAPI = {
   }
 };
 
-// Utility function to check if user is authenticated
+// Demo mode - always return authenticated
 export const isAuthenticated = (): boolean => {
-  return !!localStorage.getItem('authToken');
+  return true;
 };
 
-// Utility function to get current user
+// Demo mode - return mock user
 export const getCurrentUser = () => {
-  const userStr = localStorage.getItem('user');
-  return userStr ? JSON.parse(userStr) : null;
+  return {
+    id: 'demo-user-123',
+    username: 'demo_user',
+    email: 'demo@researchlab.com',
+    first_name: 'Demo',
+    last_name: 'User',
+    role: 'Principal Investigator'
+  };
 };

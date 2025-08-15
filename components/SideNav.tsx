@@ -1,6 +1,5 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { 
   HomeIcon, 
   BookOpenIcon, 
@@ -27,8 +26,8 @@ import {
 } from './icons';
 
 const SideNav: React.FC = () => {
-  const { user } = useAuth();
-  const userRole = user?.role || 'student';
+  // Demo mode - use mock role for full access
+  const userRole = 'Principal Investigator';
 
   const getNavItems = () => {
     const baseItems = [
@@ -76,29 +75,24 @@ const SideNav: React.FC = () => {
       }
     ];
 
-    // Add admin-specific items
-    if (userRole === 'admin' || userRole === 'principal_researcher') {
-      baseItems.push({
-        title: 'Administration',
-        items: [
-          { name: 'User Management', to: '/admin/users', icon: UsersIcon, description: 'Manage lab members and roles' },
-          { name: 'Lab Settings', to: '/admin/settings', icon: CogIcon, description: 'Lab configuration and preferences' },
-          { name: 'Security', to: '/admin/security', icon: ShieldCheckIcon, description: 'Security and privacy settings' }
-        ]
-      });
-    }
+    // Demo mode - always show admin and supervisor items
+    baseItems.push({
+      title: 'Administration',
+      items: [
+        { name: 'User Management', to: '/admin/users', icon: UsersIcon, description: 'Manage lab members and roles' },
+        { name: 'Lab Settings', to: '/admin/settings', icon: CogIcon, description: 'Lab configuration and preferences' },
+        { name: 'Security', to: '/admin/security', icon: ShieldCheckIcon, description: 'Security and privacy settings' }
+      ]
+    });
 
-    // Add supervisor-specific items
-    if (userRole === 'principal_researcher' || userRole === 'co_supervisor') {
-      baseItems.push({
-        title: 'Supervision',
-        items: [
-          { name: 'Team Overview', to: '/supervision/team', icon: UsersIcon, description: 'Monitor team progress' },
-          { name: 'Project Management', to: '/supervision/projects', icon: ChartBarIcon, description: 'Manage research projects' },
-          { name: 'Approvals', to: '/supervision/approvals', icon: ShieldCheckIcon, description: 'Review and approve requests' }
-        ]
-      });
-    }
+    baseItems.push({
+      title: 'Supervision',
+      items: [
+        { name: 'Team Overview', to: '/supervision/team', icon: UsersIcon, description: 'Monitor team progress' },
+        { name: 'Project Management', to: '/admin/projects', icon: ChartBarIcon, description: 'Manage research projects' },
+        { name: 'Approvals', to: '/supervision/approvals', icon: ShieldCheckIcon, description: 'Review and approve requests' }
+      ]
+    });
 
     return baseItems;
   };
@@ -115,13 +109,10 @@ const SideNav: React.FC = () => {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-gray-900 truncate">
-              {user?.first_name && user?.last_name 
-                ? `${user.first_name} ${user.last_name}`
-                : user?.username || 'User'
-              }
+              Demo User
             </p>
             <p className="text-xs text-gray-500 truncate">
-              {user?.role || 'Researcher'}
+              Principal Investigator
             </p>
           </div>
         </div>

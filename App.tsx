@@ -1,15 +1,11 @@
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
 import SideNav from './components/SideNav';
 
 // Import all pages
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
-import HomePage from './pages/HomePage';
 import LabManagementPage from './pages/LabManagementPage';
 import LabNotebookPage from './pages/LabNotebookPage';
 import ProtocolsPage from './pages/ProtocolsPage';
@@ -26,32 +22,8 @@ import UnitConverterPage from './pages/UnitConverterPage';
 import DataAnalysisPage from './pages/DataAnalysisPage';
 import ResearchAssistantPage from './pages/ResearchAssistantPage';
 
-// Protected Route Component
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-};
-
-// Authenticated Layout Component
-const AuthenticatedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, logout } = useAuth();
-
+// Demo Layout Component (temporary for demo)
+const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       {/* Header */}
@@ -84,26 +56,13 @@ const AuthenticatedLayout: React.FC<{ children: React.ReactNode }> = ({ children
           <div className="flex items-center space-x-4 flex-1 justify-end">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center shadow-md">
-                <span className="text-white text-sm font-medium">
-                  {user?.first_name?.[0]}{user?.last_name?.[0] || user?.username?.[0]}
-                </span>
+                <span className="text-white text-sm font-medium">DR</span>
               </div>
               <div className="hidden md:block">
-                <p className="text-sm font-medium text-gray-900">
-                  {user?.first_name && user?.last_name 
-                    ? `${user.first_name} ${user.last_name}`
-                    : user?.username
-                  }
-                </p>
-                <p className="text-xs text-gray-500">{user?.role}</p>
+                <p className="text-sm font-medium text-gray-900">Demo User</p>
+                <p className="text-xs text-gray-500">Demo Mode</p>
               </div>
             </div>
-            <button
-              onClick={logout}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md text-sm font-medium transition-colors border"
-            >
-              Logout
-            </button>
           </div>
         </div>
       </header>
@@ -129,41 +88,41 @@ const AppContent: React.FC = () => {
   return (
     <Routes>
       {/* Temporarily bypass auth - redirect all routes to dashboard for demo */}
-      <Route path="/" element={<DashboardPage />} />
-      <Route path="/login" element={<DashboardPage />} />
-      <Route path="/register" element={<DashboardPage />} />
-      <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/" element={<DemoLayout><DashboardPage /></DemoLayout>} />
+      <Route path="/login" element={<DemoLayout><DashboardPage /></DemoLayout>} />
+      <Route path="/register" element={<DemoLayout><DashboardPage /></DemoLayout>} />
+      <Route path="/dashboard" element={<DemoLayout><DashboardPage /></DemoLayout>} />
       
-      <Route path="/home" element={<DashboardPage />} />
-      <Route path="/lab-management" element={<DashboardPage />} />
-      <Route path="/lab-notebook" element={<DashboardPage />} />
-      <Route path="/protocols" element={<DashboardPage />} />
-      <Route path="/inventory" element={<DashboardPage />} />
-      <Route path="/instruments" element={<DashboardPage />} />
-      <Route path="/research-intelligence" element={<DashboardPage />} />
+      <Route path="/home" element={<DemoLayout><DashboardPage /></DemoLayout>} />
+      <Route path="/lab-management" element={<DemoLayout><LabManagementPage /></DemoLayout>} />
+      <Route path="/lab-notebook" element={<DemoLayout><LabNotebookPage /></DemoLayout>} />
+      <Route path="/protocols" element={<DemoLayout><ProtocolsPage /></DemoLayout>} />
+      <Route path="/inventory" element={<DemoLayout><InventoryPage /></DemoLayout>} />
+      <Route path="/instruments" element={<DemoLayout><InstrumentsPage /></DemoLayout>} />
+      <Route path="/research-intelligence" element={<DemoLayout><ResearchIntelligenceHub /></DemoLayout>} />
 
-      <Route path="/presentations" element={<DashboardPage />} />
-      <Route path="/data-sharing" element={<DashboardPage />} />
-      <Route path="/help-forum" element={<DashboardPage />} />
-      <Route path="/conferences" element={<DashboardPage />} />
+      <Route path="/presentations" element={<DemoLayout><AutomatedPresentationsPage /></DemoLayout>} />
+      <Route path="/data-sharing" element={<DemoLayout><GlobalDataSharingPage /></DemoLayout>} />
+      <Route path="/help-forum" element={<DemoLayout><HelpForumPage /></DemoLayout>} />
+      <Route path="/conferences" element={<DemoLayout><ConferenceNewsPage /></DemoLayout>} />
       
       {/* Tools & Resources Routes */}
-      <Route path="/calculator-hub" element={<DashboardPage />} />
-      <Route path="/reference-library" element={<DashboardPage />} />
-      <Route path="/unit-converter" element={<DashboardPage />} />
-      <Route path="/data-analysis" element={<DashboardPage />} />
-      <Route path="/research-assistant" element={<DashboardPage />} />
+      <Route path="/calculator-hub" element={<DemoLayout><CalculatorHubPage /></DemoLayout>} />
+      <Route path="/reference-library" element={<DemoLayout><ReferenceLibraryPage /></DemoLayout>} />
+      <Route path="/unit-converter" element={<DemoLayout><UnitConverterPage /></DemoLayout>} />
+      <Route path="/data-analysis" element={<DemoLayout><DataAnalysisPage /></DemoLayout>} />
+      <Route path="/research-assistant" element={<DemoLayout><ResearchAssistantPage /></DemoLayout>} />
 
       {/* Quick Action Routes */}
-      <Route path="/notebook" element={<DashboardPage />} />
-      <Route path="/notebook/new" element={<DashboardPage />} />
-      <Route path="/protocols/new" element={<DashboardPage />} />
-      <Route path="/instruments/book" element={<DashboardPage />} />
-      <Route path="/tasks/new" element={<DashboardPage />} />
-      <Route path="/team" element={<DashboardPage />} />
+      <Route path="/notebook" element={<DemoLayout><LabNotebookPage /></DemoLayout>} />
+      <Route path="/notebook/new" element={<DemoLayout><LabNotebookPage /></DemoLayout>} />
+      <Route path="/protocols/new" element={<DemoLayout><ProtocolsPage /></DemoLayout>} />
+      <Route path="/instruments/book" element={<DemoLayout><InstrumentsPage /></DemoLayout>} />
+      <Route path="/tasks/new" element={<DemoLayout><DashboardPage /></DemoLayout>} />
+      <Route path="/team" element={<DemoLayout><DashboardPage /></DemoLayout>} />
 
       {/* Catch all route */}
-      <Route path="*" element={<DashboardPage />} />
+      <Route path="*" element={<DemoLayout><DashboardPage /></DemoLayout>} />
     </Routes>
   );
 };
