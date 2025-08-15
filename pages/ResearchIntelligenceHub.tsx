@@ -177,7 +177,7 @@ const ResearchIntelligenceHub: React.FC = () => {
       {
         id: '1',
         title: 'CAR-T Therapy Optimization: Q3 2024 Progress Report',
-        description: 'AI-generated presentation combining your experimental results with relevant literature',
+        description: 'Professional presentation combining your experimental results with relevant literature',
         template: 'Research Update',
         slides: [],
         dataSources: ['Tumor inhibition results', 'Cell persistence data', 'Safety analysis', 'Relevant papers'],
@@ -200,7 +200,7 @@ const ResearchIntelligenceHub: React.FC = () => {
 
     const newPresentation: Presentation = {
       id: Date.now().toString(),
-      title: `${project.title}: AI-Generated Report`,
+              title: `${project.title}: Research Report`,
       description: `Automatically generated presentation from your research data and relevant literature`,
       template,
       slides: generatePresentationFromData(project, template),
@@ -229,7 +229,7 @@ const ResearchIntelligenceHub: React.FC = () => {
         slideNumber: 1,
         title: project.title,
         content: {
-          text: [project.title, 'AI-Generated Research Report', new Date().toLocaleDateString()],
+          text: [project.title, 'Research Report', new Date().toLocaleDateString()],
           images: [],
           charts: [],
           tables: []
@@ -379,8 +379,8 @@ const ResearchIntelligenceHub: React.FC = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Research Intelligence Hub</h1>
           <p className="text-gray-600">
-            Your AI-powered research command center. Visualize data, discover relevant papers, and automatically 
-            generate professional presentations that combine your results with cutting-edge literature.
+            Your comprehensive research command center. Visualize data, manage literature reviews, and create
+            professional presentations from your research projects.
           </p>
         </div>
 
@@ -405,7 +405,7 @@ const ResearchIntelligenceHub: React.FC = () => {
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
-              📚 AI Paper Suggestions
+              📚 Literature Review
             </button>
             <button
               onClick={() => setActiveTab('presentations')}
@@ -415,7 +415,7 @@ const ResearchIntelligenceHub: React.FC = () => {
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
-              🎯 Auto Presentations
+              🎯 Presentation Tools
             </button>
           </div>
         </div>
@@ -427,7 +427,7 @@ const ResearchIntelligenceHub: React.FC = () => {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">Your Research Projects</h2>
                 <Button onClick={() => setShowCreatePresentation(true)}>
-                  🎯 Generate AI Presentation
+                  🎯 Create Presentation
                 </Button>
               </div>
               
@@ -493,9 +493,9 @@ const ResearchIntelligenceHub: React.FC = () => {
                           </CardHeader>
                           <CardContent>
                             {renderDataVisualization(result)}
-                            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                              <div className="text-sm font-medium text-blue-800 mb-1">AI Analysis:</div>
-                              <div className="text-sm text-blue-700">{result.analysis}</div>
+                            <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                              <div className="text-sm font-medium text-gray-800 mb-1">Key Findings:</div>
+                              <div className="text-sm text-gray-700">{result.analysis}</div>
                             </div>
                           </CardContent>
                         </Card>
@@ -508,14 +508,14 @@ const ResearchIntelligenceHub: React.FC = () => {
           </div>
         )}
 
-        {/* AI Paper Suggestions Tab */}
+        {/* Literature Review Tab */}
         {activeTab === 'papers' && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">AI Paper Recommendations</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Literature Review Tools</h2>
                 <Button onClick={() => setShowCreatePresentation(true)}>
-                  🎯 Generate AI Presentation
+                  📚 Add Literature
                 </Button>
               </div>
               
@@ -543,7 +543,7 @@ const ResearchIntelligenceHub: React.FC = () => {
                           <CardTitle className="text-lg mb-2">{paper.title}</CardTitle>
                           <p className="text-gray-700 mb-3">{paper.abstract}</p>
                           <div className="text-sm text-gray-600 mb-2">
-                            <strong>Why Relevant:</strong> {paper.researchContext}
+                            <strong>Research Context:</strong> {paper.researchContext}
                           </div>
                         </div>
                       </div>
@@ -555,12 +555,12 @@ const ResearchIntelligenceHub: React.FC = () => {
           </div>
         )}
 
-        {/* Auto Presentations Tab */}
+        {/* Presentation Tools Tab */}
         {activeTab === 'presentations' && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">AI-Generated Presentations</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Presentation Management</h2>
                 <Button onClick={() => setShowCreatePresentation(true)}>
                   🎯 Create New Presentation
                 </Button>
@@ -586,7 +586,7 @@ const ResearchIntelligenceHub: React.FC = () => {
                           <CardTitle className="text-lg mb-2">{presentation.title}</CardTitle>
                           <p className="text-gray-600 text-sm mb-3">{presentation.description}</p>
                           <div className="text-sm text-gray-500 mb-2">
-                            Generated: {presentation.generatedAt.toLocaleDateString()}
+                            Created: {presentation.generatedAt.toLocaleDateString()}
                           </div>
                           <div className="text-sm text-gray-600">
                             <span className="font-medium">Data Sources:</span> {presentation.dataSources.join(', ')}
@@ -618,7 +618,7 @@ const ResearchIntelligenceHub: React.FC = () => {
         {showCreatePresentation && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
-              <h2 className="text-2xl font-bold mb-4">Generate AI Presentation</h2>
+              <h2 className="text-2xl font-bold mb-4">Create New Presentation</h2>
               
               <div className="space-y-4">
                 <div>
