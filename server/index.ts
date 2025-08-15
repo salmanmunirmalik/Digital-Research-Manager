@@ -1868,6 +1868,31 @@ app.get('/api/instruments/categories', authenticateToken, async (req, res) => {
   }
 });
 
+// Health check endpoint for Render
+app.get('/api/health', async (req, res) => {
+  try {
+    // Test database connection
+    const client = await pool.connect();
+    await client.query('SELECT 1');
+    client.release();
+    
+    res.status(200).json({ 
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      database: 'connected',
+      environment: process.env.NODE_ENV || 'development'
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({ 
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      database: 'disconnected',
+      error: 'Database connection failed'
+    });
+  }
+});
+
 // Start server
 const startServer = async () => {
   try {
