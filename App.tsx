@@ -21,6 +21,10 @@ import GlobalDataSharingPage from './pages/GlobalDataSharingPage';
 import HelpForumPage from './pages/HelpForumPage';
 import ConferenceNewsPage from './pages/ConferenceNewsPage';
 import CalculatorHubPage from './pages/CalculatorHubPage';
+import ReferenceLibraryPage from './pages/ReferenceLibraryPage';
+import UnitConverterPage from './pages/UnitConverterPage';
+import DataAnalysisPage from './pages/DataAnalysisPage';
+import ResearchAssistantPage from './pages/ResearchAssistantPage';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -240,12 +244,7 @@ const AppContent: React.FC = () => {
       <Route path="/reference-library" element={
         <ProtectedRoute>
           <AuthenticatedLayout>
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center py-12">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">Reference Library</h1>
-                <p className="text-gray-600">Coming soon - Access protocols, standards, and research resources</p>
-              </div>
-            </div>
+            <ReferenceLibraryPage />
           </AuthenticatedLayout>
         </ProtectedRoute>
       } />
@@ -253,12 +252,7 @@ const AppContent: React.FC = () => {
       <Route path="/unit-converter" element={
         <ProtectedRoute>
           <AuthenticatedLayout>
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center py-12">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">Unit Converter</h1>
-                <p className="text-gray-600">Coming soon - Convert between different measurement units</p>
-              </div>
-            </div>
+            <UnitConverterPage />
           </AuthenticatedLayout>
         </ProtectedRoute>
       } />
@@ -266,12 +260,7 @@ const AppContent: React.FC = () => {
       <Route path="/data-analysis" element={
         <ProtectedRoute>
           <AuthenticatedLayout>
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center py-12">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">Data Analysis Tools</h1>
-                <p className="text-gray-600">Coming soon - Statistical analysis and visualization tools</p>
-              </div>
-            </div>
+            <DataAnalysisPage />
           </AuthenticatedLayout>
         </ProtectedRoute>
       } />
@@ -279,12 +268,7 @@ const AppContent: React.FC = () => {
       <Route path="/research-assistant" element={
         <ProtectedRoute>
           <AuthenticatedLayout>
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center py-12">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">AI Research Assistant</h1>
-                <p className="text-gray-600">Coming soon - AI-powered research helper and insights</p>
-              </div>
-            </div>
+            <ResearchAssistantPage />
           </AuthenticatedLayout>
         </ProtectedRoute>
       } />
