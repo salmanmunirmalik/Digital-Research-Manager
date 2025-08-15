@@ -455,10 +455,10 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* Personal Calendar */}
       <div className="page-section">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Personal Calendar</h2>
           <div className="flex items-center space-x-2">
             <button
               onClick={refreshDashboard}
@@ -469,31 +469,81 @@ const DashboardPage: React.FC = () => {
               {refreshing ? 'Refreshing...' : 'Refresh'}
             </button>
             <button
-              onClick={() => setShowQuickAddModal(true)}
+              onClick={() => {
+                setQuickAddType('event');
+                setShowQuickAddModal(true);
+              }}
               className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm"
             >
               <PlusIcon className="w-4 h-4 mr-1" />
-              Quick Add
+              Add Event
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickActions.map((action) => (
-            <Link
-              key={action.id}
-              to={action.route}
-              className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 text-left group block hover:border-blue-200"
-            >
-              <div className={`w-10 h-10 bg-gradient-to-r ${action.color} rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-200`}>
-                {action.icon === 'BeakerIcon' && <BeakerIcon className="w-5 h-5 text-white" />}
-                {action.icon === 'BookOpenIcon' && <BookOpenIcon className="w-5 h-5 text-white" />}
-                {action.icon === 'ClockIcon' && <ClockIcon className="w-5 h-5 text-white" />}
-                {action.icon === 'CheckCircleIcon' && <CheckCircleIcon className="w-5 h-5 text-white" />}
+        
+        {/* Calendar Grid */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="grid grid-cols-7 gap-1 mb-4">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+              <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                {day}
               </div>
-              <h3 className="font-medium text-gray-900 mb-1 group-hover:text-blue-600 transition-colors duration-200">{action.title}</h3>
-              <p className="text-sm text-gray-600">{action.description}</p>
-            </Link>
-          ))}
+            ))}
+          </div>
+          
+          <div className="grid grid-cols-7 gap-1">
+            {Array.from({ length: 35 }, (_, i) => {
+              const date = new Date();
+              const currentMonth = date.getMonth();
+              const currentYear = date.getFullYear();
+              const firstDay = new Date(currentYear, currentMonth, 1);
+              const lastDay = new Date(currentYear, currentMonth + 1, 0);
+              const startDate = new Date(firstDay);
+              startDate.setDate(startDate.getDate() - firstDay.getDay());
+              
+              const cellDate = new Date(startDate);
+              cellDate.setDate(startDate.getDate() + i);
+              
+              const isCurrentMonth = cellDate.getMonth() === currentMonth;
+              const isToday = cellDate.toDateString() === new Date().toDateString();
+              const dayEvents = events.filter(event => {
+                const eventDate = new Date(event.date);
+                return eventDate.toDateString() === cellDate.toDateString();
+              });
+              
+              return (
+                <div
+                  key={i}
+                  className={`min-h-[80px] p-2 border border-gray-100 text-sm ${
+                    isCurrentMonth ? 'bg-white' : 'bg-gray-50'
+                  } ${isToday ? 'ring-2 ring-blue-500' : ''}`}
+                >
+                  <div className={`text-right mb-1 ${
+                    isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
+                  } ${isToday ? 'font-bold text-blue-600' : ''}`}>
+                    {cellDate.getDate()}
+                  </div>
+                  
+                  {/* Event indicators */}
+                  {dayEvents.slice(0, 2).map((event, eventIndex) => (
+                    <div
+                      key={eventIndex}
+                      className="text-xs p-1 mb-1 bg-blue-100 text-blue-800 rounded truncate"
+                      title={event.title}
+                    >
+                      {event.title}
+                    </div>
+                  ))}
+                  
+                  {dayEvents.length > 2 && (
+                    <div className="text-xs text-gray-500 text-center">
+                      +{dayEvents.length - 2} more
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 

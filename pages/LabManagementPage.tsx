@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState } from 'react';
 import { 
   PlusIcon, 
   UsersIcon, 
@@ -8,260 +7,128 @@ import {
   TrashIcon,
   UserPlusIcon,
   ShieldCheckIcon,
-  BuildingOfficeIcon
+  BuildingOfficeIcon,
+  CalendarIcon,
+  ChartBarIcon,
+  SaveIcon
 } from '../components/icons';
-import { Lab, User } from '../types';
 
 interface LabMember {
   id: string;
-  lab_id: string;
-  user_id: string;
+  name: string;
   role: string;
-  permissions: any;
-  joined_at: string;
-  user: {
-    first_name: string;
-    last_name: string;
-    username: string;
-    email: string;
-    role: string;
-  };
+  email: string;
+  status: string;
+  joinedDate: string;
 }
 
-interface LabWithMembers extends Lab {
-  members: LabMember[];
-  member_count: number;
+interface LabProject {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  progress: number;
+  startDate: string;
+  endDate: string;
 }
 
 const LabManagementPage: React.FC = () => {
-  const { user, token } = useAuth();
-  const [labs, setLabs] = useState<LabWithMembers[]>([]);
-  const [selectedLab, setSelectedLab] = useState<LabWithMembers | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showMemberModal, setShowMemberModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('overview');
+  
+  // Mock data for demo
+  const mockMembers: LabMember[] = [
+    {
+      id: '1',
+      name: 'Dr. Sarah Johnson',
+      role: 'Principal Investigator',
+      email: 'sarah.johnson@lab.com',
+      status: 'Active',
+      joinedDate: '2023-01-15'
+    },
+    {
+      id: '2',
+      name: 'Dr. Michael Chen',
+      role: 'Postdoctoral Researcher',
+      email: 'michael.chen@lab.com',
+      status: 'Active',
+      joinedDate: '2023-03-20'
+    },
+    {
+      id: '3',
+      name: 'Emily Rodriguez',
+      role: 'Graduate Student',
+      email: 'emily.rodriguez@lab.com',
+      status: 'Active',
+      joinedDate: '2023-09-01'
+    },
+    {
+      id: '4',
+      name: 'Alex Thompson',
+      role: 'Research Assistant',
+      email: 'alex.thompson@lab.com',
+      status: 'Active',
+      joinedDate: '2024-01-10'
+    }
+  ];
 
-  // Form states
-  const [labForm, setLabForm] = useState({
-    name: '',
-    description: '',
-    institution: '',
-    department: '',
-    contact_email: '',
-    contact_phone: '',
-    address: ''
-  });
+  const mockProjects: LabProject[] = [
+    {
+      id: '1',
+      name: 'CRISPR Gene Editing Optimization',
+      description: 'Improving efficiency and accuracy of CRISPR-Cas9 gene editing in mammalian cells',
+      status: 'In Progress',
+      progress: 75,
+      startDate: '2023-06-01',
+      endDate: '2024-12-31'
+    },
+    {
+      id: '2',
+      name: 'Protein Structure Analysis',
+      description: 'Structural characterization of novel proteins using X-ray crystallography',
+      status: 'Planning',
+      progress: 25,
+      startDate: '2024-03-01',
+      endDate: '2025-06-30'
+    },
+    {
+      id: '3',
+      name: 'Drug Discovery Pipeline',
+      description: 'High-throughput screening for novel therapeutic compounds',
+      status: 'Active',
+      progress: 60,
+      startDate: '2023-09-01',
+      endDate: '2024-08-31'
+    }
+  ];
 
-  const [memberForm, setMemberForm] = useState({
-    user_id: '',
-    role: 'researcher',
-    permissions: {}
-  });
-
-  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
-
-  useEffect(() => {
-    fetchLabs();
-    fetchAvailableUsers();
-  }, []);
-
-  const fetchLabs = async () => {
-    try {
-      const response = await fetch('http://localhost:5001/api/labs', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setLabs(data.labs);
-      } else {
-        setError('Failed to fetch labs');
-      }
-    } catch (error) {
-      setError('Error fetching labs');
-    } finally {
-      setIsLoading(false);
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active':
+      case 'in progress':
+        return 'bg-green-100 text-green-800';
+      case 'planning':
+        return 'bg-blue-100 text-blue-800';
+      case 'completed':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const fetchAvailableUsers = async () => {
-    try {
-      const response = await fetch('http://localhost:5001/api/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableUsers(data.users);
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
+  const getRoleColor = (role: string) => {
+    switch (role.toLowerCase()) {
+      case 'principal investigator':
+        return 'bg-purple-100 text-purple-800';
+      case 'postdoctoral researcher':
+        return 'bg-blue-100 text-blue-800';
+      case 'graduate student':
+        return 'bg-green-100 text-green-800';
+      case 'research assistant':
+        return 'bg-orange-100 text-orange-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
-
-  const fetchLabDetails = async (labId: string) => {
-    try {
-      const response = await fetch(`http://localhost:5001/api/labs/${labId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSelectedLab(data);
-      }
-    } catch (error) {
-      setError('Error fetching lab details');
-    }
-  };
-
-  const handleCreateLab = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const response = await fetch('http://localhost:5001/api/labs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(labForm)
-      });
-
-      if (response.ok) {
-        setShowCreateModal(false);
-        setLabForm({
-          name: '',
-          description: '',
-          institution: '',
-          department: '',
-          contact_email: '',
-          contact_phone: '',
-          address: ''
-        });
-        fetchLabs();
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to create lab');
-      }
-    } catch (error) {
-      setError('Error creating lab');
-    }
-  };
-
-  const handleAddMember = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedLab) return;
-
-    try {
-      const response = await fetch(`http://localhost:5001/api/labs/${selectedLab.id}/members`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(memberForm)
-      });
-
-      if (response.ok) {
-        setShowMemberModal(false);
-        setMemberForm({
-          user_id: '',
-          role: 'researcher',
-          permissions: {}
-        });
-        fetchLabDetails(selectedLab.id);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to add member');
-      }
-    } catch (error) {
-      setError('Error adding member');
-    }
-  };
-
-  const handleUpdateLab = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedLab) return;
-
-    try {
-      const response = await fetch(`http://localhost:5001/api/labs/${selectedLab.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(labForm)
-      });
-
-      if (response.ok) {
-        setShowEditModal(false);
-        fetchLabs();
-        fetchLabDetails(selectedLab.id);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to update lab');
-      }
-    } catch (error) {
-      setError('Error updating lab');
-    }
-  };
-
-  const handleRemoveMember = async (memberId: string) => {
-    if (!selectedLab) return;
-
-    try {
-      const response = await fetch(`http://localhost:5001/api/labs/${selectedLab.id}/members/${memberId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        fetchLabDetails(selectedLab.id);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to remove member');
-      }
-    } catch (error) {
-      setError('Error removing member');
-    }
-  };
-
-  const openEditModal = (lab: LabWithMembers) => {
-    setSelectedLab(lab);
-    setLabForm({
-      name: lab.name || '',
-      description: lab.description || '',
-      institution: lab.institution || '',
-      department: lab.department || '',
-      contact_email: lab.contact_email || '',
-      contact_phone: lab.contact_phone || '',
-      address: lab.address || ''
-    });
-    setShowEditModal(true);
-  };
-
-  const canManageLab = (lab: LabWithMembers) => {
-    if (user?.role === 'admin') return true;
-    const member = lab.members?.find(m => m.user_id === user?.id);
-    return member?.role === 'principal_researcher';
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -269,356 +136,262 @@ const LabManagementPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Lab Management</h1>
-          <p className="text-gray-600">Create and manage research laboratories</p>
+          <p className="text-gray-600">Manage your research lab, team members, and projects</p>
         </div>
-        {['admin', 'principal_researcher'].includes(user?.role || '') && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center space-x-2"
-          >
-            <PlusIcon className="w-5 h-5" />
-            <span>Create Lab</span>
+        <div className="flex items-center space-x-3">
+          <button className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm">
+            <PlusIcon className="w-4 h-4 mr-2" />
+            Add Member
           </button>
-        )}
+          <button className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-sm">
+            <PlusIcon className="w-4 h-4 mr-2" />
+            New Project
+          </button>
+        </div>
       </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="text-sm text-red-700">{error}</div>
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: 'overview', name: 'Overview', icon: ChartBarIcon },
+            { id: 'members', name: 'Team Members', icon: UsersIcon },
+            { id: 'projects', name: 'Projects', icon: BuildingOfficeIcon },
+            { id: 'settings', name: 'Settings', icon: CogIcon }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === tab.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <tab.icon className="w-4 h-4 inline mr-2" />
+              {tab.name}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'overview' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Stats Cards */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <UsersIcon className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Team Members</p>
+                <p className="text-2xl font-bold text-gray-900">{mockMembers.length}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <BuildingOfficeIcon className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Active Projects</p>
+                <p className="text-2xl font-bold text-gray-900">{mockProjects.filter(p => p.status === 'In Progress' || p.status === 'Active').length}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <CalendarIcon className="w-6 h-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Upcoming Events</p>
+                <p className="text-2xl font-bold text-gray-900">3</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <ChartBarIcon className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Publications</p>
+                <p className="text-2xl font-bold text-gray-900">12</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Labs Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {labs.map((lab) => (
-          <div key={lab.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
-                <BuildingOfficeIcon className="w-6 h-6 text-white" />
-              </div>
-              {canManageLab(lab) && (
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => openEditModal(lab)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
+      {activeTab === 'members' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Team Members</h2>
+            <p className="text-gray-600">Manage your research team and their roles</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {mockMembers.map((member) => (
+                  <tr key={member.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-medium text-sm">
+                            {member.name.split(' ').map(n => n[0]).join('')}
+                          </span>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{member.name}</div>
+                          <div className="text-sm text-gray-500">{member.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(member.role)}`}>
+                        {member.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(member.status)}`}>
+                        {member.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(member.joinedDate).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center space-x-2">
+                        <button className="text-blue-600 hover:text-blue-900">
+                          <PencilIcon className="w-4 h-4" />
+                        </button>
+                        <button className="text-red-600 hover:text-red-900">
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'projects' && (
+        <div className="space-y-6">
+          {mockProjects.map((project) => (
+            <div key={project.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{project.name}</h3>
+                  <p className="text-gray-600 mb-4">{project.description}</p>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Status</p>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(project.status)}`}>
+                        {project.status}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Progress</p>
+                      <p className="text-sm text-gray-900">{project.progress}%</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Start Date</p>
+                      <p className="text-sm text-gray-900">{new Date(project.startDate).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">End Date</p>
+                      <p className="text-sm text-gray-900">{new Date(project.endDate).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Progress Bar */}
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${project.progress}%` }}
+                    ></div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-2 ml-4">
+                  <button className="text-blue-600 hover:text-blue-900">
                     <PencilIcon className="w-4 h-4" />
                   </button>
-                </div>
-              )}
-            </div>
-
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">{lab.name}</h3>
-            <p className="text-gray-600 text-sm mb-3">{lab.description}</p>
-
-            <div className="space-y-2 text-sm text-gray-600">
-              <div className="flex items-center space-x-2">
-                <BuildingOfficeIcon className="w-4 h-4" />
-                <span>{lab.institution}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <UsersIcon className="w-4 h-4" />
-                <span>{lab.member_count || 0} members</span>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-gray-100">
-              <button
-                onClick={() => {
-                  setSelectedLab(lab);
-                  fetchLabDetails(lab.id);
-                }}
-                className="w-full bg-gray-50 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                View Details
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Lab Details Sidebar */}
-      {selectedLab && (
-        <div className="fixed inset-y-0 right-0 w-96 bg-white shadow-xl border-l border-gray-200 overflow-y-auto">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">{selectedLab.name}</h2>
-              <button
-                onClick={() => setSelectedLab(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Lab Info */}
-            <div className="space-y-4 mb-6">
-              <div>
-                <h3 className="font-medium text-gray-900 mb-2">Lab Information</h3>
-                <div className="space-y-2 text-sm text-gray-600">
-                  <p><strong>Institution:</strong> {selectedLab.institution}</p>
-                  <p><strong>Department:</strong> {selectedLab.department}</p>
-                  <p><strong>Contact:</strong> {selectedLab.contact_email}</p>
-                  {selectedLab.description && (
-                    <p><strong>Description:</strong> {selectedLab.description}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Members */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium text-gray-900">Team Members</h3>
-                {canManageLab(selectedLab) && (
-                  <button
-                    onClick={() => setShowMemberModal(true)}
-                    className="text-blue-600 hover:text-blue-700 text-sm flex items-center space-x-1"
-                  >
-                    <UserPlusIcon className="w-4 h-4" />
-                    <span>Add Member</span>
+                  <button className="text-red-600 hover:text-red-900">
+                    <TrashIcon className="w-4 h-4" />
                   </button>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                {selectedLab.members?.map((member) => (
-                  <div key={member.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {member.user.first_name} {member.user.last_name}
-                      </p>
-                      <p className="text-sm text-gray-600">{member.user.email}</p>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
-                          {member.role}
-                        </span>
-                        <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
-                          {member.user.role}
-                        </span>
-                      </div>
-                    </div>
-                    {canManageLab(selectedLab) && member.user_id !== user?.id && (
-                      <button
-                        onClick={() => handleRemoveMember(member.user_id)}
-                        className="text-red-400 hover:text-red-600"
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                </div>
               </div>
             </div>
-          </div>
+          ))}
         </div>
       )}
 
-      {/* Create Lab Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Create New Lab</h2>
-            <form onSubmit={handleCreateLab} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Lab Name</label>
-                <input
-                  type="text"
-                  value={labForm.name}
-                  onChange={(e) => setLabForm({ ...labForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  value={labForm.description}
-                  onChange={(e) => setLabForm({ ...labForm, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Institution</label>
-                  <input
-                    type="text"
-                    value={labForm.institution}
-                    onChange={(e) => setLabForm({ ...labForm, institution: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                  <input
-                    type="text"
-                    value={labForm.department}
-                    onChange={(e) => setLabForm({ ...labForm, department: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
-                <input
-                  type="email"
-                  value={labForm.contact_email}
-                  onChange={(e) => setLabForm({ ...labForm, contact_email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                >
-                  Create Lab
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Add Member Modal */}
-      {showMemberModal && selectedLab && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Add Team Member</h2>
-            <form onSubmit={handleAddMember} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Select User</label>
-                <select
-                  value={memberForm.user_id}
-                  onChange={(e) => setMemberForm({ ...memberForm, user_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Choose a user...</option>
-                  {availableUsers
-                    .filter(user => !selectedLab.members?.some(m => m.user_id === user.id))
-                    .map(user => (
-                      <option key={user.id} value={user.id}>
-                        {user.first_name} {user.last_name} ({user.username})
-                      </option>
-                    ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Lab Role</label>
-                <select
-                  value={memberForm.role}
-                  onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                >
-                  <option value="researcher">Researcher</option>
-                  <option value="student">Student</option>
-                  <option value="co_supervisor">Co-Supervisor</option>
-                </select>
-              </div>
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowMemberModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                >
-                  Add Member
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Lab Modal */}
-      {showEditModal && selectedLab && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Edit Lab</h2>
-            <form onSubmit={handleUpdateLab} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Lab Name</label>
-                <input
-                  type="text"
-                  value={labForm.name}
-                  onChange={(e) => setLabForm({ ...labForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  value={labForm.description}
-                  onChange={(e) => setLabForm({ ...labForm, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Institution</label>
-                  <input
-                    type="text"
-                    value={labForm.institution}
-                    onChange={(e) => setLabForm({ ...labForm, institution: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                  <input
-                    type="text"
-                    value={labForm.department}
-                    onChange={(e) => setLabForm({ ...labForm, department: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
-                <input
-                  type="email"
-                  value={labForm.contact_email}
-                  onChange={(e) => setLabForm({ ...labForm, contact_email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                >
-                  Update Lab
-                </button>
-              </div>
-            </form>
+      {activeTab === 'settings' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Lab Settings</h2>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Lab Name</label>
+              <input
+                type="text"
+                defaultValue="Advanced Research Laboratory"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Institution</label>
+              <input
+                type="text"
+                defaultValue="University of Science & Technology"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+              <input
+                type="text"
+                defaultValue="Department of Molecular Biology"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Contact Email</label>
+              <input
+                type="email"
+                defaultValue="lab@university.edu"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div className="pt-4">
+              <button className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm">
+                <SaveIcon className="w-4 h-4 mr-2" />
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       )}
