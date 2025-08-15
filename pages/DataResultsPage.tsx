@@ -21,7 +21,9 @@ import {
   EyeIcon,
   PlusIcon,
   TrashIcon,
-  EditIcon
+  EditIcon,
+  SparklesIcon,
+  PresentationChartLineIcon
 } from '../components/icons';
 
 const DataResultsPage: React.FC = () => {
