@@ -22,7 +22,10 @@ import {
   SearchIcon,
   LightbulbIcon,
   BarChart3Icon,
-  SettingsIcon
+  BarChartIcon,
+  SettingsIcon,
+  RocketIcon,
+  BrainCircuitIcon
 } from './icons';
 
 const SideNav: React.FC = () => {
@@ -68,10 +71,12 @@ const SideNav: React.FC = () => {
       },
       {
         title: 'Tools & Resources',
-        items: [
-          { name: 'Calculator Hub', to: '/calculator-hub', icon: CalculatorIcon, description: 'Scientific calculators for lab work' },
-          { name: 'Unit Converter', to: '/unit-converter', icon: SettingsIcon, description: 'Convert between measurement units' }
-        ]
+                              items: [
+                        { name: 'Calculator Hub', to: '/calculator-hub', icon: CalculatorIcon, description: 'Scientific calculators and unit conversion' },
+                        { name: 'Molecular & Cell Biology', to: '/molecular-biology', icon: BeakerIcon, description: 'PCR, cell culture, and molecular tools' },
+                        { name: 'Data Analytics', to: '/data-analytics', icon: BarChartIcon, description: 'Statistical analysis and data insights' },
+                        { name: 'Bioinformatics Tools', to: '/bioinformatics-tools', icon: BrainCircuitIcon, description: 'DNA/RNA analysis tools' }
+                      ]
       },
       {
         title: 'Collaboration',

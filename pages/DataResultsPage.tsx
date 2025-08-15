@@ -4,17 +4,12 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import { 
-  BarChartIcon, 
   FilesIcon, 
   FilterIcon, 
-  LineChartIcon, 
-  LightbulbIcon, 
-  CheckCircleIcon, 
   PencilIcon, 
   DocumentIcon,
   ImageIcon,
   TableIcon,
-  ChartBarIcon,
   CogIcon,
   UploadIcon,
   DownloadIcon,
@@ -24,15 +19,17 @@ import {
   EditIcon,
   SparklesIcon,
   PresentationChartLineIcon,
-  SigmaIcon,
-  BrainCircuitIcon
+  BarChartIcon,
+  InformationCircleIcon
 } from '../components/icons';
 
 const DataResultsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'spreadsheet' | 'images' | 'manual' | 'analysis' | 'presentations'>('spreadsheet');
+  const [activeTab, setActiveTab] = useState<'spreadsheet' | 'images' | 'manual' | 'presentations'>('spreadsheet');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'importing' | 'success' | 'error'>('idle');
+  
+
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -52,6 +49,8 @@ const DataResultsPage: React.FC = () => {
       setTimeout(() => setImportStatus('idle'), 2000);
     }, 2000);
   };
+
+
 
   const renderSpreadsheetTools = () => (
     <div className="space-y-6">
@@ -261,181 +260,7 @@ const DataResultsPage: React.FC = () => {
 
 
 
-  const renderDataAnalysis = () => (
-    <div className="space-y-6">
-      {/* Analytics Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-100 text-sm">Total Datasets</p>
-                <p className="text-3xl font-bold">1,247</p>
-              </div>
-              <BarChartIcon className="h-8 w-8 text-blue-200" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-green-100 text-sm">Active Analysis</p>
-                <p className="text-3xl font-bold">23</p>
-              </div>
-              <ChartBarIcon className="h-8 w-8 text-green-200" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-sm">Insights Found</p>
-                <p className="text-3xl font-bold">156</p>
-              </div>
-              <LightbulbIcon className="h-8 w-8 text-purple-200" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-orange-100 text-sm">Accuracy Score</p>
-                <p className="text-3xl font-bold">98.7%</p>
-              </div>
-              <CheckCircleIcon className="h-8 w-8 text-orange-200" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Advanced Analytics Tools */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <BarChartIcon className="h-6 w-6 text-purple-600" />
-              <div>
-                <CardTitle>Statistical Analysis</CardTitle>
-                <CardDescription>Advanced statistical methods and hypothesis testing</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" className="justify-start">
-                <BarChartIcon className="h-4 w-4 mr-2" />
-                Descriptive Stats
-              </Button>
-              <Button variant="outline" className="justify-start">
-                <ChartBarIcon className="h-4 w-4 mr-2" />
-                Correlation Analysis
-              </Button>
-              <Button variant="outline" className="justify-start">
-                <SigmaIcon className="h-4 w-4 mr-2" />
-                Hypothesis Testing
-              </Button>
-              <Button variant="outline" className="justify-start">
-                <LineChartIcon className="h-4 w-4 mr-2" />
-                Regression Models
-              </Button>
-            </div>
-            <div className="p-4 bg-purple-50 rounded-lg">
-              <h4 className="font-medium text-purple-900 mb-2">Quick Analysis</h4>
-              <p className="text-sm text-purple-700">Select your dataset and choose analysis type for instant insights</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <ChartBarIcon className="h-6 w-6 text-blue-600" />
-              <div>
-                <CardTitle>Data Visualization</CardTitle>
-                <CardDescription>Create stunning charts and interactive dashboards</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" className="justify-start">
-                <BarChartIcon className="h-4 w-4 mr-2" />
-                Bar Charts
-              </Button>
-              <Button variant="outline" className="justify-start">
-                <LineChartIcon className="h-4 w-4 mr-2" />
-                Line Graphs
-              </Button>
-              <Button variant="outline" className="justify-start">
-                <ChartBarIcon className="h-4 w-4 mr-2" />
-                Scatter Plots
-              </Button>
-              <Button variant="outline" className="justify-start">
-                <BarChart3Icon className="h-4 w-4 mr-2" />
-                Heat Maps
-              </Button>
-            </div>
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium text-blue-900 mb-2">Interactive Features</h4>
-              <p className="text-sm text-blue-700">Zoom, pan, and hover for detailed data exploration</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Machine Learning & AI */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <BrainCircuitIcon className="h-6 w-6 text-indigo-600" />
-            <div>
-              <CardTitle>Machine Learning & AI</CardTitle>
-              <CardDescription>Advanced AI-powered data analysis and pattern recognition</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-              <h4 className="font-medium text-indigo-900 mb-2">Pattern Recognition</h4>
-              <p className="text-sm text-indigo-700 mb-3">AI algorithms identify hidden patterns in your data</p>
-              <Button size="sm" className="w-full">Analyze Patterns</Button>
-            </div>
-            
-            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-              <h4 className="font-medium text-green-900 mb-2">Predictive Analytics</h4>
-              <p className="text-sm text-green-700 mb-3">Forecast future trends and outcomes</p>
-              <Button size="sm" className="w-full" variant="outline">Make Predictions</Button>
-            </div>
-            
-            <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <h4 className="font-medium text-purple-900 mb-2">Anomaly Detection</h4>
-              <p className="text-sm text-purple-700 mb-3">Find unusual data points automatically</p>
-              <Button size="sm" className="w-full" variant="outline">Detect Anomalies</Button>
-            </div>
-          </div>
-          
-          <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
-            <h4 className="font-medium text-indigo-900 mb-2">AI Insights Engine</h4>
-            <p className="text-sm text-indigo-700 mb-3">
-              Our advanced AI analyzes your data and provides actionable insights, 
-              statistical significance, and recommended next steps for your research.
-            </p>
-            <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
-              <BrainCircuitIcon className="h-4 w-4 mr-2" />
-              Generate AI Insights
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  
 
   const renderPresentations = () => (
     <div className="space-y-6">
@@ -659,6 +484,34 @@ const DataResultsPage: React.FC = () => {
           </p>
         </div>
 
+        {/* Data Analytics Link */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <BarChartIcon className="h-12 w-12 text-purple-600" />
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900">Need to Analyze Your Data?</h3>
+                  <p className="text-gray-600">Use our advanced Data Analytics tools for professional statistical analysis</p>
+                </div>
+              </div>
+              <div className="flex justify-center gap-4">
+                <Button 
+                  onClick={() => window.location.href = '/data-analytics'}
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                >
+                  <BarChartIcon className="h-5 w-5 mr-2" />
+                  Go to Data Analytics
+                </Button>
+                <Button variant="outline">
+                  <InformationCircleIcon className="h-5 w-5 mr-2" />
+                  Learn More
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Search Bar */}
         <div className="mb-6">
           <div className="relative">
@@ -707,16 +560,7 @@ const DataResultsPage: React.FC = () => {
             >
               ✏️ Manual Entry
             </button>
-            <button
-              onClick={() => setActiveTab('analysis')}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'analysis'
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-            >
-              📊 Data Analysis
-            </button>
+
             <button
               onClick={() => setActiveTab('presentations')}
               className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -735,7 +579,7 @@ const DataResultsPage: React.FC = () => {
         {activeTab === 'images' && renderImageTools()}
 
         {activeTab === 'manual' && renderManualEntry()}
-        {activeTab === 'analysis' && renderDataAnalysis()}
+
         {activeTab === 'presentations' && renderPresentations()}
       </div>
     </div>

@@ -18,9 +18,13 @@ import HelpForumPage from './pages/HelpForumPage';
 import ConferenceNewsPage from './pages/ConferenceNewsPage';
 import CalculatorHubPage from './pages/CalculatorHubPage';
 import ReferenceLibraryPage from './pages/ReferenceLibraryPage';
-import UnitConverterPage from './pages/UnitConverterPage';
+
 import DataAnalysisPage from './pages/DataAnalysisPage';
 import ResearchAssistantPage from './pages/ResearchAssistantPage';
+
+import BioinformaticsToolsPage from './pages/BioinformaticsToolsPage';
+import MolecularBiologyPage from './pages/MolecularBiologyPage';
+import DataAnalyticsPage from './pages/DataAnalyticsPage';
 
 // Demo Layout Component (temporary for demo)
 const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -109,9 +113,13 @@ const AppContent: React.FC = () => {
       {/* Tools & Resources Routes */}
       <Route path="/calculator-hub" element={<DemoLayout><CalculatorHubPage /></DemoLayout>} />
       <Route path="/reference-library" element={<DemoLayout><ReferenceLibraryPage /></DemoLayout>} />
-      <Route path="/unit-converter" element={<DemoLayout><UnitConverterPage /></DemoLayout>} />
+
       <Route path="/data-analysis" element={<DemoLayout><DataAnalysisPage /></DemoLayout>} />
       <Route path="/research-assistant" element={<DemoLayout><ResearchAssistantPage /></DemoLayout>} />
+
+      <Route path="/molecular-biology" element={<DemoLayout><MolecularBiologyPage /></DemoLayout>} />
+      <Route path="/data-analytics" element={<DemoLayout><DataAnalyticsPage /></DemoLayout>} />
+      <Route path="/bioinformatics-tools" element={<DemoLayout><BioinformaticsToolsPage /></DemoLayout>} />
 
       {/* Quick Action Routes */}
       <Route path="/notebook" element={<DemoLayout><LabNotebookPage /></DemoLayout>} />
