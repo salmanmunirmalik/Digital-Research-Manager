@@ -1,663 +1,523 @@
-import React, { useState, useEffect } from 'react';
-import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import React, { useState } from 'react';
+import Card, { CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import { 
-  ResultEntry, 
-  Project, 
-  PaperSuggestion, 
-  ResearchInterest,
-  Presentation,
-  PresentationTemplate,
-  ChartData,
-  TableData
-} from '../types';
+  BarChartIcon, 
+  FilesIcon, 
+  FilterIcon, 
+  LineChartIcon, 
+  LightbulbIcon, 
+  CheckCircleIcon, 
+  PencilIcon, 
+  DatabaseIcon,
+  CloudIcon,
+  DocumentIcon,
+  ImageIcon,
+  TableIcon,
+  ChartBarIcon,
+  CogIcon,
+  UploadIcon,
+  DownloadIcon,
+  EyeIcon,
+  PlusIcon,
+  TrashIcon,
+  EditIcon
+} from '../components/icons';
 
-const ResearchIntelligenceHub: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'data' | 'papers' | 'presentations'>('data');
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [paperSuggestions, setPaperSuggestions] = useState<PaperSuggestion[]>([]);
-  const [researchInterests, setResearchInterests] = useState<ResearchInterest[]>([]);
-  const [presentations, setPresentations] = useState<Presentation[]>([]);
-  const [showCreatePresentation, setShowCreatePresentation] = useState(false);
+const DataResultsPage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'spreadsheet' | 'images' | 'database' | 'manual'>('spreadsheet');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedInterest, setSelectedInterest] = useState<string>('All');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [importStatus, setImportStatus] = useState<'idle' | 'importing' | 'success' | 'error'>('idle');
 
-  // Mock data for demonstration
-  useEffect(() => {
-    const mockProjects: Project[] = [
-      {
-        id: '1',
-        title: 'CAR-T Cell Therapy Optimization',
-        description: 'Optimizing CAR-T cell therapy for solid tumors through genetic engineering',
-        status: 'In Progress',
-        startDate: new Date('2024-01-15'),
-        endDate: new Date('2024-12-31'),
-        team: ['Dr. Sarah Chen', 'Dr. Michael Rodriguez', 'Dr. Emily Watson'],
-        results: [
-          {
-            id: 'result1',
-            title: 'Tumor Growth Inhibition Results',
-            description: 'Comparison of control vs enhanced CAR-T therapy',
-            date: new Date('2024-08-10'),
-            data: {
-              type: 'chart',
-              chartType: 'bar',
-              labels: ['Control', 'Standard CAR-T', 'Enhanced CAR-T'],
-              datasets: [
-                {
-                  label: 'Tumor Volume (mm³)',
-                  data: [100, 65, 25],
-                  backgroundColor: ['#ef4444', '#f59e0b', '#10b981']
-                }
-              ]
-            },
-            analysis: 'Enhanced CAR-T shows 75% reduction in tumor volume compared to control',
-            tags: ['immunotherapy', 'cancer', 'CAR-T', 'tumor inhibition']
-          },
-          {
-            id: 'result2',
-            title: 'Cell Persistence Analysis',
-            description: 'CAR-T cell persistence in circulation over time',
-            date: new Date('2024-08-08'),
-            data: {
-              type: 'chart',
-              chartType: 'line',
-              labels: ['Day 0', 'Day 7', 'Day 14', 'Day 21', 'Day 28'],
-              datasets: [
-                {
-                  label: 'Standard CAR-T',
-                  data: [100, 85, 60, 35, 20],
-                  borderColor: '#f59e0b',
-                  fill: false
-                },
-                {
-                  label: 'Enhanced CAR-T',
-                  data: [100, 95, 88, 75, 65],
-                  borderColor: '#10b981',
-                  fill: false
-                }
-              ]
-            },
-            analysis: 'Enhanced CAR-T shows 3x better persistence at day 28',
-            tags: ['cell persistence', 'circulation', 'longevity']
-          },
-          {
-            id: 'result3',
-            title: 'Safety Profile Assessment',
-            description: 'Cytokine release syndrome and toxicity evaluation',
-            date: new Date('2024-08-05'),
-            data: {
-              type: 'table',
-              headers: ['Parameter', 'Standard CAR-T', 'Enhanced CAR-T'],
-              rows: [
-                ['CRS Grade 1-2', '45%', '25%'],
-                ['CRS Grade 3-4', '15%', '5%'],
-                ['Neurotoxicity', '20%', '8%'],
-                ['Liver Toxicity', '25%', '12%']
-              ]
-            },
-            analysis: 'Enhanced CAR-T shows significantly improved safety profile',
-            tags: ['safety', 'toxicity', 'CRS', 'neurotoxicity']
-          }
-        ]
-      },
-      {
-        id: '2',
-        title: 'CRISPR Safety Validation',
-        description: 'Comprehensive safety analysis of CRISPR-Cas9 gene editing',
-        status: 'Completed',
-        startDate: new Date('2024-03-01'),
-        endDate: new Date('2024-07-31'),
-        team: ['Dr. Michael Rodriguez', 'Dr. Lisa Park'],
-        results: [
-          {
-            id: 'result4',
-            title: 'Off-Target Analysis',
-            description: 'Genome-wide off-target effect assessment',
-            date: new Date('2024-07-25'),
-            data: {
-              type: 'chart',
-              chartType: 'pie',
-              labels: ['On-target', 'Off-target (low)', 'Off-target (high)'],
-              datasets: [{
-                data: [85, 12, 3],
-                backgroundColor: ['#10b981', '#f59e0b', '#ef4444']
-              }]
-            },
-            analysis: '95% specificity achieved with high-fidelity Cas9 variant',
-            tags: ['CRISPR', 'off-target', 'specificity', 'safety']
-          }
-        ]
-      }
-    ];
-
-    const mockInterests: ResearchInterest[] = [
-      {
-        id: '1',
-        userId: 'user1',
-        topic: 'Cancer Immunotherapy',
-        keywords: ['immunotherapy', 'cancer', 'T cells', 'checkpoint inhibitors', 'CAR-T'],
-        priority: 'High',
-        lastUpdated: new Date('2024-08-01')
-      },
-      {
-        id: '2',
-        userId: 'user1',
-        topic: 'CRISPR Gene Editing',
-        keywords: ['CRISPR', 'gene editing', 'genome engineering', 'Cas9', 'genetic modification'],
-        priority: 'Medium',
-        lastUpdated: new Date('2024-07-15')
-      }
-    ];
-
-    const mockPapers: PaperSuggestion[] = [
-      {
-        id: '1',
-        title: 'Novel CAR-T Cell Therapy for Solid Tumors: Overcoming the Tumor Microenvironment',
-        abstract: 'This study presents a breakthrough in CAR-T cell therapy for solid tumors by engineering cells to overcome immunosuppressive tumor microenvironment barriers.',
-        authors: ['Dr. Sarah Chen', 'Prof. Michael Rodriguez'],
-        journal: 'Nature Medicine',
-        year: 2024,
-        doi: '10.1038/s41591-024-02567-8',
-        relevanceScore: 95,
-        relevanceFactors: ['Directly matches your CAR-T research', 'Recent publication', 'Top-tier journal'],
-        userInterests: ['Cancer Immunotherapy'],
-        researchContext: 'Perfect for your CAR-T optimization project',
-        suggestedAt: new Date('2024-08-12'),
-        read: false,
-        saved: false,
-        notes: ''
-      }
-    ];
-
-    const mockPresentations: Presentation[] = [
-      {
-        id: '1',
-        title: 'CAR-T Therapy Optimization: Q3 2024 Progress Report',
-        description: 'Professional presentation combining your experimental results with relevant literature',
-        template: 'Research Update',
-        slides: [],
-        dataSources: ['Tumor inhibition results', 'Cell persistence data', 'Safety analysis', 'Relevant papers'],
-        generatedAt: new Date('2024-08-12'),
-        lastModified: new Date('2024-08-12'),
-        exportedFormats: ['PDF', 'PowerPoint'],
-        sharedWith: ['lab-members']
-      }
-    ];
-
-    setProjects(mockProjects);
-    setResearchInterests(mockInterests);
-    setPaperSuggestions(mockPapers);
-    setPresentations(mockPresentations);
-  }, []);
-
-  const handleCreatePresentation = (projectId: string, template: PresentationTemplate) => {
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return;
-
-    const newPresentation: Presentation = {
-      id: Date.now().toString(),
-              title: `${project.title}: Research Report`,
-      description: `Automatically generated presentation from your research data and relevant literature`,
-      template,
-      slides: generatePresentationFromData(project, template),
-      dataSources: [
-        ...project.results.map(r => r.title),
-        ...paperSuggestions.filter(p => p.userInterests.some(interest => 
-          project.results.some(r => r.tags.some(tag => 
-            p.title.toLowerCase().includes(tag.toLowerCase())
-          ))
-        )).map(p => p.title)
-      ],
-      generatedAt: new Date(),
-      lastModified: new Date(),
-      exportedFormats: ['PDF', 'PowerPoint'],
-      sharedWith: ['lab-members']
-    };
-
-    setPresentations(prev => [newPresentation, ...prev]);
-    setShowCreatePresentation(false);
-  };
-
-  const generatePresentationFromData = (project: Project, template: PresentationTemplate) => {
-    const slides = [
-      {
-        id: 'title',
-        slideNumber: 1,
-        title: project.title,
-        content: {
-          text: [project.title, 'Research Report', new Date().toLocaleDateString()],
-          images: [],
-          charts: [],
-          tables: []
-        },
-        layout: 'Title',
-        animations: [{ type: 'Fade', duration: 1000, delay: 0 }]
-      }
-    ];
-
-    // Add project overview
-    slides.push({
-      id: 'overview',
-      slideNumber: 2,
-      title: 'Project Overview',
-      content: {
-        text: [
-          `Status: ${project.status}`,
-          `Team: ${project.team.join(', ')}`,
-          `Duration: ${project.startDate.toLocaleDateString()} - ${project.endDate.toLocaleDateString()}`,
-          `Description: ${project.description}`
-        ],
-        images: [],
-        charts: [],
-        tables: []
-      },
-      layout: 'Content',
-      animations: [{ type: 'Slide', duration: 800, delay: 200 }]
-    });
-
-    // Add key results with charts
-    project.results.forEach((result, index) => {
-      slides.push({
-        id: `result-${result.id}`,
-        slideNumber: 3 + index,
-        title: result.title,
-        content: {
-          text: [result.description, result.analysis],
-          images: [],
-          charts: result.data.type === 'chart' ? [result.data] : [],
-          tables: result.data.type === 'table' ? [result.data] : []
-        },
-        layout: 'Data Chart',
-        animations: [{ type: 'Zoom', duration: 600, delay: 400 }]
-      });
-    });
-
-    // Add relevant papers
-    const relevantPapers = paperSuggestions.filter(p => 
-      p.userInterests.some(interest => 
-        project.results.some(r => r.tags.some(tag => 
-          p.title.toLowerCase().includes(tag.toLowerCase())
-        ))
-      )
-    );
-
-    if (relevantPapers.length > 0) {
-      slides.push({
-        id: 'literature',
-        slideNumber: 3 + project.results.length,
-        title: 'Relevant Literature',
-        content: {
-          text: [
-            'Key Papers Supporting Your Research:',
-            ...relevantPapers.map(p => `• ${p.title} (${p.journal}, ${p.year})`)
-          ],
-          images: [],
-          charts: [],
-          tables: []
-        },
-        layout: 'Content',
-        animations: [{ type: 'Slide', duration: 800, delay: 600 }]
-      });
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setImportStatus('idle');
     }
-
-    // Add next steps
-    slides.push({
-      id: 'next-steps',
-      slideNumber: 4 + project.results.length + (relevantPapers.length > 0 ? 1 : 0),
-      title: 'Next Steps & Recommendations',
-      content: {
-        text: [
-          'Based on your data and literature review:',
-          '• Continue enhanced CAR-T optimization',
-          '• Validate safety profile in larger cohorts',
-          '• Prepare for clinical trial applications',
-          '• Consider combination therapy approaches'
-        ],
-        images: [],
-        charts: [],
-        tables: []
-      },
-      layout: 'Content',
-      animations: [{ type: 'Slide', duration: 800, delay: 800 }]
-    });
-
-    return slides;
   };
 
-  const renderDataVisualization = (result: any) => {
-    if (result.data.type === 'chart') {
-      return (
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h4 className="font-medium text-gray-900 mb-2">{result.data.chartType.toUpperCase()} Chart</h4>
-          <div className="h-48 bg-white border rounded flex items-center justify-center text-gray-500">
-            📊 Chart Visualization: {result.data.chartType} chart with {result.data.labels.length} data points
-          </div>
-        </div>
-      );
-    } else if (result.data.type === 'table') {
-      return (
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h4 className="font-medium text-gray-900 mb-2">Data Table</h4>
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border rounded">
-              <thead>
-                <tr>
-                  {result.data.headers.map((header: string, index: number) => (
-                    <th key={index} className="px-4 py-2 border-b bg-gray-50 font-medium text-gray-900">
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {result.data.rows.map((row: string[], rowIndex: number) => (
-                  <tr key={rowIndex}>
-                    {row.map((cell: string, cellIndex: number) => (
-                      <td key={cellIndex} className="px-4 py-2 border-b text-gray-700">
-                        {cell}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      );
-    }
-    return null;
+  const handleImport = async () => {
+    if (!selectedFile) return;
+    
+    setImportStatus('importing');
+    // Simulate import process
+    setTimeout(() => {
+      setImportStatus('success');
+      setTimeout(() => setImportStatus('idle'), 2000);
+    }, 2000);
   };
+
+  const renderSpreadsheetTools = () => (
+    <div className="space-y-6">
+      {/* File Upload Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <TableIcon className="h-6 w-6 text-green-600" />
+            <div>
+              <CardTitle>File Upload & Import</CardTitle>
+              <CardDescription>Upload and import data from various spreadsheet formats</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+            <UploadIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <div className="mt-4">
+              <label htmlFor="file-upload" className="cursor-pointer">
+                <span className="text-blue-600 hover:text-blue-500 font-medium">Click to upload</span>
+                <span className="text-gray-500"> or drag and drop</span>
+              </label>
+              <input
+                id="file-upload"
+                type="file"
+                accept=".xlsx,.xls,.csv,.tsv"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Excel (.xlsx, .xls), CSV, TSV up to 10MB
+            </p>
+          </div>
+          
+          {selectedFile && (
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <DocumentIcon className="h-5 w-5 text-blue-600" />
+                  <span className="font-medium">{selectedFile.name}</span>
+                  <span className="text-sm text-gray-500">
+                    ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                  </span>
+                </div>
+                <Button onClick={handleImport} disabled={importStatus === 'importing'}>
+                  {importStatus === 'importing' ? 'Importing...' : 'Import Data'}
+                </Button>
+              </div>
+              {importStatus === 'success' && (
+                <div className="mt-3 p-3 bg-green-100 text-green-800 rounded-lg flex items-center gap-2">
+                  <CheckCircleIcon className="h-5 w-5" />
+                  <span>Data imported successfully!</span>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Import Options Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <TableIcon className="h-5 w-5 text-green-600" />
+              <CardTitle>Supported Formats</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[
+              { name: 'Excel (.xlsx, .xls)', desc: 'Import from Excel spreadsheets', icon: '📊' },
+              { name: 'CSV Files', desc: 'Import comma-separated values', icon: '📄' },
+              { name: 'TSV Files', desc: 'Import tab-separated values', icon: '📋' },
+              { name: 'Google Sheets', desc: 'Import from Google Sheets', icon: '☁️' }
+            ].map((format) => (
+              <div key={format.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <span className="text-2xl">{format.icon}</span>
+                <div>
+                  <p className="font-medium text-gray-900">{format.name}</p>
+                  <p className="text-sm text-gray-600">{format.desc}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <CogIcon className="h-5 w-5 text-blue-600" />
+              <CardTitle>Data Processing</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[
+              { name: 'Data Validation', desc: 'Check data integrity & format', icon: '✅' },
+              { name: 'Template Library', desc: 'Pre-built data entry forms', icon: '📚' },
+              { name: 'Format Detection', desc: 'Auto-detect file format', icon: '🔍' },
+              { name: 'Error Handling', desc: 'Graceful error management', icon: '⚠️' }
+            ].map((tool) => (
+              <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <span className="text-2xl">{tool.icon}</span>
+                <div>
+                  <p className="font-medium text-gray-900">{tool.name}</p>
+                  <p className="text-sm text-gray-600">{tool.desc}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
+  const renderImageTools = () => (
+    <div className="space-y-6">
+      {/* Image Upload Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <ImageIcon className="h-6 w-6 text-purple-600" />
+            <div>
+              <CardTitle>Image & Document Upload</CardTitle>
+              <CardDescription>Import and process various image and document formats</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+            <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <div className="mt-4">
+              <label htmlFor="image-upload" className="cursor-pointer">
+                <span className="text-purple-600 hover:text-purple-500 font-medium">Click to upload</span>
+                <span className="text-gray-500"> or drag and drop</span>
+              </label>
+              <input
+                id="image-upload"
+                type="file"
+                accept="image/*,.pdf"
+                multiple
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Images (PNG, JPG, TIFF), PDFs up to 50MB
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Image Processing Tools */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <ImageIcon className="h-5 w-5 text-purple-600" />
+              <CardTitle>Research Images</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[
+              { name: 'Microscope Images', desc: 'Import microscopy & imaging data', icon: '🔬' },
+              { name: 'Gel Images', desc: 'Import electrophoresis gels', icon: '🧬' },
+              { name: 'Charts & Graphs', desc: 'Import visual data representations', icon: '📈' },
+              { name: 'Lab Photos', desc: 'Import experimental setup photos', icon: '📸' }
+            ].map((tool) => (
+              <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <span className="text-2xl">{tool.icon}</span>
+                <div>
+                  <p className="font-medium text-gray-900">{tool.name}</p>
+                  <p className="text-sm text-gray-600">{tool.desc}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <DocumentIcon className="h-5 w-5 text-blue-600" />
+              <CardTitle>Document Processing</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[
+              { name: 'PDF Documents', desc: 'Extract data from PDF reports', icon: '📄' },
+              { name: 'Lab Notebooks', desc: 'Import handwritten notes', icon: '📓' },
+              { name: 'OCR Processing', desc: 'Convert images to text', icon: '🔤' },
+              { name: 'Text Extraction', desc: 'Extract text from images', icon: '📝' }
+            ].map((tool) => (
+              <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <span className="text-2xl">{tool.icon}</span>
+                <div>
+                  <p className="font-medium text-gray-900">{tool.name}</p>
+                  <p className="text-sm text-gray-600">{tool.desc}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
+  const renderDatabaseTools = () => (
+    <div className="space-y-6">
+      {/* Database Connection Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <DatabaseIcon className="h-6 w-6 text-indigo-600" />
+            <div>
+              <CardTitle>Database & API Connections</CardTitle>
+              <CardDescription>Connect to external data sources and APIs</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Database Type</label>
+              <Select>
+                <option>PostgreSQL</option>
+                <option>MySQL</option>
+                <option>SQLite</option>
+                <option>MongoDB</option>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Connection String</label>
+              <Input placeholder="postgresql://user:pass@host:port/db" />
+            </div>
+          </div>
+          <Button className="w-full">
+            <DatabaseIcon className="h-4 w-4 mr-2" />
+            Test Connection
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Connection Tools Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <DatabaseIcon className="h-5 w-5 text-indigo-600" />
+              <CardTitle>Database Connections</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[
+              { name: 'SQL Databases', desc: 'Connect to external databases', icon: '🗄️' },
+              { name: 'REST APIs', desc: 'Import from web services', icon: '🌐' },
+              { name: 'GraphQL', desc: 'Query-based data import', icon: '🔗' },
+              { name: 'Data Warehouses', desc: 'Connect to data warehouses', icon: '🏢' }
+            ].map((tool) => (
+              <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <span className="text-2xl">{tool.icon}</span>
+                <div>
+                  <p className="font-medium text-gray-900">{tool.name}</p>
+                  <p className="text-sm text-gray-600">{tool.desc}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <CloudIcon className="h-5 w-5 text-blue-600" />
+              <CardTitle>Cloud & Sync</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[
+              { name: 'Cloud Storage', desc: 'Import from cloud platforms', icon: '☁️' },
+              { name: 'Data Sync', desc: 'Automated data synchronization', icon: '🔄' },
+              { name: 'Version Control', desc: 'Track data changes over time', icon: '📝' },
+              { name: 'Backup & Restore', desc: 'Data backup and recovery', icon: '💾' }
+            ].map((tool) => (
+              <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <span className="text-2xl">{tool.icon}</span>
+                <div>
+                  <p className="font-medium text-gray-900">{tool.name}</p>
+                  <p className="text-sm text-gray-600">{tool.desc}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
+  const renderManualEntry = () => (
+    <div className="space-y-6">
+      {/* Form Builder Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <PencilIcon className="h-6 w-6 text-orange-600" />
+            <div>
+              <CardTitle>Custom Form Builder</CardTitle>
+              <CardDescription>Create custom data entry forms for your research needs</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Form Name</label>
+              <Input placeholder="Enter form name" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Form Type</label>
+              <Select>
+                <option>Experimental Data</option>
+                <option>Sample Information</option>
+                <option>Equipment Log</option>
+                <option>Results Summary</option>
+              </Select>
+            </div>
+          </div>
+          <Button>
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Create New Form
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Manual Entry Tools Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <PencilIcon className="h-5 w-5 text-orange-600" />
+              <CardTitle>Data Entry Tools</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[
+              { name: 'Form Builder', desc: 'Create custom data entry forms', icon: '📝' },
+              { name: 'Bulk Entry', desc: 'Enter multiple records at once', icon: '📊' },
+              { name: 'Data Templates', desc: 'Use predefined data structures', icon: '📋' },
+              { name: 'Field Validation', desc: 'Real-time data validation', icon: '✅' }
+            ].map((tool) => (
+              <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <span className="text-2xl">{tool.icon}</span>
+                <div>
+                  <p className="font-medium text-gray-900">{tool.name}</p>
+                  <p className="text-sm text-gray-600">{tool.desc}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <CogIcon className="h-5 w-5 text-gray-600" />
+              <CardTitle>Data Management</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[
+              { name: 'Validation Rules', desc: 'Set data quality standards', icon: '🔒' },
+              { name: 'Auto-save', desc: 'Prevent data loss', icon: '💾' },
+              { name: 'Data Review', desc: 'Review and approve entries', icon: '👁️' },
+              { name: 'Audit Trail', desc: 'Track all data changes', icon: '📋' }
+            ].map((tool) => (
+              <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <span className="text-2xl">{tool.icon}</span>
+                <div>
+                  <p className="font-medium text-gray-900">{tool.name}</p>
+                  <p className="text-sm text-gray-600">{tool.desc}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Research Intelligence Hub</h1>
-          <p className="text-gray-600">
-            Your comprehensive research command center. Visualize data, manage literature reviews, and create
-            professional presentations from your research projects.
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Data & Results</h1>
+          <p className="text-gray-600 text-lg">
+            Comprehensive data entry and management tools for your research laboratory
           </p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search data entry tools, import options, or data sources..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <FilterIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          </div>
         </div>
 
         {/* Tab Navigation */}
         <div className="bg-white rounded-lg shadow-sm p-1 mb-6">
           <div className="flex space-x-1">
             <button
-              onClick={() => setActiveTab('data')}
+              onClick={() => setActiveTab('spreadsheet')}
               className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'data'
-                  ? 'bg-blue-600 text-white'
+                activeTab === 'spreadsheet'
+                  ? 'bg-green-600 text-white'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
-              📊 Data & Results
+              📈 Spreadsheet Import
             </button>
             <button
-              onClick={() => setActiveTab('papers')}
+              onClick={() => setActiveTab('images')}
               className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'papers'
-                  ? 'bg-blue-600 text-white'
+                activeTab === 'images'
+                  ? 'bg-purple-600 text-white'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
-              📚 Literature Review
+              🖼️ Image & Documents
             </button>
             <button
-              onClick={() => setActiveTab('presentations')}
+              onClick={() => setActiveTab('database')}
               className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'presentations'
-                  ? 'bg-blue-600 text-white'
+                activeTab === 'database'
+                  ? 'bg-indigo-600 text-white'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
-              🎯 Presentation Tools
+              🗄️ Database & APIs
+            </button>
+            <button
+              onClick={() => setActiveTab('manual')}
+              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'manual'
+                  ? 'bg-orange-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              ✏️ Manual Entry
             </button>
           </div>
         </div>
 
-        {/* Data & Results Tab */}
-        {activeTab === 'data' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Your Research Projects</h2>
-                <Button onClick={() => setShowCreatePresentation(true)}>
-                  🎯 Create Presentation
-                </Button>
-              </div>
-              
-              <div className="grid gap-4">
-                {projects.map(project => (
-                  <Card key={project.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg mb-2">{project.title}</CardTitle>
-                          <p className="text-gray-600 text-sm mb-2">{project.description}</p>
-                          <div className="flex items-center gap-4 text-sm text-gray-500">
-                            <span>Status: {project.status}</span>
-                            <span>Team: {project.team.join(', ')}</span>
-                            <span>Results: {project.results.length}</span>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <Button 
-                            variant="outline" 
-                            onClick={() => setSelectedProject(project)}
-                            className="text-blue-600 border-blue-600"
-                          >
-                            View Details
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            {/* Project Details Modal */}
-            {selectedProject && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white rounded-lg p-6 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-                  <div className="flex justify-between items-start mb-4">
-                    <h2 className="text-2xl font-bold">{selectedProject.title}</h2>
-                    <Button variant="outline" onClick={() => setSelectedProject(null)}>✕</Button>
-                  </div>
-                  
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-3">Project Results</h3>
-                    <div className="space-y-6">
-                      {selectedProject.results.map(result => (
-                        <Card key={result.id}>
-                          <CardHeader>
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <CardTitle className="text-lg">{result.title}</CardTitle>
-                                <p className="text-gray-600 text-sm mt-1">{result.description}</p>
-                                <p className="text-gray-500 text-xs mt-2">{result.date.toLocaleDateString()}</p>
-                              </div>
-                              <div className="flex gap-2">
-                                {result.tags.map(tag => (
-                                  <span key={tag} className="px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs">
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            {renderDataVisualization(result)}
-                            <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                              <div className="text-sm font-medium text-gray-800 mb-1">Key Findings:</div>
-                              <div className="text-sm text-gray-700">{result.analysis}</div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Literature Review Tab */}
-        {activeTab === 'papers' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Literature Review Tools</h2>
-                <Button onClick={() => setShowCreatePresentation(true)}>
-                  📚 Add Literature
-                </Button>
-              </div>
-              
-              <div className="grid gap-4">
-                {paperSuggestions.map(paper => (
-                  <Card key={paper.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              paper.relevanceScore >= 90 ? 'text-green-600 bg-green-100' : 
-                              paper.relevanceScore >= 80 ? 'text-blue-600 bg-blue-100' : 
-                              'text-yellow-600 bg-yellow-100'
-                            }`}>
-                              {paper.relevanceScore}% Relevant
-                            </span>
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600">
-                              {paper.journal}
-                            </span>
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600">
-                              {paper.year}
-                            </span>
-                          </div>
-                          <CardTitle className="text-lg mb-2">{paper.title}</CardTitle>
-                          <p className="text-gray-700 mb-3">{paper.abstract}</p>
-                          <div className="text-sm text-gray-600 mb-2">
-                            <strong>Research Context:</strong> {paper.researchContext}
-                          </div>
-                        </div>
-                      </div>
-                    </CardHeader>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Presentation Tools Tab */}
-        {activeTab === 'presentations' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Presentation Management</h2>
-                <Button onClick={() => setShowCreatePresentation(true)}>
-                  🎯 Create New Presentation
-                </Button>
-              </div>
-              
-              <div className="grid gap-4">
-                {presentations.map(presentation => (
-                  <Card key={presentation.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600">
-                              {presentation.template}
-                            </span>
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600">
-                              {presentation.slides.length} slides
-                            </span>
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-600">
-                              {presentation.dataSources.length} data sources
-                            </span>
-                          </div>
-                          <CardTitle className="text-lg mb-2">{presentation.title}</CardTitle>
-                          <p className="text-gray-600 text-sm mb-3">{presentation.description}</p>
-                          <div className="text-sm text-gray-500 mb-2">
-                            Created: {presentation.generatedAt.toLocaleDateString()}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            <span className="font-medium">Data Sources:</span> {presentation.dataSources.join(', ')}
-                          </div>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex gap-2">
-                        <Button variant="outline" className="text-blue-600 border-blue-600">
-                          View & Edit
-                        </Button>
-                        <Button variant="outline" className="text-green-600 border-green-600">
-                          Export PDF
-                        </Button>
-                        <Button variant="outline" className="text-purple-600 border-purple-600">
-                          Export PowerPoint
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Create Presentation Modal */}
-        {showCreatePresentation && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
-              <h2 className="text-2xl font-bold mb-4">Create New Presentation</h2>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Project</label>
-                  <Select onChange={(e) => setSelectedProject(projects.find(p => p.id === e.target.value) || null)}>
-                    <option value="">Choose a project...</option>
-                    {projects.map(project => (
-                      <option key={project.id} value={project.id}>{project.title}</option>
-                    ))}
-                  </Select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Presentation Template</label>
-                  <Select onChange={(e) => {
-                    if (selectedProject) {
-                      handleCreatePresentation(selectedProject.id, e.target.value as PresentationTemplate);
-                    }
-                  }}>
-                    <option value="">Choose template...</option>
-                    <option value="Research Update">Research Update</option>
-                    <option value="Conference Talk">Conference Talk</option>
-                    <option value="Lab Meeting">Lab Meeting</option>
-                    <option value="Grant Proposal">Grant Proposal</option>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setShowCreatePresentation(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Tab Content */}
+        {activeTab === 'spreadsheet' && renderSpreadsheetTools()}
+        {activeTab === 'images' && renderImageTools()}
+        {activeTab === 'database' && renderDatabaseTools()}
+        {activeTab === 'manual' && renderManualEntry()}
       </div>
     </div>
   );
 };
 
-export default ResearchIntelligenceHub;
+export default DataResultsPage;
