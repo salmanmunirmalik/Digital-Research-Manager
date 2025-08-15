@@ -23,7 +23,9 @@ import {
   TrashIcon,
   EditIcon,
   SparklesIcon,
-  PresentationChartLineIcon
+  PresentationChartLineIcon,
+  SigmaIcon,
+  BrainCircuitIcon
 } from '../components/icons';
 
 const DataResultsPage: React.FC = () => {

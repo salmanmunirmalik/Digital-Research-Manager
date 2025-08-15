@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   HomeIcon, 
@@ -29,12 +29,24 @@ const SideNav: React.FC = () => {
   // Demo mode - use mock role for full access
   const userRole = 'Principal Investigator';
 
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['Dashboard']));
+
+  const toggleSection = (sectionTitle: string) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(sectionTitle)) {
+      newExpanded.delete(sectionTitle);
+    } else {
+      newExpanded.add(sectionTitle);
+    }
+    setExpandedSections(newExpanded);
+  };
+
   const getNavItems = () => {
     const baseItems = [
       {
         title: 'Dashboard',
         items: [
-          { name: 'Overview', to: '/dashboard', icon: HomeIcon, description: 'Personal dashboard and overview' }
+          { name: 'Dashboard', to: '/dashboard', icon: HomeIcon, description: 'Personal dashboard and overview' }
         ]
       },
       {
@@ -98,37 +110,59 @@ const SideNav: React.FC = () => {
       </div>
 
       {/* Navigation Items */}
-      <nav className="flex-1 p-3 md:p-4 space-y-4 md:space-y-6 overflow-y-auto">
+      <nav className="flex-1 p-3 md:p-4 space-y-2 md:space-y-3 overflow-y-auto">
         {navItems.map((section, sectionIndex) => (
-          <div key={sectionIndex}>
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 md:mb-3 px-2 md:px-3">
-              {section.title}
-            </h3>
-            <div className="space-y-1">
-              {section.items.map((item, itemIndex) => (
-                <NavLink
-                  key={itemIndex}
-                  to={item.to}
-                  className={({ isActive }) =>
-                    `group flex items-center px-2 md:px-3 py-2 md:py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                      isActive
-                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-200 shadow-sm'
-                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                    }`
-                  }
-                  title={item.description}
-                >
-                  <item.icon className={`w-4 md:w-5 h-4 md:h-5 mr-2 md:mr-3 flex-shrink-0 ${
-                    'text-blue-600' // Active state color
-                  }`} />
-                  <span className="flex-1 min-w-0 truncate">{item.name}</span>
-                  
-                  {/* Hover indicator */}
-                  <div className={`w-1 h-1 rounded-full transition-all duration-200 flex-shrink-0 ${
-                    'bg-blue-600' // Active state
-                  }`}></div>
-                </NavLink>
-              ))}
+          <div key={sectionIndex} className="group">
+            {/* Section Header - Clickable for dropdown */}
+            <button
+              onClick={() => toggleSection(section.title)}
+              className="w-full flex items-center justify-between px-2 md:px-3 py-2 md:py-2.5 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-all duration-200 group-hover:bg-gray-50"
+            >
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                {section.title}
+              </span>
+              <svg
+                className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
+                  expandedSections.has(section.title) ? 'rotate-180' : ''
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {/* Section Items - Animated Dropdown */}
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              expandedSections.has(section.title) ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+            }`}>
+              <div className="space-y-1 mt-2 ml-2">
+                {section.items.map((item, itemIndex) => (
+                  <NavLink
+                    key={itemIndex}
+                    to={item.to}
+                    className={({ isActive }) =>
+                      `group flex items-center px-2 md:px-3 py-2 md:py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                        isActive
+                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-200 shadow-sm'
+                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      }`
+                    }
+                    title={item.description}
+                  >
+                    <item.icon className={`w-4 md:w-5 h-4 md:h-5 mr-2 md:mr-3 flex-shrink-0 ${
+                      'text-blue-600' // Active state color
+                    }`} />
+                    <span className="flex-1 min-w-0 truncate">{item.name}</span>
+                    
+                    {/* Hover indicator */}
+                    <div className={`w-1 h-1 rounded-full transition-all duration-200 flex-shrink-0 ${
+                      'bg-blue-600' // Active state
+                    }`}></div>
+                  </NavLink>
+                ))}
+              </div>
             </div>
           </div>
         ))}
