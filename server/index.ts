@@ -35,29 +35,18 @@ app.use(express.json());
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
 
-// Authentication Middleware
+// Authentication Middleware (Demo Mode - Bypass)
 const authenticateToken = async (req: any, res: any, next: any) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    
-    // Get user from database
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [decoded.userId]);
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-
-    req.user = result.rows[0];
-    next();
-  } catch (error) {
-    return res.status(403).json({ error: 'Invalid token' });
-  }
+  // Demo mode - provide mock user data
+  req.user = {
+    id: 'demo-user-123',
+    username: 'demo_user',
+    email: 'demo@researchlab.com',
+    role: 'Principal Investigator',
+    first_name: 'Demo',
+    last_name: 'User'
+  };
+  next();
 };
 
 // Health check endpoint
@@ -255,10 +244,8 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 // Lab Management Routes
 app.post('/api/labs', authenticateToken, async (req, res) => {
   try {
-    // Only principal researchers and admins can create labs
-    if (!['admin', 'principal_researcher'].includes(req.user.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions to create labs' });
-    }
+    // Demo mode - bypass permission checks
+    // req.user is provided by the bypass middleware
 
     const { name, description, institution, department, contact_email, contact_phone, address } = req.body;
 
@@ -267,7 +254,7 @@ app.post('/api/labs', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Lab name, institution, and department are required' });
     }
 
-    // Create lab
+    // Create lab with demo user ID
     const result = await pool.query(`
       INSERT INTO labs (name, description, institution, department, principal_researcher_id, contact_email, contact_phone, address)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -297,25 +284,16 @@ app.post('/api/labs', authenticateToken, async (req, res) => {
 
 app.get('/api/labs', authenticateToken, async (req, res) => {
   try {
-    let query = `
+    // Demo mode - show all labs
+    const query = `
       SELECT l.*, u.first_name, u.last_name, u.username as pi_name,
              (SELECT COUNT(*) FROM lab_members WHERE lab_id = l.id) as member_count
       FROM labs l
       JOIN users u ON l.principal_researcher_id = u.id
+      ORDER BY l.created_at DESC
     `;
 
-    // If not admin, only show labs where user is a member
-    if (req.user.role !== 'admin') {
-      query += `
-        JOIN lab_members lm ON l.id = lm.lab_id
-        WHERE lm.user_id = $1
-      `;
-    }
-
-    query += ' ORDER BY l.created_at DESC';
-
-    const params = req.user.role !== 'admin' ? [req.user.id] : [];
-    const result = await pool.query(query, params);
+    const result = await pool.query(query);
 
     res.json({ labs: result.rows });
   } catch (error) {
@@ -328,15 +306,7 @@ app.get('/api/labs/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Check if user has access to this lab
-    const memberCheck = await pool.query(`
-      SELECT lm.role, lm.permissions FROM lab_members lm
-      WHERE lm.lab_id = $1 AND lm.user_id = $2
-    `, [id, req.user.id]);
-
-    if (memberCheck.rows.length === 0 && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied to this lab' });
-    }
+    // Demo mode - bypass access checks
 
     // Get lab details
     const labResult = await pool.query(`

@@ -455,102 +455,165 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Personal Calendar */}
-      <div className="page-section">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Personal Calendar</h2>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={refreshDashboard}
-              disabled={refreshing}
-              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              <RefreshCwIcon className={`w-4 h-4 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Refreshing...' : 'Refresh'}
-            </button>
-            <button
-              onClick={() => {
-                setQuickAddType('event');
-                setShowQuickAddModal(true);
-              }}
-              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm"
-            >
-              <PlusIcon className="w-4 h-4 mr-1" />
-              Add Event
-            </button>
-          </div>
-        </div>
-        
-        {/* Calendar Grid */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="grid grid-cols-7 gap-1 mb-4">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-              <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
-                {day}
-              </div>
-            ))}
-          </div>
-          
-          <div className="grid grid-cols-7 gap-1">
-            {Array.from({ length: 35 }, (_, i) => {
-              const date = new Date();
-              const currentMonth = date.getMonth();
-              const currentYear = date.getFullYear();
-              const firstDay = new Date(currentYear, currentMonth, 1);
-              const lastDay = new Date(currentYear, currentMonth + 1, 0);
-              const startDate = new Date(firstDay);
-              startDate.setDate(startDate.getDate() - firstDay.getDay());
-              
-              const cellDate = new Date(startDate);
-              cellDate.setDate(startDate.getDate() + i);
-              
-              const isCurrentMonth = cellDate.getMonth() === currentMonth;
-              const isToday = cellDate.toDateString() === new Date().toDateString();
-              const dayEvents = events.filter(event => {
-                const eventDate = new Date(event.date);
-                return eventDate.toDateString() === cellDate.toDateString();
-              });
-              
-              return (
-                <div
-                  key={i}
-                  className={`min-h-[80px] p-2 border border-gray-100 text-sm ${
-                    isCurrentMonth ? 'bg-white' : 'bg-gray-50'
-                  } ${isToday ? 'ring-2 ring-blue-500' : ''}`}
-                >
-                  <div className={`text-right mb-1 ${
-                    isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
-                  } ${isToday ? 'font-bold text-blue-600' : ''}`}>
-                    {cellDate.getDate()}
-                  </div>
-                  
-                  {/* Event indicators */}
-                  {dayEvents.slice(0, 2).map((event, eventIndex) => (
-                    <div
-                      key={eventIndex}
-                      className="text-xs p-1 mb-1 bg-blue-100 text-blue-800 rounded truncate"
-                      title={event.title}
-                    >
-                      {event.title}
-                    </div>
-                  ))}
-                  
-                  {dayEvents.length > 2 && (
-                    <div className="text-xs text-gray-500 text-center">
-                      +{dayEvents.length - 2} more
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+      {/* Dashboard Controls */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={refreshDashboard}
+            disabled={refreshing}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <RefreshCwIcon className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh Dashboard'}
+          </button>
+          <button
+            onClick={() => setShowQuickAddModal(true)}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm"
+          >
+            <PlusIcon className="w-4 h-4 mr-2" />
+            Quick Add
+          </button>
         </div>
       </div>
 
       {/* Main Dashboard Content */}
       <div className="page-grid">
-        {/* Left Column - Tasks & Calendar */}
+        {/* Left Column - Sticky Notes & Tasks */}
         <div className="lg:col-span-2 space-y-8">
+          {/* Sticky Notes Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Sticky Notes</h2>
+              <button 
+                onClick={() => {
+                  setQuickAddType('note');
+                  setShowQuickAddModal(true);
+                }}
+                className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
+              >
+                <PlusIcon className="w-4 h-4 mr-1" />
+                Add Note
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {stickyNotes.length === 0 ? (
+                <div className="md:col-span-2 text-center py-8 text-gray-500">
+                  <div className="w-12 h-12 mx-auto mb-3 bg-yellow-200 rounded-lg flex items-center justify-center">
+                    <span className="text-yellow-600 text-2xl">📝</span>
+                  </div>
+                  <p>No sticky notes yet. Add your first note!</p>
+                </div>
+              ) : (
+                stickyNotes
+                  .sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
+                  .slice(0, 4)
+                  .map((note) => (
+                    <div 
+                      key={note.id} 
+                      className={`p-4 rounded-lg border-l-4 group hover:shadow-md transition-all ${
+                        note.color === 'yellow' ? 'bg-yellow-50 border-yellow-400' :
+                        note.color === 'blue' ? 'bg-blue-50 border-blue-400' :
+                        note.color === 'green' ? 'bg-green-50 border-green-400' :
+                        note.color === 'purple' ? 'bg-purple-50 border-purple-400' :
+                        'bg-gray-50 border-gray-400'
+                      }`}
+                    >
+                      {editingNoteId === note.id ? (
+                        <div className="space-y-2">
+                          <textarea
+                            value={newNoteContent}
+                            onChange={(e) => setNewNoteContent(e.target.value)}
+                            className="w-full p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                            rows={3}
+                            autoFocus
+                          />
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-1">
+                              {(['yellow', 'blue', 'green', 'purple'] as const).map((color) => (
+                                <button
+                                  key={color}
+                                  onClick={() => setNewNoteColor(color)}
+                                  className={`w-4 h-4 rounded-full border-2 ${
+                                    color === 'yellow' ? 'bg-yellow-400' :
+                                    color === 'blue' ? 'bg-blue-400' :
+                                    color === 'green' ? 'bg-green-400' :
+                                    'bg-purple-400'
+                                  } ${newNoteColor === color ? 'ring-2 ring-gray-500' : ''}`}
+                                  title={`${color} note`}
+                                />
+                              ))}
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={() => editNote(note.id, newNoteContent)}
+                                className="text-green-600 hover:text-green-700 p-1 rounded"
+                                title="Save"
+                              >
+                                <SaveIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingNoteId(null);
+                                  setNewNoteContent('');
+                                }}
+                                className="text-gray-600 hover:text-gray-700 p-1 rounded"
+                                title="Cancel"
+                              >
+                                <XMarkIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-gray-800 text-sm leading-relaxed">{note.content}</p>
+                          <div className="flex items-center justify-between mt-3">
+                            <span className="text-xs text-gray-500">
+                              {new Date(note.created_at).toLocaleDateString()}
+                            </span>
+                            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => toggleNotePinned(note.id)}
+                                className={`p-1 rounded transition-colors ${
+                                  note.is_pinned ? 'text-yellow-600 hover:text-yellow-700' : 'text-gray-400 hover:text-yellow-600'
+                                }`}
+                                title={note.is_pinned ? 'Unpin' : 'Pin'}
+                              >
+                                <PinIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingNoteId(note.id);
+                                  setNewNoteContent(note.content);
+                                  setNewNoteColor(note.color);
+                                }}
+                                className="text-gray-400 hover:text-blue-600 p-1 rounded transition-colors"
+                                title="Edit"
+                              >
+                                <EditIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => deleteNote(note.id)}
+                                className="text-gray-400 hover:text-red-600 p-1 rounded transition-colors"
+                                title="Delete"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                          {note.is_pinned && (
+                            <div className="absolute top-2 right-2">
+                              <PinIcon className="w-3 h-3 text-yellow-600" />
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
+
           {/* Tasks Section */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
@@ -632,7 +695,7 @@ const DashboardPage: React.FC = () => {
           {/* Calendar Section */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Upcoming Events</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Personal Calendar</h2>
               <div className="flex items-center space-x-2">
                 <button 
                   onClick={() => {
@@ -647,38 +710,68 @@ const DashboardPage: React.FC = () => {
                 <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">View Calendar</button>
               </div>
             </div>
-            <div className="space-y-3">
-              {events.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <CalendarIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p>No upcoming events. Schedule your first event!</p>
+            
+            {/* Calendar Grid */}
+            <div className="grid grid-cols-7 gap-1 mb-4">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                  {day}
                 </div>
-              ) : (
-                events.map((event) => (
-                  <div key={event.id} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 hover:shadow-md transition-all">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0"></div>
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{event.title}</p>
-                      <p className="text-sm text-gray-600">{event.description}</p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(event.start_time).toLocaleDateString()} at {new Date(event.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                      </p>
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-7 gap-1">
+              {Array.from({ length: 35 }, (_, i) => {
+                const date = new Date();
+                const currentMonth = date.getMonth();
+                const currentYear = date.getFullYear();
+                const firstDay = new Date(currentYear, currentMonth, 1);
+                const lastDay = new Date(currentYear, currentMonth + 1, 0);
+                const startDate = new Date(firstDay);
+                startDate.setDate(startDate.getDate() - firstDay.getDay());
+                
+                const cellDate = new Date(startDate);
+                cellDate.setDate(startDate.getDate() + i);
+                
+                const isCurrentMonth = cellDate.getMonth() === currentMonth;
+                const isToday = cellDate.toDateString() === new Date().toDateString();
+                const dayEvents = events.filter(event => {
+                  const eventDate = new Date(event.date);
+                  return eventDate.toDateString() === cellDate.toDateString();
+                });
+                
+                return (
+                  <div
+                    key={i}
+                    className={`min-h-[80px] p-2 border border-gray-100 text-sm ${
+                      isCurrentMonth ? 'bg-white' : 'bg-gray-50'
+                    } ${isToday ? 'ring-2 ring-blue-500' : ''}`}
+                  >
+                    <div className={`text-right mb-1 ${
+                      isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
+                    } ${isToday ? 'font-bold text-blue-600' : ''}`}>
+                      {cellDate.getDate()}
                     </div>
-                    <div className="flex items-center space-x-1 flex-shrink-0">
-                      <button className="text-gray-400 hover:text-blue-600 p-1 rounded transition-colors" title="Edit event">
-                        <EditIcon className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => setEvents(prev => prev.filter(e => e.id !== event.id))}
-                        className="text-gray-400 hover:text-red-600 p-1 rounded transition-colors" 
-                        title="Delete event"
+                    
+                    {/* Event indicators */}
+                    {dayEvents.slice(0, 2).map((event, eventIndex) => (
+                      <div
+                        key={eventIndex}
+                        className="text-xs p-1 mb-1 bg-blue-100 text-blue-800 rounded truncate"
+                        title={event.title}
                       >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
-                    </div>
+                        {event.title}
+                      </div>
+                    ))}
+                    
+                    {dayEvents.length > 2 && (
+                      <div className="text-xs text-gray-500 text-center">
+                        +{dayEvents.length - 2} more
+                      </div>
+                    )}
                   </div>
-                ))
-              )}
+                );
+              })}
             </div>
           </div>
 
@@ -768,137 +861,54 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column - Sticky Notes & Quick Stats */}
+        {/* Right Column - Upcoming Events & Quick Stats */}
         <div className="space-y-8">
-          {/* Sticky Notes */}
+          {/* Upcoming Events */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Sticky Notes</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Upcoming Events</h2>
               <button 
                 onClick={() => {
-                  setQuickAddType('note');
+                  setQuickAddType('event');
                   setShowQuickAddModal(true);
                 }}
                 className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
               >
                 <PlusIcon className="w-4 h-4 mr-1" />
-                Add Note
+                Add Event
               </button>
             </div>
             <div className="space-y-3">
-              {stickyNotes.length === 0 ? (
+              {events.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  <div className="w-12 h-12 mx-auto mb-3 bg-yellow-200 rounded-lg flex items-center justify-center">
-                    <span className="text-yellow-600 text-2xl">📝</span>
-                  </div>
-                  <p>No sticky notes yet. Add your first note!</p>
+                  <CalendarIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p>No upcoming events. Schedule your first event!</p>
                 </div>
               ) : (
-                stickyNotes
-                  .sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
-                  .map((note) => (
-                    <div 
-                      key={note.id} 
-                      className={`p-3 rounded-lg border-l-4 group hover:shadow-md transition-all ${
-                        note.color === 'yellow' ? 'bg-yellow-50 border-yellow-400' :
-                        note.color === 'blue' ? 'bg-blue-50 border-blue-400' :
-                        note.color === 'green' ? 'bg-green-50 border-green-400' :
-                        note.color === 'purple' ? 'bg-purple-50 border-purple-400' :
-                        'bg-gray-50 border-gray-400'
-                      }`}
-                    >
-                      {editingNoteId === note.id ? (
-                        <div className="space-y-2">
-                          <textarea
-                            value={newNoteContent}
-                            onChange={(e) => setNewNoteContent(e.target.value)}
-                            className="w-full p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                            rows={3}
-                            autoFocus
-                          />
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-1">
-                              {(['yellow', 'blue', 'green', 'purple'] as const).map((color) => (
-                                <button
-                                  key={color}
-                                  onClick={() => setNewNoteColor(color)}
-                                  className={`w-4 h-4 rounded-full border-2 ${
-                                    color === 'yellow' ? 'bg-yellow-400' :
-                                    color === 'blue' ? 'bg-blue-400' :
-                                    color === 'green' ? 'bg-green-400' :
-                                    'bg-purple-400'
-                                  } ${newNoteColor === color ? 'ring-2 ring-gray-500' : ''}`}
-                                  title={`${color} note`}
-                                />
-                              ))}
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <button
-                                onClick={() => editNote(note.id, newNoteContent)}
-                                className="text-green-600 hover:text-green-700 p-1 rounded"
-                                title="Save"
-                              >
-                                <SaveIcon className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditingNoteId(null);
-                                  setNewNoteContent('');
-                                }}
-                                className="text-gray-600 hover:text-gray-700 p-1 rounded"
-                                title="Cancel"
-                              >
-                                <XMarkIcon className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <p className="text-gray-800 text-sm leading-relaxed">{note.content}</p>
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-xs text-gray-500">
-                              {new Date(note.created_at).toLocaleDateString()}
-                            </span>
-                            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={() => toggleNotePinned(note.id)}
-                                className={`p-1 rounded transition-colors ${
-                                  note.is_pinned ? 'text-yellow-600 hover:text-yellow-700' : 'text-gray-400 hover:text-yellow-600'
-                                }`}
-                                title={note.is_pinned ? 'Unpin' : 'Pin'}
-                              >
-                                <PinIcon className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditingNoteId(note.id);
-                                  setNewNoteContent(note.content);
-                                  setNewNoteColor(note.color);
-                                }}
-                                className="text-gray-400 hover:text-blue-600 p-1 rounded transition-colors"
-                                title="Edit"
-                              >
-                                <EditIcon className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => deleteNote(note.id)}
-                                className="text-gray-400 hover:text-red-600 p-1 rounded transition-colors"
-                                title="Delete"
-                              >
-                                <TrashIcon className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                          {note.is_pinned && (
-                            <div className="absolute top-2 right-2">
-                              <PinIcon className="w-3 h-3 text-yellow-600" />
-                            </div>
-                          )}
-                        </>
-                      )}
+                events.slice(0, 5).map((event) => (
+                  <div key={event.id} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 hover:shadow-md transition-all">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0"></div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">{event.title}</p>
+                      <p className="text-sm text-gray-600">{event.description}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(event.start_time).toLocaleDateString()} at {new Date(event.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </p>
                     </div>
-                  ))
+                    <div className="flex items-center space-x-1 flex-shrink-0">
+                      <button className="text-gray-400 hover:text-blue-600 p-1 rounded transition-colors" title="Edit event">
+                        <EditIcon className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => setEvents(prev => prev.filter(e => e.id !== event.id))}
+                        className="text-gray-400 hover:text-red-600 p-1 rounded transition-colors" 
+                        title="Delete event"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           </div>
