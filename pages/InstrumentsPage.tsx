@@ -539,11 +539,210 @@ const InstrumentsPage: React.FC = () => {
       )}
 
       {activeTab === 'bookings' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Bookings</h2>
-          <div className="text-center py-8 text-gray-500">
-            <CalendarIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p>No recent bookings. Book an instrument to get started!</p>
+        <div className="space-y-6">
+          {/* Booking Overview Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm opacity-90">Total Bookings</p>
+                  <p className="text-2xl font-bold">24</p>
+                </div>
+                <CalendarIcon className="w-8 h-8 opacity-80" />
+              </div>
+            </div>
+            <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm opacity-90">Active Now</p>
+                  <p className="text-2xl font-bold">8</p>
+                </div>
+                <ClockIcon className="w-8 h-8 opacity-80" />
+              </div>
+            </div>
+            <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm opacity-90">Pending</p>
+                  <p className="text-2xl font-bold">3</p>
+                </div>
+                <AlertCircleIcon className="w-8 h-8 opacity-80" />
+              </div>
+            </div>
+            <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm opacity-90">This Week</p>
+                  <p className="text-2xl font-bold">12</p>
+                </div>
+                <CalendarIcon className="w-8 h-8 opacity-80" />
+              </div>
+            </div>
+          </div>
+
+          {/* Booking Filters & Search */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Booking Management</h3>
+              <div className="flex items-center space-x-3">
+                <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <option value="">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+                <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <option value="">All Labs</option>
+                  {labs.map((lab) => (
+                    <option key={lab.id} value={lab.id}>{lab.name}</option>
+                  ))}
+                </select>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                  <PlusIcon className="w-4 h-4 inline mr-2" />
+                  New Booking
+                </button>
+              </div>
+            </div>
+
+            {/* Mock Bookings Data */}
+            <div className="space-y-4">
+              {[
+                {
+                  id: '1',
+                  instrument: 'High-Performance Liquid Chromatography (HPLC)',
+                  user: 'Dr. Sarah Johnson',
+                  team: 'Protein Analysis Team',
+                  startTime: '2024-01-20T09:00:00',
+                  endTime: '2024-01-20T17:00:00',
+                  status: 'active',
+                  purpose: 'Protein purification and analysis for CRISPR study',
+                  lab: 'Analytical Chemistry Lab',
+                  bookingType: 'team'
+                },
+                {
+                  id: '2',
+                  instrument: 'Confocal Laser Scanning Microscope',
+                  user: 'Dr. Michael Chen',
+                  team: 'Cell Imaging Group',
+                  startTime: '2024-01-21T10:00:00',
+                  endTime: '2024-01-21T16:00:00',
+                  status: 'approved',
+                  purpose: 'Live cell imaging for drug response study',
+                  lab: 'Cell Biology Lab',
+                  bookingType: 'individual'
+                },
+                {
+                  id: '3',
+                  instrument: 'Real-Time PCR Machine',
+                  user: 'Emily Rodriguez',
+                  team: 'Gene Expression Team',
+                  startTime: '2024-01-19T14:00:00',
+                  endTime: '2024-01-19T18:00:00',
+                  status: 'completed',
+                  purpose: 'Gene expression analysis in treated cells',
+                  lab: 'Molecular Genetics Lab',
+                  bookingType: 'individual'
+                },
+                {
+                  id: '4',
+                  instrument: 'Ultracentrifuge',
+                  user: 'Alex Thompson',
+                  team: 'Cross-Lab Collaboration',
+                  startTime: '2024-01-22T08:00:00',
+                  endTime: '2024-01-22T12:00:00',
+                  status: 'pending',
+                  purpose: 'Cell fractionation for protein extraction',
+                  lab: 'Cell Biology Lab',
+                  bookingType: 'team'
+                }
+              ].map((booking) => (
+                <div key={booking.id} className={`p-4 rounded-lg border-l-4 transition-all hover:shadow-md ${
+                  booking.status === 'active' ? 'bg-blue-50 border-blue-400' :
+                  booking.status === 'approved' ? 'bg-green-50 border-green-400' :
+                  booking.status === 'completed' ? 'bg-gray-50 border-gray-400' :
+                  booking.status === 'pending' ? 'bg-yellow-50 border-yellow-400' :
+                  'bg-red-50 border-red-400'
+                }`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h4 className="font-semibold text-gray-900">{booking.instrument}</h4>
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          booking.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                          booking.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          booking.status === 'completed' ? 'bg-gray-100 text-gray-800' :
+                          booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {booking.status}
+                        </span>
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          booking.bookingType === 'team' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {booking.bookingType}
+                        </span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-600"><span className="font-medium">User:</span> {booking.user}</p>
+                          <p className="text-gray-600"><span className="font-medium">Team:</span> {booking.team}</p>
+                          <p className="text-gray-600"><span className="font-medium">Lab:</span> {booking.lab}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">
+                            <span className="font-medium">Start:</span> {new Date(booking.startTime).toLocaleString()}
+                          </p>
+                          <p className="text-gray-600">
+                            <span className="font-medium">End:</span> {new Date(booking.endTime).toLocaleString()}
+                          </p>
+                          <p className="text-gray-600">
+                            <span className="font-medium">Duration:</span> {
+                              Math.round((new Date(booking.endTime).getTime() - new Date(booking.startTime).getTime()) / (1000 * 60 * 60))
+                            } hours
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <p className="text-gray-700 mt-2 italic">"{booking.purpose}"</p>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 ml-4">
+                      {booking.status === 'pending' && (
+                        <>
+                          <button className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors">
+                            Approve
+                          </button>
+                          <button className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors">
+                            Reject
+                          </button>
+                        </>
+                      )}
+                      {booking.status === 'active' && (
+                        <button className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
+                          Extend
+                        </button>
+                      )}
+                      <button className="px-3 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700 transition-colors">
+                        View
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Calendar View */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Booking Calendar</h3>
+            <div className="text-center py-8 text-gray-500">
+              <CalendarIcon className="w-16 h-16 mx-auto mb-3 text-gray-300" />
+              <p className="text-lg">Interactive calendar view coming soon!</p>
+              <p className="text-sm">View all instrument bookings in a calendar format</p>
+            </div>
           </div>
         </div>
       )}

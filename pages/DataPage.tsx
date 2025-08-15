@@ -347,6 +347,133 @@ const DataPage: FC<DataPageProps> = ({ results, onUpdateResult }) => {
                 </CardContent>
             </Card>
 
+            {/* --- DATA ANALYTICS --- */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center gap-3">
+                        <BarChartIcon className="h-6 w-6 text-slate-700"/>
+                        <div>
+                            <CardTitle>Data Analytics & Insights</CardTitle>
+                            <CardDescription>Comprehensive analysis tools for your research data and experimental results.</CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    {/* Analytics Overview Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-lg">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm opacity-90">Total Results</p>
+                                    <p className="text-2xl font-bold">{filteredEntries.length}</p>
+                                </div>
+                                <BarChartIcon className="w-8 h-8 opacity-80" />
+                            </div>
+                        </div>
+                        <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-lg">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm opacity-90">This Month</p>
+                                    <p className="text-2xl font-bold">
+                                        {filteredEntries.filter(entry => {
+                                            const entryDate = new Date(entry.date);
+                                            const now = new Date();
+                                            return entryDate.getMonth() === now.getMonth() && entryDate.getFullYear() === now.getFullYear();
+                                        }).length}
+                                    </p>
+                                </div>
+                                <LineChartIcon className="w-8 h-8 opacity-80" />
+                            </div>
+                        </div>
+                        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 rounded-lg">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm opacity-90">Unique Authors</p>
+                                    <p className="text-2xl font-bold">{uniqueAuthors.length}</p>
+                                </div>
+                                <FilesIcon className="w-8 h-8 opacity-80" />
+                            </div>
+                        </div>
+                        <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 rounded-lg">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm opacity-90">Tags Used</p>
+                                    <p className="text-2xl font-bold">{uniqueTags.length}</p>
+                                </div>
+                                <FilterIcon className="w-8 h-8 opacity-80" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Advanced Analytics Tools */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-slate-50 p-4 rounded-lg border">
+                            <h4 className="font-semibold text-slate-800 mb-3 flex items-center">
+                                <Wand2Icon className="h-5 w-5 mr-2 text-purple-600" />
+                                Statistical Analysis
+                            </h4>
+                            <div className="space-y-3">
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Descriptive Statistics</span>
+                                    <p className="text-xs text-slate-500">Mean, median, standard deviation</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Correlation Analysis</span>
+                                    <p className="text-xs text-slate-500">Find relationships between variables</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Hypothesis Testing</span>
+                                    <p className="text-xs text-slate-500">T-tests, ANOVA, chi-square</p>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 p-4 rounded-lg border">
+                            <h4 className="font-semibold text-slate-800 mb-3 flex items-center">
+                                <LightbulbIcon className="h-5 w-5 mr-2 text-blue-600" />
+                                Data Visualization
+                            </h4>
+                            <div className="space-y-3">
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Chart Generator</span>
+                                    <p className="text-xs text-slate-500">Bar, line, scatter plots</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Heat Maps</span>
+                                    <p className="text-xs text-slate-500">Correlation and distribution maps</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Interactive Dashboards</span>
+                                    <p className="text-xs text-slate-500">Real-time data exploration</p>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* AI-Powered Insights */}
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg border border-indigo-200">
+                        <h4 className="font-semibold text-indigo-800 mb-3 flex items-center">
+                            <SparklesIcon className="h-5 w-5 mr-2 text-indigo-600" />
+                            AI-Powered Data Insights
+                        </h4>
+                        <p className="text-sm text-indigo-700 mb-3">
+                            Leverage artificial intelligence to discover patterns, anomalies, and insights in your research data.
+                        </p>
+                        <div className="flex space-x-3">
+                            <button className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors">
+                                Pattern Recognition
+                            </button>
+                            <button className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors">
+                                Anomaly Detection
+                            </button>
+                            <button className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors">
+                                Predictive Analysis
+                            </button>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* --- FILTERS & SEARCH --- */}
              <Card>
                 <CardHeader>

@@ -51,18 +51,14 @@ const SideNav: React.FC = () => {
         title: 'Research Intelligence',
         items: [
           { name: 'Data & Results', to: '/research-intelligence', icon: ChartBarIcon, description: 'Research data and analysis' },
-          { name: 'AI Papers', to: '/ai-papers', icon: SparklesIcon, description: 'AI-powered paper suggestions' },
-          { name: 'Presentations', to: '/presentations', icon: PresentationChartLineIcon, description: 'Automated presentation generation' }
+          { name: 'Research Assistant', to: '/research-assistant', icon: LightbulbIcon, description: 'AI-powered research helper' }
         ]
       },
       {
         title: 'Tools & Resources',
         items: [
           { name: 'Calculator Hub', to: '/calculator-hub', icon: CalculatorIcon, description: 'Scientific calculators for lab work' },
-          { name: 'Reference Library', to: '/reference-library', icon: BookOpenIcon, description: 'Protocols, standards, and resources' },
-          { name: 'Unit Converter', to: '/unit-converter', icon: SettingsIcon, description: 'Convert between measurement units' },
-          { name: 'Data Analysis', to: '/data-analysis', icon: BarChart3Icon, description: 'Statistical analysis tools' },
-          { name: 'Research Assistant', to: '/research-assistant', icon: LightbulbIcon, description: 'AI-powered research helper' }
+          { name: 'Unit Converter', to: '/unit-converter', icon: SettingsIcon, description: 'Convert between measurement units' }
         ]
       },
       {
