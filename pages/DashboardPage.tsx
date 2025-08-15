@@ -477,7 +477,7 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* Main Dashboard Content */}
-      <div className="page-grid">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column - Sticky Notes & Tasks */}
         <div className="lg:col-span-2 space-y-8">
           {/* Sticky Notes Section */}
@@ -692,88 +692,7 @@ const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Calendar Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Personal Calendar</h2>
-              <div className="flex items-center space-x-2">
-                <button 
-                  onClick={() => {
-                    setQuickAddType('event');
-                    setShowQuickAddModal(true);
-                  }}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
-                >
-                  <PlusIcon className="w-4 h-4 mr-1" />
-                  Add Event
-                </button>
-                <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">View Calendar</button>
-              </div>
-            </div>
-            
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-1 mb-4">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
-                  {day}
-                </div>
-              ))}
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1">
-              {Array.from({ length: 35 }, (_, i) => {
-                const date = new Date();
-                const currentMonth = date.getMonth();
-                const currentYear = date.getFullYear();
-                const firstDay = new Date(currentYear, currentMonth, 1);
-                const lastDay = new Date(currentYear, currentMonth + 1, 0);
-                const startDate = new Date(firstDay);
-                startDate.setDate(startDate.getDate() - firstDay.getDay());
-                
-                const cellDate = new Date(startDate);
-                cellDate.setDate(startDate.getDate() + i);
-                
-                const isCurrentMonth = cellDate.getMonth() === currentMonth;
-                const isToday = cellDate.toDateString() === new Date().toDateString();
-                const dayEvents = events.filter(event => {
-                  const eventDate = new Date(event.date);
-                  return eventDate.toDateString() === cellDate.toDateString();
-                });
-                
-                return (
-                  <div
-                    key={i}
-                    className={`min-h-[80px] p-2 border border-gray-100 text-sm ${
-                      isCurrentMonth ? 'bg-white' : 'bg-gray-50'
-                    } ${isToday ? 'ring-2 ring-blue-500' : ''}`}
-                  >
-                    <div className={`text-right mb-1 ${
-                      isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
-                    } ${isToday ? 'font-bold text-blue-600' : ''}`}>
-                      {cellDate.getDate()}
-                    </div>
-                    
-                    {/* Event indicators */}
-                    {dayEvents.slice(0, 2).map((event, eventIndex) => (
-                      <div
-                        key={eventIndex}
-                        className="text-xs p-1 mb-1 bg-blue-100 text-blue-800 rounded truncate"
-                        title={event.title}
-                      >
-                        {event.title}
-                      </div>
-                    ))}
-                    
-                    {dayEvents.length > 2 && (
-                      <div className="text-xs text-gray-500 text-center">
-                        +{dayEvents.length - 2} more
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+
 
           {/* Experiment Updates */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -861,8 +780,90 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column - Upcoming Events & Quick Stats */}
+        {/* Right Column - Calendar & Events */}
         <div className="space-y-8">
+          {/* Calendar Section - Larger Size */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Personal Calendar</h2>
+              <div className="flex items-center space-x-2">
+                <button 
+                  onClick={() => {
+                    setQuickAddType('event');
+                    setShowQuickAddModal(true);
+                  }}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
+                >
+                  <PlusIcon className="w-4 h-4 mr-1" />
+                  Add Event
+                </button>
+              </div>
+            </div>
+            
+            {/* Calendar Grid - Larger Cells */}
+            <div className="grid grid-cols-7 gap-1 mb-4">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                  {day}
+                </div>
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-7 gap-1">
+              {Array.from({ length: 35 }, (_, i) => {
+                const date = new Date();
+                const currentMonth = date.getMonth();
+                const currentYear = date.getFullYear();
+                const firstDay = new Date(currentYear, currentMonth, 1);
+                const lastDay = new Date(currentYear, currentMonth + 1, 0);
+                const startDate = new Date(firstDay);
+                startDate.setDate(startDate.getDate() - firstDay.getDay());
+                
+                const cellDate = new Date(startDate);
+                cellDate.setDate(startDate.getDate() + i);
+                
+                const isCurrentMonth = cellDate.getMonth() === currentMonth;
+                const isToday = cellDate.toDateString() === new Date().toDateString();
+                const dayEvents = events.filter(event => {
+                  const eventDate = new Date(event.date);
+                  return eventDate.toDateString() === cellDate.toDateString();
+                });
+                
+                return (
+                  <div
+                    key={i}
+                    className={`min-h-[100px] p-2 border border-gray-100 text-sm ${
+                      isCurrentMonth ? 'bg-white' : 'bg-gray-50'
+                    } ${isToday ? 'ring-2 ring-blue-500' : ''}`}
+                  >
+                    <div className={`text-right mb-2 ${
+                      isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
+                    } ${isToday ? 'font-bold text-blue-600' : ''}`}>
+                      {cellDate.getDate()}
+                    </div>
+                    
+                    {/* Event indicators */}
+                    {dayEvents.slice(0, 3).map((event, eventIndex) => (
+                      <div
+                        key={eventIndex}
+                        className="text-xs p-1 mb-1 bg-blue-100 text-blue-800 rounded truncate"
+                        title={event.title}
+                      >
+                        {event.title}
+                      </div>
+                    ))}
+                    
+                    {dayEvents.length > 3 && (
+                      <div className="text-xs text-gray-500 text-center">
+                        +{dayEvents.length - 3} more
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Upcoming Events */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
@@ -880,24 +881,24 @@ const DashboardPage: React.FC = () => {
             </div>
             <div className="space-y-3">
               {events.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <CalendarIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p>No upcoming events. Schedule your first event!</p>
+                <div className="text-center py-6 text-gray-500">
+                  <CalendarIcon className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No upcoming events</p>
                 </div>
               ) : (
-                events.slice(0, 5).map((event) => (
+                events.slice(0, 4).map((event) => (
                   <div key={event.id} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 hover:shadow-md transition-all">
                     <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0"></div>
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">{event.title}</p>
-                      <p className="text-sm text-gray-600">{event.description}</p>
+                      <p className="font-medium text-gray-900 text-sm">{event.title}</p>
+                      <p className="text-xs text-gray-600">{event.description}</p>
                       <p className="text-xs text-gray-500">
                         {new Date(event.start_time).toLocaleDateString()} at {new Date(event.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                       </p>
                     </div>
                     <div className="flex items-center space-x-1 flex-shrink-0">
                       <button className="text-gray-400 hover:text-blue-600 p-1 rounded transition-colors" title="Edit event">
-                        <EditIcon className="w-4 h-4" />
+                        <EditIcon className="w-3 h-3" />
                       </button>
                       <button 
                         onClick={() => setEvents(prev => prev.filter(e => e.id !== event.id))}

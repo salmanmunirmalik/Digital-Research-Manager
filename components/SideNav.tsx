@@ -75,24 +75,7 @@ const SideNav: React.FC = () => {
       }
     ];
 
-    // Demo mode - always show admin and supervisor items
-    baseItems.push({
-      title: 'Administration',
-      items: [
-        { name: 'User Management', to: '/admin/users', icon: UsersIcon, description: 'Manage lab members and roles' },
-        { name: 'Lab Settings', to: '/admin/settings', icon: CogIcon, description: 'Lab configuration and preferences' },
-        { name: 'Security', to: '/admin/security', icon: ShieldCheckIcon, description: 'Security and privacy settings' }
-      ]
-    });
 
-    baseItems.push({
-      title: 'Supervision',
-      items: [
-        { name: 'Team Overview', to: '/supervision/team', icon: UsersIcon, description: 'Monitor team progress' },
-        { name: 'Project Management', to: '/admin/projects', icon: ChartBarIcon, description: 'Manage research projects' },
-        { name: 'Approvals', to: '/supervision/approvals', icon: ShieldCheckIcon, description: 'Review and approve requests' }
-      ]
-    });
 
     return baseItems;
   };

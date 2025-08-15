@@ -157,6 +157,8 @@ const LabManagementPage: React.FC = () => {
             { id: 'overview', name: 'Overview', icon: ChartBarIcon },
             { id: 'members', name: 'Team Members', icon: UsersIcon },
             { id: 'projects', name: 'Projects', icon: BuildingOfficeIcon },
+            { id: 'administration', name: 'Administration', icon: ShieldCheckIcon },
+            { id: 'supervision', name: 'Supervision', icon: UsersIcon },
             { id: 'settings', name: 'Settings', icon: CogIcon }
           ].map((tab) => (
             <button
@@ -343,6 +345,134 @@ const LabManagementPage: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {activeTab === 'administration' && (
+        <div className="space-y-6">
+          {/* User Management */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">User Management</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <UsersIcon className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Lab Members & Roles</p>
+                    <p className="text-sm text-gray-600">Manage lab member access and permissions</p>
+                  </div>
+                </div>
+                <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                  Manage Users
+                </button>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <CogIcon className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Lab Configuration</p>
+                    <p className="text-sm text-gray-600">Configure lab settings and preferences</p>
+                  </div>
+                </div>
+                <button className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">
+                  Configure
+                </button>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                    <ShieldCheckIcon className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Security Settings</p>
+                    <p className="text-sm text-gray-600">Manage security and privacy settings</p>
+                  </div>
+                </div>
+                <button className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors">
+                  Security
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'supervision' && (
+        <div className="space-y-6">
+          {/* Team Overview */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Team Overview</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="flex items-center space-x-2 mb-2">
+                  <UsersIcon className="w-5 h-5 text-blue-600" />
+                  <span className="font-medium text-blue-900">Active Members</span>
+                </div>
+                <p className="text-2xl font-bold text-blue-900">{mockMembers.length}</p>
+                <p className="text-sm text-blue-700">Currently active in lab</p>
+              </div>
+              
+              <div className="p-4 bg-green-50 rounded-lg">
+                <div className="flex items-center space-x-2 mb-2">
+                  <ChartBarIcon className="w-5 h-5 text-green-600" />
+                  <span className="font-medium text-green-900">Active Projects</span>
+                </div>
+                <p className="text-2xl font-bold text-green-900">{mockProjects.filter(p => p.status === 'In Progress' || p.status === 'Active').length}</p>
+                <p className="text-sm text-green-700">Currently in progress</p>
+              </div>
+              
+              <div className="p-4 bg-orange-50 rounded-lg">
+                <div className="flex items-center space-x-2 mb-2">
+                  <CalendarIcon className="w-5 h-5 text-orange-600" />
+                  <span className="font-medium text-orange-900">Pending Approvals</span>
+                </div>
+                <p className="text-2xl font-bold text-orange-900">2</p>
+                <p className="text-sm text-orange-700">Awaiting review</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Project Management */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Project Management</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <BuildingOfficeIcon className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Research Projects</p>
+                    <p className="text-sm text-gray-600">Monitor and manage ongoing research</p>
+                  </div>
+                </div>
+                <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                  View Projects
+                </button>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <ShieldCheckIcon className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Approvals & Reviews</p>
+                    <p className="text-sm text-gray-600">Review and approve team requests</p>
+                  </div>
+                </div>
+                <button className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">
+                  Review
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
