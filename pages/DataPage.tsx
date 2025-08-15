@@ -7,7 +7,7 @@ import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
 import { ResultEntry, DataPreview } from '../types';
 import { compileSummaries, analyzeResultData } from '../services/geminiService';
-import { SearchIcon, BarChartIcon, ChevronRightIcon, FilesIcon, SparklesIcon, FilterIcon, LineChartIcon, LightbulbIcon, CheckCircleIcon, Wand2Icon, AlertTriangleIcon } from '../components/icons';
+import { SearchIcon, BarChartIcon, ChevronRightIcon, FilesIcon, SparklesIcon, FilterIcon, LineChartIcon, LightbulbIcon, CheckCircleIcon, Wand2Icon, AlertTriangleIcon, PencilIcon, DatabaseIcon } from '../components/icons';
 
 const LoadingSpinner: React.FC<{className?: string}> = ({className}) => (
     <div className={`flex items-center justify-center space-x-2 ${className}`}>
@@ -312,38 +312,169 @@ const DataPage: FC<DataPageProps> = ({ results, onUpdateResult }) => {
                 <p className="mt-1 text-md text-slate-600">Your intelligent repository for experimental data, conclusions, and AI-powered analysis.</p>
             </div>
 
-            {/* --- COMPILER --- */}
+            {/* --- DATA ENTRY TOOLS --- */}
             <Card>
                 <CardHeader>
                     <div className="flex items-center gap-3">
                         <FilesIcon className="h-6 w-6 text-slate-700"/>
                         <div>
-                            <CardTitle>AI Summary Compiler</CardTitle>
-                            <CardDescription>Select stored notebook summaries and compile them into a report or paper draft.</CardDescription>
+                            <CardTitle>Data Entry & Import Tools</CardTitle>
+                            <CardDescription>Import and manage research data from various sources and formats.</CardDescription>
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex flex-wrap items-end gap-4">
-                        <div className="flex-grow">
-                             <label htmlFor="compilationFormat" className="block text-sm font-medium text-slate-700 mb-1">Compilation Format</label>
-                             <Select id="compilationFormat" value={compilationFormat} onChange={e => setCompilationFormat(e.target.value as any)}>
-                                 <option>Weekly Report</option>
-                                 <option>Paper Section</option>
-                             </Select>
+                <CardContent className="space-y-6">
+                    {/* Excel & CSV Import */}
+                    <div className="bg-slate-50 p-4 rounded-lg border">
+                        <h4 className="font-semibold text-slate-800 mb-3 flex items-center">
+                            <BarChartIcon className="h-5 w-5 mr-2 text-green-600" />
+                            Spreadsheet Data Import
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-3">
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Excel (.xlsx, .xls)</span>
+                                    <p className="text-xs text-slate-500">Import data from Excel spreadsheets</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">CSV Files</span>
+                                    <p className="text-xs text-slate-500">Import comma-separated values</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">TSV Files</span>
+                                    <p className="text-xs text-slate-500">Import tab-separated values</p>
+                                </button>
+                            </div>
+                            <div className="space-y-3">
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Google Sheets</span>
+                                    <p className="text-xs text-slate-500">Import from Google Sheets</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Data Validation</span>
+                                    <p className="text-xs text-slate-500">Check data integrity & format</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Template Library</span>
+                                    <p className="text-xs text-slate-500">Pre-built data entry forms</p>
+                                </button>
+                            </div>
                         </div>
-                        <Button onClick={handleCompile} disabled={isCompiling || selectedResultIds.size === 0}>
-                            {isCompiling ? <LoadingSpinner className="text-white"/> : <SparklesIcon className="h-4 w-4 mr-2"/>}
-                            {isCompiling ? 'Compiling...' : `Compile ${selectedResultIds.size} Summaries`}
-                        </Button>
                     </div>
-                     {compilerError && <p className="text-sm text-red-500">{compilerError}</p>}
-                     {compiledText && (
-                        <div className="pt-4 mt-4 border-t">
-                            <h3 className="text-lg font-semibold text-slate-800 mb-2">Compiled Result</h3>
-                            <pre className="p-4 bg-slate-100 rounded-md text-sm text-slate-800 whitespace-pre-wrap font-sans max-h-96 overflow-y-auto">{compiledText}</pre>
+
+                    {/* Image & Document Import */}
+                    <div className="bg-slate-50 p-4 rounded-lg border">
+                        <h4 className="font-semibold text-slate-800 mb-3 flex items-center">
+                            <FilesIcon className="h-5 w-5 mr-2 text-blue-600" />
+                            Image & Document Import
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-3">
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Microscope Images</span>
+                                    <p className="text-xs text-slate-500">Import microscopy & imaging data</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Gel Images</span>
+                                    <p className="text-xs text-slate-500">Import electrophoresis gels</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Charts & Graphs</span>
+                                    <p className="text-xs text-slate-500">Import visual data representations</p>
+                                </button>
+                            </div>
+                            <div className="space-y-3">
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">PDF Documents</span>
+                                    <p className="text-xs text-slate-500">Extract data from PDF reports</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Lab Notebooks</span>
+                                    <p className="text-xs text-slate-500">Import handwritten notes</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">OCR Processing</span>
+                                    <p className="text-xs text-slate-500">Convert images to text</p>
+                                </button>
+                            </div>
                         </div>
-                     )}
+                    </div>
+
+                    {/* Database & API Import */}
+                    <div className="bg-slate-50 p-4 rounded-lg border">
+                        <h4 className="font-semibold text-slate-800 mb-3 flex items-center">
+                            <DatabaseIcon className="h-5 w-5 mr-2 text-purple-600" />
+                            Database & API Import
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-3">
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">SQL Databases</span>
+                                    <p className="text-xs text-slate-500">Connect to external databases</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">REST APIs</span>
+                                    <p className="text-xs text-slate-500">Import from web services</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">GraphQL</span>
+                                    <p className="text-xs text-slate-500">Query-based data import</p>
+                                </button>
+                            </div>
+                            <div className="space-y-3">
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Cloud Storage</span>
+                                    <p className="text-xs text-slate-500">Import from cloud platforms</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Data Sync</span>
+                                    <p className="text-xs text-slate-500">Automated data synchronization</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Version Control</span>
+                                    <p className="text-xs text-slate-500">Track data changes over time</p>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Manual Data Entry */}
+                    <div className="bg-slate-50 p-4 rounded-lg border">
+                        <h4 className="font-semibold text-slate-800 mb-3 flex items-center">
+                            <PencilIcon className="h-5 w-5 mr-2 text-orange-600" />
+                            Manual Data Entry
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-3">
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Form Builder</span>
+                                    <p className="text-xs text-slate-500">Create custom data entry forms</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Bulk Entry</span>
+                                    <p className="text-xs text-slate-500">Enter multiple records at once</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Data Templates</span>
+                                    <p className="text-xs text-slate-500">Use predefined data structures</p>
+                                </button>
+                            </div>
+                            <div className="space-y-3">
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Validation Rules</span>
+                                    <p className="text-xs text-slate-500">Set data quality standards</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Auto-save</span>
+                                    <p className="text-xs text-slate-500">Prevent data loss</p>
+                                </button>
+                                <button className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
+                                    <span className="font-medium">Data Review</span>
+                                    <p className="text-xs text-slate-500">Review and approve entries</p>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
 
