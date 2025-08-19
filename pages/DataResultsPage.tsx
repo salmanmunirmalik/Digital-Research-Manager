@@ -61,7 +61,7 @@ const DataResultsPage: React.FC = () => {
   const [selectedAnalysis, setSelectedAnalysis] = useState('descriptive');
   const [analyticsDataName, setAnalyticsDataName] = useState('');
   const [analyticsDataInput, setAnalyticsDataInput] = useState('');
-  const [analyticsData, setAnalyticsData] = useState([]);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsDataPoint[]>([]);
   
   // Performance optimization refs
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -537,6 +537,72 @@ const DataResultsPage: React.FC = () => {
     };
   }, []);
 
+  // Generate dummy data for testing when backend is not available
+  const generateDummyData = () => {
+    const dummyResults: ResultEntry[] = [
+      {
+        id: '1',
+        title: 'Protein Expression Analysis',
+        summary: 'Western blot analysis of recombinant protein expression in E. coli',
+        author: 'Dr. Sarah Johnson',
+        date: '2024-01-15',
+        tags: ['protein', 'western blot', 'E. coli', 'expression'],
+        source: 'Manual',
+        dataPreview: {
+          type: 'table',
+          content: {
+            headers: ['Time (h)', 'OD600', 'Protein (mg/L)', 'Activity (U/mg)'],
+            rows: [
+              [0, 0.1, 0, 0],
+              [2, 0.5, 15, 120],
+              [4, 1.2, 45, 180],
+              [6, 2.1, 78, 220],
+              [8, 3.8, 125, 280],
+              [10, 4.2, 156, 320],
+              [12, 4.5, 189, 350],
+              [24, 4.8, 210, 380]
+            ]
+          }
+        },
+        lab_id: 'default-lab',
+        privacy_level: 'lab',
+        created_at: '2024-01-15T10:30:00Z',
+        updated_at: '2024-01-15T10:30:00Z'
+      },
+      {
+        id: '2',
+        title: 'Enzyme Kinetics Study',
+        summary: 'Michaelis-Menten kinetics of purified enzyme at varying substrate concentrations',
+        author: 'Dr. Michael Chen',
+        date: '2024-01-14',
+        tags: ['enzyme', 'kinetics', 'Michaelis-Menten', 'biochemistry'],
+        source: 'Manual',
+        dataPreview: {
+          type: 'table',
+          content: {
+            headers: ['[S] (mM)', 'V0 (μmol/min)', '1/[S] (1/mM)', '1/V0 (min/μmol)'],
+            rows: [
+              [0.1, 0.25, 10.0, 4.0],
+              [0.2, 0.45, 5.0, 2.22],
+              [0.5, 0.85, 2.0, 1.18],
+              [1.0, 1.25, 1.0, 0.8],
+              [2.0, 1.65, 0.5, 0.61],
+              [5.0, 1.95, 0.2, 0.51],
+              [10.0, 2.15, 0.1, 0.47],
+              [20.0, 2.25, 0.05, 0.44]
+            ]
+          }
+        },
+        lab_id: 'default-lab',
+        privacy_level: 'lab',
+        created_at: '2024-01-14T14:15:00Z',
+        updated_at: '2024-01-14T14:15:00Z'
+      }
+    ];
+    
+    setResults(dummyResults);
+  };
+
   const fetchLabs = async () => {
     try {
       const response = await fetch('http://localhost:5001/api/labs', {
@@ -548,6 +614,8 @@ const DataResultsPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching labs:', error);
+      // Set default lab data if API fails
+      setLabs([{ id: 'default-lab', name: 'Default Lab', institution: 'Default Institution' }]);
     }
   };
 
@@ -562,6 +630,7 @@ const DataResultsPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching results:', error);
+      // Keep existing dummy data if API fails
     }
   };
 
@@ -576,6 +645,16 @@ const DataResultsPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
+      // Set default stats if API fails
+      setStats({
+        total_results: results.length,
+        this_month: results.length,
+        experiments: results.filter(r => r.data_type === 'experiment').length,
+        observations: results.filter(r => r.data_type === 'observation').length,
+        measurements: results.filter(r => r.data_type === 'measurement').length,
+        manual_entries: results.filter(r => r.source === 'manual').length,
+        imports: results.filter(r => r.source === 'import').length
+      });
     }
   };
 
@@ -596,193 +675,6 @@ const DataResultsPage: React.FC = () => {
       setImportStatus('success');
       setTimeout(() => setImportStatus('idle'), 2000);
     }, 2000);
-  };
-
-  // Generate dummy data for testing
-  const generateDummyData = () => {
-    const dummyResults = [
-      {
-        id: '1',
-        title: 'Temperature vs. pH Study',
-        summary: 'Investigation of pH changes with temperature variations in aqueous solutions',
-        author: 'Dr. Sarah Chen',
-        date: '2024-01-15',
-        tags: ['temperature', 'pH', 'aqueous', 'chemistry'],
-        source: 'experiment',
-        data_type: 'experiment',
-        data_content: {
-          type: 'spreadsheet',
-          headers: ['Temperature (°C)', 'pH', 'Conductivity (mS/cm)', 'Sample ID'],
-          rows: [
-            [20, 7.2, 0.45, 'A1'],
-            [25, 7.1, 0.48, 'A2'],
-            [30, 7.0, 0.52, 'A3'],
-            [35, 6.9, 0.55, 'A4'],
-            [40, 6.8, 0.58, 'A5'],
-            [45, 6.7, 0.62, 'A6'],
-            [50, 6.6, 0.65, 'A7']
-          ]
-        },
-        created_at: '2024-01-15T10:00:00Z'
-      },
-      {
-        id: '2',
-        title: 'Cell Growth Rate Analysis',
-        summary: 'Measurement of bacterial cell growth rates under different nutrient conditions',
-        author: 'Dr. Michael Rodriguez',
-        date: '2024-01-14',
-        tags: ['cell growth', 'bacteria', 'nutrients', 'microbiology'],
-        source: 'experiment',
-        data_type: 'experiment',
-        data_content: {
-          type: 'spreadsheet',
-          headers: ['Time (hours)', 'Cell Count (×10⁶)', 'Nutrient Level (%)', 'Replicate'],
-          rows: [
-            [0, 1.2, 100, 'R1'],
-            [2, 2.8, 100, 'R1'],
-            [4, 6.5, 100, 'R1'],
-            [6, 15.2, 100, 'R1'],
-            [8, 28.7, 100, 'R1'],
-            [0, 1.1, 50, 'R2'],
-            [2, 2.1, 50, 'R2'],
-            [4, 4.8, 50, 'R2'],
-            [6, 9.2, 50, 'R2'],
-            [8, 16.5, 50, 'R2']
-          ]
-        },
-        created_at: '2024-01-14T14:30:00Z'
-      },
-      {
-        id: '3',
-        title: 'Protein Concentration Assay',
-        summary: 'Bradford assay results for protein quantification in cell lysates',
-        author: 'Dr. Emily Watson',
-        date: '2024-01-13',
-        tags: ['protein', 'Bradford assay', 'cell lysate', 'biochemistry'],
-        source: 'experiment',
-        data_type: 'experiment',
-        data_content: {
-          type: 'spreadsheet',
-          headers: ['Sample ID', 'Absorbance (595nm)', 'Protein (μg/mL)', 'Dilution Factor'],
-          rows: [
-            ['Control', 0.12, 0, 1],
-            ['Std1', 0.25, 5, 1],
-            ['Std2', 0.48, 10, 1],
-            ['Std3', 0.72, 15, 1],
-            ['Std4', 0.95, 20, 1],
-            ['Sample1', 0.68, 14.2, 1],
-            ['Sample2', 0.71, 15.1, 1],
-            ['Sample3', 0.65, 13.8, 1]
-          ]
-        },
-        created_at: '2024-01-13T09:15:00Z'
-      },
-      {
-        id: '4',
-        title: 'Enzyme Kinetics Study',
-        summary: 'Michaelis-Menten kinetics analysis of enzyme activity',
-        author: 'Dr. James Thompson',
-        date: '2024-01-12',
-        tags: ['enzyme', 'kinetics', 'Michaelis-Menten', 'biochemistry'],
-        source: 'experiment',
-        data_type: 'experiment',
-        data_content: {
-          type: 'spreadsheet',
-          headers: ['Substrate (mM)', 'Velocity (μmol/min)', '1/[S] (mM⁻¹)', '1/V (min/μmol)'],
-          rows: [
-            [0.5, 0.25, 2.0, 4.0],
-            [1.0, 0.40, 1.0, 2.5],
-            [2.0, 0.60, 0.5, 1.67],
-            [5.0, 0.80, 0.2, 1.25],
-            [10.0, 0.90, 0.1, 1.11],
-            [20.0, 0.95, 0.05, 1.05],
-            [50.0, 0.98, 0.02, 1.02]
-          ]
-        },
-        created_at: '2024-01-12T16:45:00Z'
-      },
-      {
-        id: '5',
-        title: 'Drug Dose Response',
-        summary: 'IC50 determination for novel drug compound on cancer cell lines',
-        author: 'Dr. Lisa Park',
-        date: '2024-01-11',
-        tags: ['drug', 'IC50', 'cancer', 'pharmacology'],
-        source: 'experiment',
-        data_type: 'experiment',
-        data_content: {
-          type: 'spreadsheet',
-          headers: ['Drug Concentration (μM)', 'Cell Viability (%)', 'Log[Concentration]', 'Response'],
-          rows: [
-            [0.001, 98.5, -3.0, 1.5],
-            [0.01, 95.2, -2.0, 4.8],
-            [0.1, 87.3, -1.0, 12.7],
-            [1.0, 65.8, 0.0, 34.2],
-            [10.0, 32.1, 1.0, 67.9],
-            [100.0, 8.5, 2.0, 91.5],
-            [1000.0, 2.1, 3.0, 97.9]
-          ]
-        },
-        created_at: '2024-01-11T11:20:00Z'
-      },
-      {
-        id: '6',
-        title: 'Plant Growth Study',
-        summary: 'Measurement of plant height and leaf count under different light conditions',
-        author: 'Dr. Robert Kim',
-        date: '2024-01-10',
-        tags: ['plant growth', 'light', 'height', 'botany'],
-        source: 'experiment',
-        data_type: 'experiment',
-        data_content: {
-          type: 'spreadsheet',
-          headers: ['Light Hours', 'Height (cm)', 'Leaf Count', 'Week'],
-          rows: [
-            [6, 12.5, 8, 1],
-            [8, 18.2, 12, 2],
-            [10, 25.8, 18, 3],
-            [12, 32.1, 24, 4],
-            [14, 28.9, 22, 5],
-            [16, 26.3, 20, 6],
-            [6, 11.8, 7, 1],
-            [8, 17.5, 11, 2],
-            [10, 24.2, 17, 3],
-            [12, 30.8, 23, 4],
-            [14, 27.1, 21, 5],
-            [16, 24.8, 19, 6]
-          ]
-        },
-        created_at: '2024-01-10T13:45:00Z'
-      },
-      {
-        id: '7',
-        title: 'Chemical Reaction Kinetics',
-        summary: 'Reaction rate analysis at different temperatures and concentrations',
-        author: 'Dr. Maria Garcia',
-        date: '2024-01-09',
-        tags: ['kinetics', 'temperature', 'concentration', 'chemistry'],
-        source: 'experiment',
-        data_type: 'experiment',
-        data_content: {
-          type: 'spreadsheet',
-          headers: ['Temperature (K)', 'Concentration (M)', 'Rate (M/s)', 'ln(Rate)'],
-          rows: [
-            [298, 0.1, 0.0023, -6.08],
-            [298, 0.2, 0.0046, -5.38],
-            [298, 0.3, 0.0069, -4.98],
-            [308, 0.1, 0.0045, -5.40],
-            [308, 0.2, 0.0090, -4.71],
-            [308, 0.3, 0.0135, -4.31],
-            [318, 0.1, 0.0087, -4.74],
-            [318, 0.2, 0.0174, -4.05],
-            [318, 0.3, 0.0261, -3.65]
-          ]
-        },
-        created_at: '2024-01-09T15:20:00Z'
-      }
-    ];
-    
-    setResults(dummyResults);
   };
 
   const handleSaveResult = (result: ResultEntry) => {
