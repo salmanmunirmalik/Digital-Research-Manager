@@ -409,8 +409,8 @@ const CalculatorHubPage: React.FC = () => {
             <div className="flex justify-center">
               <div className="bg-white rounded-xl p-1 shadow-lg border border-gray-100">
                 <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
+                                value={selectedCalcCategory}
+              onChange={(e) => setSelectedCalcCategory(e.target.value)}
                   className="px-4 py-2 rounded-lg border-0 focus:ring-0 bg-transparent text-gray-700 font-medium"
                 >
                   <option value="all">🔬 All Categories</option>
@@ -765,19 +765,19 @@ const CalculatorHubPage: React.FC = () => {
               {conversionCategories.map((category) => (
                 <button
                   key={category.name}
-                  onClick={() => setSelectedCategory(category.name)}
+                  onClick={() => setSelectedConverterCategory(category.name)}
                   className={`p-4 rounded-2xl transition-all duration-200 ${
-                    selectedCategory === category.name
+                    selectedConverterCategory === category.name
                       ? 'bg-gradient-to-r ' + category.color + ' text-white shadow-lg scale-105'
                       : 'bg-white hover:shadow-lg hover:-translate-y-1 border border-gray-100'
                   }`}
                 >
                   <div className="text-center">
                     <category.icon className={`w-8 h-8 mx-auto mb-2 ${
-                      selectedCategory === category.name ? 'text-white' : 'text-gray-600'
+                      selectedConverterCategory === category.name ? 'text-white' : 'text-gray-600'
                     }`} />
                     <p className={`text-sm font-medium capitalize ${
-                      selectedCategory === category.name ? 'text-white' : 'text-gray-700'
+                      selectedConverterCategory === category.name ? 'text-white' : 'text-gray-700'
                     }`}>
                       {category.name}
                     </p>
@@ -798,7 +798,7 @@ const CalculatorHubPage: React.FC = () => {
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   >
                     {conversionCategories
-                      .find(cat => cat.name === selectedCategory)
+                      .find(cat => cat.name === selectedConverterCategory)
                       ?.units.map((unit) => (
                         <option key={unit.name} value={unit.name}>
                           {unit.name} ({unit.symbol})
@@ -828,7 +828,7 @@ const CalculatorHubPage: React.FC = () => {
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   >
                     {conversionCategories
-                      .find(cat => cat.name === selectedCategory)
+                      .find(cat => cat.name === selectedConverterCategory)
                       ?.units.map((unit) => (
                         <option key={unit.name} value={unit.name}>
                           {unit.name} ({unit.symbol})
