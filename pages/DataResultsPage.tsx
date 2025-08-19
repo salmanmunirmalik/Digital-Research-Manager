@@ -482,13 +482,20 @@ const DataResultsPage: React.FC = () => {
   };
 
   useEffect(() => {
+    // Generate dummy data immediately for testing
+    generateDummyData();
+    
+    // Fetch labs and other data
     fetchLabs();
-    generateDummyData(); // Generate dummy data for testing
-    if (labs.length > 0) {
+    
+    // Fetch results and stats after a short delay to ensure labs are loaded
+    const timer = setTimeout(() => {
       fetchResults();
       fetchStats();
-    }
-  }, [labs]);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []); // Remove labs dependency to prevent race condition
   
   // Auto-select columns when switching to scatter plot
   useEffect(() => {
@@ -1139,10 +1146,10 @@ const DataResultsPage: React.FC = () => {
     // Use requestAnimationFrame for smooth transitions
     requestAnimationFrame(() => {
       // Perform statistical analysis
-      const data = dataset.data_content;
-      if (data.type === 'spreadsheet' && data.rows && data.headers) {
-        const numericColumns = data.headers.map((header: string, index: number) => {
-          const values = data.rows.map((row: any[]) => parseFloat(row[index])).filter(v => !isNaN(v));
+      const data = dataset.dataPreview;
+      if (data.type === 'table' && data.content?.rows && data.content?.headers) {
+        const numericColumns = data.content.headers.map((header: string, index: number) => {
+          const values = data.content.rows.map((row: any[]) => parseFloat(row[index])).filter(v => !isNaN(v));
           return { header, values, index };
         }).filter(col => col.values.length > 0);
         
@@ -1219,9 +1226,9 @@ const DataResultsPage: React.FC = () => {
       <CardContent className="p-4">
         <div className="flex justify-between items-start mb-2">
           <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-            result.data_type === 'experiment' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+            result.source === 'Manual' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
           }`}>
-            {result.data_type}
+            {result.source}
           </span>
           <span className="text-xs text-gray-500">
             {new Date(result.created_at).toLocaleDateString()}
@@ -1245,9 +1252,9 @@ const DataResultsPage: React.FC = () => {
           By {result.author}
         </div>
         
-        {result.data_content && result.data_content.type === 'spreadsheet' && (
+        {result.dataPreview && result.dataPreview.type === 'table' && (
           <div className="text-xs text-gray-500 mb-3">
-            📊 {result.data_content.rows?.length || 0} rows × {result.data_content.headers?.length || 0} columns
+            📊 {result.dataPreview.content?.rows?.length || 0} rows × {result.dataPreview.content?.headers?.length || 0} columns
           </div>
         )}
         
@@ -1261,7 +1268,7 @@ const DataResultsPage: React.FC = () => {
             variant="outline"
             className="flex-1"
           >
-            <EyeIcon className="w-4 h-4 mr-2" />
+            <EyeIcon className="w-4 w-4 mr-2" />
             View Data
           </Button>
           <Button
@@ -1539,14 +1546,14 @@ const DataResultsPage: React.FC = () => {
           )}
           
           {/* Data Display */}
-          {selectedDataset && selectedDataset.data_content && (
+          {selectedDataset && selectedDataset.dataPreview && (
             <div className="mb-6">
               <h4 className="font-semibold text-gray-900 mb-3">Dataset Preview</h4>
               <div className="overflow-x-auto border border-gray-200 rounded-lg">
                 <table className="min-w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      {selectedDataset.data_content.headers?.map((header: string, index: number) => (
+                      {selectedDataset.dataPreview.content?.headers?.map((header: string, index: number) => (
                         <th key={index} className="px-4 py-2 text-left text-sm font-medium text-gray-700 border-b">
                           {header}
                         </th>
@@ -1554,7 +1561,7 @@ const DataResultsPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedDataset.data_content.rows?.slice(0, 10).map((row: any[], rowIndex: number) => (
+                    {selectedDataset.dataPreview.content?.rows?.slice(0, 10).map((row: any[], rowIndex: number) => (
                       <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                         {row.map((cell: any, cellIndex: number) => (
                           <td key={cellIndex} className="px-4 py-2 text-sm text-gray-900 border-b">
@@ -1565,9 +1572,9 @@ const DataResultsPage: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
-                {selectedDataset.data_content.rows && selectedDataset.data_content.rows.length > 10 && (
+                {selectedDataset.dataPreview.content?.rows && selectedDataset.dataPreview.content.rows.length > 10 && (
                   <div className="px-4 py-2 text-sm text-gray-500 bg-gray-50 border-t">
-                    Showing first 10 rows of {selectedDataset.data_content.rows.length} total rows
+                    Showing first 10 rows of {selectedDataset.dataPreview.content.rows.length} total rows
                   </div>
                 )}
               </div>
