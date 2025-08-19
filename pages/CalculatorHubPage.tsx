@@ -18,7 +18,11 @@ import {
   RefreshCwIcon,
   SettingsIcon,
   SearchIcon,
-  FilterIcon
+  FilterIcon,
+  DnaIcon,
+  MicroscopeIcon,
+  AtomIcon,
+  FlaskIcon
 } from '../components/icons';
 import { 
   CALCULATOR_DEFINITIONS, 
@@ -115,7 +119,7 @@ const CalculatorHubPage: React.FC = () => {
   const [converterFavorites, setConverterFavorites] = useState<string[]>([]);
 
   // Group calculators by category, excluding specified categories
-  const excludedCategories = ['Molecular & Cell Biology', 'Statistics & Data Analysis', 'Bioinformatics', 'Engineering & Physics'];
+  const excludedCategories = ['Statistics & Data Analysis', 'Engineering & Physics'];
   
   const calculatorsByCategory = Object.values(CALCULATOR_DEFINITIONS)
     .filter(calc => !excludedCategories.includes(calc.category))
@@ -137,6 +141,46 @@ const CalculatorHubPage: React.FC = () => {
         calc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     });
+
+  // Get appropriate icon for calculator category
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Chemistry & Biochemistry':
+        return BeakerIcon;
+      case 'Biology & Life Sciences':
+        return FlaskIcon;
+      case 'Molecular & Cell Biology':
+        return DnaIcon;
+      case 'Bioinformatics':
+        return MicroscopeIcon;
+      case 'Physics & Engineering':
+        return AtomIcon;
+      case 'Laboratory & Instrumentation':
+        return PipetteIcon;
+      default:
+        return CalculatorIcon;
+    }
+  };
+
+  // Get appropriate color for calculator category
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'Chemistry & Biochemistry':
+        return 'from-blue-600 to-purple-600';
+      case 'Biology & Life Sciences':
+        return 'from-green-600 to-emerald-600';
+      case 'Molecular & Cell Biology':
+        return 'from-pink-600 to-rose-600';
+      case 'Bioinformatics':
+        return 'from-indigo-600 to-blue-600';
+      case 'Physics & Engineering':
+        return 'from-orange-600 to-red-600';
+      case 'Laboratory & Instrumentation':
+        return 'from-purple-600 to-pink-600';
+      default:
+        return 'from-gray-600 to-slate-600';
+    }
+  };
 
   // Define conversion categories and units
   const conversionCategories: ConversionCategory[] = [
@@ -418,28 +462,32 @@ const CalculatorHubPage: React.FC = () => {
               
               {Array.from(new Set(Object.values(CALCULATOR_DEFINITIONS).map(calc => calc.category)))
                 .filter(category => !excludedCategories.includes(category))
-                .map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCalcCategory(category)}
-                    className={`p-4 rounded-2xl transition-all duration-200 ${
-                      selectedCalcCategory === category
-                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg scale-105'
-                        : 'bg-white hover:shadow-lg hover:-translate-y-1 border border-gray-100'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <BeakerIcon className={`w-8 h-8 mx-auto mb-2 ${
-                        selectedCalcCategory === category ? 'text-white' : 'text-gray-600'
-                      }`} />
-                      <p className={`text-sm font-medium capitalize ${
-                        selectedCalcCategory === category ? 'text-white' : 'text-gray-700'
-                      }`}>
-                        {category}
-                      </p>
-                    </div>
-                  </button>
-                ))}
+                .map((category) => {
+                  const CategoryIcon = getCategoryIcon(category);
+                  const categoryColor = getCategoryColor(category);
+                  return (
+                    <button
+                      key={category}
+                      onClick={() => setSelectedCalcCategory(category)}
+                      className={`p-4 rounded-2xl transition-all duration-200 ${
+                        selectedCalcCategory === category
+                          ? `bg-gradient-to-r ${categoryColor} text-white shadow-lg scale-105`
+                          : 'bg-white hover:shadow-lg hover:-translate-y-1 border border-gray-100'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <CategoryIcon className={`w-8 h-8 mx-auto mb-2 ${
+                          selectedCalcCategory === category ? 'text-white' : 'text-gray-600'
+                        }`} />
+                        <p className={`text-sm font-medium capitalize ${
+                          selectedCalcCategory === category ? 'text-white' : 'text-gray-700'
+                        }`}>
+                          {category}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
             </div>
 
             {/* Calculator Interface */}

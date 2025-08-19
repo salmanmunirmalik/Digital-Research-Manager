@@ -69,11 +69,8 @@ const SideNav: React.FC = () => {
       {
         title: 'Tools & Resources',
         items: [
-          { name: 'Calculator Hub', to: '/calculator-hub', icon: CalculatorIcon, description: 'Scientific calculators and unit conversion' },
-          { name: 'Global Protocol Directory', to: '/protocols', icon: BeakerIcon, description: 'Research protocols and methods database' },
-          { name: 'Molecular & Cell Biology', to: '/molecular-biology', icon: BeakerIcon, description: 'PCR, cell culture, and molecular tools' },
-          { name: 'Data Analytics', to: '/data-analytics', icon: BarChartIcon, description: 'Statistical analysis and data insights' },
-          { name: 'Bioinformatics Tools', to: '/bioinformatics-tools', icon: BrainCircuitIcon, description: 'DNA/RNA analysis tools' }
+          { name: 'Calculators', to: '/calculator-hub', icon: CalculatorIcon, description: 'Scientific calculators and unit conversion' },
+          { name: 'Global Protocol Directory', to: '/protocols', icon: BeakerIcon, description: 'Research protocols and methods database' }
         ]
       },
       {
