@@ -703,3 +703,82 @@ export interface SuccessMessage {
   data?: any;
   timestamp: string;
 }
+
+// Results & Data Types
+export interface ResultEntry {
+  id: string;
+  title: string;
+  summary: string;
+  author: string;
+  date: string;
+  tags: string[];
+  source: 'Manual' | 'Notebook Summary' | 'Import';
+  dataPreview: DataPreview;
+  lab_id: string;
+  project_id?: string;
+  privacy_level: PrivacyLevel;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DataPreview {
+  type: 'table' | 'graph' | 'text' | 'image';
+  content: any;
+}
+
+export interface DataEntryForm {
+  title: string;
+  summary: string;
+  data_type: 'experiment' | 'observation' | 'measurement' | 'survey' | 'simulation' | 'other';
+  data_format: 'spreadsheet' | 'manual' | 'import';
+  lab_id: string;
+  project_id?: string;
+  tags: string[];
+  privacy_level: PrivacyLevel;
+  
+  // For spreadsheet data
+  spreadsheet_data?: {
+    headers: string[];
+    rows: string[][];
+    file_name?: string;
+    file_type?: 'excel' | 'csv' | 'tsv';
+  };
+  
+  // For manual entry
+  manual_data?: {
+    fields: Array<{
+      name: string;
+      type: 'text' | 'number' | 'date' | 'boolean' | 'select';
+      value: string | number | boolean;
+      required: boolean;
+      options?: string[];
+    }>;
+  };
+  
+  // For imported data
+  import_data?: {
+    source: string;
+    original_format: string;
+    metadata: Record<string, any>;
+  };
+}
+
+export interface DataTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  fields: Array<{
+    name: string;
+    type: 'text' | 'number' | 'date' | 'boolean' | 'select';
+    required: boolean;
+    default_value?: string | number | boolean;
+    options?: string[];
+    validation_rules?: Record<string, any>;
+  }>;
+  created_by: string;
+  lab_id: string;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+}

@@ -55,28 +55,26 @@ const SideNav: React.FC = () => {
       {
         title: 'Lab Management',
         items: [
-          { name: 'Lab Management', to: '/lab-management', icon: BuildingOfficeIcon, description: 'Manage labs and team members' },
-          { name: 'Protocols', to: '/protocols', icon: BeakerIcon, description: 'Research protocols and methods' },
-          { name: 'Lab Notebook', to: '/lab-notebook', icon: BookOpenIcon, description: 'Experiment records and notes' },
-          { name: 'Inventory', to: '/inventory', icon: ClipboardListIcon, description: 'Lab supplies and materials' },
-          { name: 'Instruments', to: '/instruments', icon: ClockIcon, description: 'Equipment booking and management' }
+          { name: 'Lab Management', to: '/lab-management', icon: BuildingOfficeIcon, description: 'Manage labs and team members' }
         ]
       },
       {
         title: 'Data & Results',
         items: [
           { name: 'Data & Results', to: '/data-results', icon: ChartBarIcon, description: 'Research data and analysis' },
+          { name: 'My Notebook', to: '/lab-notebook', icon: BookOpenIcon, description: 'Personal experiment records and notes' },
           { name: 'Research Assistant', to: '/research-assistant', icon: LightbulbIcon, description: 'AI-powered research helper' }
         ]
       },
       {
         title: 'Tools & Resources',
-                              items: [
-                        { name: 'Calculator Hub', to: '/calculator-hub', icon: CalculatorIcon, description: 'Scientific calculators and unit conversion' },
-                        { name: 'Molecular & Cell Biology', to: '/molecular-biology', icon: BeakerIcon, description: 'PCR, cell culture, and molecular tools' },
-                        { name: 'Data Analytics', to: '/data-analytics', icon: BarChartIcon, description: 'Statistical analysis and data insights' },
-                        { name: 'Bioinformatics Tools', to: '/bioinformatics-tools', icon: BrainCircuitIcon, description: 'DNA/RNA analysis tools' }
-                      ]
+        items: [
+          { name: 'Calculator Hub', to: '/calculator-hub', icon: CalculatorIcon, description: 'Scientific calculators and unit conversion' },
+          { name: 'Global Protocol Directory', to: '/protocols', icon: BeakerIcon, description: 'Research protocols and methods database' },
+          { name: 'Molecular & Cell Biology', to: '/molecular-biology', icon: BeakerIcon, description: 'PCR, cell culture, and molecular tools' },
+          { name: 'Data Analytics', to: '/data-analytics', icon: BarChartIcon, description: 'Statistical analysis and data insights' },
+          { name: 'Bioinformatics Tools', to: '/bioinformatics-tools', icon: BrainCircuitIcon, description: 'DNA/RNA analysis tools' }
+        ]
       },
       {
         title: 'Collaboration',

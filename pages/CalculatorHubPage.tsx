@@ -89,7 +89,9 @@ interface CalculatorState {
 }
 
 const CalculatorHubPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'calculators' | 'converter'>('calculators');
+  const [activeTab, setActiveTab] = useState<'calculators' | 'converter' | 'advanced'>('calculators');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCalcCategory, setSelectedCalcCategory] = useState<string>('all');
   
   // Calculator state
   const [calcState, setCalcState] = useState<CalculatorState>({
@@ -104,16 +106,13 @@ const CalculatorHubPage: React.FC = () => {
   });
 
   // Unit converter state
-  const [selectedCategory, setSelectedCategory] = useState<string>('length');
+  const [selectedConverterCategory, setSelectedConverterCategory] = useState<string>('length');
   const [fromUnit, setFromUnit] = useState<string>('');
   const [toUnit, setToUnit] = useState<string>('');
   const [fromValue, setFromValue] = useState<string>('1');
   const [toValue, setToValue] = useState<string>('');
   const [conversionHistory, setConversionHistory] = useState<ConversionHistory[]>([]);
-  const [favorites, setFavorites] = useState<string[]>([]);
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCalcCategory, setSelectedCalcCategory] = useState<string>('all');
+  const [converterFavorites, setConverterFavorites] = useState<string[]>([]);
 
   // Group calculators by category, excluding specified categories
   const excludedCategories = ['Molecular & Cell Biology', 'Statistics & Data Analysis', 'Bioinformatics', 'Engineering & Physics'];
@@ -218,23 +217,23 @@ const CalculatorHubPage: React.FC = () => {
 
   // Initialize units when category changes
   useEffect(() => {
-    const category = conversionCategories.find(cat => cat.name === selectedCategory);
+    const category = conversionCategories.find(cat => cat.name === selectedConverterCategory);
     if (category && category.units.length > 0) {
       setFromUnit(category.units[0].name);
       setToUnit(category.units[1]?.name || category.units[0].name);
     }
-  }, [selectedCategory]);
+  }, [selectedConverterCategory]);
 
   // Handle unit conversion
   const handleConversion = () => {
     if (!fromUnit || !toUnit || !fromValue) return;
 
     const fromUnitObj = conversionCategories
-      .find(cat => cat.name === selectedCategory)
+      .find(cat => cat.name === selectedConverterCategory)
       ?.units.find(unit => unit.name === fromUnit);
     
     const toUnitObj = conversionCategories
-      .find(cat => cat.name === selectedCategory)
+      .find(cat => cat.name === selectedConverterCategory)
       ?.units.find(unit => unit.name === toUnit);
 
     if (fromUnitObj && toUnitObj) {
@@ -249,7 +248,7 @@ const CalculatorHubPage: React.FC = () => {
         fromUnit,
         toValue: convertedValue,
         toUnit,
-        category: selectedCategory,
+        category: selectedConverterCategory,
         timestamp: new Date()
       };
       setConversionHistory(prev => [newHistory, ...prev.slice(0, 9)]);
@@ -311,7 +310,7 @@ const CalculatorHubPage: React.FC = () => {
 
   // Toggle favorite
   const toggleFavorite = (id: string) => {
-    setFavorites(prev => 
+    setConverterFavorites(prev => 
       prev.includes(id) 
         ? prev.filter(fav => fav !== id)
         : [...prev, id]
@@ -321,38 +320,79 @@ const CalculatorHubPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+        {/* Enhanced Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-lg mb-6">
-            <CalculatorIcon className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-3xl shadow-xl mb-6 transform hover:scale-105 transition-transform duration-200">
+            <CalculatorIcon className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Calculator Hub
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
+            🧮 Calculator Hub
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Advanced scientific calculators and unit conversion tools for research and laboratory work
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-6">
+            Advanced scientific calculators and unit conversion tools for research, laboratory work, and academic studies
           </p>
+          
+          {/* Quick Stats */}
+          <div className="flex justify-center gap-8 mb-8">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600">{Object.keys(CALCULATOR_DEFINITIONS).length}+</div>
+              <div className="text-sm text-gray-500">Scientific Calculators</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-600">20+</div>
+              <div className="text-sm text-gray-500">Unit Conversions</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-indigo-600">∞</div>
+              <div className="text-sm text-gray-500">Calculations</div>
+            </div>
+          </div>
+
+          {/* Search Bar */}
+          <div className="max-w-2xl mx-auto">
+            <div className="relative">
+              <SearchIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search calculators (e.g., molarity, dilution, pH, statistics)..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-6 py-4 text-lg border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 shadow-lg"
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Tab Navigation */}
+        {/* Enhanced Tab Navigation */}
         <div className="flex justify-center mb-8">
-          <div className="bg-white rounded-2xl p-2 shadow-lg border border-gray-100">
+          <div className="bg-white rounded-2xl p-2 shadow-xl border border-gray-100">
             <button
               onClick={() => setActiveTab('calculators')}
-              className={`px-8 py-3 rounded-xl font-medium transition-all duration-200 ${
+              className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
                 activeTab === 'calculators'
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg transform scale-105'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
               <CalculatorIcon className="w-5 h-5 inline mr-2" />
-              Scientific Calculators
+              Basic Calculators
+            </button>
+            <button
+              onClick={() => setActiveTab('advanced')}
+              className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                activeTab === 'advanced'
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg transform scale-105'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <BrainCircuitIcon className="w-5 h-5 inline mr-2" />
+              Advanced Tools
             </button>
             <button
               onClick={() => setActiveTab('converter')}
-              className={`px-8 py-3 rounded-xl font-medium transition-all duration-200 ${
+              className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
                 activeTab === 'converter'
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg transform scale-105'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
@@ -362,9 +402,26 @@ const CalculatorHubPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Calculators Tab */}
+        {/* Basic Calculators Tab */}
         {activeTab === 'calculators' && (
           <div className="space-y-8">
+            {/* Category Filter */}
+            <div className="flex justify-center">
+              <div className="bg-white rounded-xl p-1 shadow-lg border border-gray-100">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="px-4 py-2 rounded-lg border-0 focus:ring-0 bg-transparent text-gray-700 font-medium"
+                >
+                  <option value="all">🔬 All Categories</option>
+                  <option value="Chemistry & Biochemistry">⚗️ Chemistry & Biochemistry</option>
+                  <option value="Biology & Life Sciences">🧬 Biology & Life Sciences</option>
+                  <option value="Physics & Engineering">⚡ Physics & Engineering</option>
+                  <option value="Statistics & Data Analysis">📊 Statistics & Data Analysis</option>
+                  <option value="Laboratory & Instrumentation">🔬 Laboratory & Instrumentation</option>
+                </select>
+              </div>
+            </div>
             {/* Search and Filter */}
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
               <div className="flex flex-col sm:flex-row gap-4">
@@ -519,6 +576,184 @@ const CalculatorHubPage: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Advanced Tools Tab */}
+        {activeTab === 'advanced' && (
+          <div className="space-y-8">
+            {/* Advanced Tools Header */}
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">🧠 Advanced Research Tools</h2>
+              <p className="text-gray-600 max-w-2xl mx-auto">
+                Specialized calculators for advanced research, complex statistical analysis, and professional laboratory applications
+              </p>
+            </div>
+
+            {/* Advanced Calculator Categories */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Statistical Analysis Tools */}
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-200">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center mr-4">
+                    <BarChartIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">Statistical Analysis</h3>
+                </div>
+                <p className="text-gray-600 mb-4">Advanced statistical calculations for research data analysis</p>
+                <div className="space-y-2">
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <div className="font-medium text-blue-900">📊 ANOVA Calculator</div>
+                    <div className="text-sm text-blue-700">One-way and two-way ANOVA with post-hoc tests</div>
+                  </div>
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <div className="font-medium text-blue-900">📈 Regression Analysis</div>
+                    <div className="text-sm text-blue-700">Linear, polynomial, and multiple regression</div>
+                  </div>
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <div className="font-medium text-blue-900">🎯 Power Analysis</div>
+                    <div className="text-sm text-blue-700">Sample size and statistical power calculations</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bioinformatics Tools */}
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-200">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mr-4">
+                    <BeakerIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">Bioinformatics</h3>
+                </div>
+                <p className="text-gray-600 mb-4">Molecular biology and bioinformatics calculations</p>
+                <div className="space-y-2">
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <div className="font-medium text-green-900">🧬 DNA/RNA Calculator</div>
+                    <div className="text-sm text-green-700">Tm, GC content, molecular weight calculations</div>
+                  </div>
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <div className="font-medium text-green-900">🔬 Protein Analysis</div>
+                    <div className="text-sm text-green-700">Protein MW, pI, extinction coefficient</div>
+                  </div>
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <div className="font-medium text-green-900">⚗️ PCR Calculator</div>
+                    <div className="text-sm text-green-700">Primer design and reaction optimization</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Analytical Chemistry */}
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-200">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mr-4">
+                    <PipetteIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">Analytical Chemistry</h3>
+                </div>
+                <p className="text-gray-600 mb-4">Advanced analytical and instrumental chemistry tools</p>
+                <div className="space-y-2">
+                  <div className="p-3 bg-purple-50 rounded-lg">
+                    <div className="font-medium text-purple-900">📊 Calibration Curves</div>
+                    <div className="text-sm text-purple-700">Linear and non-linear calibration analysis</div>
+                  </div>
+                  <div className="p-3 bg-purple-50 rounded-lg">
+                    <div className="font-medium text-purple-900">🎯 Detection Limits</div>
+                    <div className="text-sm text-purple-700">LOD, LOQ, and precision calculations</div>
+                  </div>
+                  <div className="p-3 bg-purple-50 rounded-lg">
+                    <div className="font-medium text-purple-900">⚖️ Method Validation</div>
+                    <div className="text-sm text-purple-700">Accuracy, precision, and recovery studies</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pharmacokinetics */}
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-200">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-orange-500 rounded-xl flex items-center justify-center mr-4">
+                    <LightbulbIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">Pharmacokinetics</h3>
+                </div>
+                <p className="text-gray-600 mb-4">Drug metabolism and pharmacokinetic modeling</p>
+                <div className="space-y-2">
+                  <div className="p-3 bg-red-50 rounded-lg">
+                    <div className="font-medium text-red-900">💊 PK Parameters</div>
+                    <div className="text-sm text-red-700">Clearance, half-life, bioavailability</div>
+                  </div>
+                  <div className="p-3 bg-red-50 rounded-lg">
+                    <div className="font-medium text-red-900">📈 Compartment Models</div>
+                    <div className="text-sm text-red-700">One and two-compartment modeling</div>
+                  </div>
+                  <div className="p-3 bg-red-50 rounded-lg">
+                    <div className="font-medium text-red-900">⚡ Dosing Regimens</div>
+                    <div className="text-sm text-red-700">Optimal dosing and administration</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Environmental Science */}
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-200">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center mr-4">
+                    <BeakerIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">Environmental Science</h3>
+                </div>
+                <p className="text-gray-600 mb-4">Environmental monitoring and assessment tools</p>
+                <div className="space-y-2">
+                  <div className="p-3 bg-teal-50 rounded-lg">
+                    <div className="font-medium text-teal-900">🌍 Air Quality Index</div>
+                    <div className="text-sm text-teal-700">AQI calculations and pollutant modeling</div>
+                  </div>
+                  <div className="p-3 bg-teal-50 rounded-lg">
+                    <div className="font-medium text-teal-900">💧 Water Quality</div>
+                    <div className="text-sm text-teal-700">BOD, COD, and contamination assessment</div>
+                  </div>
+                  <div className="p-3 bg-teal-50 rounded-lg">
+                    <div className="font-medium text-teal-900">🏭 Emission Calculations</div>
+                    <div className="text-sm text-teal-700">Carbon footprint and emission factors</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Spectroscopy Tools */}
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-200">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center mr-4">
+                    <BrainCircuitIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">Spectroscopy</h3>
+                </div>
+                <p className="text-gray-600 mb-4">Advanced spectroscopic analysis and calculations</p>
+                <div className="space-y-2">
+                  <div className="p-3 bg-indigo-50 rounded-lg">
+                    <div className="font-medium text-indigo-900">🌈 UV-Vis Analysis</div>
+                    <div className="text-sm text-indigo-700">Beer's law and concentration analysis</div>
+                  </div>
+                  <div className="p-3 bg-indigo-50 rounded-lg">
+                    <div className="font-medium text-indigo-900">🔍 NMR Calculator</div>
+                    <div className="text-sm text-indigo-700">Chemical shift and coupling analysis</div>
+                  </div>
+                  <div className="p-3 bg-indigo-50 rounded-lg">
+                    <div className="font-medium text-indigo-900">📡 Mass Spec Tools</div>
+                    <div className="text-sm text-indigo-700">Isotope patterns and fragmentation</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Coming Soon Notice */}
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 text-center border border-blue-100">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mb-4">
+                <BrainCircuitIcon className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">🚀 Advanced Tools Coming Soon!</h3>
+              <p className="text-gray-600 max-w-2xl mx-auto">
+                We're developing even more sophisticated calculators including AI-powered analysis tools, 
+                machine learning models for prediction, and advanced statistical packages. Stay tuned for updates!
+              </p>
+            </div>
           </div>
         )}
 

@@ -39,7 +39,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-t
 const authenticateToken = async (req: any, res: any, next: any) => {
   // Demo mode - provide mock user data
   req.user = {
-    id: 'demo-user-123',
+    id: '4fd07593-fdfd-46ca-890c-f7875e3c47fb', // Use a valid UUID from the database
     username: 'demo_user',
     email: 'demo@researchlab.com',
     role: 'Principal Investigator',
@@ -1152,6 +1152,137 @@ app.delete('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Share lab notebook entry with individual users
+app.post('/api/lab-notebooks/:id/share', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user_id, access_level } = req.body;
+
+    // Check if entry exists
+    const entryResult = await pool.query(`
+      SELECT * FROM lab_notebook_entries WHERE id = $1
+    `, [id]);
+
+    if (entryResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Lab notebook entry not found' });
+    }
+
+    const entry = entryResult.rows[0];
+
+    // Check permissions (creator, lab PI, or admin)
+    if (entry.author_id !== req.user.id && req.user.role !== 'admin') {
+      const labAccess = await pool.query(`
+        SELECT role FROM lab_members 
+        WHERE lab_id = $1 AND user_id = $2 AND role = 'principal_researcher'
+      `, [entry.lab_id, req.user.id]);
+
+      if (labAccess.rows.length === 0) {
+        return res.status(403).json({ error: 'Insufficient permissions to share this entry' });
+      }
+    }
+
+    // Get current collaborators or initialize empty array
+    const currentCollaborators = entry.collaborators || [];
+    
+    // Add new user to collaborators if not already present
+    if (!currentCollaborators.includes(user_id)) {
+      currentCollaborators.push(user_id);
+    }
+
+    // Update entry with new collaborators
+    await pool.query(`
+      UPDATE lab_notebook_entries 
+      SET collaborators = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+    `, [currentCollaborators]);
+
+    // Get user details for logging
+    const userResult = await pool.query(`
+      SELECT username, first_name, last_name FROM users WHERE id = $1
+    `, [user_id]);
+
+    const userName = userResult.rows[0]?.username || 'Unknown User';
+
+    console.log('🔗 Lab notebook entry shared:', { 
+      entryId: id, 
+      userId: user_id, 
+      userName: userName,
+      accessLevel: access_level, 
+      sharedBy: req.user.username 
+    });
+
+    res.json({ 
+      message: 'Entry shared successfully',
+      shared_with: userName,
+      access_level 
+    });
+
+  } catch (error) {
+    console.error('💥 Share lab notebook error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get lab members for the current user's lab
+app.get('/api/lab-members', authenticateToken, async (req, res) => {
+  try {
+    // Get the user's lab membership
+    const userLab = await pool.query(`
+      SELECT lm.lab_id, l.name as lab_name, l.institution
+      FROM lab_members lm
+      JOIN labs l ON lm.lab_id = l.id
+      WHERE lm.user_id = $1 AND lm.is_active = true
+      LIMIT 1
+    `, [req.user.id]);
+
+    if (userLab.rows.length === 0) {
+      return res.json({ members: [] });
+    }
+
+    const labId = userLab.rows[0].lab_id;
+
+    // Get all lab members with user details
+    const membersResult = await pool.query(`
+      SELECT 
+        lm.id,
+        lm.user_id,
+        lm.role,
+        lm.joined_at,
+        lm.permissions,
+        u.username,
+        u.first_name,
+        u.last_name,
+        u.email,
+        u.avatar_url
+      FROM lab_members lm
+      JOIN users u ON lm.user_id = u.id
+      WHERE lm.lab_id = $1 AND lm.is_active = true
+      ORDER BY 
+        CASE lm.role
+          WHEN 'principal_researcher' THEN 1
+          WHEN 'co_supervisor' THEN 2
+          WHEN 'researcher' THEN 3
+          WHEN 'student' THEN 4
+          ELSE 5
+        END,
+        u.first_name, u.last_name
+    `, [labId]);
+
+    res.json({ 
+      members: membersResult.rows,
+      lab: {
+        id: labId,
+        name: userLab.rows[0].lab_name,
+        institution: userLab.rows[0].institution
+      }
+    });
+
+  } catch (error) {
+    console.error('💥 Get lab members error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.post('/api/lab-notebooks/:id/comments', authenticateToken, async (req, res) => {
   try {
     const { id: entryId } = req.params;
@@ -1841,6 +1972,382 @@ app.get('/api/instruments/categories', authenticateToken, async (req, res) => {
   }
 });
 
+// ===== LAB NOTEBOOK ROUTES =====
+
+// Get all lab notebook entries with filters
+app.get('/api/lab-notebooks', authenticateToken, async (req, res) => {
+  try {
+    const {
+      lab_id,
+      entry_type,
+      status,
+      priority,
+      search,
+      privacy_level,
+      limit = 50,
+      offset = 0
+    } = req.query;
+
+    let query = `
+      SELECT 
+        e.*,
+        CONCAT(u.first_name, ' ', u.last_name) as creator_name,
+        l.name as lab_name,
+        l.institution
+      FROM lab_notebook_entries e
+      INNER JOIN users u ON e.author_id = u.id
+      INNER JOIN labs l ON e.lab_id = l.id
+      WHERE 1=1
+    `;
+
+    const params: any[] = [];
+    let paramCount = 0;
+
+    if (lab_id) {
+      paramCount++;
+      query += ` AND e.lab_id = $${paramCount}`;
+      params.push(lab_id);
+    }
+
+    if (entry_type) {
+      paramCount++;
+      query += ` AND e.entry_type = $${paramCount}`;
+      params.push(entry_type);
+    }
+
+    if (status) {
+      paramCount++;
+      query += ` AND e.status = $${paramCount}`;
+      params.push(status);
+    }
+
+    if (priority) {
+      paramCount++;
+      query += ` AND e.priority = $${paramCount}`;
+      params.push(priority);
+    }
+
+    if (privacy_level) {
+      paramCount++;
+      query += ` AND e.privacy_level = $${paramCount}`;
+      params.push(privacy_level);
+    }
+
+    if (search) {
+      paramCount++;
+      query += ` AND (
+        e.title ILIKE $${paramCount} OR 
+        e.content ILIKE $${paramCount} OR 
+        e.objectives ILIKE $${paramCount} OR 
+        e.methodology ILIKE $${paramCount} OR 
+        e.results ILIKE $${paramCount} OR 
+        e.conclusions ILIKE $${paramCount}
+      )`;
+      params.push(`%${search}%`);
+    }
+
+    // Add pagination
+    paramCount++;
+    query += ` ORDER BY e.created_at DESC LIMIT $${paramCount}`;
+    params.push(limit);
+
+    paramCount++;
+    query += ` OFFSET $${paramCount}`;
+    params.push(offset);
+
+    const result = await pool.query(query, params);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching lab notebook entries:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get a specific lab notebook entry
+app.get('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const query = `
+      SELECT 
+        e.*,
+        CONCAT(u.first_name, ' ', u.last_name) as creator_name,
+        l.name as lab_name,
+        l.institution
+      FROM lab_notebook_entries e
+      INNER JOIN users u ON e.author_id = u.id
+      INNER JOIN labs l ON e.lab_id = l.id
+      WHERE e.id = $1
+    `;
+
+    const result = await pool.query(query, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Entry not found' });
+    }
+
+    // Get comments
+    const commentsQuery = `
+      SELECT 
+        c.*,
+        CONCAT(u.first_name, ' ', u.last_name) as first_name,
+        u.username
+      FROM lab_notebook_comments c
+      INNER JOIN users u ON c.user_id = u.id
+      WHERE c.entry_id = $1
+      ORDER BY c.created_at ASC
+    `;
+    const commentsResult = await pool.query(commentsQuery, [id]);
+
+    // Get milestones
+    const milestonesQuery = `
+      SELECT * FROM lab_notebook_milestones
+      WHERE entry_id = $1
+      ORDER BY due_date ASC
+    `;
+    const milestonesResult = await pool.query(milestonesQuery, [id]);
+
+    // Get attachments
+    const attachmentsQuery = `
+      SELECT 
+        a.*,
+        CONCAT(u.first_name, ' ', u.last_name) as uploaded_by_name
+      FROM lab_notebook_attachments a
+      INNER JOIN users u ON a.uploaded_by = u.id
+      WHERE a.entry_id = $1
+      ORDER BY a.created_at DESC
+    `;
+    const attachmentsResult = await pool.query(attachmentsQuery, [id]);
+
+    const entry = result.rows[0];
+    entry.comments = commentsResult.rows;
+    entry.milestones = milestonesResult.rows;
+    entry.attachments = attachmentsResult.rows;
+
+    res.json(entry);
+  } catch (error) {
+    console.error('Error fetching lab notebook entry:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create a new lab notebook entry
+app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
+  try {
+    const {
+      title,
+      content,
+      entry_type,
+      status,
+      priority,
+      objectives,
+      methodology,
+      results,
+      conclusions,
+      next_steps,
+      lab_id,
+      project_id,
+      tags,
+      privacy_level,
+      estimated_duration,
+      cost,
+      equipment_used,
+      materials_used,
+      safety_notes,
+      references,
+      collaborators
+    } = req.body;
+
+    const userId = (req as any).user.id;
+
+    const query = `
+      INSERT INTO lab_notebook_entries (
+        title, content, entry_type, status, priority, objectives, methodology,
+        results, conclusions, next_steps, lab_id, project_id, tags, privacy_level,
+        author_id, estimated_duration, cost, equipment_used, materials_used,
+        safety_notes, references, collaborators
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+      RETURNING *
+    `;
+
+    const values = [
+      title,
+      content,
+      entry_type,
+      status,
+      priority,
+      objectives,
+      methodology,
+      results,
+      conclusions,
+      next_steps,
+      lab_id,
+      project_id,
+      tags || [],
+      privacy_level,
+      userId,
+      estimated_duration || 0,
+      cost || 0,
+      equipment_used || [],
+      materials_used || [],
+      safety_notes,
+      references || [],
+      collaborators || []
+    ];
+
+    const result = await pool.query(query, values);
+    
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating lab notebook entry:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update a lab notebook entry
+app.put('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+
+    // Check if user can edit this entry
+    const checkQuery = `
+      SELECT author_id, privacy_level, lab_id FROM lab_notebook_entries WHERE id = $1
+    `;
+    const checkResult = await pool.query(checkQuery, [id]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Entry not found' });
+    }
+
+    const entry = checkResult.rows[0];
+    
+    // Only author or lab admin can edit
+    if (entry.author_id !== userId) {
+      return res.status(403).json({ error: 'Not authorized to edit this entry' });
+    }
+
+    const {
+      title,
+      content,
+      entry_type,
+      status,
+      priority,
+      objectives,
+      methodology,
+      results,
+      conclusions,
+      next_steps,
+      lab_id,
+      project_id,
+      tags,
+      privacy_level,
+      estimated_duration,
+      cost,
+      equipment_used,
+      materials_used,
+      safety_notes,
+      references,
+      collaborators
+    } = req.body;
+
+    const query = `
+      UPDATE lab_notebook_entries SET
+        title = $1, content = $2, entry_type = $3, status = $4, priority = $5,
+        objectives = $6, methodology = $7, results = $8, conclusions = $9,
+        next_steps = $10, lab_id = $11, project_id = $12, tags = $13,
+        privacy_level = $14, estimated_duration = $15, cost = $16,
+        equipment_used = $17, materials_used = $18, safety_notes = $19,
+        references = $20, collaborators = $21, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $22
+      RETURNING *
+    `;
+
+    const values = [
+      title,
+      content,
+      entry_type,
+      status,
+      priority,
+      objectives,
+      methodology,
+      results,
+      conclusions,
+      next_steps,
+      lab_id,
+      project_id,
+      tags || [],
+      privacy_level,
+      estimated_duration || 0,
+      cost || 0,
+      equipment_used || [],
+      materials_used || [],
+      safety_notes,
+      references || [],
+      collaborators || [],
+      id
+    ];
+
+    const result = await pool.query(query, values);
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating lab notebook entry:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete a lab notebook entry
+app.delete('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+
+    // Check if user can delete this entry
+    const checkQuery = `
+      SELECT author_id, privacy_level, lab_id FROM lab_notebook_entries WHERE id = $1
+    `;
+    const checkResult = await pool.query(checkQuery, [id]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Entry not found' });
+    }
+
+    const entry = checkResult.rows[0];
+    
+    // Only author or lab admin can delete
+    if (entry.author_id !== userId) {
+      return res.status(403).json({ error: 'Not authorized to delete this entry' });
+    }
+
+    // Delete the entry (cascade will handle related data)
+    await pool.query('DELETE FROM lab_notebook_entries WHERE id = $1', [id]);
+
+    res.json({ message: 'Entry deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting lab notebook entry:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get labs for the lab notebook
+app.get('/api/labs', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT l.*, i.name as institution_name
+      FROM labs l
+      INNER JOIN institutions i ON l.institution_id = i.id
+      ORDER BY l.name ASC
+    `);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching labs:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Health check endpoint for Render
 app.get('/api/health', async (req, res) => {
   try {
@@ -1863,6 +2370,321 @@ app.get('/api/health', async (req, res) => {
       database: 'disconnected',
       error: 'Database connection failed'
     });
+  }
+});
+
+// --- DATA & RESULTS ROUTES ---
+
+// Get all results for a lab
+app.get('/api/data/results', authenticateToken, async (req, res) => {
+  try {
+    const { lab_id, data_type, search, tags, date_from, date_to } = req.query;
+    const userId = (req as any).user.id;
+
+    let query = `
+      SELECT r.*, u.username, u.first_name, u.last_name, l.name as lab_name
+      FROM results r
+      JOIN users u ON r.author_id = u.id
+      JOIN labs l ON r.lab_id = l.id
+      WHERE r.lab_id = $1
+    `;
+    
+    const queryParams = [lab_id];
+    let paramCount = 1;
+
+    if (data_type) {
+      paramCount++;
+      query += ` AND r.data_type = $${paramCount}`;
+      queryParams.push(data_type);
+    }
+
+    if (search) {
+      paramCount++;
+      query += ` AND (r.title ILIKE $${paramCount} OR r.summary ILIKE $${paramCount})`;
+      queryParams.push(`%${search}%`);
+    }
+
+    if (tags && Array.isArray(tags)) {
+      paramCount++;
+      query += ` AND r.tags && $${paramCount}`;
+      queryParams.push(tags);
+    }
+
+    if (date_from) {
+      paramCount++;
+      query += ` AND r.created_at >= $${paramCount}`;
+      queryParams.push(date_from);
+    }
+
+    if (date_to) {
+      paramCount++;
+      query += ` AND r.created_at <= $${paramCount}`;
+      queryParams.push(date_to);
+    }
+
+    query += ` ORDER BY r.created_at DESC`;
+
+    const result = await pool.query(query, queryParams);
+    res.json({ results: result.rows });
+  } catch (error) {
+    console.error('Error fetching results:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get a specific result
+app.get('/api/data/results/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+
+    const result = await pool.query(`
+      SELECT r.*, u.username, u.first_name, u.last_name, l.name as lab_name
+      FROM results r
+      JOIN users u ON r.author_id = u.id
+      JOIN labs l ON r.lab_id = l.id
+      WHERE r.id = $1
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Result not found' });
+    }
+
+    res.json({ result: result.rows[0] });
+  } catch (error) {
+    console.error('Error fetching result:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create a new result
+app.post('/api/data/results', authenticateToken, async (req, res) => {
+  try {
+    const {
+      title,
+      summary,
+      data_type,
+      data_format,
+      data_content,
+      tags,
+      privacy_level,
+      lab_id,
+      project_id,
+      source,
+      notebook_entry_id
+    } = req.body;
+
+    const userId = (req as any).user.id;
+
+    // Validate required fields
+    if (!title || !summary || !data_type || !data_format || !data_content || !lab_id) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO results (
+        title, summary, author_id, lab_id, project_id, data_type, 
+        data_format, data_content, tags, privacy_level, source, notebook_entry_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING *
+    `, [
+      title, summary, userId, lab_id, project_id, data_type,
+      data_format, data_content, tags || [], privacy_level || 'lab', source || 'manual', notebook_entry_id
+    ]);
+
+    res.status(201).json({ result: result.rows[0] });
+  } catch (error) {
+    console.error('Error creating result:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update a result
+app.put('/api/data/results/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      title,
+      summary,
+      data_type,
+      data_format,
+      data_content,
+      tags,
+      privacy_level
+    } = req.body;
+
+    const userId = (req as any).user.id;
+
+    // Check if user owns the result or has permission
+    const ownershipCheck = await pool.query(`
+      SELECT author_id, lab_id FROM results WHERE id = $1
+    `, [id]);
+
+    if (ownershipCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Result not found' });
+    }
+
+    const result = ownershipCheck.rows[0];
+    if (result.author_id !== userId) {
+      // Check if user is lab member with edit permissions
+      const labMemberCheck = await pool.query(`
+        SELECT role FROM lab_members WHERE lab_id = $1 AND user_id = $2
+      `, [result.lab_id, userId]);
+
+      if (labMemberCheck.rows.length === 0 || !['principal_researcher', 'co_supervisor'].includes(labMemberCheck.rows[0].role)) {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
+    }
+
+    const updateResult = await pool.query(`
+      UPDATE results SET
+        title = COALESCE($1, title),
+        summary = COALESCE($2, summary),
+        data_type = COALESCE($3, data_type),
+        data_format = COALESCE($4, data_format),
+        data_content = JSONB_SET(data_content, '{updated_at}', to_jsonb(CURRENT_TIMESTAMP)),
+        tags = COALESCE($5, tags),
+        privacy_level = COALESCE($6, privacy_level),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $7
+      RETURNING *
+    `, [title, summary, data_type, data_format, tags, privacy_level, id]);
+
+    res.json({ result: updateResult.rows[0] });
+  } catch (error) {
+    console.error('Error updating result:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete a result
+app.delete('/api/data/results/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+
+    // Check ownership
+    const ownershipCheck = await pool.query(`
+      SELECT author_id, lab_id FROM results WHERE id = $1
+    `, [id]);
+
+    if (ownershipCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Result not found' });
+    }
+
+    const result = ownershipCheck.rows[0];
+    if (result.author_id !== userId) {
+      // Check if user is lab member with delete permissions
+      const labMemberCheck = await pool.query(`
+        SELECT role FROM lab_members WHERE lab_id = $1 AND user_id = $2
+      `, [result.lab_id, userId]);
+
+      if (labMemberCheck.rows.length === 0 || !['principal_researcher'].includes(labMemberCheck.rows[0].role)) {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
+    }
+
+    await pool.query('DELETE FROM results WHERE id = $1', [id]);
+    res.json({ message: 'Result deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting result:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get data templates
+app.get('/api/data/templates', authenticateToken, async (req, res) => {
+  try {
+    const { lab_id, category, is_public } = req.query;
+    const userId = (req as any).user.id;
+
+    let query = `
+      SELECT dt.*, u.username, u.first_name, u.last_name
+      FROM data_templates dt
+      JOIN users u ON dt.created_by = u.id
+      WHERE (dt.lab_id = $1 OR dt.is_public = true)
+    `;
+    
+    const queryParams = [lab_id];
+    let paramCount = 1;
+
+    if (category) {
+      paramCount++;
+      query += ` AND dt.category = $${paramCount}`;
+      queryParams.push(category);
+    }
+
+    if (is_public !== undefined) {
+      paramCount++;
+      query += ` AND dt.is_public = $${paramCount}`;
+      queryParams.push(is_public === 'true');
+    }
+
+    query += ` ORDER BY dt.created_at DESC`;
+
+    const result = await pool.query(query, queryParams);
+    res.json({ templates: result.rows });
+  } catch (error) {
+    console.error('Error fetching templates:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create a data template
+app.post('/api/data/templates', authenticateToken, async (req, res) => {
+  try {
+    const {
+      name,
+      description,
+      category,
+      fields,
+      lab_id,
+      is_public
+    } = req.body;
+
+    const userId = (req as any).user.id;
+
+    if (!name || !category || !fields || !lab_id) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO data_templates (
+        name, description, category, fields, created_by, lab_id, is_public
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `, [name, description, category, fields, userId, lab_id, is_public || false]);
+
+    res.status(201).json({ template: result.rows[0] });
+  } catch (error) {
+    console.error('Error creating template:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get results statistics
+app.get('/api/data/results/stats/overview', authenticateToken, async (req, res) => {
+  try {
+    const { lab_id } = req.query;
+    const userId = (req as any).user.id;
+
+    const stats = await pool.query(`
+      SELECT 
+        COUNT(*) as total_results,
+        COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as this_month,
+        COUNT(CASE WHEN data_type = 'experiment' THEN 1 END) as experiments,
+        COUNT(CASE WHEN data_type = 'observation' THEN 1 END) as observations,
+        COUNT(CASE WHEN data_type = 'measurement' THEN 1 END) as measurements,
+        COUNT(CASE WHEN source = 'manual' THEN 1 END) as manual_entries,
+        COUNT(CASE WHEN source = 'import' THEN 1 END) as imports
+      FROM results 
+      WHERE lab_id = $1
+    `, [lab_id]);
+
+    res.json({ stats: stats.rows[0] });
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

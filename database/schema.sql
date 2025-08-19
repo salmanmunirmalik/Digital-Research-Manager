@@ -175,6 +175,39 @@ CREATE TABLE lab_notebook_entries (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Results Table
+CREATE TABLE results (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(255) NOT NULL,
+    summary TEXT NOT NULL,
+    author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    lab_id UUID NOT NULL REFERENCES labs(id) ON DELETE CASCADE,
+    project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+    data_type VARCHAR(50) NOT NULL DEFAULT 'experiment',
+    data_format VARCHAR(50) NOT NULL DEFAULT 'manual',
+    data_content JSONB NOT NULL,
+    tags TEXT[],
+    privacy_level privacy_level DEFAULT 'lab',
+    source VARCHAR(50) DEFAULT 'manual',
+    notebook_entry_id UUID REFERENCES lab_notebook_entries(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Data Templates Table
+CREATE TABLE data_templates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(100) NOT NULL,
+    fields JSONB NOT NULL,
+    created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    lab_id UUID NOT NULL REFERENCES labs(id) ON DELETE CASCADE,
+    is_public BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Inventory Items Table
 CREATE TABLE inventory_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -347,7 +380,18 @@ CREATE INDEX idx_calendar_user_id ON calendar_events(user_id);
 CREATE INDEX idx_audit_user_id ON audit_log(user_id);
 CREATE INDEX idx_audit_created_at ON audit_log(created_at);
 
--- Triggers for updated_at timestamps
+-- Create indexes for better performance
+CREATE INDEX idx_results_lab_id ON results(lab_id);
+CREATE INDEX idx_results_author_id ON results(author_id);
+CREATE INDEX idx_results_data_type ON results(data_type);
+CREATE INDEX idx_results_created_at ON results(created_at);
+CREATE INDEX idx_results_tags ON results USING GIN(tags);
+
+CREATE INDEX idx_data_templates_lab_id ON data_templates(lab_id);
+CREATE INDEX idx_data_templates_category ON data_templates(category);
+CREATE INDEX idx_data_templates_is_public ON data_templates(is_public);
+
+-- Add triggers for updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -368,6 +412,11 @@ CREATE TRIGGER update_sticky_notes_updated_at BEFORE UPDATE ON sticky_notes FOR 
 CREATE TRIGGER update_calendar_updated_at BEFORE UPDATE ON calendar_events FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_experiment_updates_updated_at BEFORE UPDATE ON experiment_updates FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_data_sharing_updated_at BEFORE UPDATE ON data_sharing FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_results_updated_at BEFORE UPDATE ON results
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_data_templates_updated_at BEFORE UPDATE ON data_templates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert default admin user (password: admin123 - change in production!)
 INSERT INTO users (email, username, password_hash, first_name, last_name, role, status, email_verified) 

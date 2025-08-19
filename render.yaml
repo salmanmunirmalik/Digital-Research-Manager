@@ -1,8 +1,9 @@
 services:
   # Backend API Service
   - type: web
-    name: researchlab-api
+    name: digital-research-manager-api
     env: node
+    plan: free
     buildCommand: npm install && npm run build:backend
     startCommand: npm start
     envVars:
@@ -10,28 +11,27 @@ services:
         value: production
       - key: PORT
         value: 10000
+      - key: DATABASE_URL
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        value: https://researchlab-frontend.onrender.com
-      - key: DATABASE_URL
-        fromDatabase:
-          name: researchlab-db
-          property: connectionString
-    healthCheckPath: /api/health
+        value: https://digital-research-manager.onrender.com
 
   # Frontend Static Site
-  - type: static
-    name: researchlab-frontend
-    env: node
+  - type: web
+    name: digital-research-manager-frontend
+    env: static
+    plan: free
     buildCommand: npm install && npm run build:frontend
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL
-        value: https://researchlab-api.onrender.com
+        value: https://digital-research-manager-api.onrender.com
+      - key: VITE_APP_NAME
+        value: Digital Research Manager
 
-# Database
 databases:
-  - name: researchlab-db
+  - name: digital-research-manager-db
     databaseName: digital_research_manager
-    user: postgres
+    user: digital_research_manager_user

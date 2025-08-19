@@ -254,7 +254,7 @@ const InstrumentsPage: React.FC = () => {
     ]);
 
     setCategories(['Analytical Chemistry', 'Imaging & Microscopy', 'Molecular Biology', 'Cell Biology', 'Biochemistry', 'Genetics']);
-    setIsLoading(false);
+      setIsLoading(false);
   }, []);
 
   const getStatusColor = (status: string) => {
@@ -290,8 +290,8 @@ const InstrumentsPage: React.FC = () => {
   const handleCreateInstrument = async (e: React.FormEvent) => {
     e.preventDefault();
     // Demo mode - just close modal
-    setShowCreateModal(false);
-    setInstrumentForm({
+        setShowCreateModal(false);
+        setInstrumentForm({
       name: '', description: '', category: '', model: '', serial_number: '', lab_id: '', location: '',
       status: 'available', manufacturer: '', purchase_date: '', warranty_expiry: '', calibration_due_date: '',
       maintenance_notes: '', user_manual_url: '', hourly_rate: 0, max_booking_hours: 24, requires_training: false, training_level: 'basic'
@@ -310,18 +310,18 @@ const InstrumentsPage: React.FC = () => {
 
   const openBookingModal = (instrument: Instrument, type: 'individual' | 'team' = 'individual') => {
     setSelectedInstrument(instrument);
-    setBookingForm({
-      start_time: '',
-      end_time: '',
-      purpose: '',
+        setBookingForm({
+          start_time: '',
+          end_time: '',
+          purpose: '',
       notes: '',
       team_id: '',
       booking_type: type
-    });
+        });
     if (type === 'team') {
       setShowTeamBookingModal(true);
-    } else {
-      setShowBookingModal(true);
+      } else {
+    setShowBookingModal(true);
     }
   };
 
@@ -334,15 +334,15 @@ const InstrumentsPage: React.FC = () => {
           <p className="text-gray-600">Manage and book research instruments across all labs</p>
         </div>
         <div className="flex items-center space-x-3">
-          <button
-            onClick={() => setShowCreateModal(true)}
+        <button
+          onClick={() => setShowCreateModal(true)}
             className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm"
-          >
+        >
             <PlusIcon className="w-4 h-4 mr-2" />
             Add Instrument
-          </button>
-        </div>
+        </button>
       </div>
+        </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
@@ -367,70 +367,70 @@ const InstrumentsPage: React.FC = () => {
             </button>
           ))}
         </nav>
-      </div>
-
+        </div>
+        
       {/* Tab Content */}
       {activeTab === 'instruments' && (
         <>
           {/* Filters */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div>
+          <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
-                <div className="relative">
-                  <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search instruments..."
-                    value={filters.search}
-                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search instruments..."
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-              
-              <div>
+              />
+            </div>
+          </div>
+
+          <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Lab</label>
-                <select
-                  value={filters.lab_id}
-                  onChange={(e) => setFilters({ ...filters, lab_id: e.target.value })}
+            <select
+              value={filters.lab_id}
+              onChange={(e) => setFilters({ ...filters, lab_id: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">All Labs</option>
+            >
+              <option value="">All Labs</option>
                   {labs.map((lab) => (
-                    <option key={lab.id} value={lab.id}>{lab.name}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
+                <option key={lab.id} value={lab.id}>{lab.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <select
-                  value={filters.category}
-                  onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+            <select
+              value={filters.category}
+              onChange={(e) => setFilters({ ...filters, category: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">All Categories</option>
+            >
+              <option value="">All Categories</option>
                   {categories.map((category) => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <select
-                  value={filters.status}
-                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
+            >
                   <option value="">All Status</option>
-                  <option value="available">Available</option>
+              <option value="available">Available</option>
                   <option value="in_use">In Use</option>
-                  <option value="maintenance">Maintenance</option>
-                  <option value="out_of_order">Out of Order</option>
-                </select>
-              </div>
+              <option value="maintenance">Maintenance</option>
+              <option value="out_of_order">Out of Order</option>
+            </select>
+          </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Availability</label>
@@ -445,11 +445,11 @@ const InstrumentsPage: React.FC = () => {
                   <option value="free_to_use">Free to Use</option>
                 </select>
               </div>
-            </div>
-          </div>
+        </div>
+      </div>
 
-          {/* Instruments Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Instruments Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {instruments
               .filter(instrument => {
                 if (filters.search && !instrument.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
@@ -463,10 +463,10 @@ const InstrumentsPage: React.FC = () => {
               })
               .map((instrument) => (
                 <div key={instrument.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
-                  <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between mb-4">
                     <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
-                      <FlaskConicalIcon className="w-6 h-6 text-white" />
-                    </div>
+                <FlaskConicalIcon className="w-6 h-6 text-white" />
+              </div>
                     <div className="flex items-center space-x-2">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(instrument.status)}`}>
                         {instrument.status.replace('_', ' ')}
@@ -475,34 +475,34 @@ const InstrumentsPage: React.FC = () => {
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTrainingLevelColor(instrument.training_level)}`}>
                           {instrument.training_level}
                         </span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{instrument.name}</h3>
+                )}
+              </div>
+            </div>
+
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{instrument.name}</h3>
                   <p className="text-gray-600 text-sm mb-4">{instrument.description}</p>
                   
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center space-x-2 text-sm text-gray-600">
                       <BuildingOfficeIcon className="w-4 h-4" />
-                      <span>{instrument.lab_name}</span>
-                    </div>
+                <span>{instrument.lab_name}</span>
+              </div>
                                          <div className="flex items-center space-x-2 text-sm text-gray-600">
                        <PinIcon className="w-4 h-4" />
                        <span>{instrument.location}</span>
                      </div>
                     <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <TagIcon className="w-4 h-4" />
-                      <span>{instrument.category}</span>
-                    </div>
+                <TagIcon className="w-4 h-4" />
+                <span>{instrument.category}</span>
+              </div>
                     {instrument.hourly_rate > 0 && (
                       <div className="flex items-center space-x-2 text-sm text-gray-600">
                         <StarIcon className="w-4 h-4" />
                         <span>${instrument.hourly_rate}/hour</span>
-                      </div>
-                    )}
-                  </div>
-                  
+                </div>
+              )}
+            </div>
+
                   <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                     <div className="flex items-center space-x-2">
                       <button
@@ -521,8 +521,8 @@ const InstrumentsPage: React.FC = () => {
                         <UsersIcon className="w-4 h-4 mr-1 inline" />
                         Team Book
                       </button>
-                    </div>
-                    
+            </div>
+
                     <div className="flex items-center space-x-1">
                       <button className="text-gray-400 hover:text-blue-600 p-1 rounded transition-colors" title="View details">
                         <EyeIcon className="w-4 h-4" />
@@ -530,11 +530,11 @@ const InstrumentsPage: React.FC = () => {
                       <button className="text-gray-400 hover:text-blue-600 p-1 rounded transition-colors" title="Edit">
                         <EyeIcon className="w-4 h-4" />
                       </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+              </div>
+            </div>
           </div>
+        ))}
+      </div>
         </>
       )}
 
@@ -549,17 +549,17 @@ const InstrumentsPage: React.FC = () => {
                   <p className="text-2xl font-bold">24</p>
                 </div>
                 <CalendarIcon className="w-8 h-8 opacity-80" />
+                </div>
               </div>
-            </div>
             <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-xl">
               <div className="flex items-center justify-between">
-                <div>
+              <div>
                   <p className="text-sm opacity-90">Active Now</p>
                   <p className="text-2xl font-bold">8</p>
-                </div>
-                <ClockIcon className="w-8 h-8 opacity-80" />
               </div>
-            </div>
+                <ClockIcon className="w-8 h-8 opacity-80" />
+                </div>
+                </div>
             <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 rounded-xl">
               <div className="flex items-center justify-between">
                 <div>
@@ -568,7 +568,7 @@ const InstrumentsPage: React.FC = () => {
                 </div>
                 <AlertCircleIcon className="w-8 h-8 opacity-80" />
               </div>
-            </div>
+                </div>
             <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 rounded-xl">
               <div className="flex items-center justify-between">
                 <div>
@@ -577,8 +577,8 @@ const InstrumentsPage: React.FC = () => {
                 </div>
                 <CalendarIcon className="w-8 h-8 opacity-80" />
               </div>
-            </div>
-          </div>
+                </div>
+              </div>
 
           {/* Booking Filters & Search */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -603,8 +603,8 @@ const InstrumentsPage: React.FC = () => {
                   <PlusIcon className="w-4 h-4 inline mr-2" />
                   New Booking
                 </button>
-              </div>
-            </div>
+                </div>
+                </div>
 
             {/* Mock Bookings Data */}
             <div className="space-y-4">
@@ -683,15 +683,15 @@ const InstrumentsPage: React.FC = () => {
                         }`}>
                           {booking.bookingType}
                         </span>
-                      </div>
-                      
+              </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
+                <div>
                           <p className="text-gray-600"><span className="font-medium">User:</span> {booking.user}</p>
                           <p className="text-gray-600"><span className="font-medium">Team:</span> {booking.team}</p>
                           <p className="text-gray-600"><span className="font-medium">Lab:</span> {booking.lab}</p>
-                        </div>
-                        <div>
+                </div>
+                <div>
                           <p className="text-gray-600">
                             <span className="font-medium">Start:</span> {new Date(booking.startTime).toLocaleString()}
                           </p>
@@ -703,18 +703,18 @@ const InstrumentsPage: React.FC = () => {
                               Math.round((new Date(booking.endTime).getTime() - new Date(booking.startTime).getTime()) / (1000 * 60 * 60))
                             } hours
                           </p>
-                        </div>
-                      </div>
-                      
+                </div>
+              </div>
+
                       <p className="text-gray-700 mt-2 italic">"{booking.purpose}"</p>
-                    </div>
-                    
+              </div>
+
                     <div className="flex items-center space-x-2 ml-4">
                       {booking.status === 'pending' && (
                         <>
                           <button className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors">
                             Approve
-                          </button>
+                      </button>
                           <button className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors">
                             Reject
                           </button>
@@ -723,17 +723,17 @@ const InstrumentsPage: React.FC = () => {
                       {booking.status === 'active' && (
                         <button className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
                           Extend
-                        </button>
+                </button>
                       )}
                       <button className="px-3 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700 transition-colors">
                         View
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                </button>
+              </div>
           </div>
+        </div>
+              ))}
+                </div>
+              </div>
 
           {/* Calendar View */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -742,9 +742,9 @@ const InstrumentsPage: React.FC = () => {
               <CalendarIcon className="w-16 h-16 mx-auto mb-3 text-gray-300" />
               <p className="text-lg">Interactive calendar view coming soon!</p>
               <p className="text-sm">View all instrument bookings in a calendar format</p>
-            </div>
-          </div>
-        </div>
+              </div>
+                </div>
+                </div>
       )}
 
       {activeTab === 'teams' && (
@@ -757,7 +757,7 @@ const InstrumentsPage: React.FC = () => {
                 </div>
                 <span className="text-sm text-gray-500">{team.member_count} members</span>
               </div>
-              
+
               <h3 className="text-lg font-semibold text-gray-900 mb-2">{team.name}</h3>
               <p className="text-sm text-gray-600 mb-3">Led by {team.leader_name}</p>
               <p className="text-sm text-gray-500 mb-4">{team.lab_name}</p>
@@ -765,9 +765,9 @@ const InstrumentsPage: React.FC = () => {
               <button className="w-full px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all">
                 View Team
               </button>
-            </div>
+                </div>
           ))}
-        </div>
+                </div>
       )}
 
       {activeTab === 'labs' && (
@@ -777,7 +777,7 @@ const InstrumentsPage: React.FC = () => {
               <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center mb-4">
                 <BuildingOfficeIcon className="w-6 h-6 text-white" />
               </div>
-              
+
               <h3 className="text-lg font-semibold text-gray-900 mb-2">{lab.name}</h3>
               <p className="text-sm text-gray-600 mb-3">{lab.institution}</p>
               <p className="text-sm text-gray-500 mb-4">{lab.department}</p>
@@ -785,9 +785,9 @@ const InstrumentsPage: React.FC = () => {
               <button className="w-full px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all">
                 View Lab
               </button>
-            </div>
+                </div>
           ))}
-        </div>
+                </div>
       )}
 
       {/* Individual Booking Modal */}
@@ -798,20 +798,20 @@ const InstrumentsPage: React.FC = () => {
             <p className="text-sm text-gray-600 mb-4">Booking: {selectedInstrument.name}</p>
             
             <form onSubmit={handleCreateBooking} className="space-y-4">
-              <div>
+                <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
-                <input
+                  <input
                   type="datetime-local"
                   value={bookingForm.start_time}
                   onChange={(e) => setBookingForm({ ...bookingForm, start_time: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
-                />
-              </div>
+                  />
+                </div>
               
-              <div>
+                <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
-                <input
+                  <input
                   type="datetime-local"
                   value={bookingForm.end_time}
                   onChange={(e) => setBookingForm({ ...bookingForm, end_time: e.target.value })}
@@ -819,7 +819,7 @@ const InstrumentsPage: React.FC = () => {
                   required
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Purpose</label>
                 <textarea
@@ -830,7 +830,7 @@ const InstrumentsPage: React.FC = () => {
                   required
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                 <textarea
@@ -840,7 +840,7 @@ const InstrumentsPage: React.FC = () => {
                   rows={2}
                 />
               </div>
-              
+
               <div className="flex space-x-3 pt-4">
                 <button
                   type="button"
@@ -869,7 +869,7 @@ const InstrumentsPage: React.FC = () => {
             <p className="text-sm text-gray-600 mb-4">Booking: {selectedInstrument.name}</p>
             
             <form onSubmit={handleCreateBooking} className="space-y-4">
-              <div>
+                <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
                 <select
                   value={bookingForm.team_id}
@@ -886,26 +886,26 @@ const InstrumentsPage: React.FC = () => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
-                <input
-                  type="datetime-local"
-                  value={bookingForm.start_time}
-                  onChange={(e) => setBookingForm({ ...bookingForm, start_time: e.target.value })}
+                  <input
+                    type="datetime-local"
+                    value={bookingForm.start_time}
+                    onChange={(e) => setBookingForm({ ...bookingForm, start_time: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
+                    required
+                  />
+                </div>
               
-              <div>
+                <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
-                <input
-                  type="datetime-local"
-                  value={bookingForm.end_time}
-                  onChange={(e) => setBookingForm({ ...bookingForm, end_time: e.target.value })}
+                  <input
+                    type="datetime-local"
+                    value={bookingForm.end_time}
+                    onChange={(e) => setBookingForm({ ...bookingForm, end_time: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
+                    required
+                  />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Purpose</label>
                 <textarea
@@ -916,7 +916,7 @@ const InstrumentsPage: React.FC = () => {
                   required
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                 <textarea
@@ -926,7 +926,7 @@ const InstrumentsPage: React.FC = () => {
                   rows={2}
                 />
               </div>
-              
+
               <div className="flex space-x-3 pt-4">
                 <button
                   type="button"
@@ -964,8 +964,8 @@ const InstrumentsPage: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
-                </div>
-                
+            </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                   <select
@@ -979,8 +979,8 @@ const InstrumentsPage: React.FC = () => {
                       <option key={category} value={category}>{category}</option>
                     ))}
                   </select>
-                </div>
               </div>
+                      </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -991,10 +991,10 @@ const InstrumentsPage: React.FC = () => {
                   rows={3}
                   required
                 />
-              </div>
-              
+                    </div>
+                    
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                      <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Lab</label>
                   <select
                     value={instrumentForm.lab_id}
@@ -1007,9 +1007,9 @@ const InstrumentsPage: React.FC = () => {
                       <option key={lab.id} value={lab.id}>{lab.name}</option>
                     ))}
                   </select>
-                </div>
+                      </div>
                 
-                <div>
+                      <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
                   <input
                     type="text"
@@ -1018,9 +1018,9 @@ const InstrumentsPage: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
-                </div>
-              </div>
-              
+                      </div>
+                    </div>
+                    
               <div className="flex space-x-3 pt-4">
                 <button
                   type="button"
@@ -1035,7 +1035,7 @@ const InstrumentsPage: React.FC = () => {
                 >
                   Add Instrument
                 </button>
-              </div>
+                    </div>
             </form>
           </div>
         </div>

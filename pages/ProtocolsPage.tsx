@@ -537,7 +537,13 @@ const ProtocolsPage: React.FC = () => {
   const [selectedProtocolDetails, setSelectedProtocolDetails] = useState<{ protocol: Protocol; sharing: ProtocolSharing[] } | null>(null);
 
   // Filter states
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<{
+    lab_id: string;
+    category: string;
+    difficulty: string;
+    search: string;
+    privacy: string;
+  }>({
     lab_id: '',
     category: '',
     difficulty: '',
@@ -605,7 +611,7 @@ const ProtocolsPage: React.FC = () => {
   const fetchProtocols = async () => {
     try {
       const queryParams = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
+      Object.entries(filters).forEach(([key, value]: [string, string]) => {
         if (value) queryParams.append(key, value);
       });
 
@@ -664,6 +670,7 @@ const ProtocolsPage: React.FC = () => {
 
   const fetchProtocolDetails = async (protocolId: string) => {
     try {
+      // First try to fetch from API
       const response = await fetch(`http://localhost:5001/api/protocols/${protocolId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -673,9 +680,80 @@ const ProtocolsPage: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         setSelectedProtocolDetails(data);
+      } else {
+        // Fallback to mock data if API fails
+        const protocol = mockProtocols.find(p => p.id === protocolId);
+        if (protocol) {
+          // Create mock sharing data
+          const mockSharing: ProtocolSharing[] = [
+            {
+              id: '1',
+              protocol_id: protocolId,
+              shared_with_user_id: 'user-2',
+              shared_with_lab_id: null,
+              permission_level: 'view',
+              lab_name: null,
+              first_name: 'Jane',
+              last_name: 'Smith',
+              username: 'jsmith'
+            },
+            {
+              id: '2',
+              protocol_id: protocolId,
+              shared_with_user_id: null,
+              shared_with_lab_id: 'lab-2',
+              permission_level: 'edit',
+              lab_name: 'Chemistry Department Lab',
+              first_name: null,
+              last_name: null,
+              username: null
+            }
+          ];
+          
+          setSelectedProtocolDetails({
+            protocol: protocol,
+            sharing: mockSharing
+          });
+        }
       }
     } catch (error) {
-      setError('Error fetching protocol details');
+      console.error('API error, using mock data:', error);
+      // Fallback to mock data
+      const protocol = mockProtocols.find(p => p.id === protocolId);
+      if (protocol) {
+        // Create mock sharing data
+        const mockSharing: ProtocolSharing[] = [
+          {
+            id: '1',
+            protocol_id: protocolId,
+            shared_with_user_id: 'user-2',
+            shared_with_lab_id: null,
+            permission_level: 'view',
+            lab_name: null,
+            first_name: 'Jane',
+            last_name: 'Smith',
+            username: 'jsmith'
+          },
+          {
+            id: '2',
+            protocol_id: protocolId,
+            shared_with_user_id: null,
+            shared_with_lab_id: 'lab-2',
+            permission_level: 'edit',
+            lab_name: 'Chemistry Department Lab',
+            first_name: null,
+            last_name: null,
+            username: null
+          }
+        ];
+        
+        setSelectedProtocolDetails({
+          protocol: protocol,
+          sharing: mockSharing
+        });
+      } else {
+        setError('Protocol not found');
+      }
     }
   };
 
@@ -1505,108 +1583,224 @@ const ProtocolsPage: React.FC = () => {
         </div>
       )}
 
-      {/* View Protocol Modal */}
+      {/* Enhanced View Protocol Modal */}
       {showViewModal && selectedProtocol && selectedProtocolDetails && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">{selectedProtocol.title}</h2>
-              <button
-                onClick={() => setShowViewModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ×
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                    <BookOpenIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">{selectedProtocol.title}</h2>
+                    <p className="text-green-100 text-sm">{selectedProtocol.lab_name} • {selectedProtocol.creator_name}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowViewModal(false)}
+                  className="text-white hover:text-green-100 transition-colors p-2 hover:bg-white hover:bg-opacity-20 rounded-lg"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <div>
-                  <h3 className="font-medium text-gray-900 mb-2">Description</h3>
-                  <p className="text-gray-600">{selectedProtocol.description}</p>
-                </div>
+            {/* Modal Content */}
+            <div className="overflow-y-auto max-h-[calc(95vh-80px)]">
+              <div className="p-6">
 
-                <div>
-                  <h3 className="font-medium text-gray-900 mb-2">Protocol Steps</h3>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <pre className="whitespace-pre-wrap text-sm text-gray-700">{selectedProtocol.content}</pre>
-                  </div>
-                </div>
-
-                {selectedProtocol.materials && selectedProtocol.materials.length > 0 && (
-                  <div>
-                    <h3 className="font-medium text-gray-900 mb-2">Materials</h3>
-                    <ul className="list-disc list-inside space-y-1 text-gray-600">
-                      {selectedProtocol.materials.map((material, index) => (
-                        <li key={index}>{material}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {selectedProtocol.safety_notes && (
-                  <div>
-                    <h3 className="font-medium text-gray-900 mb-2">Safety Notes</h3>
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <p className="text-yellow-800">{selectedProtocol.safety_notes}</p>
+                {/* Protocol Overview Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                    <div className="flex items-center space-x-2">
+                      <ClockIcon className="w-5 h-5 text-blue-600" />
+                      <span className="font-medium text-blue-900">Duration</span>
                     </div>
+                    <p className="text-xl font-bold text-blue-800 mt-1">{selectedProtocol.estimated_duration}h</p>
                   </div>
-                )}
+                  <div className="bg-green-50 rounded-xl p-4 border border-green-100">
+                    <div className="flex items-center space-x-2">
+                      <TagIcon className="w-5 h-5 text-green-600" />
+                      <span className="font-medium text-green-900">Category</span>
+                    </div>
+                    <p className="text-xl font-bold text-green-800 mt-1">{selectedProtocol.category}</p>
+                  </div>
+                  <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
+                    <div className="flex items-center space-x-2">
+                      <BuildingOfficeIcon className="w-5 h-5 text-purple-600" />
+                      <span className="font-medium text-purple-900">Level</span>
+                    </div>
+                    <p className="text-xl font-bold text-purple-800 mt-1 capitalize">{selectedProtocol.difficulty_level}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-white border border-gray-200 rounded-xl p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                        <BookOpenIcon className="w-5 h-5 mr-2 text-gray-600" />
+                        Description
+                      </h3>
+                      <p className="text-gray-700 leading-relaxed">{selectedProtocol.description}</p>
+                    </div>
+
+                    <div className="bg-white border border-gray-200 rounded-xl p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <ClockIcon className="w-5 h-5 mr-2 text-gray-600" />
+                        Protocol Steps
+                      </h3>
+                      <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-6 border border-gray-100">
+                        <div className="space-y-3">
+                          {selectedProtocol.content.split('\n').map((step, index) => (
+                            <div key={index} className="flex items-start space-x-3">
+                              <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                                {index + 1}
+                              </div>
+                              <p className="text-gray-700 leading-relaxed">{step}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {selectedProtocol.materials && selectedProtocol.materials.length > 0 && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                          <UserIcon className="w-5 h-5 mr-2 text-gray-600" />
+                          Materials & Equipment
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {selectedProtocol.materials.map((material, index) => (
+                            <div key={index} className="flex items-center space-x-2 p-2 bg-gray-50 rounded-lg">
+                              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                              <span className="text-gray-700">{material}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedProtocol.safety_notes && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                          <svg className="w-5 h-5 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                          </svg>
+                          Safety Notes
+                        </h3>
+                        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 rounded-lg p-4">
+                          <p className="text-yellow-800 leading-relaxed">{selectedProtocol.safety_notes}</p>
+                        </div>
+                      </div>
+                    )}
               </div>
 
-              <div className="space-y-6">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-medium text-gray-900 mb-3">Protocol Details</h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Category:</span>
-                      <span className="font-medium">{selectedProtocol.category}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Difficulty:</span>
-                      <span className="font-medium capitalize">{selectedProtocol.difficulty_level}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Duration:</span>
-                      <span className="font-medium">{selectedProtocol.estimated_duration} hour{selectedProtocol.estimated_duration !== 1 ? 's' : ''}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Privacy:</span>
-                      <span className="font-medium capitalize">{selectedProtocol.privacy_level}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Created:</span>
-                      <span className="font-medium">{new Date(selectedProtocol.created_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {selectedProtocol.tags && selectedProtocol.tags.length > 0 && (
-                  <div>
-                    <h3 className="font-medium text-gray-900 mb-2">Tags</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedProtocol.tags.map((tag, index) => (
-                        <span key={index} className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <h3 className="font-medium text-gray-900 mb-3">Sharing</h3>
-                  <div className="space-y-2">
-                    {selectedProtocolDetails.sharing.map((share) => (
-                      <div key={share.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <span className="text-sm text-gray-600">
-                          {share.lab_name || `${share.first_name} ${share.last_name}`}
-                        </span>
-                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full capitalize">
-                          {share.permission_level}
-                        </span>
+                  <div className="space-y-6">
+                    {/* Protocol Info Card */}
+                    <div className="bg-white border border-gray-200 rounded-xl p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <UserIcon className="w-5 h-5 mr-2 text-gray-600" />
+                        Protocol Information
+                      </h3>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                          <span className="text-gray-600 font-medium">Author</span>
+                          <span className="text-gray-900">{selectedProtocol.creator_name}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                          <span className="text-gray-600 font-medium">Institution</span>
+                          <span className="text-gray-900">{selectedProtocol.institution}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                          <span className="text-gray-600 font-medium">Privacy</span>
+                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm capitalize">
+                            {selectedProtocol.privacy_level}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                          <span className="text-gray-600 font-medium">Shares</span>
+                          <span className="text-gray-900">{selectedProtocol.share_count}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-2">
+                          <span className="text-gray-600 font-medium">Created</span>
+                          <span className="text-gray-900">{new Date(selectedProtocol.created_at).toLocaleDateString()}</span>
+                        </div>
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Tags */}
+                    {selectedProtocol.tags && selectedProtocol.tags.length > 0 && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                          <TagIcon className="w-5 h-5 mr-2 text-gray-600" />
+                          Tags
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedProtocol.tags.map((tag, index) => (
+                            <span key={index} className="px-3 py-1 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 rounded-full text-sm font-medium">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sharing Information */}
+                    <div className="bg-white border border-gray-200 rounded-xl p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <ShareIcon className="w-5 h-5 mr-2 text-gray-600" />
+                        Shared With
+                      </h3>
+                      <div className="space-y-3">
+                        {selectedProtocolDetails.sharing.length === 0 ? (
+                          <p className="text-gray-500 text-sm">Not shared with anyone yet</p>
+                        ) : (
+                          selectedProtocolDetails.sharing.map((share) => (
+                            <div key={share.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
+                                  <UserIcon className="w-4 h-4 text-white" />
+                                </div>
+                                <span className="text-gray-900 font-medium">
+                                  {share.lab_name || `${share.first_name} ${share.last_name}`}
+                                </span>
+                              </div>
+                              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium capitalize">
+                                {share.permission_level}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="bg-white border border-gray-200 rounded-xl p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
+                      <div className="space-y-3">
+                        <button className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200">
+                          <ShareIcon className="w-4 h-4" />
+                          <span>Share Protocol</span>
+                        </button>
+                        {canEditProtocol(selectedProtocol) && (
+                          <button className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200">
+                            <PencilIcon className="w-4 h-4" />
+                            <span>Edit Protocol</span>
+                          </button>
+                        )}
+                        <button className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          <span>Duplicate Protocol</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
