@@ -89,7 +89,7 @@ interface CalculatorState {
 }
 
 const CalculatorHubPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'calculators' | 'converter' | 'advanced'>('calculators');
+  const [activeTab, setActiveTab] = useState<'calculators' | 'converter'>('calculators');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCalcCategory, setSelectedCalcCategory] = useState<string>('all');
   
@@ -378,17 +378,6 @@ const CalculatorHubPage: React.FC = () => {
               Basic Calculators
             </button>
             <button
-              onClick={() => setActiveTab('advanced')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
-                activeTab === 'advanced'
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg transform scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <BrainCircuitIcon className="w-5 h-5 inline mr-2" />
-              Advanced Tools
-            </button>
-            <button
               onClick={() => setActiveTab('converter')}
               className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
                 activeTab === 'converter'
@@ -405,355 +394,196 @@ const CalculatorHubPage: React.FC = () => {
         {/* Basic Calculators Tab */}
         {activeTab === 'calculators' && (
           <div className="space-y-8">
-            {/* Category Filter */}
-            <div className="flex justify-center">
-              <div className="bg-white rounded-xl p-1 shadow-lg border border-gray-100">
-                <select
-                                value={selectedCalcCategory}
-              onChange={(e) => setSelectedCalcCategory(e.target.value)}
-                  className="px-4 py-2 rounded-lg border-0 focus:ring-0 bg-transparent text-gray-700 font-medium"
-                >
-                  <option value="all">🔬 All Categories</option>
-                  <option value="Chemistry & Biochemistry">⚗️ Chemistry & Biochemistry</option>
-                  <option value="Biology & Life Sciences">🧬 Biology & Life Sciences</option>
-                  <option value="Physics & Engineering">⚡ Physics & Engineering</option>
-                  <option value="Statistics & Data Analysis">📊 Statistics & Data Analysis</option>
-                  <option value="Laboratory & Instrumentation">🔬 Laboratory & Instrumentation</option>
-                </select>
-              </div>
-            </div>
-            {/* Search and Filter */}
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search calculators..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    />
-                  </div>
+            {/* Category Selection */}
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <button
+                onClick={() => setSelectedCalcCategory('all')}
+                className={`p-4 rounded-2xl transition-all duration-200 ${
+                  selectedCalcCategory === 'all'
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg scale-105'
+                    : 'bg-white hover:shadow-lg hover:-translate-y-1 border border-gray-100'
+                }`}
+              >
+                <div className="text-center">
+                  <CalculatorIcon className={`w-8 h-8 mx-auto mb-2 ${
+                    selectedCalcCategory === 'all' ? 'text-white' : 'text-gray-600'
+                  }`} />
+                  <p className={`text-sm font-medium ${
+                    selectedCalcCategory === 'all' ? 'text-white' : 'text-gray-700'
+                  }`}>
+                    All Categories
+                  </p>
                 </div>
-                <div className="flex-shrink-0">
-                  <select
-                    value={selectedCalcCategory}
-                    onChange={(e) => setSelectedCalcCategory(e.target.value)}
-                    className="px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              </button>
+              
+              {Array.from(new Set(Object.values(CALCULATOR_DEFINITIONS).map(calc => calc.category)))
+                .filter(category => !excludedCategories.includes(category))
+                .map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCalcCategory(category)}
+                    className={`p-4 rounded-2xl transition-all duration-200 ${
+                      selectedCalcCategory === category
+                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg scale-105'
+                        : 'bg-white hover:shadow-lg hover:-translate-y-1 border border-gray-100'
+                    }`}
                   >
-                    <option value="all">All Categories</option>
-                    {Object.keys(calculatorsByCategory).map(category => (
-                      <option key={category} value={category}>
-                        {category.charAt(0).toUpperCase() + category.slice(1)}
-                      </option>
+                    <div className="text-center">
+                      <BeakerIcon className={`w-8 h-8 mx-auto mb-2 ${
+                        selectedCalcCategory === category ? 'text-white' : 'text-gray-600'
+                      }`} />
+                      <p className={`text-sm font-medium capitalize ${
+                        selectedCalcCategory === category ? 'text-white' : 'text-gray-700'
+                      }`}>
+                        {category}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+            </div>
+
+            {/* Calculator Interface */}
+            <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Calculator Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Calculator</label>
+                  <select
+                    value={calcState.selectedCalculator || ''}
+                    onChange={(e) => handleCalculatorSelect(e.target.value as CalculatorName)}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  >
+                    <option value="">Choose a calculator...</option>
+                    {filteredCalculators.map(([category, calcs]) => (
+                      <optgroup key={category} label={category}>
+                        {(calcs as Array<typeof CALCULATOR_DEFINITIONS[keyof typeof CALCULATOR_DEFINITIONS]>).map((calc) => (
+                          <option key={calc.name} value={calc.name}>
+                            {calc.name}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Calculator Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredCalculators.map(([category, calcs]) => (
-                <div key={category} className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-800 capitalize">{category}</h3>
-                  <div className="space-y-3">
-                    {(calcs as Array<typeof CALCULATOR_DEFINITIONS[keyof typeof CALCULATOR_DEFINITIONS]>).map((calc) => (
-                      <div
-                        key={calc.name}
-                        onClick={() => handleCalculatorSelect(calc.name as CalculatorName)}
-                        className={`bg-white rounded-xl p-4 cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 ${
-                          calcState.selectedCalculator === calc.name
-                            ? 'border-blue-500 shadow-lg'
-                            : 'border-gray-100 hover:border-blue-200'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium text-gray-900">{calc.name}</h4>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Toggle favorite logic here
-                            }}
-                            className="text-gray-400 hover:text-yellow-500 transition-colors"
-                          >
-                            <StarIcon className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-3">{calc.description}</p>
-                        <div className="flex flex-wrap gap-1">
-                          {calc.tags.slice(0, 3).map((tag, index) => (
-                            <span
-                              key={index}
-                              className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
+                  
+                  {calcState.selectedCalculator && (
+                    <div className="mt-4 p-4 bg-blue-50 rounded-xl">
+                      <h4 className="font-medium text-blue-900 mb-2">
+                        {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].name}
+                      </h4>
+                      <p className="text-sm text-blue-700 mb-3">
+                        {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].description}
+                      </p>
+                      <div className="text-xs text-blue-600">
+                        <strong>Formula:</strong> {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].formula}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Selected Calculator */}
-            {calcState.selectedCalculator && (
-              <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900">
-                    {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].name}
-                  </h3>
-                  <button
-                    onClick={() => setCalcState(prev => ({ ...prev, selectedCalculator: null }))}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <span className="sr-only">Close</span>
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                    </div>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Inputs */}
+                {/* Calculator Inputs */}
+                {calcState.selectedCalculator && (
                   <div>
-                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Input Parameters</h4>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Input Values</label>
                     <div className="space-y-4">
                       {CALCULATOR_INPUTS[calcState.selectedCalculator]?.map((input) => (
                         <div key={input.name}>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            {input.label}
-                          </label>
+                          <label className="block text-sm text-gray-600 mb-1">{input.label}</label>
                           <input
                             type="number"
-                            placeholder={input.placeholder}
                             value={calcState.inputs[input.name] || ''}
-                            onChange={(e) => handleInputChange(input.name, e.target.value)}
+                            onChange={(e) => handleInputChange(input.name, parseFloat(e.target.value) || '')}
                             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                            placeholder={`Enter ${input.label.toLowerCase()}`}
+                            step={input.step || 'any'}
                           />
+                          <div className="text-xs text-gray-500 mt-1">Unit: {input.unit}</div>
                         </div>
                       ))}
                     </div>
+                    
                     <button
                       onClick={handleCalculate}
-                      className="w-full mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-6 rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                      className="w-full mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-8 rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
                     >
                       Calculate
                     </button>
                   </div>
+                )}
+              </div>
 
-                  {/* Results */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Results</h4>
-                    {calcState.error ? (
-                      <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                        <p className="text-red-700">{calcState.error}</p>
+              {/* Results */}
+              {calcState.result && (
+                <div className="mt-8 p-6 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-2xl">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Calculation Result</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="text-center">
+                      <div className="text-4xl font-bold text-gray-900 mb-2">
+                        {calcState.result.value}
                       </div>
-                    ) : calcState.result ? (
-                      <div className="bg-green-50 border border-green-200 rounded-xl p-6">
-                        <div className="text-center">
-                          <div className="text-3xl font-bold text-green-700 mb-2">
-                            {calcState.result.value.toFixed(6)}
-                          </div>
-                          <div className="text-lg text-green-600 mb-4">
-                            {calcState.result.unit}
-                          </div>
-                          {calcState.result.explanation && (
-                            <p className="text-green-700">{calcState.result.explanation}</p>
-                          )}
+                      <div className="text-xl text-gray-600">
+                        {calcState.result.unit}
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {calcState.result.explanation && (
+                        <div className="p-3 bg-white rounded-lg">
+                          <div className="text-sm font-medium text-gray-700">Explanation</div>
+                          <div className="text-sm text-gray-600">{calcState.result.explanation}</div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
-                        <p className="text-gray-500">Enter parameters and click Calculate to see results</p>
-                      </div>
-                    )}
+                      )}
+                      {calcState.result.warnings && calcState.result.warnings.length > 0 && (
+                        <div className="p-3 bg-yellow-50 rounded-lg">
+                          <div className="text-sm font-medium text-yellow-800">Warnings</div>
+                          <div className="text-sm text-yellow-700">{calcState.result.warnings.join(', ')}</div>
+                        </div>
+                      )}
+                      {calcState.result.suggestions && calcState.result.suggestions.length > 0 && (
+                        <div className="p-3 bg-blue-50 rounded-lg">
+                          <div className="text-sm font-medium text-blue-800">Suggestions</div>
+                          <div className="text-sm text-blue-700">{calcState.result.suggestions.join(', ')}</div>
+                        </div>
+                      )}
+                    </div>
                   </div>
+                </div>
+              )}
+
+              {/* Error Display */}
+              {calcState.error && (
+                <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+                  <div className="text-red-800">
+                    <strong>Error:</strong> {calcState.error}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Recent Calculations */}
+            {calcState.recentCalculations.length > 0 && (
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Calculations</h3>
+                <div className="space-y-3">
+                  {calcState.recentCalculations.slice(0, 5).map((calc) => (
+                    <div
+                      key={calc.id}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <span className="text-lg font-medium text-gray-900">
+                          {calc.calculator}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {calc.result.value} {calc.result.unit}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-500">
+                        {new Date(calc.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* Advanced Tools Tab */}
-        {activeTab === 'advanced' && (
-          <div className="space-y-8">
-            {/* Advanced Tools Header */}
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">🧠 Advanced Research Tools</h2>
-              <p className="text-gray-600 max-w-2xl mx-auto">
-                Specialized calculators for advanced research, complex statistical analysis, and professional laboratory applications
-              </p>
-            </div>
-
-            {/* Advanced Calculator Categories */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Statistical Analysis Tools */}
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-200">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center mr-4">
-                    <BarChartIcon className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">Statistical Analysis</h3>
-                </div>
-                <p className="text-gray-600 mb-4">Advanced statistical calculations for research data analysis</p>
-                <div className="space-y-2">
-                  <div className="p-3 bg-blue-50 rounded-lg">
-                    <div className="font-medium text-blue-900">📊 ANOVA Calculator</div>
-                    <div className="text-sm text-blue-700">One-way and two-way ANOVA with post-hoc tests</div>
-                  </div>
-                  <div className="p-3 bg-blue-50 rounded-lg">
-                    <div className="font-medium text-blue-900">📈 Regression Analysis</div>
-                    <div className="text-sm text-blue-700">Linear, polynomial, and multiple regression</div>
-                  </div>
-                  <div className="p-3 bg-blue-50 rounded-lg">
-                    <div className="font-medium text-blue-900">🎯 Power Analysis</div>
-                    <div className="text-sm text-blue-700">Sample size and statistical power calculations</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bioinformatics Tools */}
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-200">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mr-4">
-                    <BeakerIcon className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">Bioinformatics</h3>
-                </div>
-                <p className="text-gray-600 mb-4">Molecular biology and bioinformatics calculations</p>
-                <div className="space-y-2">
-                  <div className="p-3 bg-green-50 rounded-lg">
-                    <div className="font-medium text-green-900">🧬 DNA/RNA Calculator</div>
-                    <div className="text-sm text-green-700">Tm, GC content, molecular weight calculations</div>
-                  </div>
-                  <div className="p-3 bg-green-50 rounded-lg">
-                    <div className="font-medium text-green-900">🔬 Protein Analysis</div>
-                    <div className="text-sm text-green-700">Protein MW, pI, extinction coefficient</div>
-                  </div>
-                  <div className="p-3 bg-green-50 rounded-lg">
-                    <div className="font-medium text-green-900">⚗️ PCR Calculator</div>
-                    <div className="text-sm text-green-700">Primer design and reaction optimization</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Analytical Chemistry */}
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-200">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mr-4">
-                    <PipetteIcon className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">Analytical Chemistry</h3>
-                </div>
-                <p className="text-gray-600 mb-4">Advanced analytical and instrumental chemistry tools</p>
-                <div className="space-y-2">
-                  <div className="p-3 bg-purple-50 rounded-lg">
-                    <div className="font-medium text-purple-900">📊 Calibration Curves</div>
-                    <div className="text-sm text-purple-700">Linear and non-linear calibration analysis</div>
-                  </div>
-                  <div className="p-3 bg-purple-50 rounded-lg">
-                    <div className="font-medium text-purple-900">🎯 Detection Limits</div>
-                    <div className="text-sm text-purple-700">LOD, LOQ, and precision calculations</div>
-                  </div>
-                  <div className="p-3 bg-purple-50 rounded-lg">
-                    <div className="font-medium text-purple-900">⚖️ Method Validation</div>
-                    <div className="text-sm text-purple-700">Accuracy, precision, and recovery studies</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Pharmacokinetics */}
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-200">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-orange-500 rounded-xl flex items-center justify-center mr-4">
-                    <LightbulbIcon className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">Pharmacokinetics</h3>
-                </div>
-                <p className="text-gray-600 mb-4">Drug metabolism and pharmacokinetic modeling</p>
-                <div className="space-y-2">
-                  <div className="p-3 bg-red-50 rounded-lg">
-                    <div className="font-medium text-red-900">💊 PK Parameters</div>
-                    <div className="text-sm text-red-700">Clearance, half-life, bioavailability</div>
-                  </div>
-                  <div className="p-3 bg-red-50 rounded-lg">
-                    <div className="font-medium text-red-900">📈 Compartment Models</div>
-                    <div className="text-sm text-red-700">One and two-compartment modeling</div>
-                  </div>
-                  <div className="p-3 bg-red-50 rounded-lg">
-                    <div className="font-medium text-red-900">⚡ Dosing Regimens</div>
-                    <div className="text-sm text-red-700">Optimal dosing and administration</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Environmental Science */}
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-200">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center mr-4">
-                    <BeakerIcon className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">Environmental Science</h3>
-                </div>
-                <p className="text-gray-600 mb-4">Environmental monitoring and assessment tools</p>
-                <div className="space-y-2">
-                  <div className="p-3 bg-teal-50 rounded-lg">
-                    <div className="font-medium text-teal-900">🌍 Air Quality Index</div>
-                    <div className="text-sm text-teal-700">AQI calculations and pollutant modeling</div>
-                  </div>
-                  <div className="p-3 bg-teal-50 rounded-lg">
-                    <div className="font-medium text-teal-900">💧 Water Quality</div>
-                    <div className="text-sm text-teal-700">BOD, COD, and contamination assessment</div>
-                  </div>
-                  <div className="p-3 bg-teal-50 rounded-lg">
-                    <div className="font-medium text-teal-900">🏭 Emission Calculations</div>
-                    <div className="text-sm text-teal-700">Carbon footprint and emission factors</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Spectroscopy Tools */}
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-200">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center mr-4">
-                    <BrainCircuitIcon className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">Spectroscopy</h3>
-                </div>
-                <p className="text-gray-600 mb-4">Advanced spectroscopic analysis and calculations</p>
-                <div className="space-y-2">
-                  <div className="p-3 bg-indigo-50 rounded-lg">
-                    <div className="font-medium text-indigo-900">🌈 UV-Vis Analysis</div>
-                    <div className="text-sm text-indigo-700">Beer's law and concentration analysis</div>
-                  </div>
-                  <div className="p-3 bg-indigo-50 rounded-lg">
-                    <div className="font-medium text-indigo-900">🔍 NMR Calculator</div>
-                    <div className="text-sm text-indigo-700">Chemical shift and coupling analysis</div>
-                  </div>
-                  <div className="p-3 bg-indigo-50 rounded-lg">
-                    <div className="font-medium text-indigo-900">📡 Mass Spec Tools</div>
-                    <div className="text-sm text-indigo-700">Isotope patterns and fragmentation</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Coming Soon Notice */}
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 text-center border border-blue-100">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mb-4">
-                <BrainCircuitIcon className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">🚀 Advanced Tools Coming Soon!</h3>
-              <p className="text-gray-600 max-w-2xl mx-auto">
-                We're developing even more sophisticated calculators including AI-powered analysis tools, 
-                machine learning models for prediction, and advanced statistical packages. Stay tuned for updates!
-              </p>
-            </div>
           </div>
         )}
 

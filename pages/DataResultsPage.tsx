@@ -626,42 +626,68 @@ const DataResultsPage: React.FC = () => {
     }
   };
 
-  const fetchResults = async () => {
-    try {
-      const response = await fetch('http://localhost:5001/api/data/results', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setResults(data.results || []);
-      }
-    } catch (error) {
-      console.error('Error fetching results:', error);
-      // Keep existing dummy data if API fails
-    }
-  };
-
+  // Fetch stats from backend
   const fetchStats = async () => {
     try {
-      const response = await fetch(`http://localhost:5001/api/data/results/stats/overview?lab_id=${labs[0]?.id || ''}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const response = await fetch('/api/data/results/stats/overview', {
+        headers: {
+          'Authorization': 'Bearer demo-token'
+        }
       });
+      
       if (response.ok) {
         const data = await response.json();
-        setStats(data.stats);
+        setStats(data);
+      } else {
+        console.error('Error fetching stats:', response.statusText);
+        // Set default stats if API fails (based on current results state)
+        setStats({
+          total_results: results.length,
+          this_month: results.length,
+          experiments: results.filter(r => r.data_type === 'experiment').length,
+          observations: results.filter(r => r.data_type === 'observation').length,
+          measurements: results.filter(r => r.data_type === 'measurement').length,
+          manual_entries: results.filter(r => r.source === 'Manual').length,
+          imports: results.filter(r => r.source === 'Import').length
+        });
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
-      // Set default stats if API fails
+      // Set default stats if API fails (based on current results state)
       setStats({
         total_results: results.length,
         this_month: results.length,
         experiments: results.filter(r => r.data_type === 'experiment').length,
         observations: results.filter(r => r.data_type === 'observation').length,
         measurements: results.filter(r => r.data_type === 'measurement').length,
-        manual_entries: results.filter(r => r.source === 'manual').length,
-        imports: results.filter(r => r.source === 'import').length
+        manual_entries: results.filter(r => r.source === 'Manual').length,
+        imports: results.filter(r => r.source === 'Import').length
       });
+    }
+  };
+
+  // Fetch results from backend
+  const fetchResults = async () => {
+    try {
+      const response = await fetch('/api/data/results', {
+        headers: {
+          'Authorization': 'Bearer demo-token'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.results && data.results.length > 0) {
+          setResults(data.results);
+        }
+        // Keep existing dummy data if API returns empty results
+      } else {
+        console.error('Error fetching results:', response.statusText);
+        // Keep existing dummy data if API fails (already set by generateDummyData)
+      }
+    } catch (error) {
+      console.error('Error fetching results:', error);
+      // Keep existing dummy data if API fails (already set by generateDummyData)
     }
   };
 
