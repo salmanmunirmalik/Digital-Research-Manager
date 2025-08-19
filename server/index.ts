@@ -2605,7 +2605,7 @@ app.get('/api/data/templates', authenticateToken, async (req, res) => {
       WHERE (dt.lab_id = $1 OR dt.is_public = true)
     `;
     
-    const queryParams = [lab_id];
+    const queryParams: any[] = [lab_id];
     let paramCount = 1;
 
     if (category) {
