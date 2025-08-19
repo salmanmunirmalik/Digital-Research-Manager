@@ -725,8 +725,8 @@ const DataResultsPage: React.FC = () => {
             <div className="flex items-center gap-3">
               <TableIcon className="h-6 w-6 text-green-600" />
               <div>
-                <CardTitle>Unified Data Entry System</CardTitle>
-                <CardDescription>Create, import, and manage research data with our enhanced tools</CardDescription>
+                <CardTitle>Research Data Management System</CardTitle>
+                <CardDescription>Comprehensive platform for managing research data, experiments, and results</CardDescription>
               </div>
             </div>
             <Button
@@ -739,47 +739,50 @@ const DataResultsPage: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Quick Stats */}
+          {/* Research Data Overview */}
           {stats && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <div className="bg-blue-50 p-4 rounded-lg text-center">
                 <div className="text-2xl font-bold text-blue-600">{stats.total_results || 0}</div>
-                <div className="text-sm text-blue-600">Total Results</div>
+                <div className="text-sm text-blue-600">Research Projects</div>
               </div>
               <div className="bg-green-50 p-4 rounded-lg text-center">
                 <div className="text-2xl font-bold text-green-600">{stats.this_month || 0}</div>
-                <div className="text-sm text-green-600">This Month</div>
+                <div className="text-sm text-green-600">Active Studies</div>
               </div>
               <div className="bg-purple-50 p-4 rounded-lg text-center">
                 <div className="text-2xl font-bold text-purple-600">{stats.manual_entries || 0}</div>
-                <div className="text-sm text-purple-600">Manual Entries</div>
+                <div className="text-sm text-purple-600">Data Entries</div>
               </div>
               <div className="bg-orange-50 p-4 rounded-lg text-center">
                 <div className="text-2xl font-bold text-orange-600">{stats.imports || 0}</div>
-                <div className="text-sm text-orange-600">Imports</div>
+                <div className="text-sm text-orange-600">Data Imports</div>
               </div>
             </div>
           )}
 
-          {/* File Upload Section */}
+          {/* Research Data Import Section */}
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
             <UploadIcon className="mx-auto h-12 w-12 text-gray-400" />
             <div className="mt-4">
               <label htmlFor="file-upload" className="cursor-pointer">
-                <span className="text-blue-600 hover:text-blue-500 font-medium">Click to upload</span>
+                <span className="text-blue-600 hover:text-blue-500 font-medium">Import Research Data</span>
                 <span className="text-gray-500"> or drag and drop</span>
               </label>
               <input
                 id="file-upload"
                 type="file"
-                accept=".xlsx,.xls,.csv,.tsv"
+                accept=".xlsx,.xls,.csv,.tsv,.txt,.dat"
                 onChange={handleFileUpload}
                 className="hidden"
               />
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              Excel (.xlsx, .xls), CSV, TSV up to 10MB
+              Excel, CSV, TSV, Text files, Instrument data up to 50MB
             </p>
+            <div className="mt-3 text-xs text-gray-400">
+              Supports: Experimental data, instrument outputs, survey results, time series data
+            </div>
           </div>
           
           {selectedFile && (
@@ -816,10 +819,12 @@ const DataResultsPage: React.FC = () => {
               </CardHeader>
               <CardContent className="space-y-3">
                 {[
-                  { name: 'Excel (.xlsx, .xls)', desc: 'Import from Excel spreadsheets', icon: '📊' },
-                  { name: 'CSV Files', desc: 'Import comma-separated values', icon: '📄' },
-                  { name: 'TSV Files', desc: 'Import tab-separated values', icon: '📋' },
-                  { name: 'Google Sheets', desc: 'Import from Google Sheets', icon: '☁️' }
+                  { name: 'Excel (.xlsx, .xls)', desc: 'Research data spreadsheets', icon: '📊' },
+                  { name: 'CSV/TSV Files', desc: 'Instrument data exports', icon: '📄' },
+                  { name: 'Text Files (.txt)', desc: 'Raw data and logs', icon: '📋' },
+                  { name: 'Data Files (.dat)', desc: 'Scientific instrument data', icon: '🔬' },
+                  { name: 'Google Sheets', desc: 'Collaborative research data', icon: '☁️' },
+                  { name: 'JSON/XML', desc: 'Structured research data', icon: '📊' }
                 ].map((format) => (
                   <div key={format.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                     <span className="text-2xl">{format.icon}</span>
@@ -841,10 +846,12 @@ const DataResultsPage: React.FC = () => {
               </CardHeader>
               <CardContent className="space-y-3">
                 {[
-                  { name: 'Data Validation', desc: 'Check data integrity & format', icon: '✅' },
-                  { name: 'Template Library', desc: 'Pre-built data entry forms', icon: '📚' },
-                  { name: 'Format Detection', desc: 'Auto-detect file format', icon: '🔍' },
-                  { name: 'Error Handling', desc: 'Graceful error management', icon: '⚠️' }
+                  { name: 'Research Validation', desc: 'Scientific data quality checks', icon: '✅' },
+                  { name: 'Research Templates', desc: 'Field-specific data forms', icon: '📚' },
+                  { name: 'Auto-Format Detection', desc: 'Smart file type recognition', icon: '🔍' },
+                  { name: 'Data Cleaning', desc: 'Remove outliers and errors', icon: '🧹' },
+                  { name: 'Metadata Extraction', desc: 'Capture experimental context', icon: '🏷️' },
+                  { name: 'Quality Metrics', desc: 'Data quality assessment', icon: '📊' }
                 ].map((tool) => (
                   <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                     <span className="text-2xl">{tool.icon}</span>
@@ -871,8 +878,8 @@ const DataResultsPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <ImageIcon className="h-6 w-6 text-purple-600" />
             <div>
-              <CardTitle>Image & Document Upload</CardTitle>
-              <CardDescription>Import and process various image and document formats</CardDescription>
+              <CardTitle>Research Image & Document Management</CardTitle>
+              <CardDescription>Advanced tools for managing research images, documents, and data extraction</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -911,10 +918,12 @@ const DataResultsPage: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { name: 'Microscope Images', desc: 'Import microscopy & imaging data', icon: '🔬' },
-              { name: 'Gel Images', desc: 'Import electrophoresis gels', icon: '🧬' },
-              { name: 'Charts & Graphs', desc: 'Import visual data representations', icon: '📈' },
-              { name: 'Lab Photos', desc: 'Import experimental setup photos', icon: '📸' }
+              { name: 'Microscopy & Imaging', desc: 'Advanced microscopy, SEM, TEM, fluorescence', icon: '🔬' },
+              { name: 'Electrophoresis Gels', desc: 'DNA/RNA gels, protein gels, Western blots', icon: '🧬' },
+              { name: 'Spectroscopy Data', desc: 'NMR, IR, UV-Vis, mass spectrometry', icon: '📊' },
+              { name: 'Chromatography', desc: 'HPLC, GC, TLC chromatograms', icon: '📈' },
+              { name: 'Flow Cytometry', desc: 'Cell analysis and sorting data', icon: '🔬' },
+              { name: 'Imaging Analysis', desc: 'Quantitative image analysis tools', icon: '📸' }
             ].map((tool) => (
               <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                 <span className="text-2xl">{tool.icon}</span>
@@ -936,10 +945,12 @@ const DataResultsPage: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { name: 'PDF Documents', desc: 'Extract data from PDF reports', icon: '📄' },
-              { name: 'Lab Notebooks', desc: 'Import handwritten notes', icon: '📓' },
-              { name: 'OCR Processing', desc: 'Convert images to text', icon: '🔤' },
-              { name: 'Text Extraction', desc: 'Extract text from images', icon: '📝' }
+              { name: 'Research Papers', desc: 'Extract data from scientific publications', icon: '📄' },
+              { name: 'Lab Notebooks', desc: 'Digital lab notebook integration', icon: '📓' },
+              { name: 'Data Sheets', desc: 'Import instrument data sheets', icon: '📋' },
+              { name: 'Protocol Documents', desc: 'Research protocol and SOP management', icon: '📝' },
+              { name: 'OCR Processing', desc: 'Convert handwritten notes to text', icon: '🔤' },
+              { name: 'Data Extraction', desc: 'Extract numerical data from images', icon: '📊' }
             ].map((tool) => (
               <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                 <span className="text-2xl">{tool.icon}</span>
@@ -965,8 +976,8 @@ const DataResultsPage: React.FC = () => {
             <div className="flex items-center gap-3">
               <PencilIcon className="h-6 w-6 text-orange-600" />
               <div>
-                <CardTitle>Enhanced Manual Data Entry</CardTitle>
-                <CardDescription>Create custom data entry forms with our unified system</CardDescription>
+                <CardTitle>Research Data Entry Forms</CardTitle>
+                <CardDescription>Comprehensive data entry forms designed specifically for research workflows</CardDescription>
               </div>
             </div>
             <Button
@@ -979,25 +990,47 @@ const DataResultsPage: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Form Name</label>
-              <Input placeholder="Enter form name" />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Research Type</label>
+              <Select>
+                <option value="">Select research type...</option>
+                <option value="experimental">Experimental Research</option>
+                <option value="observational">Observational Study</option>
+                <option value="clinical">Clinical Trial</option>
+                <option value="survey">Survey Research</option>
+                <option value="case_study">Case Study</option>
+                <option value="meta_analysis">Meta Analysis</option>
+                <option value="systematic_review">Systematic Review</option>
+              </Select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Form Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Field of Study</label>
               <Select>
-                <option>Experimental Data</option>
-                <option>Sample Information</option>
-                <option>Equipment Log</option>
-                <option>Results Summary</option>
+                <option value="">Select field...</option>
+                <option value="biology">Biology</option>
+                <option value="chemistry">Chemistry</option>
+                <option value="physics">Physics</option>
+                <option value="medicine">Medicine</option>
+                <option value="engineering">Engineering</option>
+                <option value="psychology">Psychology</option>
+                <option value="environmental">Environmental Science</option>
+                <option value="computer_science">Computer Science</option>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Data Category</label>
+              <Select>
+                <option value="">Select category...</option>
+                <option value="quantitative">Quantitative Data</option>
+                <option value="qualitative">Qualitative Data</option>
+                <option value="mixed">Mixed Methods</option>
+                <option value="time_series">Time Series</option>
+                <option value="cross_sectional">Cross-Sectional</option>
+                <option value="longitudinal">Longitudinal</option>
               </Select>
             </div>
           </div>
-          <Button>
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Create New Form
-          </Button>
         </CardContent>
       </Card>
 
@@ -1012,10 +1045,10 @@ const DataResultsPage: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { name: 'Form Builder', desc: 'Create custom data entry forms', icon: '📝' },
-              { name: 'Bulk Entry', desc: 'Enter multiple records at once', icon: '📊' },
-              { name: 'Data Templates', desc: 'Use predefined data structures', icon: '📋' },
-              { name: 'Field Validation', desc: 'Real-time data validation', icon: '✅' }
+              { name: 'Research Templates', desc: 'Pre-built research data forms', icon: '📋' },
+              { name: 'Bulk Data Entry', desc: 'Enter multiple samples/measurements', icon: '📊' },
+              { name: 'Data Validation', desc: 'Research-specific validation rules', icon: '✅' },
+              { name: 'Metadata Capture', desc: 'Capture experimental conditions', icon: '🏷️' }
             ].map((tool) => (
               <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                 <span className="text-2xl">{tool.icon}</span>
@@ -1037,10 +1070,10 @@ const DataResultsPage: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { name: 'Validation Rules', desc: 'Set data quality standards', icon: '🔒' },
-              { name: 'Auto-save', desc: 'Prevent data loss', icon: '💾' },
-              { name: 'Data Review', desc: 'Review and approve entries', icon: '👁️' },
-              { name: 'Audit Trail', desc: 'Track all data changes', icon: '📋' }
+              { name: 'Quality Control', desc: 'Research data quality standards', icon: '🔒' },
+              { name: 'Auto-save', desc: 'Prevent data loss during experiments', icon: '💾' },
+              { name: 'Peer Review', desc: 'Collaborative data review', icon: '👁️' },
+              { name: 'Version Control', desc: 'Track experimental iterations', icon: '📋' }
             ].map((tool) => (
               <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                 <span className="text-2xl">{tool.icon}</span>
@@ -1085,64 +1118,148 @@ const DataResultsPage: React.FC = () => {
     </div>
   );
 
-  // Simple Data Entry Modal
+  // Enhanced Research Data Entry Modal
   const renderDataEntryModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full mx-4">
+      <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Create New Data Entry</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Create New Research Data Entry</h2>
             <button onClick={() => setShowDataEntry(false)} className="text-gray-400 hover:text-gray-600">
               <XMarkIcon className="w-6 h-6" />
             </button>
           </div>
           
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
-              <Input
-                value={entryForm.title}
-                onChange={(e) => setEntryForm(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Enter data entry title"
-              />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Basic Information</h3>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Research Title *</label>
+                <Input
+                  value={entryForm.title}
+                  onChange={(e) => setEntryForm(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Enter research title"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Research Type *</label>
+                <Select
+                  value={entryForm.data_type}
+                  onChange={(e) => setEntryForm(prev => ({ ...prev, data_type: e.target.value }))}
+                >
+                  <option value="">Select research type...</option>
+                  <option value="experimental">Experimental Research</option>
+                  <option value="observational">Observational Study</option>
+                  <option value="clinical">Clinical Trial</option>
+                  <option value="survey">Survey Research</option>
+                  <option value="case_study">Case Study</option>
+                  <option value="meta_analysis">Meta Analysis</option>
+                  <option value="systematic_review">Systematic Review</option>
+                  <option value="laboratory">Laboratory Analysis</option>
+                  <option value="field_study">Field Study</option>
+                  <option value="simulation">Computer Simulation</option>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Field of Study</label>
+                <Select>
+                  <option value="">Select field...</option>
+                  <option value="biology">Biology</option>
+                  <option value="chemistry">Chemistry</option>
+                  <option value="physics">Physics</option>
+                  <option value="medicine">Medicine</option>
+                  <option value="engineering">Engineering</option>
+                  <option value="psychology">Psychology</option>
+                  <option value="environmental">Environmental Science</option>
+                  <option value="computer_science">Computer Science</option>
+                  <option value="agriculture">Agriculture</option>
+                  <option value="geology">Geology</option>
+                </Select>
+              </div>
             </div>
+
+            {/* Research Details */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Research Details</h3>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Data Category</label>
+                <Select>
+                  <option value="">Select category...</option>
+                  <option value="quantitative">Quantitative Data</option>
+                  <option value="qualitative">Qualitative Data</option>
+                  <option value="mixed">Mixed Methods</option>
+                  <option value="time_series">Time Series</option>
+                  <option value="cross_sectional">Cross-Sectional</option>
+                  <option value="longitudinal">Longitudinal</option>
+                  <option value="categorical">Categorical Data</option>
+                  <option value="continuous">Continuous Data</option>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Sample Size</label>
+                <Input
+                  type="number"
+                  placeholder="Number of samples/participants"
+                  min="1"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Study Duration</label>
+                <Input
+                  placeholder="e.g., 6 months, 2 years"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Fields */}
+          <div className="mt-6 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Additional Information</h3>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Data Type</label>
-              <Select
-                value={entryForm.data_type}
-                onChange={(e) => setEntryForm(prev => ({ ...prev, data_type: e.target.value }))}
-              >
-                <option value="experiment">Experiment</option>
-                <option value="observation">Observation</option>
-                <option value="measurement">Measurement</option>
-                <option value="survey">Survey</option>
-                <option value="simulation">Simulation</option>
-                <option value="other">Other</option>
-              </Select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Summary</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Research Summary *</label>
               <textarea
                 value={entryForm.summary}
                 onChange={(e) => setEntryForm(prev => ({ ...prev, summary: e.target.value }))}
-                placeholder="Brief description of the data entry"
+                placeholder="Detailed description of the research, methodology, and objectives"
                 className="w-full h-24 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Tags (comma-separated)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Keywords/Tags</label>
               <Input
                 value={entryForm.tags}
                 onChange={(e) => setEntryForm(prev => ({ ...prev, tags: e.target.value }))}
-                placeholder="Enter tags separated by commas"
+                placeholder="Enter keywords separated by commas"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Research Objectives</label>
+              <textarea
+                placeholder="List the main research objectives and hypotheses"
+                className="w-full h-20 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Methodology Notes</label>
+              <textarea
+                placeholder="Brief description of the research methodology and experimental design"
+                className="w-full h-20 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
           
-          <div className="flex justify-end gap-3 mt-6">
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
             <Button variant="ghost" onClick={() => setShowDataEntry(false)}>
               Cancel
             </Button>
@@ -1152,7 +1269,7 @@ const DataResultsPage: React.FC = () => {
               setEntryForm({ title: '', summary: '', data_type: 'experiment', tags: '' });
             }} className="bg-blue-600 hover:bg-blue-700">
               <SaveIcon className="w-4 h-4 mr-2" />
-              Save Entry
+              Save Research Entry
             </Button>
           </div>
         </div>

@@ -25,7 +25,9 @@ import {
   BarChartIcon,
   SettingsIcon,
   RocketIcon,
-  BrainCircuitIcon
+  BrainCircuitIcon,
+  FolderIcon,
+  PackageIcon
 } from './icons';
 
 const SideNav: React.FC = () => {
@@ -55,22 +57,26 @@ const SideNav: React.FC = () => {
       {
         title: 'Lab Management',
         items: [
-          { name: 'Lab Management', to: '/lab-management', icon: BuildingOfficeIcon, description: 'Manage labs and team members' }
+          { name: 'Lab Management', to: '/lab-management', icon: BuildingOfficeIcon, description: 'Manage labs and team members' },
+          { name: 'Projects', to: '/projects', icon: FolderIcon, description: 'Research projects and management' },
+          { name: 'Protocols', to: '/protocols', icon: BeakerIcon, description: 'Research protocols and methods' },
+          { name: 'Inventory', to: '/inventory', icon: PackageIcon, description: 'Lab supplies and equipment inventory' },
+          { name: 'Instruments', to: '/instruments', icon: CogIcon, description: 'Laboratory instruments and equipment' }
         ]
       },
       {
         title: 'Data & Results',
         items: [
           { name: 'Data & Results', to: '/data-results', icon: ChartBarIcon, description: 'Research data and analysis' },
-          { name: 'My Notebook', to: '/lab-notebook', icon: BookOpenIcon, description: 'Personal experiment records and notes' },
-          { name: 'Research Assistant', to: '/research-assistant', icon: LightbulbIcon, description: 'AI-powered research helper' }
+          { name: 'My Notebook', to: '/lab-notebook', icon: BookOpenIcon, description: 'Personal experiment records and notes' }
         ]
       },
       {
         title: 'Tools & Resources',
         items: [
           { name: 'Calculators', to: '/calculator-hub', icon: CalculatorIcon, description: 'Scientific calculators and unit conversion' },
-          { name: 'Global Protocol Directory', to: '/protocols', icon: BeakerIcon, description: 'Research protocols and methods database' }
+          { name: 'Global Protocol Directory', to: '/protocols', icon: BeakerIcon, description: 'Research protocols and methods database' },
+          { name: 'Research Assistant', to: '/research-assistant', icon: LightbulbIcon, description: 'AI-powered research helper' }
         ]
       },
       {
