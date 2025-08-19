@@ -2196,6 +2196,34 @@ const DataResultsPage: React.FC = () => {
           <p>2. <strong>Choose analysis type</strong> based on your research question</p>
           <p>3. <strong>Review results</strong> with professional statistical accuracy</p>
           <p>4. <strong>Export findings</strong> for your research reports</p>
+          
+          {/* Debug Info */}
+          <div className="mt-4 p-3 bg-gray-100 rounded-lg">
+            <p className="font-medium text-gray-800">Debug Info:</p>
+            <p>Data Points: {analyticsData.length}</p>
+            <p>Analysis Type: {selectedAnalysis}</p>
+            <p>Results: {analyticsResults ? 'Available' : 'None'}</p>
+            <p>Analyzing: {isAnalyzing ? 'Yes' : 'No'}</p>
+          </div>
+          
+          {/* Test Button */}
+          <div className="mt-4">
+            <Button 
+              onClick={() => {
+                console.log('Analytics Debug:', {
+                  analyticsData,
+                  selectedAnalysis,
+                  analyticsResults,
+                  isAnalyzing
+                });
+                alert('Check console for debug info');
+              }}
+              variant="outline"
+              size="sm"
+            >
+              Debug Analytics
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
