@@ -32,7 +32,10 @@ import {
   CogIcon,
   SparklesIcon,
   PresentationChartLineIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
+  CalculatorIcon,
+  ExclamationTriangleIcon,
+  TrendingUpIcon
 } from '../components/icons';
 
 const DataResultsPage: React.FC = () => {
@@ -55,6 +58,10 @@ const DataResultsPage: React.FC = () => {
   const [chartType, setChartType] = useState<'histogram' | 'scatter' | 'bar'>('histogram');
   const [selectedColumns, setSelectedColumns] = useState<{x: string, y: string}>({x: '', y: ''});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedAnalysis, setSelectedAnalysis] = useState('descriptive');
+  const [analyticsDataName, setAnalyticsDataName] = useState('');
+  const [analyticsDataInput, setAnalyticsDataInput] = useState('');
+  const [analyticsData, setAnalyticsData] = useState([]);
   
   // Performance optimization refs
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -68,6 +75,411 @@ const DataResultsPage: React.FC = () => {
     data_type: 'experiment',
     tags: ''
   });
+
+  // Analytics data interfaces and functions
+  interface AnalyticsDataPoint {
+    id: string;
+    value: number;
+    category?: string;
+    group?: string;
+    timestamp?: string;
+  }
+
+  interface StatisticalSummary {
+    count: number;
+    mean: number;
+    median: number;
+    mode: number[];
+    variance: number;
+    standardDeviation: number;
+    min: number;
+    max: number;
+    range: number;
+    skewness: number;
+    kurtosis: number;
+    quartiles: {
+      q1: number;
+      q2: number;
+      q3: number;
+    };
+  }
+
+  interface CorrelationResult {
+    correlation: number;
+    strength: string;
+    interpretation: string;
+  }
+
+  interface HypothesisTestResult {
+    testType: string;
+    tStatistic: number;
+    pValue: number;
+    degreesOfFreedom: number;
+    confidenceInterval: [number, number];
+    conclusion: string;
+  }
+
+  interface RegressionResult {
+    slope: number;
+    intercept: number;
+    rSquared: number;
+    adjustedRSquared: number;
+    standardError: number;
+    equation: string;
+    interpretation: string;
+  }
+
+  // Parse CSV-like input for analytics
+  const parseAnalyticsDataInput = (input: string): AnalyticsDataPoint[] => {
+    const lines = input.trim().split('\n');
+    const parsedData: AnalyticsDataPoint[] = [];
+    
+    lines.forEach((line, index) => {
+      const values = line.split(',').map(v => v.trim());
+      if (values.length >= 1) {
+        const numericValue = parseFloat(values[0]);
+        if (!isNaN(numericValue)) {
+          parsedData.push({
+            id: `point-${index}`,
+            value: numericValue,
+            category: values[1] || undefined,
+            group: values[2] || undefined,
+            timestamp: values[3] || undefined
+          });
+        }
+      }
+    });
+    
+    return parsedData;
+  };
+
+  // Calculate descriptive statistics
+  const calculateDescriptiveStats = (values: number[]): StatisticalSummary => {
+    const sorted = [...values].sort((a, b) => a - b);
+    const n = values.length;
+    
+    // Basic measures
+    const sum = values.reduce((a, b) => a + b, 0);
+    const mean = sum / n;
+    
+    // Median
+    const median = n % 2 === 0 
+      ? (sorted[n/2 - 1] + sorted[n/2]) / 2 
+      : sorted[Math.floor(n/2)];
+    
+    // Mode
+    const frequency: { [key: number]: number } = {};
+    values.forEach(v => frequency[v] = (frequency[v] || 0) + 1);
+    const maxFreq = Math.max(...Object.values(frequency));
+    const mode = Object.keys(frequency)
+      .filter(k => frequency[parseFloat(k)] === maxFreq)
+      .map(k => parseFloat(k));
+    
+    // Variance and Standard Deviation
+    const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / n;
+    const standardDeviation = Math.sqrt(variance);
+    
+    // Quartiles
+    const q1 = sorted[Math.floor(n * 0.25)];
+    const q2 = median;
+    const q3 = sorted[Math.floor(n * 0.75)];
+    
+    // Skewness
+    const skewness = values.reduce((sum, val) => {
+      return sum + Math.pow((val - mean) / standardDeviation, 3);
+    }, 0) / n;
+    
+    // Kurtosis
+    const kurtosis = values.reduce((sum, val) => {
+      return sum + Math.pow((val - mean) / standardDeviation, 4);
+    }, 0) / n - 3;
+    
+    return {
+      count: n,
+      mean,
+      median,
+      mode,
+      variance,
+      standardDeviation,
+      min: sorted[0],
+      max: sorted[n - 1],
+      range: sorted[n - 1] - sorted[0],
+      skewness,
+      kurtosis,
+      quartiles: { q1, q2, q3 }
+    };
+  };
+
+  // Calculate correlation coefficient
+  const calculateCorrelation = (x: number[], y: number[]): CorrelationResult => {
+    const n = Math.min(x.length, y.length);
+    if (n < 2) return { correlation: 0, strength: 'Insufficient data', interpretation: 'Need at least 2 data points' };
+    
+    const xMean = x.reduce((a, b) => a + b, 0) / n;
+    const yMean = y.reduce((a, b) => a + b, 0) / n;
+    
+    let numerator = 0;
+    let xDenominator = 0;
+    let yDenominator = 0;
+    
+    for (let i = 0; i < n; i++) {
+      const xDiff = x[i] - xMean;
+      const yDiff = y[i] - yMean;
+      numerator += xDiff * yDiff;
+      xDenominator += xDiff * xDiff;
+      yDenominator += yDiff * yDiff;
+    }
+    
+    const correlation = numerator / Math.sqrt(xDenominator * yDenominator);
+    
+    let strength = '';
+    let interpretation = '';
+    
+    if (Math.abs(correlation) >= 0.9) {
+      strength = 'Very Strong';
+      interpretation = 'Very strong relationship between variables';
+    } else if (Math.abs(correlation) >= 0.7) {
+      strength = 'Strong';
+      interpretation = 'Strong relationship between variables';
+    } else if (Math.abs(correlation) >= 0.5) {
+      strength = 'Moderate';
+      interpretation = 'Moderate relationship between variables';
+    } else if (Math.abs(correlation) >= 0.3) {
+      strength = 'Weak';
+      interpretation = 'Weak relationship between variables';
+    } else {
+      strength = 'Very Weak';
+      interpretation = 'Very weak or no relationship between variables';
+    }
+    
+    return { correlation, strength, interpretation };
+  };
+
+  // Perform t-test
+  const performTTest = (group1: number[], group2: number[]): HypothesisTestResult => {
+    const n1 = group1.length;
+    const n2 = group2.length;
+    
+    if (n1 < 2 || n2 < 2) {
+      return {
+        testType: 'Two-Sample t-Test',
+        tStatistic: 0,
+        pValue: 1,
+        degreesOfFreedom: 0,
+        confidenceInterval: [0, 0],
+        conclusion: 'Insufficient data for t-test'
+      };
+    }
+    
+    const mean1 = group1.reduce((a, b) => a + b, 0) / n1;
+    const mean2 = group2.reduce((a, b) => a + b, 0) / n2;
+    
+    const var1 = group1.reduce((sum, val) => sum + Math.pow(val - mean1, 2), 0) / (n1 - 1);
+    const var2 = group2.reduce((sum, val) => sum + Math.pow(val - mean2, 2), 0) / (n2 - 1);
+    
+    const pooledVariance = ((n1 - 1) * var1 + (n2 - 1) * var2) / (n1 + n2 - 2);
+    const standardError = Math.sqrt(pooledVariance * (1/n1 + 1/n2));
+    
+    const tStatistic = (mean1 - mean2) / standardError;
+    const degreesOfFreedom = n1 + n2 - 2;
+    
+    // Simplified p-value calculation (for demo purposes)
+    const pValue = 2 * (1 - Math.abs(tStatistic) / (Math.abs(tStatistic) + 2));
+    
+    const marginOfError = 1.96 * standardError; // 95% confidence
+    const confidenceInterval: [number, number] = [
+      (mean1 - mean2) - marginOfError,
+      (mean1 - mean2) + marginOfError
+    ];
+    
+    const conclusion = pValue < 0.05 
+      ? 'Reject null hypothesis - Groups are significantly different'
+      : 'Fail to reject null hypothesis - No significant difference';
+    
+    return {
+      testType: 'Two-Sample t-Test',
+      tStatistic,
+      pValue,
+      degreesOfFreedom,
+      confidenceInterval,
+      conclusion
+    };
+  };
+
+  // Perform linear regression
+  const performLinearRegression = (x: number[], y: number[]): RegressionResult => {
+    const n = x.length;
+    if (n < 2) {
+      return {
+        slope: 0,
+        intercept: 0,
+        rSquared: 0,
+        adjustedRSquared: 0,
+        standardError: 0,
+        equation: 'y = 0x + 0',
+        interpretation: 'Insufficient data for regression'
+      };
+    }
+    
+    const xMean = x.reduce((a, b) => a + b, 0) / n;
+    const yMean = y.reduce((a, b) => a + b, 0) / n;
+    
+    let numerator = 0;
+    let denominator = 0;
+    
+    for (let i = 0; i < n; i++) {
+      numerator += (x[i] - xMean) * (y[i] - yMean);
+      denominator += (x[i] - xMean) * (x[i] - xMean);
+    }
+    
+    const slope = denominator === 0 ? 0 : numerator / denominator;
+    const intercept = yMean - slope * xMean;
+    
+    // Calculate R-squared
+    const yPred = x.map(xi => slope * xi + intercept);
+    const ssRes = y.reduce((sum, yi, i) => sum + Math.pow(yi - yPred[i], 2), 0);
+    const ssTot = y.reduce((sum, yi) => sum + Math.pow(yi - yMean, 2), 0);
+    const rSquared = ssTot === 0 ? 0 : 1 - (ssRes / ssTot);
+    const adjustedRSquared = 1 - ((1 - rSquared) * (n - 1) / (n - 2));
+    
+    // Standard error
+    const standardError = Math.sqrt(ssRes / (n - 2));
+    
+    const equation = `y = ${slope.toFixed(4)}x + ${intercept.toFixed(4)}`;
+    
+    let interpretation = '';
+    if (rSquared >= 0.9) {
+      interpretation = 'Excellent fit - Model explains most of the variance';
+    } else if (rSquared >= 0.7) {
+      interpretation = 'Good fit - Model explains substantial variance';
+    } else if (rSquared >= 0.5) {
+      interpretation = 'Moderate fit - Model explains some variance';
+    } else {
+      interpretation = 'Poor fit - Model explains little variance';
+    }
+    
+    return {
+      slope,
+      intercept,
+      rSquared,
+      adjustedRSquared,
+      standardError,
+      equation,
+      interpretation
+    };
+  };
+
+  // Run advanced analysis
+  const runAdvancedAnalysis = async (analysisType: string) => {
+    if (analyticsData.length === 0) {
+      alert('Please enter data first');
+      return;
+    }
+    
+    setIsAnalyzing(true);
+    setSelectedAnalysis(analysisType);
+    
+    // Simulate processing time
+    setTimeout(() => {
+      let analysisResults;
+      
+      switch (analysisType) {
+        case 'descriptive':
+          const values = analyticsData.map(d => d.value);
+          analysisResults = calculateDescriptiveStats(values);
+          break;
+          
+        case 'correlation':
+          if (analyticsData.length < 2) {
+            analysisResults = { error: 'Need at least 2 data points for correlation' };
+            break;
+          }
+          const x = analyticsData.map((d, i) => i);
+          const y = analyticsData.map(d => d.value);
+          analysisResults = calculateCorrelation(x, y);
+          break;
+          
+        case 't-test':
+          const groups = analyticsData.reduce((acc, d) => {
+            const group = d.group || 'default';
+            if (!acc[group]) acc[group] = [];
+            acc[group].push(d.value);
+            return acc;
+          }, {} as { [key: string]: number[] });
+          
+          const groupKeys = Object.keys(groups);
+          if (groupKeys.length < 2) {
+            analysisResults = { error: 'Need at least 2 groups for t-test' };
+            break;
+          }
+          
+          analysisResults = performTTest(groups[groupKeys[0]], groups[groupKeys[1]]);
+          break;
+          
+        case 'regression':
+          if (analyticsData.length < 2) {
+            analysisResults = { error: 'Need at least 2 data points for regression' };
+            break;
+          }
+          const xVals = analyticsData.map((d, i) => i);
+          const yVals = analyticsData.map(d => d.value);
+          analysisResults = performLinearRegression(xVals, yVals);
+          break;
+          
+        default:
+          analysisResults = { error: 'Unknown analysis type' };
+      }
+      
+      setAnalyticsResults(analysisResults);
+      setIsAnalyzing(false);
+    }, 1500);
+  };
+
+  // Load sample analytics data
+  const loadSampleAnalyticsData = () => {
+    const sampleData = [
+      { id: '1', value: 12.5, category: 'A', group: 'Control' },
+      { id: '2', value: 15.2, category: 'A', group: 'Control' },
+      { id: '3', value: 13.8, category: 'A', group: 'Control' },
+      { id: '4', value: 14.1, category: 'A', group: 'Control' },
+      { id: '5', value: 16.7, category: 'A', group: 'Control' },
+      { id: '6', value: 18.3, category: 'B', group: 'Treatment' },
+      { id: '7', value: 19.1, category: 'B', group: 'Treatment' },
+      { id: '8', value: 17.9, category: 'B', group: 'Treatment' },
+      { id: '9', value: 20.2, category: 'B', group: 'Treatment' },
+      { id: '10', value: 18.8, category: 'B', group: 'Treatment' }
+    ];
+    
+    setAnalyticsData(sampleData);
+    setAnalyticsDataName('Sample Research Data');
+    setAnalyticsDataInput(sampleData.map(d => `${d.value}, ${d.category}, ${d.group}`).join('\n'));
+  };
+
+  // Clear analytics data
+  const clearAnalyticsData = () => {
+    setAnalyticsData([]);
+    setAnalyticsDataInput('');
+    setAnalyticsDataName('');
+    setAnalyticsResults(null);
+  };
+
+  // Export analytics results
+  const exportAnalyticsResults = () => {
+    if (!analyticsResults) return;
+    
+    const content = `Data Analytics Results\n${'='.repeat(50)}\n\n` +
+      `Analysis Type: ${selectedAnalysis}\n` +
+      `Data Points: ${analyticsData.length}\n\n` +
+      JSON.stringify(analyticsResults, null, 2);
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `data-analytics-${selectedAnalysis}-${new Date().toISOString().split('T')[0]}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     fetchLabs();
@@ -885,7 +1297,7 @@ const DataResultsPage: React.FC = () => {
             const col2 = numericColumns[j];
             
             if (col1.values.length === col2.values.length) {
-              const correlation = calculateCorrelation(col1.values, col2.values);
+              const correlation = calculateCorrelationSimple(col1.values, col2.values);
               correlations.push({
                 column1: col1.header,
                 column2: col2.header,
@@ -973,13 +1385,13 @@ const DataResultsPage: React.FC = () => {
     </Card>
   ), [isAnalyzing, runAnalytics, setSelectedDataset, setShowAnalytics, setAnalyticsResults]);
   
-  // Calculate Pearson correlation coefficient
-  const calculateCorrelation = (x: number[], y: number[]) => {
+  // Simple correlation function for existing analytics (returns number)
+  const calculateCorrelationSimple = (x: number[], y: number[]) => {
     const n = x.length;
     if (n !== y.length) return 0;
     
     const sumX = x.reduce((a, b) => a + b, 0);
-    const sumY = y.reduce((a, b) => a + b, 0);
+    const sumY = y.reduce((acc, val) => acc + val, 0);
     const sumXY = x.reduce((acc, val, i) => acc + val * y[i], 0);
     const sumX2 = x.reduce((acc, val) => acc + val * val, 0);
     const sumY2 = y.reduce((acc, val) => acc + val * val, 0);
@@ -999,7 +1411,7 @@ const DataResultsPage: React.FC = () => {
     if (abs >= 0.2) return { text: 'Weak', color: 'text-blue-600', bg: 'bg-blue-100' };
     return { text: 'Very Weak', color: 'text-gray-600', bg: 'bg-gray-100' };
   };
-  
+
   // Generate simple bar chart data for visualization
   const generateChartData = (column: any) => {
     const values = column.values;
@@ -1583,27 +1995,315 @@ const DataResultsPage: React.FC = () => {
   // Restored Data Analytics
   const renderAnalytics = () => (
     <div className="space-y-6">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-100 text-sm">Data Points</p>
+                <p className="text-3xl font-bold">{analyticsData.length}</p>
+              </div>
+              <TableIcon className="h-8 w-8 text-blue-200" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-green-100 text-sm">Categories</p>
+                <p className="text-3xl font-bold">{new Set(analyticsData.map(d => d.category)).size}</p>
+              </div>
+              <ChartBarIcon className="h-8 w-8 text-green-200" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-100 text-sm">Groups</p>
+                <p className="text-3xl font-bold">{new Set(analyticsData.map(d => d.group)).size}</p>
+              </div>
+              <TrendingUpIcon className="h-8 w-8 text-purple-200" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-orange-100 text-sm">Analyses</p>
+                <p className="text-3xl font-bold">{analyticsResults ? '1' : '0'}</p>
+              </div>
+              <CalculatorIcon className="h-8 w-8 text-orange-200" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Data Input Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Data Analytics & Insights</CardTitle>
-          <CardDescription>Comprehensive analysis tools for your research data</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <BarChartIcon className="mx-auto h-16 w-16 text-purple-400 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Advanced Data Analytics</h3>
-            <p className="text-gray-600 mb-6">Professional statistical analysis and visualization tools</p>
-            <div className="flex justify-center gap-4">
-              <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-                <BarChartIcon className="w-5 h-5 mr-2" />
-                Launch Analytics
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <TableIcon className="h-6 w-6 text-blue-600" />
+              <div>
+                <CardTitle>Data Input & Analysis</CardTitle>
+                <CardDescription>Enter your research data for comprehensive statistical analysis</CardDescription>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={loadSampleAnalyticsData} variant="outline" size="sm">
+                <PlusIcon className="h-4 w-4 mr-2" />
+                Load Sample
               </Button>
-              <Button variant="outline">
-                <InformationCircleIcon className="w-5 h-5 mr-2" />
-                View Examples
+              <Button onClick={clearAnalyticsData} variant="outline" size="sm">
+                <TrashIcon className="h-4 w-4 mr-2" />
+                Clear
               </Button>
             </div>
           </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Input
+            placeholder="Dataset name (optional)"
+            value={analyticsDataName}
+            onChange={(e) => setAnalyticsDataName(e.target.value)}
+          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Data (CSV format: value, category, group, timestamp)
+            </label>
+            <textarea
+              className="w-full h-32 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="12.5, A, Control&#10;15.2, A, Control&#10;18.3, B, Treatment&#10;19.1, B, Treatment"
+              value={analyticsDataInput}
+              onChange={(e) => {
+                setAnalyticsDataInput(e.target.value);
+                const parsed = parseAnalyticsDataInput(e.target.value);
+                setAnalyticsData(parsed);
+              }}
+            />
+          </div>
+          <div className="text-sm text-gray-600">
+            <p>• Enter one data point per line</p>
+            <p>• First column must be numeric values</p>
+            <p>• Additional columns for categories, groups, etc. are optional</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Analysis Tools */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <CalculatorIcon className="h-6 w-6 text-purple-600" />
+            <div>
+              <CardTitle>Statistical Analysis Tools</CardTitle>
+              <CardDescription>Select the type of analysis to perform on your data</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Button
+              onClick={() => runAdvancedAnalysis('descriptive')}
+              disabled={isAnalyzing || analyticsData.length === 0}
+              className="justify-start h-16 text-left"
+            >
+              <BarChartIcon className="h-6 w-6 mr-3" />
+              <div>
+                <div className="font-medium">Descriptive Statistics</div>
+                <div className="text-sm opacity-75">Mean, median, variance, etc.</div>
+              </div>
+            </Button>
+            
+            <Button
+              onClick={() => runAdvancedAnalysis('correlation')}
+              disabled={isAnalyzing || analyticsData.length < 2}
+              className="justify-start h-16 text-left"
+            >
+              <LineChartIcon className="h-6 w-6 mr-3" />
+              <div>
+                <div className="font-medium">Correlation Analysis</div>
+                <div className="text-sm opacity-75">Pearson correlation coefficient</div>
+              </div>
+            </Button>
+            
+            <Button
+              onClick={() => runAdvancedAnalysis('t-test')}
+              disabled={isAnalyzing || analyticsData.length < 4}
+              className="justify-start h-16 text-left"
+            >
+              <ChartBarIcon className="h-6 w-6 mr-3" />
+              <div>
+                <div className="font-medium">Hypothesis Testing</div>
+                <div className="text-sm opacity-75">Two-sample t-test</div>
+              </div>
+            </Button>
+            
+            <Button
+              onClick={() => runAdvancedAnalysis('regression')}
+              disabled={isAnalyzing || analyticsData.length < 2}
+              className="justify-start h-16 text-left"
+            >
+              <TrendingUpIcon className="h-6 w-6 mr-3" />
+              <div>
+                <div className="font-medium">Linear Regression</div>
+                <div className="text-sm opacity-75">Slope, intercept, R²</div>
+              </div>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Analysis Status */}
+      {isAnalyzing && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Analyzing Data...</h3>
+              <p className="text-gray-600">Performing {selectedAnalysis} analysis</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Advanced Analytics Results */}
+      {analyticsResults && !isAnalyzing && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <LightbulbIcon className="h-6 w-6 text-green-600" />
+                <div>
+                  <CardTitle>{selectedAnalysis.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
+                  <CardDescription>Analysis completed successfully</CardDescription>
+                </div>
+              </div>
+              <Button onClick={exportAnalyticsResults} variant="outline" size="sm">
+                <DownloadIcon className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {analyticsResults.error ? (
+              <div className="p-4 bg-red-50 rounded-lg">
+                <ExclamationTriangleIcon className="h-6 w-6 text-red-600 mb-2" />
+                <p className="text-red-700">{analyticsResults.error}</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {selectedAnalysis === 'descriptive' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="text-center p-3 bg-blue-50 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600">{analyticsResults.count}</div>
+                        <div className="text-sm text-blue-600">Count</div>
+                      </div>
+                      <div className="text-center p-3 bg-green-50 rounded-lg">
+                        <div className="text-2xl font-bold text-green-600">{analyticsResults.mean.toFixed(3)}</div>
+                        <div className="text-sm text-green-600">Mean</div>
+                      </div>
+                      <div className="text-center p-3 bg-purple-50 rounded-lg">
+                        <div className="text-2xl font-bold text-purple-600">{analyticsResults.median.toFixed(3)}</div>
+                        <div className="text-sm text-purple-600">Median</div>
+                      </div>
+                      <div className="text-center p-3 bg-orange-50 rounded-lg">
+                        <div className="text-2xl font-bold text-orange-600">{analyticsResults.standardDeviation.toFixed(3)}</div>
+                        <div className="text-sm text-orange-600">Std Dev</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-3 bg-red-50 rounded-lg">
+                        <div className="text-lg font-bold text-red-600">{analyticsResults.min.toFixed(3)}</div>
+                        <div className="text-sm text-red-600">Minimum</div>
+                      </div>
+                      <div className="text-center p-3 bg-indigo-50 rounded-lg">
+                        <div className="text-lg font-bold text-indigo-600">{analyticsResults.max.toFixed(3)}</div>
+                        <div className="text-sm text-indigo-600">Maximum</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedAnalysis === 'correlation' && (
+                  <div className="space-y-4">
+                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <div className="text-3xl font-bold text-blue-600">{analyticsResults.correlation.toFixed(4)}</div>
+                      <div className="text-lg text-blue-600">{analyticsResults.strength}</div>
+                      <div className="text-sm text-blue-700 mt-2">{analyticsResults.interpretation}</div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedAnalysis === 't-test' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 bg-purple-50 rounded-lg">
+                        <div className="text-sm font-medium text-purple-900 mb-1">t-Statistic</div>
+                        <div className="text-lg font-bold text-purple-600">{analyticsResults.tStatistic.toFixed(4)}</div>
+                      </div>
+                      <div className="p-3 bg-blue-50 rounded-lg">
+                        <div className="text-sm font-medium text-blue-900 mb-1">p-Value</div>
+                        <div className="text-lg font-bold text-blue-600">{analyticsResults.pValue.toFixed(4)}</div>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <div className="text-sm font-medium text-green-900 mb-1">Conclusion</div>
+                      <div className="text-sm text-green-700">{analyticsResults.conclusion}</div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedAnalysis === 'regression' && (
+                  <div className="space-y-4">
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <div className="text-sm font-medium text-green-900 mb-1">Equation</div>
+                      <div className="text-lg font-mono text-green-600">{analyticsResults.equation}</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 bg-blue-50 rounded-lg">
+                        <div className="text-sm font-medium text-blue-900 mb-1">R²</div>
+                        <div className="text-lg font-bold text-blue-600">{analyticsResults.rSquared.toFixed(4)}</div>
+                      </div>
+                      <div className="p-3 bg-purple-50 rounded-lg">
+                        <div className="text-sm font-medium text-purple-900 mb-1">Slope</div>
+                        <div className="text-lg font-bold text-purple-600">{analyticsResults.slope.toFixed(4)}</div>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-orange-50 rounded-lg">
+                      <div className="text-sm font-medium text-orange-900 mb-1">Interpretation</div>
+                      <div className="text-sm text-orange-700">{analyticsResults.interpretation}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Getting Started Guide */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <InformationCircleIcon className="h-6 w-6 text-blue-600" />
+            <CardTitle>Getting Started with Analytics</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-gray-600">
+          <p>1. <strong>Enter your data</strong> in the format shown above</p>
+          <p>2. <strong>Choose analysis type</strong> based on your research question</p>
+          <p>3. <strong>Review results</strong> with professional statistical accuracy</p>
+          <p>4. <strong>Export findings</strong> for your research reports</p>
         </CardContent>
       </Card>
     </div>
