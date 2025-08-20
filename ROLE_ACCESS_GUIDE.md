@@ -18,7 +18,8 @@
 ### **Student Role** (`student`)
 - ✅ **View Access**: All protocols, lab notebook, data results, calculators
 - ✅ **Basic Operations**: View instruments, access research tools
-- ❌ **Restricted**: Cannot create/edit protocols, manage inventory, or access lab management
+- ✅ **Lab Management**: Access lab management features
+- ❌ **Restricted**: Cannot create/edit protocols or manage inventory
 
 **Available Features:**
 - Dashboard overview
@@ -26,6 +27,7 @@
 - Access calculators and research tools
 - View data results and presentations
 - Access help forum and conferences
+- Lab management access
 
 ---
 
@@ -103,7 +105,7 @@
 #### **Researcher+ Access**
 - `/inventory` - Inventory management
 
-#### **Principal Investigator+ Access**
+#### **Student+ Access** (All authenticated users)
 - `/lab-management` - Lab administration
 
 ---
@@ -124,13 +126,13 @@
 #### **1. Student Access Test**
 1. Login as student
 2. Try to access `/inventory` → Should be denied
-3. Try to access `/lab-management` → Should be denied
+3. Access `/lab-management` → Should work (now accessible to all)
 4. Verify access to basic features works
 
 #### **2. Researcher Access Test**
 1. Login as researcher
 2. Access `/inventory` → Should work
-3. Try to access `/lab-management` → Should be denied
+3. Access `/lab-management` → Should work (now accessible to all)
 4. Verify full research tool access
 
 #### **3. Principal Investigator Access Test**

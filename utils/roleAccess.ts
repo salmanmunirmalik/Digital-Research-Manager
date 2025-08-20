@@ -50,7 +50,7 @@ export const hasAllowedRole = (userRole: string, allowedRoles: string[]): boolea
 export const getRolePermissions = (role: string): RolePermissions => {
   const basePermissions: RolePermissions = {
     canManageUsers: false,
-    canManageLabs: false,
+    canManageLabs: true, // Everyone can manage labs now
     canManageProtocols: true,
     canManageInventory: false,
     canManageInstruments: true,
@@ -73,14 +73,12 @@ export const getRolePermissions = (role: string): RolePermissions => {
       return {
         ...basePermissions,
         canManageUsers: true,
-        canManageLabs: true,
         canManageInventory: true,
       };
 
     case 'principal_researcher':
       return {
         ...basePermissions,
-        canManageLabs: true,
         canManageInventory: true,
       };
 
@@ -104,7 +102,7 @@ export const getRolePermissions = (role: string): RolePermissions => {
 // Route access control
 export const ROUTE_ACCESS = {
   '/dashboard': { minRole: 'student' },
-  '/lab-management': { exactRoles: ['admin', 'principal_researcher'] },
+  '/lab-management': { minRole: 'student' }, // Everyone can access lab management now
   '/lab-notebook': { minRole: 'student' },
   '/protocols': { minRole: 'student' },
   '/inventory': { minRole: 'researcher' },
@@ -127,11 +125,13 @@ export const canAccessRoute = (userRole: string, route: string): boolean => {
   const routeConfig = ROUTE_ACCESS[route as keyof typeof ROUTE_ACCESS];
   if (!routeConfig) return false;
 
-  if (routeConfig.exactRoles) {
+  // Check if routeConfig has exactRoles property
+  if ('exactRoles' in routeConfig && Array.isArray(routeConfig.exactRoles)) {
     return hasAllowedRole(userRole, routeConfig.exactRoles);
   }
 
-  if (routeConfig.minRole) {
+  // Check if routeConfig has minRole property
+  if ('minRole' in routeConfig && typeof routeConfig.minRole === 'string') {
     return hasMinimumRole(userRole, routeConfig.minRole);
   }
 
