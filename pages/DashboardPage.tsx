@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import RoleTestComponent from '../components/RoleTestComponent';
 import { 
   CalendarIcon, 
   CheckCircleIcon, 
@@ -69,6 +70,8 @@ const DashboardPage: React.FC = () => {
     color: string;
   }>>([]);
   const [refreshing, setRefreshing] = useState(false);
+
+
 
   // Mock data - replace with real API calls
   useEffect(() => {
@@ -390,13 +393,16 @@ const DashboardPage: React.FC = () => {
     <div className="page-container">
       {/* Page Header */}
       <div className="page-section">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="page-title">Dashboard</h1>
-            <p className="page-subtitle">Welcome back! Here's what's happening today.</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+            <p className="text-gray-600 text-base sm:text-lg">Welcome back! Here's what's happening today.</p>
           </div>
-          <div className="flex items-center space-x-4">
-            <button className="btn-primary">
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            <button 
+              onClick={() => setShowQuickAddModal(true)}
+              className="btn-primary w-full sm:w-auto"
+            >
               <PlusIcon className="w-4 h-4 inline mr-2" />
               Quick Add
             </button>
@@ -405,70 +411,71 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* Stats Overview */}
-      <div className="page-grid">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className="page-section">
           <div className="flex items-center">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
-              <BookOpenIcon className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0">
+              <BookOpenIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Protocols</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total_protocols}</p>
+            <div className="ml-3 sm:ml-4 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-gray-600">Total Protocols</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.total_protocols}</p>
             </div>
           </div>
         </div>
         
         <div className="page-section">
           <div className="flex items-center">
-            <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
-              <BeakerIcon className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
+              <BeakerIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Experiments</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total_experiments}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="page-section">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-              <CheckCircleIcon className="w-6 h-6 text-white" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Pending Tasks</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.pending_tasks}</p>
+            <div className="ml-3 sm:ml-4 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-gray-600">Active Experiments</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.total_experiments}</p>
             </div>
           </div>
         </div>
         
         <div className="page-section">
           <div className="flex items-center">
-            <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-              <CalendarIcon className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center flex-shrink-0">
+              <CheckCircleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Upcoming Events</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.upcoming_events}</p>
+            <div className="ml-3 sm:ml-4 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-gray-600">Pending Tasks</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.pending_tasks}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="page-section">
+          <div className="flex items-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center flex-shrink-0">
+              <CalendarIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </div>
+            <div className="ml-3 sm:ml-4 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-gray-600">Upcoming Events</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.upcoming_events}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Dashboard Controls */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
           <button
             onClick={refreshDashboard}
             disabled={refreshing}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 w-full sm:w-auto"
           >
             <RefreshCwIcon className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing...' : 'Refresh Dashboard'}
+            <span className="hidden sm:inline">{refreshing ? 'Refreshing...' : 'Refresh Dashboard'}</span>
+            <span className="sm:hidden">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
           </button>
           <button
             onClick={() => setShowQuickAddModal(true)}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm"
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm w-full sm:w-auto"
           >
             <PlusIcon className="w-4 h-4 mr-2" />
             Quick Add
@@ -476,10 +483,15 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Role Test Component - Debug Information */}
+      <div className="mb-6">
+        <RoleTestComponent />
+      </div>
+
       {/* Main Dashboard Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
         {/* Left Column - Sticky Notes & Tasks */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="xl:col-span-2 space-y-6 lg:space-y-8">
           {/* Sticky Notes Section */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">

@@ -39,6 +39,52 @@ interface LabProject {
 const LabManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   
+  // Modal states
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  
+  // Form states
+  const [members, setMembers] = useState<LabMember[]>([]);
+  const [projects, setProjects] = useState<LabProject[]>([]);
+  
+  // Action handlers
+  const handleAddMember = () => {
+    setShowAddMemberModal(true);
+  };
+  
+  const handleNewProject = () => {
+    setShowNewProjectModal(true);
+  };
+  
+  const handleEditItem = (item: any) => {
+    setSelectedItem(item);
+    setShowEditModal(true);
+  };
+  
+  const handleDeleteItem = (id: string, type: 'member' | 'project') => {
+    if (type === 'member') {
+      setMembers(prev => prev.filter(m => m.id !== id));
+    } else {
+      setProjects(prev => prev.filter(p => p.id !== id));
+    }
+  };
+  
+  const handleSaveChanges = () => {
+    // Simulate save operation
+    console.log('Saving changes...');
+    setShowEditModal(false);
+    setShowAddMemberModal(false);
+    setShowNewProjectModal(false);
+  };
+  
+  // Initialize with mock data
+  React.useEffect(() => {
+    setMembers(mockMembers);
+    setProjects(mockProjects);
+  }, []);
+  
   // Mock data for demo
   const mockMembers: LabMember[] = [
     {
@@ -143,11 +189,17 @@ const LabManagementPage: React.FC = () => {
           <p className="text-gray-600">Manage your research lab, team members, and projects</p>
         </div>
         <div className="flex items-center space-x-3">
-          <button className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm">
+          <button 
+            onClick={handleAddMember}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm"
+          >
             <PlusIcon className="w-4 h-4 mr-2" />
             Add Member
           </button>
-          <button className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-sm">
+          <button 
+            onClick={handleNewProject}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-sm"
+          >
             <PlusIcon className="w-4 h-4 mr-2" />
             New Project
           </button>
@@ -400,10 +452,18 @@ const LabManagementPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
-                        <button className="text-blue-600 hover:text-blue-900">
+                        <button 
+                          onClick={() => handleEditItem(member)}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="Edit member"
+                        >
                           <PencilIcon className="w-4 h-4" />
                         </button>
-                        <button className="text-red-600 hover:text-red-900">
+                        <button 
+                          onClick={() => handleDeleteItem(member.id, 'member')}
+                          className="text-red-600 hover:text-red-900"
+                          title="Delete member"
+                        >
                           <TrashIcon className="w-4 h-4" />
                         </button>
                       </div>
@@ -456,10 +516,18 @@ const LabManagementPage: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center space-x-2 ml-4">
-                  <button className="text-blue-600 hover:text-blue-900">
+                  <button 
+                    onClick={() => handleEditItem(project)}
+                    className="text-blue-600 hover:text-blue-900"
+                    title="Edit project"
+                  >
                     <PencilIcon className="w-4 h-4" />
                   </button>
-                  <button className="text-red-600 hover:text-red-900">
+                  <button 
+                    onClick={() => handleDeleteItem(project.id, 'project')}
+                    className="text-red-600 hover:text-red-900"
+                    title="Delete project"
+                  >
                     <TrashIcon className="w-4 h-4" />
                   </button>
                 </div>
@@ -907,7 +975,10 @@ const LabManagementPage: React.FC = () => {
               </div>
               
               <div className="pt-4">
-                <button className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm">
+                <button 
+                  onClick={handleSaveChanges}
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm"
+                >
                   <SaveIcon className="w-4 h-4 mr-2" />
                   Save Changes
                 </button>
@@ -1015,7 +1086,10 @@ const LabManagementPage: React.FC = () => {
                       <span className="font-medium">Today</span>
                     </div>
                   </div>
-                  <button className="w-full mt-3 px-3 py-2 text-sm font-medium text-orange-700 bg-orange-100 rounded-lg hover:bg-orange-200 transition-colors">
+                  <button 
+                    onClick={() => alert('Generating report... (Demo)')}
+                    className="w-full mt-3 px-3 py-2 text-sm font-medium text-orange-700 bg-orange-100 rounded-lg hover:bg-orange-200 transition-colors"
+                  >
                     Generate Report
                   </button>
                 </div>
@@ -1048,7 +1122,10 @@ const LabManagementPage: React.FC = () => {
                       <span className="font-medium">3 pending</span>
                     </div>
                   </div>
-                  <button className="w-full mt-3 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors">
+                  <button 
+                    onClick={() => alert('Viewing students... (Demo)')}
+                    className="w-full mt-3 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors"
+                  >
                     View Students
                   </button>
                 </div>
@@ -1123,10 +1200,115 @@ const LabManagementPage: React.FC = () => {
                       <span className="font-medium">1 week ago</span>
                     </div>
                   </div>
-                  <button className="w-full mt-3 px-3 py-2 text-sm font-medium text-orange-700 bg-orange-100 rounded-lg hover:bg-orange-200 transition-colors">
+                  <button 
+                    onClick={() => alert('Viewing metrics... (Demo)')}
+                    className="w-full mt-3 px-3 py-2 text-sm font-medium text-orange-700 bg-orange-100 rounded-lg hover:bg-orange-200 transition-colors"
+                  >
                     View Metrics
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Member Modal */}
+      {showAddMemberModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Add Team Member</h3>
+                <button
+                  onClick={() => setShowAddMemberModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option>Select Role</option>
+                  <option>Principal Investigator</option>
+                  <option>Postdoctoral Researcher</option>
+                  <option>Graduate Student</option>
+                  <option>Research Assistant</option>
+                </select>
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowAddMemberModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveChanges}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                >
+                  Add Member
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Project Modal */}
+      {showNewProjectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">New Project</h3>
+                <button
+                  onClick={() => setShowNewProjectModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Project Name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <textarea
+                  placeholder="Description"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="date"
+                  placeholder="Start Date"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowNewProjectModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveChanges}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
+                >
+                  Create Project
+                </button>
               </div>
             </div>
           </div>

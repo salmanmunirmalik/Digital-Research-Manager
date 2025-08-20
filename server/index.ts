@@ -35,18 +35,36 @@ app.use(express.json());
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
 
-// Authentication Middleware (Demo Mode - Bypass)
+// Authentication Middleware (JWT verification)
 const authenticateToken = async (req: any, res: any, next: any) => {
-  // Demo mode - provide mock user data
-  req.user = {
-    id: '4fd07593-fdfd-46ca-890c-f7875e3c47fb', // Use a valid UUID from the database
-    username: 'demo_user',
-    email: 'demo@researchlab.com',
-    role: 'Principal Investigator',
-    first_name: 'Demo',
-    last_name: 'User'
-  };
-  next();
+  try {
+    const authHeader = req.headers['authorization'] as string | undefined;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Missing or invalid Authorization header' });
+    }
+    const token = authHeader.split(' ')[1];
+    const payload: any = jwt.verify(token, JWT_SECRET);
+
+    // Load user from DB
+    const result = await pool.query(
+      'SELECT id, email, username, first_name, last_name, role, status FROM users WHERE id = $1',
+      [payload.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    const user = result.rows[0];
+    if (user.status !== 'active') {
+      return res.status(403).json({ error: 'Account is not active' });
+    }
+
+    req.user = user;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
 };
 
 // Health check endpoint
@@ -96,7 +114,7 @@ app.post('/api/auth/register', async (req, res) => {
       INSERT INTO users (email, username, password_hash, first_name, last_name, role, status, email_verified)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING id, email, username, first_name, last_name, role, status
-    `, [email, username, hashedPassword, first_name, last_name, role, 'pending_verification', false]);
+    `, [email, username, hashedPassword, first_name, last_name, role, 'active', false]);
 
     const user = result.rows[0];
 
@@ -203,6 +221,15 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Logout (stateless JWT - client should discard token)
+app.post('/api/auth/logout', authenticateToken, async (req, res) => {
+  try {
+    return res.json({ message: 'Logged out' });
+  } catch (error) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Protected route example
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
@@ -217,6 +244,49 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Profile endpoints
+app.get('/api/auth/profile', authenticateToken, async (req, res) => {
+  try {
+    return res.json({ user: req.user });
+  } catch (error) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/auth/profile', authenticateToken, async (req, res) => {
+  try {
+    const { first_name, last_name, email } = req.body;
+    const result = await pool.query(
+      `UPDATE users SET first_name = COALESCE($1, first_name), last_name = COALESCE($2, last_name), email = COALESCE($3, email), updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4 RETURNING id, email, username, first_name, last_name, role, status`,
+      [first_name, last_name, email, req.user.id]
+    );
+    return res.json({ user: result.rows[0] });
+  } catch (error) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/auth/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Both current and new passwords are required' });
+    }
+    const result = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+    const user = result.rows[0];
+    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid current password' });
+    }
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [newHash, req.user.id]);
+    return res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 

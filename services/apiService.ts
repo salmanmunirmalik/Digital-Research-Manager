@@ -39,10 +39,10 @@ const apiRequest = async <T>(
 
 // Authentication API
 export const authAPI = {
-  login: async (username: string, password: string) => {
+  login: async (email: string, password: string) => {
     const response = await apiRequest<{ token: string; user: any }>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ email, password })
     });
     
     // Store token in localStorage

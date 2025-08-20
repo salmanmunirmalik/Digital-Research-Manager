@@ -1,0 +1,178 @@
+// Role-based access control system
+export interface RolePermissions {
+  canManageUsers: boolean;
+  canManageLabs: boolean;
+  canManageProtocols: boolean;
+  canManageInventory: boolean;
+  canManageInstruments: boolean;
+  canAccessLabNotebook: boolean;
+  canAccessDataResults: boolean;
+  canAccessCalculators: boolean;
+  canAccessResearchTools: boolean;
+  canAccessPresentations: boolean;
+  canAccessGlobalData: boolean;
+  canAccessHelpForum: boolean;
+  canAccessConferences: boolean;
+  canAccessReferenceLibrary: boolean;
+  canAccessDataAnalytics: boolean;
+  canAccessMolecularBiology: boolean;
+  canAccessBioinformatics: boolean;
+}
+
+// Role hierarchy (higher number = more permissions)
+export const ROLE_HIERARCHY = {
+  'student': 1,
+  'researcher': 2,
+  'principal_researcher': 3,
+  'admin': 4
+} as const;
+
+export type UserRole = keyof typeof ROLE_HIERARCHY;
+
+// Check if user has minimum required role
+export const hasMinimumRole = (userRole: string, requiredRole: string): boolean => {
+  const userLevel = ROLE_HIERARCHY[userRole as UserRole] || 0;
+  const requiredLevel = ROLE_HIERARCHY[requiredRole as UserRole] || 0;
+  return userLevel >= requiredLevel;
+};
+
+// Check if user has exact role
+export const hasExactRole = (userRole: string, requiredRole: string): boolean => {
+  return userRole === requiredRole;
+};
+
+// Check if user has one of the allowed roles
+export const hasAllowedRole = (userRole: string, allowedRoles: string[]): boolean => {
+  return allowedRoles.includes(userRole);
+};
+
+// Get role permissions for a user
+export const getRolePermissions = (role: string): RolePermissions => {
+  const basePermissions: RolePermissions = {
+    canManageUsers: false,
+    canManageLabs: false,
+    canManageProtocols: true,
+    canManageInventory: false,
+    canManageInstruments: true,
+    canAccessLabNotebook: true,
+    canAccessDataResults: true,
+    canAccessCalculators: true,
+    canAccessResearchTools: true,
+    canAccessPresentations: true,
+    canAccessGlobalData: true,
+    canAccessHelpForum: true,
+    canAccessConferences: true,
+    canAccessReferenceLibrary: true,
+    canAccessDataAnalytics: true,
+    canAccessMolecularBiology: true,
+    canAccessBioinformatics: true,
+  };
+
+  switch (role) {
+    case 'admin':
+      return {
+        ...basePermissions,
+        canManageUsers: true,
+        canManageLabs: true,
+        canManageInventory: true,
+      };
+
+    case 'principal_researcher':
+      return {
+        ...basePermissions,
+        canManageLabs: true,
+        canManageInventory: true,
+      };
+
+    case 'researcher':
+      return {
+        ...basePermissions,
+        canManageInventory: true,
+      };
+
+    case 'student':
+      return {
+        ...basePermissions,
+        canManageProtocols: false, // Students can view but not create/edit
+      };
+
+    default:
+      return basePermissions;
+  }
+};
+
+// Route access control
+export const ROUTE_ACCESS = {
+  '/dashboard': { minRole: 'student' },
+  '/lab-management': { exactRoles: ['admin', 'principal_researcher'] },
+  '/lab-notebook': { minRole: 'student' },
+  '/protocols': { minRole: 'student' },
+  '/inventory': { minRole: 'researcher' },
+  '/instruments': { minRole: 'student' },
+  '/data-results': { minRole: 'student' },
+  '/presentations': { minRole: 'student' },
+  '/data-sharing': { minRole: 'student' },
+  '/help-forum': { minRole: 'student' },
+  '/conferences': { minRole: 'student' },
+  '/calculator-hub': { minRole: 'student' },
+  '/reference-library': { minRole: 'student' },
+  '/data-analytics': { minRole: 'student' },
+  '/research-assistant': { minRole: 'student' },
+  '/molecular-biology': { minRole: 'student' },
+  '/bioinformatics-tools': { minRole: 'student' },
+} as const;
+
+// Check if user can access a specific route
+export const canAccessRoute = (userRole: string, route: string): boolean => {
+  const routeConfig = ROUTE_ACCESS[route as keyof typeof ROUTE_ACCESS];
+  if (!routeConfig) return false;
+
+  if (routeConfig.exactRoles) {
+    return hasAllowedRole(userRole, routeConfig.exactRoles);
+  }
+
+  if (routeConfig.minRole) {
+    return hasMinimumRole(userRole, routeConfig.minRole);
+  }
+
+  return true;
+};
+
+// Get user's display name
+export const getUserDisplayName = (user: any): string => {
+  if (!user) return 'Unknown User';
+  
+  if (user.role === 'admin') {
+    return `${user.first_name} ${user.last_name} (Admin)`;
+  }
+  
+  if (user.role === 'principal_researcher') {
+    return `Dr. ${user.first_name} ${user.last_name} (PI)`;
+  }
+  
+  if (user.role === 'researcher') {
+    return `${user.first_name} ${user.last_name} (Researcher)`;
+  }
+  
+  if (user.role === 'student') {
+    return `${user.first_name} ${user.last_name} (Student)`;
+  }
+  
+  return `${user.first_name} ${user.last_name}`;
+};
+
+// Get role display name
+export const getRoleDisplayName = (role: string): string => {
+  switch (role) {
+    case 'admin':
+      return 'System Administrator';
+    case 'principal_researcher':
+      return 'Principal Investigator';
+    case 'researcher':
+      return 'Research Scientist';
+    case 'student':
+      return 'Research Student';
+    default:
+      return 'Unknown Role';
+  }
+};

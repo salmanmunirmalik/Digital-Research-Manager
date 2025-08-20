@@ -365,73 +365,77 @@ const CalculatorHubPage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Enhanced Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-3xl shadow-xl mb-6 transform hover:scale-105 transition-transform duration-200">
-            <CalculatorIcon className="w-10 h-10 text-white" />
+        <div className="text-center mb-8 sm:mb-12">
+          <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-2xl sm:rounded-3xl shadow-xl mb-4 sm:mb-6 transform hover:scale-105 transition-transform duration-200">
+            <CalculatorIcon className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
           </div>
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
-            🧮 Calculator Hub
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-3 sm:mb-4">
+            🧮 Calculators
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-6">
+          <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto mb-4 sm:mb-6 px-4">
             Advanced scientific calculators and unit conversion tools for research, laboratory work, and academic studies
           </p>
           
           {/* Quick Stats */}
-          <div className="flex justify-center gap-8 mb-8">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 mb-6 sm:mb-8">
             <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600">{Object.keys(CALCULATOR_DEFINITIONS).length}+</div>
-              <div className="text-sm text-gray-500">Scientific Calculators</div>
+              <div className="text-2xl sm:text-3xl font-bold text-blue-600">{Object.keys(CALCULATOR_DEFINITIONS).length}+</div>
+              <div className="text-xs sm:text-sm text-gray-500">Scientific Calculators</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-purple-600">20+</div>
-              <div className="text-sm text-gray-500">Unit Conversions</div>
+              <div className="text-2xl sm:text-3xl font-bold text-purple-600">20+</div>
+              <div className="text-xs sm:text-sm text-gray-500">Unit Conversions</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-indigo-600">∞</div>
-              <div className="text-sm text-gray-500">Calculations</div>
+              <div className="text-2xl sm:text-3xl font-bold text-indigo-600">∞</div>
+              <div className="text-xs sm:text-sm text-gray-500">Calculations</div>
             </div>
           </div>
 
           {/* Search Bar */}
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-2xl mx-auto px-4">
             <div className="relative">
-              <SearchIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400" />
+              <SearchIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search calculators (e.g., molarity, dilution, pH, statistics)..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-6 py-4 text-lg border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 shadow-lg"
+                className="w-full pl-12 pr-6 py-3 sm:py-4 text-base sm:text-lg border-2 border-gray-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 shadow-lg"
               />
             </div>
           </div>
         </div>
 
         {/* Enhanced Tab Navigation */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-white rounded-2xl p-2 shadow-xl border border-gray-100">
-            <button
-              onClick={() => setActiveTab('calculators')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
-                activeTab === 'calculators'
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg transform scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <CalculatorIcon className="w-5 h-5 inline mr-2" />
-              Basic Calculators
-            </button>
-            <button
-              onClick={() => setActiveTab('converter')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
-                activeTab === 'converter'
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg transform scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <SettingsIcon className="w-5 h-5 inline mr-2" />
-              Unit Converter
-            </button>
+        <div className="flex justify-center mb-6 sm:mb-8">
+          <div className="bg-white rounded-xl sm:rounded-2xl p-1 sm:p-2 shadow-xl border border-gray-100 w-full max-w-md sm:max-w-none">
+            <div className="flex flex-col sm:flex-row">
+              <button
+                onClick={() => setActiveTab('calculators')}
+                className={`flex-1 px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-medium transition-all duration-200 text-sm sm:text-base ${
+                  activeTab === 'calculators'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg transform scale-105'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <CalculatorIcon className="w-4 h-4 sm:w-5 sm:h-5 inline mr-2" />
+                <span className="hidden sm:inline">Basic Calculators</span>
+                <span className="sm:hidden">Calculators</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('converter')}
+                className={`flex-1 px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-medium transition-all duration-200 text-sm sm:text-base ${
+                  activeTab === 'converter'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg transform scale-105'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <SettingsIcon className="w-4 h-4 sm:w-5 sm:h-5 inline mr-2" />
+                <span className="hidden sm:inline">Unit Converter</span>
+                <span className="sm:hidden">Converter</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -439,20 +443,20 @@ const CalculatorHubPage: React.FC = () => {
         {activeTab === 'calculators' && (
           <div className="space-y-8">
             {/* Category Selection */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
               <button
                 onClick={() => setSelectedCalcCategory('all')}
-                className={`p-4 rounded-2xl transition-all duration-200 ${
+                className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl transition-all duration-200 ${
                   selectedCalcCategory === 'all'
                     ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg scale-105'
                     : 'bg-white hover:shadow-lg hover:-translate-y-1 border border-gray-100'
                 }`}
               >
                 <div className="text-center">
-                  <CalculatorIcon className={`w-8 h-8 mx-auto mb-2 ${
+                  <CalculatorIcon className={`w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 ${
                     selectedCalcCategory === 'all' ? 'text-white' : 'text-gray-600'
                   }`} />
-                  <p className={`text-sm font-medium ${
+                  <p className={`text-xs sm:text-sm font-medium ${
                     selectedCalcCategory === 'all' ? 'text-white' : 'text-gray-700'
                   }`}>
                     All Categories

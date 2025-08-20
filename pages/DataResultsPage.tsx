@@ -35,7 +35,8 @@ import {
   InformationCircleIcon,
   CalculatorIcon,
   ExclamationTriangleIcon,
-  TrendingUpIcon
+  TrendingUpIcon,
+  CheckIcon
 } from '../components/icons';
 
 const DataResultsPage: React.FC = () => {
@@ -45,8 +46,7 @@ const DataResultsPage: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'importing' | 'success' | 'error'>('idle');
   
-  // Enhanced data entry state
-  const [showDataEntry, setShowDataEntry] = useState(false);
+
   const [results, setResults] = useState<ResultEntry[]>([]);
   const [labs, setLabs] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
@@ -75,6 +75,92 @@ const DataResultsPage: React.FC = () => {
     data_type: 'experiment',
     tags: ''
   });
+
+  // Datasheet state
+  const [datasheetData, setDatasheetData] = useState<{ [key: string]: string }[][]>([
+    [{ 'A1': '' }, { 'B1': '' }, { 'C1': '' }, { 'D1': '' }, { 'E1': '' }],
+    [{ 'A2': '' }, { 'B2': '' }, { 'C2': '' }, { 'D2': '' }, { 'E2': '' }],
+    [{ 'A3': '' }, { 'B3': '' }, { 'C3': '' }, { 'D3': '' }, { 'E3': '' }],
+    [{ 'A4': '' }, { 'B4': '' }, { 'C4': '' }, { 'D4': '' }, { 'E4': '' }],
+    [{ 'A5': '' }, { 'B5': '' }, { 'C5': '' }, { 'D5': '' }, { 'E5': '' }]
+  ]);
+  const [datasheetTitle, setDatasheetTitle] = useState('Untitled Datasheet');
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Datasheet functions
+  const handleCellChange = (rowIndex: number, colIndex: number, value: string) => {
+    const newData = [...datasheetData];
+    const cellKey = String.fromCharCode(65 + colIndex) + (rowIndex + 1);
+    newData[rowIndex][colIndex] = { [cellKey]: value };
+    setDatasheetData(newData);
+  };
+
+  const addRow = () => {
+    const newRow = [];
+    for (let i = 0; i < 5; i++) {
+      const colKey = String.fromCharCode(65 + i);
+      const rowNum = datasheetData.length + 1;
+      newRow.push({ [`${colKey}${rowNum}`]: '' });
+    }
+    setDatasheetData([...datasheetData, newRow]);
+  };
+
+  const addColumn = () => {
+    const newColKey = String.fromCharCode(65 + datasheetData[0].length);
+    const newData = datasheetData.map((row, rowIndex) => {
+      const newRow = [...row];
+      newRow.push({ [`${newColKey}${rowIndex + 1}`]: '' });
+      return newRow;
+    });
+    setDatasheetData(newData);
+  };
+
+  const saveDatasheet = () => {
+    // Create a new result entry from the datasheet
+    const newResult: ResultEntry = {
+      id: Date.now().toString(),
+      title: datasheetTitle,
+      summary: `Datasheet with ${datasheetData.length} rows and ${datasheetData[0].length} columns`,
+      author: 'Current User',
+      date: new Date().toISOString().split('T')[0],
+      dataPreview: {
+        type: 'table',
+        content: {
+          headers: Array.from({ length: datasheetData[0].length }, (_, i) => String.fromCharCode(65 + i)),
+          rows: datasheetData.map(row => row.map(cell => Object.values(cell)[0]))
+        }
+      },
+      source: 'Manual',
+      tags: ['datasheet', 'manual-entry'],
+      privacy_level: 'personal',
+      lab_id: 'demo-lab-123',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    // Add to results
+    setResults(prev => [newResult, ...prev]);
+    
+    // Update stats
+    if (stats) {
+      setStats(prev => ({
+        ...prev,
+        total_results: (prev.total_results || 0) + 1,
+        manual_entries: (prev.manual_entries || 0) + 1
+      }));
+    }
+
+    setIsEditing(false);
+    // Reset datasheet
+    setDatasheetData([
+      [{ 'A1': '' }, { 'B1': '' }, { 'C1': '' }, { 'D1': '' }, { 'E1': '' }],
+      [{ 'A2': '' }, { 'B2': '' }, { 'C2': '' }, { 'D2': '' }, { 'E2': '' }],
+      [{ 'A3': '' }, { 'B3': '' }, { 'C3': '' }, { 'D3': '' }, { 'E3': '' }],
+      [{ 'A4': '' }, { 'B4': '' }, { 'C4': '' }, { 'D4': '' }, { 'E4': '' }],
+      [{ 'A5': '' }, { 'B5': '' }, { 'C5': '' }, { 'D5': '' }, { 'E5': '' }]
+    ]);
+    setDatasheetTitle('Untitled Datasheet');
+  };
 
   // Analytics data interfaces and functions
   interface AnalyticsDataPoint {
@@ -703,9 +789,49 @@ const DataResultsPage: React.FC = () => {
     if (!selectedFile) return;
     
     setImportStatus('importing');
-    // Simulate import process
+    
+    // Simulate import process and create a result entry
     setTimeout(() => {
+      // Create a new result entry from the imported file
+      const newResult: ResultEntry = {
+        id: Date.now().toString(),
+        title: selectedFile.name.replace(/\.[^/.]+$/, ''), // Remove file extension
+        summary: `Imported data from ${selectedFile.name} (${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`,
+        author: 'Current User',
+        date: new Date().toISOString().split('T')[0],
+        dataPreview: {
+          type: 'table',
+          content: {
+            headers: ['Column A', 'Column B', 'Column C', 'Column D', 'Column E'],
+            rows: [
+              ['Sample data 1', 'Sample data 2', 'Sample data 3', 'Sample data 4', 'Sample data 5'],
+              ['Sample data 6', 'Sample data 7', 'Sample data 8', 'Sample data 9', 'Sample data 10'],
+              ['Sample data 11', 'Sample data 12', 'Sample data 13', 'Sample data 14', 'Sample data 15']
+            ]
+          }
+        },
+        source: 'Import',
+        tags: ['imported', selectedFile.name.split('.').pop() || 'data'],
+        privacy_level: 'personal',
+        lab_id: 'demo-lab-123',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Add to results
+      setResults(prev => [newResult, ...prev]);
+      
+      // Update stats
+      if (stats) {
+        setStats(prev => ({
+          ...prev,
+          total_results: (prev.total_results || 0) + 1,
+          imports: (prev.imports || 0) + 1
+        }));
+      }
+
       setImportStatus('success');
+      setSelectedFile(null); // Clear the selected file
       setTimeout(() => setImportStatus('idle'), 2000);
     }, 2000);
   };
@@ -722,20 +848,14 @@ const DataResultsPage: React.FC = () => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <TableIcon className="h-6 w-6 text-green-600" />
-              <div>
-                <CardTitle>Research Data Management System</CardTitle>
-                <CardDescription>Comprehensive platform for managing research data, experiments, and results</CardDescription>
-              </div>
+          <div className="flex items-center gap-3">
+            <TableIcon className="h-6 w-6 text-green-600" />
+            <div>
+                <CardTitle>Import Data</CardTitle>
+                <CardDescription>Import and manage your research data files</CardDescription>
             </div>
-            <Button
-              onClick={() => setShowDataEntry(true)}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-            >
-              <PlusIcon className="w-5 h-5 mr-2" />
-              New Data Entry
-            </Button>
+            </div>
+
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -808,64 +928,14 @@ const DataResultsPage: React.FC = () => {
             </div>
           )}
 
-          {/* Import Options Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <TableIcon className="h-5 w-5 text-green-600" />
-                  <CardTitle>Supported Formats</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {[
-                  { name: 'Excel (.xlsx, .xls)', desc: 'Research data spreadsheets', icon: '📊' },
-                  { name: 'CSV/TSV Files', desc: 'Instrument data exports', icon: '📄' },
-                  { name: 'Text Files (.txt)', desc: 'Raw data and logs', icon: '📋' },
-                  { name: 'Data Files (.dat)', desc: 'Scientific instrument data', icon: '🔬' },
-                  { name: 'Google Sheets', desc: 'Collaborative research data', icon: '☁️' },
-                  { name: 'JSON/XML', desc: 'Structured research data', icon: '📊' }
-                ].map((format) => (
-                  <div key={format.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <span className="text-2xl">{format.icon}</span>
-                    <div>
-                      <p className="font-medium text-gray-900">{format.name}</p>
-                      <p className="text-sm text-gray-600">{format.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <CogIcon className="h-5 w-5 text-blue-600" />
-                  <CardTitle>Data Processing</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {[
-                  { name: 'Research Validation', desc: 'Scientific data quality checks', icon: '✅' },
-                  { name: 'Research Templates', desc: 'Field-specific data forms', icon: '📚' },
-                  { name: 'Auto-Format Detection', desc: 'Smart file type recognition', icon: '🔍' },
-                  { name: 'Data Cleaning', desc: 'Remove outliers and errors', icon: '🧹' },
-                  { name: 'Metadata Extraction', desc: 'Capture experimental context', icon: '🏷️' },
-                  { name: 'Quality Metrics', desc: 'Data quality assessment', icon: '📊' }
-                ].map((tool) => (
-                  <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <span className="text-2xl">{tool.icon}</span>
-                    <div>
-                      <p className="font-medium text-gray-900">{tool.name}</p>
-                      <p className="text-sm text-gray-600">{tool.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+
+
+            </div>
+          </CardContent>
+        </Card>
     </div>
   );
 
@@ -966,128 +1036,129 @@ const DataResultsPage: React.FC = () => {
     </div>
   );
 
-  // Enhanced Manual Entry
-  const renderManualEntry = () => (
+  // Datasheet Interface
+  const renderManualEntry = () => {
+    console.log('Rendering datasheet with data:', datasheetData); // Debug log
+    return (
     <div className="space-y-6">
-      {/* Form Builder Section */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <PencilIcon className="h-6 w-6 text-orange-600" />
-              <div>
-                <CardTitle>Research Data Entry Forms</CardTitle>
-                <CardDescription>Comprehensive data entry forms designed specifically for research workflows</CardDescription>
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex items-center gap-3">
+                <TableIcon className="h-6 w-6 text-orange-600" />
+            <div>
+                  <CardTitle>Datasheets</CardTitle>
+                  <CardDescription>Create and edit data tables like Microsoft Excel</CardDescription>
+                </div>
               </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                {isEditing ? (
+                  <>
+                    <Button onClick={addRow} variant="outline" className="w-full sm:w-auto">
+                      <PlusIcon className="w-4 h-4 mr-2" />
+                      Add Row
+                    </Button>
+                    <Button onClick={addColumn} variant="outline" className="w-full sm:w-auto">
+                      <PlusIcon className="w-4 h-4 mr-2" />
+                      Add Column
+                    </Button>
+                    <Button onClick={saveDatasheet} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
+                      <CheckIcon className="w-4 h-4 mr-2" />
+                      Save Datasheet
+                    </Button>
+                  </>
+                ) : (
+                  <Button onClick={() => setIsEditing(true)} className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto">
+                    <PencilIcon className="w-4 h-4 mr-2" />
+                    Edit Datasheet
+                  </Button>
+                )}
             </div>
-            <Button
-              onClick={() => setShowDataEntry(true)}
-              className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
-            >
-              <PlusIcon className="w-5 h-5 mr-2" />
-              Create Data Entry
-            </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Research Type</label>
-              <Select>
-                <option value="">Select research type...</option>
-                <option value="experimental">Experimental Research</option>
-                <option value="observational">Observational Study</option>
-                <option value="clinical">Clinical Trial</option>
-                <option value="survey">Survey Research</option>
-                <option value="case_study">Case Study</option>
-                <option value="meta_analysis">Meta Analysis</option>
-                <option value="systematic_review">Systematic Review</option>
-              </Select>
+          <CardContent>
+            {/* Debug info */}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Debug Info:</strong> Active Tab: {activeTab} | Datasheet Rows: {datasheetData.length} | Is Editing: {isEditing.toString()}
+              </p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Field of Study</label>
-              <Select>
-                <option value="">Select field...</option>
-                <option value="biology">Biology</option>
-                <option value="chemistry">Chemistry</option>
-                <option value="physics">Physics</option>
-                <option value="medicine">Medicine</option>
-                <option value="engineering">Engineering</option>
-                <option value="psychology">Psychology</option>
-                <option value="environmental">Environmental Science</option>
-                <option value="computer_science">Computer Science</option>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Data Category</label>
-              <Select>
-                <option value="">Select category...</option>
-                <option value="quantitative">Quantitative Data</option>
-                <option value="qualitative">Qualitative Data</option>
-                <option value="mixed">Mixed Methods</option>
-                <option value="time_series">Time Series</option>
-                <option value="cross_sectional">Cross-Sectional</option>
-                <option value="longitudinal">Longitudinal</option>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Manual Entry Tools Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <PencilIcon className="h-5 w-5 text-orange-600" />
-              <CardTitle>Data Entry Tools</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {[
-              { name: 'Research Templates', desc: 'Pre-built research data forms', icon: '📋' },
-              { name: 'Bulk Data Entry', desc: 'Enter multiple samples/measurements', icon: '📊' },
-              { name: 'Data Validation', desc: 'Research-specific validation rules', icon: '✅' },
-              { name: 'Metadata Capture', desc: 'Capture experimental conditions', icon: '🏷️' }
-            ].map((tool) => (
-              <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <span className="text-2xl">{tool.icon}</span>
-                <div>
-                  <p className="font-medium text-gray-900">{tool.name}</p>
-                  <p className="text-sm text-gray-600">{tool.desc}</p>
+            {isEditing && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Datasheet Title</label>
+                <Input
+                  value={datasheetTitle}
+                  onChange={(e) => setDatasheetTitle(e.target.value)}
+                  placeholder="Enter datasheet title"
+                  className="w-full max-w-md"
+                />
+              </div>
+            )}
+            
+            <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+              <div className="min-w-full inline-block align-middle">
+                <div className="overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12 sm:w-16">
+                          #
+                        </th>
+                        {datasheetData[0]?.map((_, colIndex) => (
+                          <th key={colIndex} className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px] sm:min-w-[120px]">
+                            {String.fromCharCode(65 + colIndex)}
+                          </th>
+                        )) || <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">A</th>}
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {datasheetData.map((row, rowIndex) => (
+                        <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          <td className="px-2 sm:px-3 py-2 text-xs text-gray-500 font-medium border-r border-gray-200">
+                            {rowIndex + 1}
+                          </td>
+                          {row.map((cell, colIndex) => (
+                            <td key={colIndex} className="px-2 sm:px-3 py-2 border-r border-gray-200">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={Object.values(cell)[0] || ''}
+                                  onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
+                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                                  placeholder="Enter data"
+                                />
+                              ) : (
+                                <span className="text-sm text-gray-900 break-words">
+                                  {Object.values(cell)[0] || '-'}
+                                </span>
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <CogIcon className="h-5 w-5 text-gray-600" />
-              <CardTitle>Data Management</CardTitle>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {[
-              { name: 'Quality Control', desc: 'Research data quality standards', icon: '🔒' },
-              { name: 'Auto-save', desc: 'Prevent data loss during experiments', icon: '💾' },
-              { name: 'Peer Review', desc: 'Collaborative data review', icon: '👁️' },
-              { name: 'Version Control', desc: 'Track experimental iterations', icon: '📋' }
-            ].map((tool) => (
-              <div key={tool.name} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <span className="text-2xl">{tool.icon}</span>
-                <div>
-                  <p className="font-medium text-gray-900">{tool.name}</p>
-                  <p className="text-sm text-gray-600">{tool.desc}</p>
-                </div>
+            
+            {!isEditing && (
+              <div className="mt-4 text-center text-sm text-gray-500">
+                <div className="hidden sm:block">Click "Edit Datasheet" to modify the data</div>
+                <div className="sm:hidden">Tap "Edit Datasheet" to modify the data</div>
               </div>
-            ))}
+            )}
+            
+            {/* Mobile-friendly table info */}
+            <div className="mt-4 sm:hidden text-center text-xs text-gray-400 bg-gray-50 p-3 rounded-lg">
+              <p>💡 <strong>Tip:</strong> Scroll horizontally to view all columns on mobile devices</p>
+            </div>
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Restored AI Presentations
   const renderPresentations = () => (
@@ -1103,7 +1174,10 @@ const DataResultsPage: React.FC = () => {
             <h3 className="text-xl font-semibold text-gray-900 mb-2">AI Presentation Generator</h3>
             <p className="text-gray-600 mb-6">Transform your research data into professional presentations</p>
             <div className="flex justify-center gap-4">
-              <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
+              <Button 
+                onClick={() => alert('AI Presentation generation coming soon! (Demo)')}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+              >
                 <SparklesIcon className="w-5 h-5 mr-2" />
                 Generate Presentation
               </Button>
@@ -1125,7 +1199,7 @@ const DataResultsPage: React.FC = () => {
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Create New Research Data Entry</h2>
-            <button onClick={() => setShowDataEntry(false)} className="text-gray-400 hover:text-gray-600">
+            <button className="text-gray-400 hover:text-gray-600">
               <XMarkIcon className="w-6 h-6" />
             </button>
           </div>
@@ -1135,16 +1209,16 @@ const DataResultsPage: React.FC = () => {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Basic Information</h3>
               
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Research Title *</label>
                 <Input
                   value={entryForm.title}
                   onChange={(e) => setEntryForm(prev => ({ ...prev, title: e.target.value }))}
                   placeholder="Enter research title"
                 />
-              </div>
+            </div>
               
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Research Type *</label>
                 <Select
                   value={entryForm.data_type}
@@ -1166,7 +1240,7 @@ const DataResultsPage: React.FC = () => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Field of Study</label>
-                <Select>
+              <Select>
                   <option value="">Select field...</option>
                   <option value="biology">Biology</option>
                   <option value="chemistry">Chemistry</option>
@@ -1178,9 +1252,9 @@ const DataResultsPage: React.FC = () => {
                   <option value="computer_science">Computer Science</option>
                   <option value="agriculture">Agriculture</option>
                   <option value="geology">Geology</option>
-                </Select>
-              </div>
+              </Select>
             </div>
+          </div>
 
             {/* Research Details */}
             <div className="space-y-4">
@@ -1260,14 +1334,10 @@ const DataResultsPage: React.FC = () => {
           </div>
           
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-            <Button variant="ghost" onClick={() => setShowDataEntry(false)}>
+            <Button variant="ghost">
               Cancel
-            </Button>
-            <Button onClick={() => {
-              // Handle save logic here
-              setShowDataEntry(false);
-              setEntryForm({ title: '', summary: '', data_type: 'experiment', tags: '' });
-            }} className="bg-blue-600 hover:bg-blue-700">
+          </Button>
+                          <Button className="bg-blue-600 hover:bg-blue-700">
               <SaveIcon className="w-4 h-4 mr-2" />
               Save Research Entry
             </Button>
@@ -1415,16 +1485,20 @@ const DataResultsPage: React.FC = () => {
             View Data
           </Button>
           <Button
-            onClick={() => runAnalytics(result)}
+            onClick={() => {
+              setSelectedDataset(result);
+              setActiveTab('analytics');
+              // Auto-run analytics when switching to analytics tab
+              setTimeout(() => runAnalytics(result), 100);
+            }}
             className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-            disabled={isAnalyzing}
           >
             <BarChartIcon className="w-4 h-4 mr-2" />
-            {isAnalyzing ? 'Analyzing...' : 'Run Stats'}
+            Run Stats
           </Button>
         </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
   ), [isAnalyzing, runAnalytics, setSelectedDataset, setShowAnalytics, setAnalyticsResults]);
   
   // Simple correlation function for existing analytics (returns number)
@@ -1618,7 +1692,7 @@ const DataResultsPage: React.FC = () => {
             <button onClick={() => setShowAnalytics(false)} className="text-gray-400 hover:text-gray-600">
               <XMarkIcon className="w-6 h-6" />
             </button>
-          </div>
+            </div>
           
           {/* Chart Type Selection */}
           {analyticsResults?.numericColumns && analyticsResults.numericColumns.length >= 2 && (
@@ -1649,7 +1723,7 @@ const DataResultsPage: React.FC = () => {
                 
                 {chartType === 'scatter' && (
                   <div className="flex gap-4">
-                    <div>
+                <div>
                       <label className="text-sm font-medium text-gray-700 mb-1 block">X Axis</label>
                       <select
                         value={selectedColumns.x}
@@ -1661,7 +1735,7 @@ const DataResultsPage: React.FC = () => {
                           <option key={col.header} value={col.header}>{col.header}</option>
                         ))}
                       </select>
-                    </div>
+                </div>
                     <div>
                       <label className="text-sm font-medium text-gray-700 mb-1 block">Y Axis</label>
                       <select
@@ -1674,7 +1748,7 @@ const DataResultsPage: React.FC = () => {
                           <option key={col.header} value={col.header}>{col.header}</option>
                         ))}
                       </select>
-                    </div>
+              </div>
                   </div>
                 )}
               </div>
@@ -1733,7 +1807,7 @@ const DataResultsPage: React.FC = () => {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 Analyzing data and generating statistics...
-              </div>
+            </div>
             </div>
           )}
           
@@ -1748,8 +1822,8 @@ const DataResultsPage: React.FC = () => {
                   <Card key={index}>
                     <CardHeader>
                       <CardTitle className="text-lg">{result.column}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
+          </CardHeader>
+          <CardContent className="space-y-3">
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-600">Mean:</span>
@@ -1853,7 +1927,7 @@ const DataResultsPage: React.FC = () => {
                   {/* Chart Display */}
                   <div className="bg-white border border-gray-200 rounded-lg p-6">
                     {chartType === 'histogram' && (
-                      <div>
+                <div>
                         <h5 className="text-lg font-medium text-gray-900 mb-4">Distribution Histograms</h5>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           {analyticsResults.basic?.slice(0, 4).map((result, index) => (
@@ -1875,9 +1949,9 @@ const DataResultsPage: React.FC = () => {
                                     </div>
                                   ));
                                 })()}
-                              </div>
-                            </div>
-                          ))}
+                </div>
+              </div>
+            ))}
                         </div>
                       </div>
                     )}
@@ -2008,8 +2082,8 @@ const DataResultsPage: React.FC = () => {
                                 <span className="font-medium text-xs">{advancedStats.ciLower} - {advancedStats.ciUpper}</span>
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
+          </CardContent>
+        </Card>
                       );
                     })}
                   </div>
@@ -2034,354 +2108,9 @@ const DataResultsPage: React.FC = () => {
     </div>
   );
 
-  // Restored Data Analytics
-  const renderAnalytics = () => (
-    <div className="space-y-6">
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-100 text-sm">Data Points</p>
-                <p className="text-3xl font-bold">{analyticsData.length}</p>
-              </div>
-              <TableIcon className="h-8 w-8 text-blue-200" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-green-100 text-sm">Categories</p>
-                <p className="text-3xl font-bold">{new Set(analyticsData.map(d => d.category)).size}</p>
-              </div>
-              <ChartBarIcon className="h-8 w-8 text-green-200" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-sm">Groups</p>
-                <p className="text-3xl font-bold">{new Set(analyticsData.map(d => d.group)).size}</p>
-              </div>
-              <TrendingUpIcon className="h-8 w-8 text-purple-200" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-orange-100 text-sm">Analyses</p>
-                <p className="text-3xl font-bold">{analyticsResults ? '1' : '0'}</p>
-              </div>
-              <CalculatorIcon className="h-8 w-8 text-orange-200" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Data Input Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <TableIcon className="h-6 w-6 text-blue-600" />
-              <div>
-                <CardTitle>Data Input & Analysis</CardTitle>
-                <CardDescription>Enter your research data for comprehensive statistical analysis</CardDescription>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={loadSampleAnalyticsData} variant="outline" size="sm">
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Load Sample
-              </Button>
-              <Button onClick={clearAnalyticsData} variant="outline" size="sm">
-                <TrashIcon className="h-4 w-4 mr-2" />
-                Clear
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Input
-            placeholder="Dataset name (optional)"
-            value={analyticsDataName}
-            onChange={(e) => setAnalyticsDataName(e.target.value)}
-          />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Data (CSV format: value, category, group, timestamp)
-            </label>
-            <textarea
-              className="w-full h-32 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="12.5, A, Control&#10;15.2, A, Control&#10;18.3, B, Treatment&#10;19.1, B, Treatment"
-              value={analyticsDataInput}
-              onChange={(e) => {
-                setAnalyticsDataInput(e.target.value);
-                const parsed = parseAnalyticsDataInput(e.target.value);
-                setAnalyticsData(parsed);
-              }}
-            />
-          </div>
-          <div className="text-sm text-gray-600">
-            <p>• Enter one data point per line</p>
-            <p>• First column must be numeric values</p>
-            <p>• Additional columns for categories, groups, etc. are optional</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Analysis Tools */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <CalculatorIcon className="h-6 w-6 text-purple-600" />
-            <div>
-              <CardTitle>Statistical Analysis Tools</CardTitle>
-              <CardDescription>Select the type of analysis to perform on your data</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button
-              onClick={() => runAdvancedAnalysis('descriptive')}
-              disabled={isAnalyzing || analyticsData.length === 0}
-              className="justify-start h-16 text-left"
-            >
-              <BarChartIcon className="h-6 w-6 mr-3" />
-              <div>
-                <div className="font-medium">Descriptive Statistics</div>
-                <div className="text-sm opacity-75">Mean, median, variance, etc.</div>
-              </div>
-            </Button>
-            
-            <Button
-              onClick={() => runAdvancedAnalysis('correlation')}
-              disabled={isAnalyzing || analyticsData.length < 2}
-              className="justify-start h-16 text-left"
-            >
-              <LineChartIcon className="h-6 w-6 mr-3" />
-              <div>
-                <div className="font-medium">Correlation Analysis</div>
-                <div className="text-sm opacity-75">Pearson correlation coefficient</div>
-              </div>
-            </Button>
-            
-            <Button
-              onClick={() => runAdvancedAnalysis('t-test')}
-              disabled={isAnalyzing || analyticsData.length < 4}
-              className="justify-start h-16 text-left"
-            >
-              <ChartBarIcon className="h-6 w-6 mr-3" />
-              <div>
-                <div className="font-medium">Hypothesis Testing</div>
-                <div className="text-sm opacity-75">Two-sample t-test</div>
-              </div>
-            </Button>
-            
-            <Button
-              onClick={() => runAdvancedAnalysis('regression')}
-              disabled={isAnalyzing || analyticsData.length < 2}
-              className="justify-start h-16 text-left"
-            >
-              <TrendingUpIcon className="h-6 w-6 mr-3" />
-              <div>
-                <div className="font-medium">Linear Regression</div>
-                <div className="text-sm opacity-75">Slope, intercept, R²</div>
-              </div>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Analysis Status */}
-      {isAnalyzing && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Analyzing Data...</h3>
-              <p className="text-gray-600">Performing {selectedAnalysis} analysis</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Advanced Analytics Results */}
-      {analyticsResults && !isAnalyzing && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <LightbulbIcon className="h-6 w-6 text-green-600" />
-                <div>
-                  <CardTitle>{selectedAnalysis.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</CardTitle>
-                  <CardDescription>Analysis completed successfully</CardDescription>
-                </div>
-              </div>
-              <Button onClick={exportAnalyticsResults} variant="outline" size="sm">
-                <DownloadIcon className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {analyticsResults.error ? (
-              <div className="p-4 bg-red-50 rounded-lg">
-                <ExclamationTriangleIcon className="h-6 w-6 text-red-600 mb-2" />
-                <p className="text-red-700">{analyticsResults.error}</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {selectedAnalysis === 'descriptive' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600">{analyticsResults.count}</div>
-                        <div className="text-sm text-blue-600">Count</div>
-                      </div>
-                      <div className="text-center p-3 bg-green-50 rounded-lg">
-                        <div className="text-2xl font-bold text-green-600">{analyticsResults.mean.toFixed(3)}</div>
-                        <div className="text-sm text-green-600">Mean</div>
-                      </div>
-                      <div className="text-center p-3 bg-purple-50 rounded-lg">
-                        <div className="text-2xl font-bold text-purple-600">{analyticsResults.median.toFixed(3)}</div>
-                        <div className="text-sm text-purple-600">Median</div>
-                      </div>
-                      <div className="text-center p-3 bg-orange-50 rounded-lg">
-                        <div className="text-2xl font-bold text-orange-600">{analyticsResults.standardDeviation.toFixed(3)}</div>
-                        <div className="text-sm text-orange-600">Std Dev</div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="text-center p-3 bg-red-50 rounded-lg">
-                        <div className="text-lg font-bold text-red-600">{analyticsResults.min.toFixed(3)}</div>
-                        <div className="text-sm text-red-600">Minimum</div>
-                      </div>
-                      <div className="text-center p-3 bg-indigo-50 rounded-lg">
-                        <div className="text-lg font-bold text-indigo-600">{analyticsResults.max.toFixed(3)}</div>
-                        <div className="text-sm text-indigo-600">Maximum</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {selectedAnalysis === 'correlation' && (
-                  <div className="space-y-4">
-                    <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <div className="text-3xl font-bold text-blue-600">{analyticsResults.correlation.toFixed(4)}</div>
-                      <div className="text-lg text-blue-600">{analyticsResults.strength}</div>
-                      <div className="text-sm text-blue-700 mt-2">{analyticsResults.interpretation}</div>
-                    </div>
-                  </div>
-                )}
-
-                {selectedAnalysis === 't-test' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-purple-50 rounded-lg">
-                        <div className="text-sm font-medium text-purple-900 mb-1">t-Statistic</div>
-                        <div className="text-lg font-bold text-purple-600">{analyticsResults.tStatistic.toFixed(4)}</div>
-                      </div>
-                      <div className="p-3 bg-blue-50 rounded-lg">
-                        <div className="text-sm font-medium text-blue-900 mb-1">p-Value</div>
-                        <div className="text-lg font-bold text-blue-600">{analyticsResults.pValue.toFixed(4)}</div>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-green-50 rounded-lg">
-                      <div className="text-sm font-medium text-green-900 mb-1">Conclusion</div>
-                      <div className="text-sm text-green-700">{analyticsResults.conclusion}</div>
-                    </div>
-                  </div>
-                )}
-
-                {selectedAnalysis === 'regression' && (
-                  <div className="space-y-4">
-                    <div className="p-3 bg-green-50 rounded-lg">
-                      <div className="text-sm font-medium text-green-900 mb-1">Equation</div>
-                      <div className="text-lg font-mono text-green-600">{analyticsResults.equation}</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-blue-50 rounded-lg">
-                        <div className="text-sm font-medium text-blue-900 mb-1">R²</div>
-                        <div className="text-lg font-bold text-blue-600">{analyticsResults.rSquared.toFixed(4)}</div>
-                      </div>
-                      <div className="p-3 bg-purple-50 rounded-lg">
-                        <div className="text-sm font-medium text-purple-900 mb-1">Slope</div>
-                        <div className="text-lg font-bold text-purple-600">{analyticsResults.slope.toFixed(4)}</div>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-orange-50 rounded-lg">
-                      <div className="text-sm font-medium text-orange-900 mb-1">Interpretation</div>
-                      <div className="text-sm text-orange-700">{analyticsResults.interpretation}</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Getting Started Guide */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <InformationCircleIcon className="h-6 w-6 text-blue-600" />
-            <CardTitle>Getting Started with Analytics</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-gray-600">
-          <p>1. <strong>Enter your data</strong> in the format shown above</p>
-          <p>2. <strong>Choose analysis type</strong> based on your research question</p>
-          <p>3. <strong>Review results</strong> with professional statistical accuracy</p>
-          <p>4. <strong>Export findings</strong> for your research reports</p>
-          
-          {/* Debug Info */}
-          <div className="mt-4 p-3 bg-gray-100 rounded-lg">
-            <p className="font-medium text-gray-800">Debug Info:</p>
-            <p>Data Points: {analyticsData.length}</p>
-            <p>Analysis Type: {selectedAnalysis}</p>
-            <p>Results: {analyticsResults ? 'Available' : 'None'}</p>
-            <p>Analyzing: {isAnalyzing ? 'Yes' : 'No'}</p>
-          </div>
-          
-          {/* Test Button */}
-          <div className="mt-4">
-            <Button 
-              onClick={() => {
-                console.log('Analytics Debug:', {
-                  analyticsData,
-                  selectedAnalysis,
-                  analyticsResults,
-                  isAnalyzing
-                });
-                alert('Check console for debug info');
-              }}
-              variant="outline"
-              size="sm"
-            >
-              Debug Analytics
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-gray-50">
-      {showDataEntry && renderDataEntryModal()}
+      
       {showAnalytics && (
         <div key="analytics-modal" className="fixed inset-0 z-50">
           {renderAnalyticsModal()}
@@ -2399,9 +2128,9 @@ const DataResultsPage: React.FC = () => {
         }}
       >
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Data & Results</h1>
-          <p className="text-gray-600 text-lg">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Data & Results</h1>
+          <p className="text-gray-600 text-base sm:text-lg">
             Comprehensive data entry and management tools with AI-powered analytics
           </p>
         </div>
@@ -2414,58 +2143,62 @@ const DataResultsPage: React.FC = () => {
               placeholder="Search data entry tools, import options, or data sources..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
             />
-            <FilterIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <FilterIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
           </div>
         </div>
 
         {/* Tab Navigation */}
         <div className="bg-white rounded-lg shadow-sm p-1 mb-6">
-          <div className="flex space-x-1">
+          <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-1">
             <button
               onClick={() => setActiveTab('spreadsheet')}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 activeTab === 'spreadsheet'
                   ? 'bg-green-600 text-white'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
-              📈 Enhanced Data Entry
+              <span className="hidden sm:inline">📈 Enhanced Data Entry</span>
+              <span className="sm:hidden">📈 Import Data</span>
             </button>
             <button
               onClick={() => setActiveTab('images')}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 activeTab === 'images'
                   ? 'bg-purple-600 text-white'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
-              🖼️ Image & Documents
+              <span className="hidden sm:inline">🖼️ Image & Documents</span>
+              <span className="sm:hidden">🖼️ Documents</span>
             </button>
             <button
               onClick={() => setActiveTab('manual')}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 activeTab === 'manual'
                   ? 'bg-orange-600 text-white'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
-              ✏️ Manual Entry
+              <span className="hidden sm:inline">📊 Datasheets</span>
+              <span className="sm:hidden">📊 Sheets</span>
             </button>
             <button
               onClick={() => setActiveTab('presentations')}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 activeTab === 'presentations'
                   ? 'bg-indigo-600 text-white'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
-              🎯 AI Presentations
+              <span className="hidden sm:inline">🎯 AI Presentations</span>
+              <span className="sm:hidden">🎯 AI</span>
             </button>
             <button
               onClick={() => setActiveTab('analytics')}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 activeTab === 'analytics'
                   ? 'bg-purple-600 text-white'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
@@ -2481,7 +2214,150 @@ const DataResultsPage: React.FC = () => {
         {activeTab === 'images' && renderImageTools()}
         {activeTab === 'manual' && renderManualEntry()}
         {activeTab === 'presentations' && renderPresentations()}
-        {activeTab === 'analytics' && renderAnalytics()}
+        {activeTab === 'analytics' && (
+          <div className="space-y-6">
+            {/* Data Directory Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <DatabaseIcon className="h-6 w-6 text-blue-600" />
+                  <div>
+                    <CardTitle>Data Directory</CardTitle>
+                    <CardDescription>All available datasets from Enhanced Data Entry, Image & Documents, and Datasheets</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {results.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {results.map((result) => (
+                      <div
+                        key={result.id}
+                        className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                        onClick={() => {
+                          setSelectedDataset(result);
+                          // Auto-run analytics when dataset is selected
+                          setTimeout(() => runAnalytics(result), 100);
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            result.source === 'Manual' ? 'bg-blue-100 text-blue-800' : 
+                            result.source === 'Import' ? 'bg-green-100 text-green-800' : 
+                            'bg-purple-100 text-purple-800'
+                          }`}>
+                            {result.source}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(result.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        
+                        <h4 className="font-medium text-gray-900 mb-2 line-clamp-2">{result.title}</h4>
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{result.summary}</p>
+                        
+                        {result.dataPreview && result.dataPreview.type === 'table' && (
+                          <div className="text-xs text-gray-500 mb-3">
+                            📊 {result.dataPreview.content?.rows?.length || 0} rows × {result.dataPreview.content?.headers?.length || 0} columns
+                          </div>
+                        )}
+                        
+                        {result.tags && result.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {result.tags.slice(0, 3).map((tag: string, index: number) => (
+                              <span key={index} className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        
+                        <div className="text-xs text-gray-500">
+                          By {result.author}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <DatabaseIcon className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                    <p>No datasets available yet.</p>
+                    <p className="text-sm">Create data in Enhanced Data Entry, Image & Documents, or Datasheets tabs.</p>
+                  </div>
+                )}
+                
+                {/* Selected Dataset Info */}
+                {selectedDataset && (
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-blue-900">Selected Dataset: {selectedDataset.title}</h4>
+                        <p className="text-sm text-blue-700">{selectedDataset.summary}</p>
+                      </div>
+                      {isAnalyzing && (
+                        <div className="flex items-center gap-2 text-blue-600">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          <span className="text-sm">Running Analytics...</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+              <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-100 text-sm">Total Datasets</p>
+                      <p className="text-3xl font-bold">{results.length}</p>
+                    </div>
+                    <TableIcon className="h-8 w-8 text-blue-200" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-green-100 text-sm">Manual Entries</p>
+                      <p className="text-3xl font-bold">{results.filter(r => r.source === 'Manual').length}</p>
+                    </div>
+                    <ChartBarIcon className="h-8 w-8 text-green-200" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-purple-100 text-sm">Imported Data</p>
+                      <p className="text-3xl font-bold">{results.filter(r => r.source === 'Import').length}</p>
+                    </div>
+                    <TrendingUpIcon className="h-8 w-8 text-purple-200" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-orange-100 text-sm">Analyses Run</p>
+                      <p className="text-3xl font-bold">{analyticsResults ? '1' : '0'}</p>
+                    </div>
+                    <CalculatorIcon className="h-8 w-8 text-orange-200" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
         
         {/* Results Display Section - Optimized */}
         {results.length > 0 && (

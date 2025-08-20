@@ -1,25 +1,75 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { canAccessRoute, hasMinimumRole, hasAllowedRole } from '../utils/roleAccess';
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
-  
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requiredRole?: string | string[];
+  allowedRoles?: string[];
+  fallbackPath?: string;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  requiredRole,
+  allowedRoles,
+  fallbackPath = '/login'
+}) => {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  // Show loading state while checking authentication
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
     );
   }
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated || !user) {
+    return <Navigate to={fallbackPath} state={{ from: location }} replace />;
   }
-  
+
+  // Check role-based access
+  if (requiredRole || allowedRoles) {
+    const userRole = user.role;
+    
+    // Debug logging
+    console.log(`🔐 Route Protection Check:`);
+    console.log(`   User: ${user.email} (${user.first_name} ${user.last_name})`);
+    console.log(`   User Role: ${userRole}`);
+    console.log(`   Required Role: ${requiredRole}`);
+    console.log(`   Allowed Roles: ${allowedRoles}`);
+    
+    // Check if user has required role (exact match)
+    if (requiredRole) {
+      const required = Array.isArray(requiredRole) 
+        ? requiredRole
+        : [requiredRole];
+      
+      if (!hasAllowedRole(userRole, required)) {
+        console.log(`❌ Access denied: User role ${userRole} not in required roles ${required}`);
+        return <Navigate to="/unauthorized" replace />;
+      }
+    }
+    
+    // Check if user has one of the allowed roles
+    if (allowedRoles) {
+      if (!hasAllowedRole(userRole, allowedRoles)) {
+        console.log(`❌ Access denied: User role ${userRole} not in allowed roles ${allowedRoles}`);
+        return <Navigate to="/unauthorized" replace />;
+      }
+    }
+    
+    console.log(`✅ Access granted for user role ${userRole}`);
+  }
+
   return <>{children}</>;
 };
 

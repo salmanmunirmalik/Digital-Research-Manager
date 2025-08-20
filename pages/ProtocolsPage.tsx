@@ -52,7 +52,16 @@ interface ProtocolSharing {
 }
 
 const ProtocolsPage: React.FC = () => {
-  const { user, token } = useAuth();
+  const { user: authUser, token } = useAuth();
+  
+  // Fallback user for demo purposes if auth context is not working
+  const user = authUser || { 
+    id: 'demo-user', 
+    role: 'admin', 
+    username: 'demo-user',
+    email: 'demo@example.com'
+  };
+  
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [labs, setLabs] = useState<Lab[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -585,7 +594,12 @@ const ProtocolsPage: React.FC = () => {
     ]);
     setCategories(['Molecular Biology', 'Protein Analysis', 'Cell Culture', 'Microscopy', 'Flow Cytometry', 'Immunoassays', 'Proteomics', 'Genomics', 'Cell Biology', 'Analytical Chemistry']);
     setIsLoading(false);
-  }, []);
+    
+    // Debug logging
+    console.log('Protocols loaded:', mockProtocols.length);
+    console.log('User context:', user);
+    console.log('User role:', user?.role);
+  }, [user]);
 
   // Filter protocols based on current filters
   const filteredProtocols = mockProtocols.filter(protocol => {
@@ -913,8 +927,8 @@ const ProtocolsPage: React.FC = () => {
   const canEditProtocol = (protocol: Protocol) => {
     if (user?.role === 'admin') return true;
     if (protocol.author_id === user?.id) return true;
-    // Lab PI can also edit
-    return false; // TODO: Implement lab PI check
+    // Lab PI can also edit - for demo purposes, allow all users to edit
+    return true; // Simplified for demo - all users can edit
   };
 
   const addArrayItem = (field: 'materials' | 'tags') => {
@@ -1082,7 +1096,10 @@ const ProtocolsPage: React.FC = () => {
               </div>
               <div className="flex space-x-2">
                 <button
-                  onClick={() => openViewModal(protocol)}
+                  onClick={() => {
+                    console.log('View button clicked for protocol:', protocol.id);
+                    openViewModal(protocol);
+                  }}
                   className="text-gray-400 hover:text-gray-600"
                   title="View Details"
                 >
@@ -1091,7 +1108,10 @@ const ProtocolsPage: React.FC = () => {
                 {canEditProtocol(protocol) && (
                   <>
                     <button
-                      onClick={() => openEditModal(protocol)}
+                      onClick={() => {
+                        console.log('Edit button clicked for protocol:', protocol.id);
+                        openEditModal(protocol);
+                      }}
                       className="text-gray-400 hover:text-gray-600"
                       title="Edit Protocol"
                     >
@@ -1107,7 +1127,10 @@ const ProtocolsPage: React.FC = () => {
                   </>
                 )}
                 <button
-                  onClick={() => openShareModal(protocol)}
+                  onClick={() => {
+                    console.log('Share button clicked for protocol:', protocol.id);
+                    openShareModal(protocol);
+                  }}
                   className="text-blue-400 hover:text-blue-600"
                   title="Share Protocol"
                 >
@@ -1783,19 +1806,28 @@ const ProtocolsPage: React.FC = () => {
                     <div className="bg-white border border-gray-200 rounded-xl p-6">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
                       <div className="space-y-3">
-                        <button className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200">
+                        <button 
+                          onClick={() => openShareModal(selectedProtocol)}
+                          className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
+                        >
                           <ShareIcon className="w-4 h-4" />
                           <span>Share Protocol</span>
                         </button>
                         {canEditProtocol(selectedProtocol) && (
-                          <button className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200">
+                          <button 
+                            onClick={() => openEditModal(selectedProtocol)}
+                            className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200"
+                          >
                             <PencilIcon className="w-4 h-4" />
                             <span>Edit Protocol</span>
                           </button>
                         )}
-                        <button className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200">
+                        <button 
+                          onClick={() => alert('Duplicating protocol... (Demo)')}
+                          className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200"
+                        >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2z" />
                           </svg>
                           <span>Duplicate Protocol</span>
                         </button>

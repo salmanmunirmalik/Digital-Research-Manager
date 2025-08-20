@@ -52,29 +52,59 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(mockUser);
-  const [token, setToken] = useState<string | null>(mockToken);
-  const [isLoading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setLoading] = useState(true);
 
-  // Simulate loading state
+  // Load from localStorage and verify with backend
   useEffect(() => {
-    setLoading(true);
-    // Simulate API call delay
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+    const init = async () => {
+      try {
+        const storedToken = localStorage.getItem('authToken');
+        const storedUser = localStorage.getItem('user');
+        
+        console.log(`🔄 Initializing AuthContext:`);
+        console.log(`   Token exists: ${!!storedToken}`);
+        console.log(`   User exists: ${!!storedUser}`);
+        
+        if (storedToken && storedUser) {
+          const userData = JSON.parse(storedUser);
+          console.log(`📋 User loaded from localStorage:`, userData);
+          console.log(`   User Role: ${userData.role}`);
+          console.log(`   User Email: ${userData.email}`);
+          
+          setToken(storedToken);
+          setUser(userData);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
   }, []);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setUser(mockUser);
-      setToken(mockToken);
-    } catch (error) {
-      console.error('Login error:', error);
+      const resp = await fetch((import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api' + '/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      if (!resp.ok) throw new Error('Login failed');
+      const data = await resp.json();
+      
+      // Debug logging
+      console.log(`🔐 Login Response:`, data);
+      console.log(`   User Role: ${data.user.role}`);
+      console.log(`   User Email: ${data.user.email}`);
+      
+      setUser(data.user);
+      setToken(data.token);
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      console.log(`✅ User set in context:`, data.user);
     } finally {
       setLoading(false);
     }
@@ -83,30 +113,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (userData: any) => {
     setLoading(true);
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setUser(mockUser);
-      setToken(mockToken);
-    } catch (error) {
-      console.error('Registration error:', error);
+      const resp = await fetch(((import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api') + '/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
+      if (!resp.ok) throw new Error('Registration failed');
+      const data = await resp.json();
+      setUser(data.user);
+      setToken(data.token);
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setToken(null);
+  const logout = async () => {
+    try {
+      const tokenLocal = localStorage.getItem('authToken');
+      await fetch(((import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api') + '/auth/logout', {
+        method: 'POST',
+        headers: { 'Authorization': tokenLocal ? `Bearer ${tokenLocal}` : '' }
+      });
+    } finally {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      setUser(null);
+      setToken(null);
+    }
   };
 
   const updateProfile = async (data: Partial<User>) => {
     setLoading(true);
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setUser(prev => prev ? { ...prev, ...data } : null);
-    } catch (error) {
-      console.error('Profile update error:', error);
+      const tokenLocal = localStorage.getItem('authToken');
+      const resp = await fetch(((import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api') + '/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': tokenLocal ? `Bearer ${tokenLocal}` : '' },
+        body: JSON.stringify(data)
+      });
+      if (!resp.ok) throw new Error('Profile update failed');
+      const body = await resp.json();
+      setUser(body.user);
+      localStorage.setItem('user', JSON.stringify(body.user));
     } finally {
       setLoading(false);
     }
@@ -115,11 +165,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const changePassword = async (currentPassword: string, newPassword: string) => {
     setLoading(true);
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      // Mock success
-    } catch (error) {
-      console.error('Password change error:', error);
+      const tokenLocal = localStorage.getItem('authToken');
+      const resp = await fetch(((import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api') + '/auth/change-password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': tokenLocal ? `Bearer ${tokenLocal}` : '' },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      if (!resp.ok) throw new Error('Password change failed');
     } finally {
       setLoading(false);
     }

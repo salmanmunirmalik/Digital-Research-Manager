@@ -173,7 +173,7 @@ const LabNotebookPage: React.FC = () => {
       setIsLoading(true);
       const queryParams = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
-        if (value) queryParams.append(key, value);
+        if (value) queryParams.append(key, String(value));
       });
 
       const response = await fetch(`http://localhost:5001/api/lab-notebooks?${queryParams}`, {
@@ -583,7 +583,7 @@ const LabNotebookPage: React.FC = () => {
                     <TrashIcon className="w-4 h-4 mr-1" />
                     Delete
                   </Button>
-                </div>
+          </div>
         </div>
       </div>
           </CardContent>
@@ -1090,8 +1090,8 @@ const LabNotebookPage: React.FC = () => {
                     <div>
                       <h3 className="font-medium text-gray-900 mb-2">Next Steps</h3>
                       <p className="text-gray-600">{selectedEntry.next_steps}</p>
-                    </div>
-                  )}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-6">
