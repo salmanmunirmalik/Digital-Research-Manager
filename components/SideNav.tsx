@@ -51,16 +51,6 @@ const SideNav: React.FC = () => {
   const getNavItems = () => {
     const baseItems = [];
 
-    // Lab Management - Only for PI and Admin
-    if (userPermissions?.canManageLabs) {
-      baseItems.push({
-        title: 'Lab Management',
-        items: [
-          { name: 'Lab Management', to: '/lab-management', icon: BuildingOfficeIcon, description: 'Manage labs and team members' }
-        ]
-      });
-    }
-
     // Dashboard - Available to all
     baseItems.push({
       title: 'Dashboard',
