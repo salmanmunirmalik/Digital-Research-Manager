@@ -596,9 +596,7 @@ const ProtocolsPage: React.FC = () => {
     setIsLoading(false);
     
     // Debug logging
-    console.log('Protocols loaded:', mockProtocols.length);
-    console.log('User context:', user);
-    console.log('User role:', user?.role);
+
   }, [user]);
 
   // Filter protocols based on current filters
@@ -1097,7 +1095,7 @@ const ProtocolsPage: React.FC = () => {
               <div className="flex space-x-2">
                 <button
                   onClick={() => {
-                    console.log('View button clicked for protocol:', protocol.id);
+                
                     openViewModal(protocol);
                   }}
                   className="text-gray-400 hover:text-gray-600"
@@ -1109,7 +1107,7 @@ const ProtocolsPage: React.FC = () => {
                   <>
                     <button
                       onClick={() => {
-                        console.log('Edit button clicked for protocol:', protocol.id);
+                    
                         openEditModal(protocol);
                       }}
                       className="text-gray-400 hover:text-gray-600"
@@ -1128,7 +1126,7 @@ const ProtocolsPage: React.FC = () => {
                 )}
                 <button
                   onClick={() => {
-                    console.log('Share button clicked for protocol:', protocol.id);
+                
                     openShareModal(protocol);
                   }}
                   className="text-blue-400 hover:text-blue-600"

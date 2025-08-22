@@ -108,6 +108,7 @@ export const ROUTE_ACCESS = {
   '/inventory': { minRole: 'researcher' },
   '/instruments': { minRole: 'student' },
   '/data-results': { minRole: 'student' },
+  '/resource-exchange': { minRole: 'student' },
   '/presentations': { minRole: 'student' },
   '/data-sharing': { minRole: 'student' },
   '/help-forum': { minRole: 'student' },

@@ -1,4 +1,4 @@
-import { CalculatorName, CalculatorInput, CalculatorResult, CalculatorInfo } from './types';
+import { CalculatorName, CalculatorInput, CalculatorResult, CalculatorInfo } from '../types';
 
 // Calculator Definitions
 export const CALCULATOR_DEFINITIONS: Record<CalculatorName, CalculatorInfo> = {
@@ -257,6 +257,958 @@ export const CALCULATOR_DEFINITIONS: Record<CalculatorName, CalculatorInfo> = {
     ],
     references: ['Centrifuge Manuals'],
     tags: ['centrifugation', 'RCF', 'RPM', 'rotor', 'physics']
+  },
+
+  'Protein Concentration Calculator (Bradford)': {
+    name: 'Protein Concentration Calculator (Bradford)',
+    category: 'Biochemistry',
+    subCategory: 'Protein Analysis',
+    description: 'Calculate protein concentration from Bradford assay absorbance',
+    formula: 'Concentration = (Absorbance - Blank) / Slope × Dilution_Factor',
+    units: {
+      inputs: {
+        absorbance: 'OD',
+        blankAbsorbance: 'OD',
+        slope: 'OD/μg/mL',
+        dilutionFactor: 'unitless'
+      },
+      output: 'μg/mL'
+    },
+    examples: [
+      {
+        title: 'Standard Bradford Assay',
+        inputs: { absorbance: 0.8, blankAbsorbance: 0.1, slope: 0.01, dilutionFactor: 10 },
+        expectedOutput: 700,
+        explanation: '0.7 OD difference / 0.01 × 10 = 700 μg/mL'
+      }
+    ],
+    references: ['Bradford, M.M. Anal. Biochem. 72:248-254'],
+    tags: ['protein', 'Bradford', 'concentration', 'absorbance', 'biochemistry']
+  },
+
+  'DNA Concentration Calculator (A260)': {
+    name: 'DNA Concentration Calculator (A260)',
+    category: 'Molecular Biology',
+    subCategory: 'DNA Analysis',
+    description: 'Calculate DNA concentration from A260 absorbance readings',
+    formula: 'Concentration = A260 × 50 × Dilution_Factor',
+    units: {
+      inputs: {
+        a260: 'OD',
+        dilutionFactor: 'unitless'
+      },
+      output: 'ng/μL'
+    },
+    examples: [
+      {
+        title: 'DNA Sample',
+        inputs: { a260: 0.5, dilutionFactor: 100 },
+        expectedOutput: 2500,
+        explanation: '0.5 × 50 × 100 = 2500 ng/μL'
+      }
+    ],
+    references: ['Sambrook, J. Molecular Cloning'],
+    tags: ['DNA', 'concentration', 'A260', 'spectrophotometry', 'molecular biology']
+  },
+
+  'RNA Concentration Calculator (A260)': {
+    name: 'RNA Concentration Calculator (A260)',
+    category: 'Molecular Biology',
+    subCategory: 'RNA Analysis',
+    description: 'Calculate RNA concentration from A260 absorbance readings',
+    formula: 'Concentration = A260 × 40 × Dilution_Factor',
+    units: {
+      inputs: {
+        a260: 'OD',
+        dilutionFactor: 'unitless'
+      },
+      output: 'ng/μL'
+    },
+    examples: [
+      {
+        title: 'RNA Sample',
+        inputs: { a260: 0.6, dilutionFactor: 50 },
+        expectedOutput: 1200,
+        explanation: '0.6 × 40 × 50 = 1200 ng/μL'
+      }
+    ],
+    references: ['Sambrook, J. Molecular Cloning'],
+    tags: ['RNA', 'concentration', 'A260', 'spectrophotometry', 'molecular biology']
+  },
+
+  'Cell Density Calculator': {
+    name: 'Cell Density Calculator',
+    category: 'Cell Biology',
+    subCategory: 'Cell Culture',
+    description: 'Calculate cell density from hemocytometer counts',
+    formula: 'Density = (Count × Dilution_Factor × 10⁴) / Volume_Counted',
+    units: {
+      inputs: {
+        cellCount: 'count',
+        dilutionFactor: 'unitless',
+        volumeCounted: 'μL'
+      },
+      output: 'cells/mL'
+    },
+    examples: [
+      {
+        title: 'Hemocytometer Count',
+        inputs: { cellCount: 150, dilutionFactor: 10, volumeCounted: 0.1 },
+        expectedOutput: 150000000,
+        explanation: '(150 × 10 × 10⁴) / 0.1 = 150M cells/mL'
+      }
+    ],
+    references: ['Freshney, R.I. Culture of Animal Cells'],
+    tags: ['cell density', 'hemocytometer', 'cell counting', 'cell culture']
+  },
+
+  'Doubling Time Calculator': {
+    name: 'Doubling Time Calculator',
+    category: 'Cell Biology',
+    subCategory: 'Cell Growth',
+    description: 'Calculate cell doubling time from growth curve data',
+    formula: 'Doubling_Time = ln(2) / Growth_Rate',
+    units: {
+      inputs: {
+        initialCount: 'cells',
+        finalCount: 'cells',
+        timeElapsed: 'hours'
+      },
+      output: 'hours'
+    },
+    examples: [
+      {
+        title: 'Exponential Growth',
+        inputs: { initialCount: 1000000, finalCount: 4000000, timeElapsed: 24 },
+        expectedOutput: 12,
+        explanation: '4-fold increase in 24h = 12h doubling time'
+      }
+    ],
+    references: ['Freshney, R.I. Culture of Animal Cells'],
+    tags: ['doubling time', 'cell growth', 'exponential growth', 'cell culture']
+  },
+
+  'Transformation Efficiency Calculator': {
+    name: 'Transformation Efficiency Calculator',
+    category: 'Molecular Biology',
+    subCategory: 'Bacterial Transformation',
+    description: 'Calculate transformation efficiency for bacterial transformations',
+    formula: 'Efficiency = (Colonies × Dilution_Factor) / DNA_Amount',
+    units: {
+      inputs: {
+        colonies: 'count',
+        dilutionFactor: 'unitless',
+        dnaAmount: 'ng'
+      },
+      output: 'CFU/μg'
+    },
+    examples: [
+      {
+        title: 'Standard Transformation',
+        inputs: { colonies: 50, dilutionFactor: 1000, dnaAmount: 10 },
+        expectedOutput: 5000000,
+        explanation: '(50 × 1000) / 10 = 5M CFU/μg'
+      }
+    ],
+    references: ['Sambrook, J. Molecular Cloning'],
+    tags: ['transformation', 'efficiency', 'bacteria', 'DNA', 'molecular biology']
+  },
+
+  'Ligation Calculator': {
+    name: 'Ligation Calculator',
+    category: 'Molecular Biology',
+    subCategory: 'DNA Ligation',
+    description: 'Calculate optimal insert:vector ratios for DNA ligation',
+    formula: 'Insert_ng = (Vector_ng × Insert_size_kb × Ratio) / Vector_size_kb',
+    units: {
+      inputs: {
+        vectorAmount: 'ng',
+        vectorSize: 'kb',
+        insertSize: 'kb',
+        insertVectorRatio: 'unitless'
+      },
+      output: 'ng'
+    },
+    examples: [
+      {
+        title: '3:1 Insert:Vector Ratio',
+        inputs: { vectorAmount: 100, vectorSize: 3, insertSize: 1, insertVectorRatio: 3 },
+        expectedOutput: 100,
+        explanation: '(100 × 1 × 3) / 3 = 100 ng insert'
+      }
+    ],
+    references: ['Sambrook, J. Molecular Cloning'],
+    tags: ['ligation', 'insert:vector ratio', 'DNA', 'molecular biology']
+  },
+
+  'Restriction Enzyme Calculator': {
+    name: 'Restriction Enzyme Calculator',
+    category: 'Molecular Biology',
+    subCategory: 'DNA Digestion',
+    description: 'Calculate enzyme amounts and digestion times for DNA',
+    formula: 'Enzyme_Units = (DNA_μg × 10) / Time_hours',
+    units: {
+      inputs: {
+        dnaAmount: 'μg',
+        digestionTime: 'hours',
+        enzymeUnits: 'units'
+      },
+      output: 'units'
+    },
+    examples: [
+      {
+        title: 'Overnight Digestion',
+        inputs: { dnaAmount: 5, digestionTime: 16, enzymeUnits: 0 },
+        expectedOutput: 3.125,
+        explanation: '(5 × 10) / 16 = 3.125 units needed'
+      }
+    ],
+    references: ['Sambrook, J. Molecular Cloning'],
+    tags: ['restriction enzyme', 'DNA digestion', 'molecular biology']
+  },
+
+  'Gel Electrophoresis Calculator': {
+    name: 'Gel Electrophoresis Calculator',
+    category: 'Molecular Biology',
+    subCategory: 'Gel Analysis',
+    description: 'Calculate DNA fragment sizes from gel migration distances',
+    formula: 'Size = A × e^(-B × Distance)',
+    units: {
+      inputs: {
+        migrationDistance: 'cm',
+        gelConcentration: '%',
+        voltage: 'V',
+        time: 'minutes'
+      },
+      output: 'kb'
+    },
+    examples: [
+      {
+        title: '1% Agarose Gel',
+        inputs: { migrationDistance: 3, gelConcentration: 1, voltage: 100, time: 60 },
+        expectedOutput: 2.5,
+        explanation: 'Approximate size based on standard curve'
+      }
+    ],
+    references: ['Sambrook, J. Molecular Cloning'],
+    tags: ['gel electrophoresis', 'DNA size', 'migration', 'molecular biology']
+  },
+
+  'Western Blot Calculator': {
+    name: 'Western Blot Calculator',
+    category: 'Protein Analysis',
+    subCategory: 'Western Blotting',
+    description: 'Calculate protein transfer conditions for Western blots',
+    formula: 'Transfer_Time = (Gel_Thickness × 2) + (Protein_Size_kDa × 0.1)',
+    units: {
+      inputs: {
+        gelThickness: 'mm',
+        proteinSize: 'kDa',
+        transferVoltage: 'V'
+      },
+      output: 'minutes'
+    },
+    examples: [
+      {
+        title: 'Standard Transfer',
+        inputs: { gelThickness: 1, proteinSize: 50, transferVoltage: 100 },
+        expectedOutput: 7,
+        explanation: '(1 × 2) + (50 × 0.1) = 7 minutes'
+      }
+    ],
+    references: ['Towbin, H. et al. PNAS 76:4350-4354'],
+    tags: ['Western blot', 'protein transfer', 'electrophoresis', 'protein analysis']
+  },
+
+  'ELISA Calculator': {
+    name: 'ELISA Calculator',
+    category: 'Immunology',
+    subCategory: 'ELISA Assays',
+    description: 'Calculate antibody dilutions and concentrations for ELISA',
+    formula: 'Final_Concentration = Stock_Concentration × (Volume_Stock / Total_Volume)',
+    units: {
+      inputs: {
+        stockConcentration: 'μg/mL',
+        volumeStock: 'μL',
+        totalVolume: 'μL'
+      },
+      output: 'μg/mL'
+    },
+    examples: [
+      {
+        title: 'Antibody Dilution',
+        inputs: { stockConcentration: 1000, volumeStock: 10, totalVolume: 1000 },
+        expectedOutput: 10,
+        explanation: '1000 × (10/1000) = 10 μg/mL final'
+      }
+    ],
+    references: ['Harlow, E. Antibodies: A Laboratory Manual'],
+    tags: ['ELISA', 'antibody', 'dilution', 'immunology', 'concentration']
+  },
+
+  'Flow Cytometry Calculator': {
+    name: 'Flow Cytometry Calculator',
+    category: 'Cell Biology',
+    subCategory: 'Flow Cytometry',
+    description: 'Calculate compensation and gating parameters for flow cytometry',
+    formula: 'Compensation = (MFI_Spillover / MFI_Positive) × 100',
+    units: {
+      inputs: {
+        mfiSpillover: 'MFI',
+        mfiPositive: 'MFI',
+        negativeControl: 'MFI'
+      },
+      output: '%'
+    },
+    examples: [
+      {
+        title: 'FITC Compensation',
+        inputs: { mfiSpillover: 500, mfiPositive: 10000, negativeControl: 100 },
+        expectedOutput: 5,
+        explanation: '(500/10000) × 100 = 5% compensation needed'
+      }
+    ],
+    references: ['Shapiro, H.M. Practical Flow Cytometry'],
+    tags: ['flow cytometry', 'compensation', 'MFI', 'cell biology']
+  },
+
+  'Microscopy Calculator': {
+    name: 'Microscopy Calculator',
+    category: 'Imaging',
+    subCategory: 'Microscopy',
+    description: 'Calculate magnification, resolution, and field of view',
+    formula: 'Resolution = 0.61 × λ / NA',
+    units: {
+      inputs: {
+        wavelength: 'nm',
+        numericalAperture: 'unitless',
+        magnification: '×',
+        pixelSize: 'μm'
+      },
+      output: 'nm'
+    },
+    examples: [
+      {
+        title: 'Fluorescence Microscopy',
+        inputs: { wavelength: 500, numericalAperture: 1.4, magnification: 100, pixelSize: 6.45 },
+        expectedOutput: 218,
+        explanation: '0.61 × 500 / 1.4 = 218 nm resolution'
+      }
+    ],
+    references: ['Murphy, D.B. Fundamentals of Light Microscopy'],
+    tags: ['microscopy', 'resolution', 'magnification', 'imaging', 'NA']
+  },
+
+  'Image Analysis Calculator': {
+    name: 'Image Analysis Calculator',
+    category: 'Imaging',
+    subCategory: 'Image Processing',
+    description: 'Calculate pixel dimensions, areas, and intensities from images',
+    formula: 'Area_μm² = (Pixels × Pixel_Size²) / Magnification²',
+    units: {
+      inputs: {
+        pixelCount: 'pixels',
+        pixelSize: 'μm',
+        magnification: '×',
+        intensity: 'gray value'
+      },
+      output: 'μm²'
+    },
+    examples: [
+      {
+        title: 'Cell Area Measurement',
+        inputs: { pixelCount: 1000, pixelSize: 6.45, magnification: 100, intensity: 150 },
+        expectedOutput: 0.416,
+        explanation: '(1000 × 6.45²) / 100² = 0.416 μm²'
+      }
+    ],
+    references: ['ImageJ Documentation'],
+    tags: ['image analysis', 'pixels', 'area', 'intensity', 'imaging']
+  },
+
+  'Spectrophotometry Calculator': {
+    name: 'Spectrophotometry Calculator',
+    category: 'Analytical Chemistry',
+    subCategory: 'Spectroscopy',
+    description: 'Calculate concentration from absorbance using Beer-Lambert law',
+    formula: 'A = ε × c × l',
+    units: {
+      inputs: {
+        absorbance: 'OD',
+        molarAbsorptivity: 'M⁻¹cm⁻¹',
+        pathLength: 'cm'
+      },
+      output: 'M'
+    },
+    examples: [
+      {
+        title: 'Standard Curve',
+        inputs: { absorbance: 0.5, molarAbsorptivity: 5000, pathLength: 1 },
+        expectedOutput: 0.0001,
+        explanation: '0.5 / (5000 × 1) = 0.0001 M'
+      }
+    ],
+    references: ['Harris, D.C. Quantitative Chemical Analysis'],
+    tags: ['spectrophotometry', 'Beer-Lambert', 'absorbance', 'concentration', 'chemistry']
+  },
+
+  'HPLC Calculator': {
+    name: 'HPLC Calculator',
+    category: 'Analytical Chemistry',
+    subCategory: 'Chromatography',
+    description: 'Calculate retention time, resolution, and peak area from HPLC data',
+    formula: 'Resolution = 2(tR2 - tR1) / (w1 + w2)',
+    units: {
+      inputs: {
+        retentionTime1: 'minutes',
+        retentionTime2: 'minutes',
+        peakWidth1: 'minutes',
+        peakWidth2: 'minutes'
+      },
+      output: 'unitless'
+    },
+    examples: [
+      {
+        title: 'Peak Resolution',
+        inputs: { retentionTime1: 5, retentionTime2: 6, peakWidth1: 0.5, peakWidth2: 0.6 },
+        expectedOutput: 1.82,
+        explanation: '2(6-5) / (0.5+0.6) = 1.82 resolution'
+      }
+    ],
+    references: ['Skoog, D.A. Principles of Instrumental Analysis'],
+    tags: ['HPLC', 'chromatography', 'retention time', 'resolution', 'analytical chemistry']
+  },
+
+  'Mass Spectrometry Calculator': {
+    name: 'Mass Spectrometry Calculator',
+    category: 'Analytical Chemistry',
+    subCategory: 'Mass Spec',
+    description: 'Calculate m/z ratios, isotopic distributions, and molecular weights',
+    formula: 'm/z = (Mass + nH⁺) / Charge',
+    units: {
+      inputs: {
+        molecularWeight: 'Da',
+        charge: 'unitless',
+        hydrogenIons: 'unitless'
+      },
+      output: 'm/z'
+    },
+    examples: [
+      {
+        title: 'Protonated Ion',
+        inputs: { molecularWeight: 1000, charge: 1, hydrogenIons: 1 },
+        expectedOutput: 1001,
+        explanation: '(1000 + 1) / 1 = 1001 m/z'
+      }
+    ],
+    references: ['Gross, J.H. Mass Spectrometry'],
+    tags: ['mass spectrometry', 'm/z', 'molecular weight', 'isotopes', 'analytical chemistry']
+  },
+
+  'NMR Calculator': {
+    name: 'NMR Calculator',
+    category: 'Analytical Chemistry',
+    subCategory: 'NMR Spectroscopy',
+    description: 'Calculate chemical shifts, coupling constants, and relaxation times',
+    formula: 'δ = (ν_sample - ν_reference) / ν_reference × 10⁶',
+    units: {
+      inputs: {
+        sampleFrequency: 'MHz',
+        referenceFrequency: 'MHz',
+        couplingConstant: 'Hz'
+      },
+      output: 'ppm'
+    },
+    examples: [
+      {
+        title: 'Chemical Shift',
+        inputs: { sampleFrequency: 500.123, referenceFrequency: 500.000, couplingConstant: 7.2 },
+        expectedOutput: 246,
+        explanation: '(500.123 - 500.000) / 500.000 × 10⁶ = 246 ppm'
+      }
+    ],
+    references: ['Keeler, J. Understanding NMR Spectroscopy'],
+    tags: ['NMR', 'chemical shift', 'coupling constant', 'spectroscopy', 'analytical chemistry']
+  },
+
+  'X-ray Crystallography Calculator': {
+    name: 'X-ray Crystallography Calculator',
+    category: 'Structural Biology',
+    subCategory: 'X-ray Diffraction',
+    description: 'Calculate resolution, unit cell parameters, and diffraction angles',
+    formula: 'd = λ / (2 × sin(θ))',
+    units: {
+      inputs: {
+        wavelength: 'Å',
+        diffractionAngle: 'degrees',
+        unitCellA: 'Å',
+        unitCellB: 'Å',
+        unitCellC: 'Å'
+      },
+      output: 'Å'
+    },
+    examples: [
+      {
+        title: 'Copper Kα Radiation',
+        inputs: { wavelength: 1.54, diffractionAngle: 15, unitCellA: 10, unitCellB: 10, unitCellC: 10 },
+        expectedOutput: 2.97,
+        explanation: '1.54 / (2 × sin(15°)) = 2.97 Å resolution'
+      }
+    ],
+    references: ['Drenth, J. Principles of Protein X-ray Crystallography'],
+    tags: ['X-ray crystallography', 'diffraction', 'resolution', 'unit cell', 'structural biology']
+  },
+
+  'Cryo-EM Calculator': {
+    name: 'Cryo-EM Calculator',
+    category: 'Structural Biology',
+    subCategory: 'Electron Microscopy',
+    description: 'Calculate resolution, defocus, and particle sizes for cryo-EM',
+    formula: 'Resolution = 0.43 × λ / (Defocus × 10⁻¹⁰)',
+    units: {
+      inputs: {
+        electronWavelength: 'Å',
+        defocus: 'μm',
+        particleSize: 'nm',
+        accelerationVoltage: 'kV'
+      },
+      output: 'Å'
+    },
+    examples: [
+      {
+        title: '300 kV Cryo-EM',
+        inputs: { electronWavelength: 0.02, defocus: 2, particleSize: 100, accelerationVoltage: 300 },
+        expectedOutput: 4.3,
+        explanation: '0.43 × 0.02 / (2 × 10⁻¹⁰) = 4.3 Å resolution'
+      }
+    ],
+    references: ['Frank, J. Three-Dimensional Electron Microscopy'],
+    tags: ['cryo-EM', 'electron microscopy', 'resolution', 'defocus', 'structural biology']
+  },
+
+  'Bioinformatics Calculator': {
+    name: 'Bioinformatics Calculator',
+    category: 'Bioinformatics',
+    subCategory: 'Sequence Analysis',
+    description: 'Calculate sequence similarity, alignment scores, and evolutionary distances',
+    formula: 'Similarity = (Identical_Positions / Total_Positions) × 100',
+    units: {
+      inputs: {
+        identicalPositions: 'count',
+        totalPositions: 'count',
+        gapPenalty: 'unitless',
+        mismatchPenalty: 'unitless'
+      },
+      output: '%'
+    },
+    examples: [
+      {
+        title: 'Sequence Alignment',
+        inputs: { identicalPositions: 80, totalPositions: 100, gapPenalty: -10, mismatchPenalty: -1 },
+        expectedOutput: 80,
+        explanation: '(80/100) × 100 = 80% similarity'
+      }
+    ],
+ references: ['Mount, D.W. Bioinformatics'],
+    tags: ['bioinformatics', 'sequence similarity', 'alignment', 'evolution', 'sequence analysis']
+  },
+
+  'Machine Learning Calculator': {
+    name: 'Machine Learning Calculator',
+    category: 'Data Science',
+    subCategory: 'Machine Learning',
+    description: 'Calculate accuracy, precision, recall, and F1 score for ML models',
+    formula: 'F1 = 2 × (Precision × Recall) / (Precision + Recall)',
+    units: {
+      inputs: {
+        truePositives: 'count',
+        falsePositives: 'count',
+        trueNegatives: 'count',
+        falseNegatives: 'count'
+      },
+      output: 'unitless'
+    },
+    examples: [
+      {
+        title: 'Classification Model',
+        inputs: { truePositives: 80, falsePositives: 20, trueNegatives: 70, falseNegatives: 30 },
+        expectedOutput: 0.8,
+        explanation: 'Precision=0.8, Recall=0.73, F1=0.76'
+      }
+    ],
+    references: ['Hastie, T. Elements of Statistical Learning'],
+    tags: ['machine learning', 'accuracy', 'precision', 'recall', 'F1 score', 'data science']
+  },
+
+  'Statistical Power Calculator': {
+    name: 'Statistical Power Calculator',
+    category: 'Statistics & Data Analysis',
+    subCategory: 'Power Analysis',
+    description: 'Calculate statistical power and required sample sizes for studies',
+    formula: 'Power = 1 - β = P(Reject H₀ | H₁ is true)',
+    units: {
+      inputs: {
+        effectSize: 'unitless',
+        sampleSize: 'count',
+        alpha: 'unitless',
+        standardDeviation: 'unitless'
+      },
+      output: 'unitless'
+    },
+    examples: [
+      {
+        title: 'T-Test Power',
+        inputs: { effectSize: 0.5, sampleSize: 64, alpha: 0.05, standardDeviation: 1 },
+        expectedOutput: 0.8,
+        explanation: '80% power to detect medium effect size'
+      }
+    ],
+    references: ['Cohen, J. Statistical Power Analysis'],
+    tags: ['statistical power', 'sample size', 'effect size', 'statistics', 'power analysis']
+  },
+
+  'Correlation Calculator': {
+    name: 'Correlation Calculator',
+    category: 'Statistics & Data Analysis',
+    subCategory: 'Correlation Analysis',
+    description: 'Calculate Pearson, Spearman, and Kendall correlation coefficients',
+    formula: 'r = Σ((x - x̄)(y - ȳ)) / √(Σ(x - x̄)² × Σ(y - ȳ)²)',
+    units: {
+      inputs: {
+        xValues: 'comma-separated values',
+        yValues: 'comma-separated values',
+        correlationType: 'pearson, spearman, or kendall'
+      },
+      output: 'unitless'
+    },
+    examples: [
+      {
+        title: 'Pearson Correlation',
+        inputs: { xValues: '1,2,3,4,5', yValues: '2,4,6,8,10', correlationType: 'pearson' },
+        expectedOutput: 1,
+        explanation: 'Perfect positive correlation = 1.0'
+      }
+    ],
+    references: ['Sokal, R.R. Biometry'],
+    tags: ['correlation', 'pearson', 'spearman', 'kendall', 'statistics', 'data analysis']
+  },
+
+  'ANOVA Calculator': {
+    name: 'ANOVA Calculator',
+    category: 'Statistics & Data Analysis',
+    subCategory: 'Analysis of Variance',
+    description: 'Perform one-way and two-way ANOVA with post-hoc tests',
+    formula: 'F = MS_between / MS_within',
+    units: {
+      inputs: {
+        groupData: 'comma-separated groups',
+        alpha: 'unitless'
+      },
+      output: 'F-statistic and p-value'
+    },
+    examples: [
+      {
+        title: 'One-Way ANOVA',
+        inputs: { groupData: '10,12,11;15,17,16;18,20,19', alpha: 0.05 },
+        expectedOutput: 'F=25.2, p<0.001',
+        explanation: 'Significant difference between groups'
+      }
+    ],
+    references: ['Sokal, R.R. Biometry'],
+    tags: ['ANOVA', 'analysis of variance', 'F-test', 'statistics', 'data analysis']
+  },
+
+  'Chi-Square Calculator': {
+    name: 'Chi-Square Calculator',
+    category: 'Statistics & Data Analysis',
+    subCategory: 'Chi-Square Tests',
+    description: 'Calculate chi-square statistic for goodness-of-fit and independence tests',
+    formula: 'χ² = Σ((Observed - Expected)² / Expected)',
+    units: {
+      inputs: {
+        observedValues: 'comma-separated values',
+        expectedValues: 'comma-separated values',
+        degreesOfFreedom: 'count'
+      },
+      output: 'χ² statistic and p-value'
+    },
+    examples: [
+      {
+        title: 'Goodness-of-Fit Test',
+        inputs: { observedValues: '25,75', expectedValues: '20,80', degreesOfFreedom: 1 },
+        expectedOutput: 'χ²=1.56, p>0.05',
+        explanation: 'No significant deviation from expected'
+      }
+    ],
+    references: ['Sokal, R.R. Biometry'],
+    tags: ['chi-square', 'goodness-of-fit', 'independence', 'statistics', 'data analysis']
+  },
+
+  'Regression Calculator': {
+    name: 'Regression Calculator',
+    category: 'Statistics & Data Analysis',
+    subCategory: 'Regression Analysis',
+    description: 'Calculate linear and multiple regression coefficients and R²',
+    formula: 'y = mx + b, R² = 1 - (SS_residual / SS_total)',
+    units: {
+      inputs: {
+        xValues: 'comma-separated values',
+        yValues: 'comma-separated values',
+        regressionType: 'linear or multiple'
+      },
+      output: 'slope, intercept, R²'
+    },
+    examples: [
+      {
+        title: 'Linear Regression',
+        inputs: { xValues: '1,2,3,4,5', yValues: '2,4,6,8,10', regressionType: 'linear' },
+        expectedOutput: 'slope=2, intercept=0, R²=1',
+        explanation: 'Perfect linear relationship'
+      }
+    ],
+    references: ['Sokal, R.R. Biometry'],
+    tags: ['regression', 'linear', 'multiple', 'R²', 'statistics', 'data analysis']
+  },
+
+  'Survival Analysis Calculator': {
+    name: 'Survival Analysis Calculator',
+    category: 'Statistics & Data Analysis',
+    subCategory: 'Survival Analysis',
+    description: 'Calculate Kaplan-Meier survival curves and log-rank test',
+    formula: 'S(t) = ∏(1 - dᵢ/nᵢ)',
+    units: {
+      inputs: {
+        timePoints: 'comma-separated values',
+        events: 'comma-separated values',
+        censored: 'comma-separated values'
+      },
+      output: 'survival probability'
+    },
+    examples: [
+      {
+        title: 'Kaplan-Meier',
+        inputs: { timePoints: '1,2,3,4,5', events: '1,1,0,1,0', censored: '0,0,1,0,1' },
+        expectedOutput: 'S(5)=0.4',
+        explanation: '40% survival at 5 time units'
+      }
+    ],
+    references: ['Klein, J.P. Survival Analysis'],
+    tags: ['survival analysis', 'Kaplan-Meier', 'log-rank', 'statistics', 'data analysis']
+  },
+
+  'Meta-Analysis Calculator': {
+    name: 'Meta-Analysis Calculator',
+    category: 'Statistics & Data Analysis',
+    subCategory: 'Meta-Analysis',
+    description: 'Calculate effect sizes, heterogeneity, and publication bias',
+    formula: 'Q = Σwᵢ(yᵢ - ȳ)², I² = (Q - df) / Q × 100',
+    units: {
+      inputs: {
+        effectSizes: 'comma-separated values',
+        standardErrors: 'comma-separated values',
+        sampleSizes: 'comma-separated values'
+      },
+      output: 'overall effect size, heterogeneity'
+    },
+    examples: [
+      {
+        title: 'Fixed Effects Model',
+        inputs: { effectSizes: '0.5,0.6,0.4', standardErrors: '0.1,0.1,0.1', sampleSizes: '100,100,100' },
+        expectedOutput: 'effect=0.5, I²=0%',
+        explanation: 'Homogeneous studies, fixed effects appropriate'
+      }
+    ],
+    references: ['Borenstein, M. Introduction to Meta-Analysis'],
+    tags: ['meta-analysis', 'effect size', 'heterogeneity', 'publication bias', 'statistics']
+  },
+
+  'Pharmacokinetics Calculator': {
+    name: 'Pharmacokinetics Calculator',
+    category: 'Pharmacology',
+    subCategory: 'Drug Kinetics',
+    description: 'Calculate drug half-life, clearance, and volume of distribution',
+    formula: 't₁/₂ = ln(2) / k, Cl = Dose / AUC',
+    units: {
+      inputs: {
+        eliminationRate: 'h⁻¹',
+        dose: 'mg',
+        areaUnderCurve: 'mg·h/L',
+        volumeDistribution: 'L'
+      },
+      output: 'hours, L/h, L'
+    },
+    examples: [
+      {
+        title: 'Drug Elimination',
+        inputs: { eliminationRate: 0.1, dose: 100, areaUnderCurve: 50, volumeDistribution: 10 },
+        expectedOutput: 't₁/₂=6.93h, Cl=2L/h, Vd=10L',
+        explanation: 'Standard pharmacokinetic parameters'
+      }
+    ],
+    references: ['Rowland, M. Clinical Pharmacokinetics'],
+    tags: ['pharmacokinetics', 'half-life', 'clearance', 'volume of distribution', 'pharmacology']
+  },
+
+  'Toxicology Calculator': {
+    name: 'Toxicology Calculator',
+    category: 'Toxicology',
+    subCategory: 'Risk Assessment',
+    description: 'Calculate LD50, NOAEL, and safety factors for toxicological studies',
+    formula: 'Safety_Factor = NOAEL / Human_Exposure',
+    units: {
+      inputs: {
+        noael: 'mg/kg/day',
+        humanExposure: 'mg/kg/day',
+        ld50: 'mg/kg',
+        bodyWeight: 'kg'
+      },
+      output: 'unitless'
+    },
+    examples: [
+      {
+        title: 'Safety Assessment',
+        inputs: { noael: 100, humanExposure: 1, ld50: 1000, bodyWeight: 70 },
+        expectedOutput: 100,
+        explanation: '100-fold safety factor (100/1)'
+      }
+    ],
+    references: ['Klaassen, C.D. Casarett & Doull\'s Toxicology'],
+    tags: ['toxicology', 'LD50', 'NOAEL', 'safety factor', 'risk assessment']
+  },
+
+  'Neuroscience Calculator': {
+    name: 'Neuroscience Calculator',
+    category: 'Neuroscience',
+    subCategory: 'Neural Analysis',
+    description: 'Calculate action potential parameters, synaptic strength, and neural connectivity',
+    formula: 'V(t) = V₀ + (V_max - V₀)(1 - e^(-t/τ))',
+    units: {
+      inputs: {
+        restingPotential: 'mV',
+        thresholdPotential: 'mV',
+        timeConstant: 'ms',
+        membraneResistance: 'MΩ'
+      },
+      output: 'mV'
+    },
+    examples: [
+      {
+        title: 'Action Potential',
+        inputs: { restingPotential: -70, thresholdPotential: -55, timeConstant: 10, membraneResistance: 100 },
+        expectedOutput: -55,
+        explanation: 'Threshold reached, action potential initiated'
+      }
+    ],
+    references: ['Kandel, E.R. Principles of Neural Science'],
+    tags: ['neuroscience', 'action potential', 'synaptic strength', 'neural connectivity', 'membrane potential']
+  },
+
+  'Immunology Calculator': {
+    name: 'Immunology Calculator',
+    category: 'Immunology',
+    subCategory: 'Immune Response',
+    description: 'Calculate antibody titers, cytokine concentrations, and immune cell counts',
+    formula: 'Titer = 2^(Dilution_Factor)',
+    units: {
+      inputs: {
+        dilutionFactor: 'unitless',
+        antibodyConcentration: 'μg/mL',
+        cytokineLevel: 'pg/mL',
+        cellCount: 'cells/μL'
+      },
+      output: 'various units'
+    },
+    examples: [
+      {
+        title: 'Antibody Titer',
+        inputs: { dilutionFactor: 8, antibodyConcentration: 100, cytokineLevel: 50, cellCount: 1000 },
+        expectedOutput: 256,
+        explanation: '2^8 = 256-fold dilution titer'
+      }
+    ],
+    references: ['Abbas, A.K. Cellular and Molecular Immunology'],
+    tags: ['immunology', 'antibody titer', 'cytokines', 'immune cells', 'immune response']
+  },
+
+  'Ecology Calculator': {
+    name: 'Ecology Calculator',
+    category: 'Ecology',
+    subCategory: 'Population Dynamics',
+    description: 'Calculate population growth, biodiversity indices, and species richness',
+    formula: 'Shannon_H = -Σ(pᵢ × ln(pᵢ))',
+    units: {
+      inputs: {
+        populationSize: 'individuals',
+        growthRate: 'unitless',
+        speciesCounts: 'comma-separated values',
+        carryingCapacity: 'individuals'
+      },
+      output: 'various units'
+    },
+    examples: [
+      {
+        title: 'Biodiversity Index',
+        inputs: { populationSize: 1000, growthRate: 0.1, speciesCounts: '50,30,20', carryingCapacity: 2000 },
+        expectedOutput: 'H=1.1',
+        explanation: 'Shannon diversity index for 3 species'
+      }
+    ],
+    references: ['Krebs, C.J. Ecology'],
+    tags: ['ecology', 'biodiversity', 'population dynamics', 'species richness', 'ecosystem']
+  },
+
+  'Climate Science Calculator': {
+    name: 'Climate Science Calculator',
+    category: 'Climate Science',
+    subCategory: 'Climate Modeling',
+    description: 'Calculate temperature anomalies, carbon budgets, and climate sensitivity',
+    formula: 'ΔT = λ × ΔF, where λ is climate sensitivity',
+    units: {
+      inputs: {
+        radiativeForcing: 'W/m²',
+        climateSensitivity: '°C/(W/m²)',
+        temperatureAnomaly: '°C',
+        carbonConcentration: 'ppm'
+      },
+      output: '°C'
+    },
+    examples: [
+      {
+        title: 'Temperature Response',
+        inputs: { radiativeForcing: 3.7, climateSensitivity: 0.8, temperatureAnomaly: 1.0, carbonConcentration: 400 },
+        expectedOutput: 3.0,
+        explanation: '3.7 × 0.8 = 3.0°C temperature increase'
+      }
+    ],
+    references: ['IPCC Assessment Reports'],
+    tags: ['climate science', 'temperature', 'carbon budget', 'climate sensitivity', 'global warming']
+  },
+
+  'Materials Science Calculator': {
+    name: 'Materials Science Calculator',
+    category: 'Materials Science',
+    subCategory: 'Material Properties',
+    description: 'Calculate Young\'s modulus, tensile strength, and material properties',
+    formula: 'E = σ / ε, where E is Young\'s modulus',
+    units: {
+      inputs: {
+        stress: 'MPa',
+        strain: 'unitless',
+        elasticModulus: 'GPa',
+        poissonRatio: 'unitless'
+      },
+      output: 'GPa'
+    },
+    examples: [
+      {
+        title: 'Young\'s Modulus',
+        inputs: { stress: 200, strain: 0.002, elasticModulus: 0, poissonRatio: 0.3 },
+        expectedOutput: 100,
+        explanation: '200 MPa / 0.002 = 100 GPa'
+      }
+    ],
+    references: ['Callister, W.D. Materials Science and Engineering'],
+    tags: ['materials science', 'Young\'s modulus', 'tensile strength', 'material properties', 'engineering']
   }
 };
 
@@ -525,6 +1477,1293 @@ export const CALCULATOR_INPUTS: Record<CalculatorName, CalculatorInput[]> = {
       min: 0,
       step: 1,
       helpText: 'Relative centrifugal force (leave empty to calculate)'
+    }
+  ],
+
+  'Protein Concentration Calculator (Bradford)': [
+    {
+      name: 'absorbance',
+      label: 'Sample Absorbance (OD)',
+      type: 'number',
+      unit: 'OD',
+      required: true,
+      min: 0,
+      step: 0.001,
+      helpText: 'Absorbance reading of your sample'
+    },
+    {
+      name: 'blankAbsorbance',
+      label: 'Blank Absorbance (OD)',
+      type: 'number',
+      unit: 'OD',
+      required: true,
+      min: 0,
+      step: 0.001,
+      helpText: 'Absorbance reading of blank/reference'
+    },
+    {
+      name: 'slope',
+      label: 'Standard Curve Slope (OD/μg/mL)',
+      type: 'number',
+      unit: 'OD/μg/mL',
+      required: true,
+      min: 0,
+      step: 0.001,
+      helpText: 'Slope from your standard curve'
+    },
+    {
+      name: 'dilutionFactor',
+      label: 'Dilution Factor',
+      type: 'number',
+      required: true,
+      min: 1,
+      step: 1,
+      helpText: 'How much you diluted your sample'
+    }
+  ],
+
+  'DNA Concentration Calculator (A260)': [
+    {
+      name: 'a260',
+      label: 'A260 Absorbance',
+      type: 'number',
+      unit: 'OD',
+      required: true,
+      min: 0,
+      step: 0.001,
+      helpText: 'Absorbance reading at 260nm'
+    },
+    {
+      name: 'dilutionFactor',
+      label: 'Dilution Factor',
+      type: 'number',
+      required: true,
+      min: 1,
+      step: 1,
+      helpText: 'How much you diluted your sample'
+    }
+  ],
+
+  'RNA Concentration Calculator (A260)': [
+    {
+      name: 'a260',
+      label: 'A260 Absorbance',
+      type: 'number',
+      unit: 'OD',
+      required: true,
+      min: 0,
+      step: 0.001,
+      helpText: 'Absorbance reading at 260nm'
+    },
+    {
+      name: 'dilutionFactor',
+      label: 'Dilution Factor',
+      type: 'number',
+      required: true,
+      min: 1,
+      step: 1,
+      helpText: 'How much you diluted your sample'
+    }
+  ],
+
+  'Cell Density Calculator': [
+    {
+      name: 'cellCount',
+      label: 'Cell Count',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Number of cells counted in hemocytometer'
+    },
+    {
+      name: 'dilutionFactor',
+      label: 'Dilution Factor',
+      type: 'number',
+      required: true,
+      min: 1,
+      step: 1,
+      helpText: 'How much you diluted your sample'
+    },
+    {
+      name: 'volumeCounted',
+      label: 'Volume Counted (μL)',
+      type: 'number',
+      unit: 'μL',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Volume of the counting chamber'
+    }
+  ],
+
+  'Doubling Time Calculator': [
+    {
+      name: 'initialCount',
+      label: 'Initial Cell Count',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Starting number of cells'
+    },
+    {
+      name: 'finalCount',
+      label: 'Final Cell Count',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Final number of cells'
+    },
+    {
+      name: 'timeElapsed',
+      label: 'Time Elapsed (hours)',
+      type: 'number',
+      unit: 'hours',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Time between measurements'
+    }
+  ],
+
+  'Transformation Efficiency Calculator': [
+    {
+      name: 'colonies',
+      label: 'Colonies Counted',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Number of colonies on the plate'
+    },
+    {
+      name: 'dilutionFactor',
+      label: 'Dilution Factor',
+      type: 'number',
+      required: true,
+      min: 1,
+      step: 1,
+      helpText: 'How much you diluted before plating'
+    },
+    {
+      name: 'dnaAmount',
+      label: 'DNA Amount (ng)',
+      type: 'number',
+      unit: 'ng',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Amount of DNA used for transformation'
+    }
+  ],
+
+  'Ligation Calculator': [
+    {
+      name: 'vectorAmount',
+      label: 'Vector Amount (ng)',
+      type: 'number',
+      unit: 'ng',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Amount of vector DNA'
+    },
+    {
+      name: 'vectorSize',
+      label: 'Vector Size (kb)',
+      type: 'number',
+      unit: 'kb',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Size of vector in kilobases'
+    },
+    {
+      name: 'insertSize',
+      label: 'Insert Size (kb)',
+      type: 'number',
+      unit: 'kb',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Size of insert in kilobases'
+    },
+    {
+      name: 'insertVectorRatio',
+      label: 'Insert:Vector Ratio',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Desired molar ratio of insert to vector'
+    }
+  ],
+
+  'Restriction Enzyme Calculator': [
+    {
+      name: 'dnaAmount',
+      label: 'DNA Amount (μg)',
+      type: 'number',
+      unit: 'μg',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Amount of DNA to digest'
+    },
+    {
+      name: 'digestionTime',
+      label: 'Digestion Time (hours)',
+      type: 'number',
+      unit: 'hours',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'How long to digest'
+    },
+    {
+      name: 'enzymeUnits',
+      label: 'Enzyme Units',
+      type: 'number',
+      required: false,
+      min: 0,
+      step: 0.1,
+      helpText: 'Leave empty to calculate required units'
+    }
+  ],
+
+  'Gel Electrophoresis Calculator': [
+    {
+      name: 'migrationDistance',
+      label: 'Migration Distance (cm)',
+      type: 'number',
+      unit: 'cm',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Distance migrated on gel'
+    },
+    {
+      name: 'gelConcentration',
+      label: 'Gel Concentration (%)',
+      type: 'number',
+      unit: '%',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Percentage of agarose in gel'
+    },
+    {
+      name: 'voltage',
+      label: 'Voltage (V)',
+      type: 'number',
+      unit: 'V',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Voltage applied during electrophoresis'
+    },
+    {
+      name: 'time',
+      label: 'Run Time (minutes)',
+      type: 'number',
+      unit: 'minutes',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'How long the gel ran'
+    }
+  ],
+
+  'Western Blot Calculator': [
+    {
+      name: 'gelThickness',
+      label: 'Gel Thickness (mm)',
+      type: 'number',
+      unit: 'mm',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Thickness of the gel'
+    },
+    {
+      name: 'proteinSize',
+      label: 'Protein Size (kDa)',
+      type: 'number',
+      unit: 'kDa',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Size of protein in kilodaltons'
+    },
+    {
+      name: 'transferVoltage',
+      label: 'Transfer Voltage (V)',
+      type: 'number',
+      unit: 'V',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Voltage for protein transfer'
+    }
+  ],
+
+  'ELISA Calculator': [
+    {
+      name: 'stockConcentration',
+      label: 'Stock Concentration (μg/mL)',
+      type: 'number',
+      unit: 'μg/mL',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Concentration of stock antibody'
+    },
+    {
+      name: 'volumeStock',
+      label: 'Volume of Stock (μL)',
+      type: 'number',
+      unit: 'μL',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Volume of stock to add'
+    },
+    {
+      name: 'totalVolume',
+      label: 'Total Volume (μL)',
+      type: 'number',
+      unit: 'μL',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Final volume after dilution'
+    }
+  ],
+
+  'Flow Cytometry Calculator': [
+    {
+      name: 'mfiSpillover',
+      label: 'MFI Spillover',
+      type: 'number',
+      unit: 'MFI',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Mean fluorescence intensity in spillover channel'
+    },
+    {
+      name: 'mfiPositive',
+      label: 'MFI Positive',
+      type: 'number',
+      unit: 'MFI',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Mean fluorescence intensity in positive channel'
+    },
+    {
+      name: 'negativeControl',
+      label: 'Negative Control MFI',
+      type: 'number',
+      unit: 'MFI',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'MFI of negative control'
+    }
+  ],
+
+  'Microscopy Calculator': [
+    {
+      name: 'wavelength',
+      label: 'Wavelength (nm)',
+      type: 'number',
+      unit: 'nm',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Wavelength of light used'
+    },
+    {
+      name: 'numericalAperture',
+      label: 'Numerical Aperture',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 0.01,
+      helpText: 'NA of the objective lens'
+    },
+    {
+      name: 'magnification',
+      label: 'Magnification (×)',
+      type: 'number',
+      unit: '×',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Total magnification'
+    },
+    {
+      name: 'pixelSize',
+      label: 'Pixel Size (μm)',
+      type: 'number',
+      unit: 'μm',
+      required: true,
+      min: 0,
+      step: 0.01,
+      helpText: 'Size of camera pixels'
+    }
+  ],
+
+  'Image Analysis Calculator': [
+    {
+      name: 'pixelCount',
+      label: 'Pixel Count',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Number of pixels in region of interest'
+    },
+    {
+      name: 'pixelSize',
+      label: 'Pixel Size (μm)',
+      type: 'number',
+      unit: 'μm',
+      required: true,
+      min: 0,
+      step: 0.01,
+      helpText: 'Physical size of each pixel'
+    },
+    {
+      name: 'magnification',
+      label: 'Magnification (×)',
+      type: 'number',
+      unit: '×',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Total magnification used'
+    },
+    {
+      name: 'intensity',
+      label: 'Intensity Value',
+      type: 'number',
+      required: false,
+      min: 0,
+      step: 1,
+      helpText: 'Gray value or fluorescence intensity'
+    }
+  ],
+
+  'Spectrophotometry Calculator': [
+    {
+      name: 'absorbance',
+      label: 'Absorbance (OD)',
+      type: 'number',
+      unit: 'OD',
+      required: true,
+      min: 0,
+      step: 0.001,
+      helpText: 'Absorbance reading'
+    },
+    {
+      name: 'molarAbsorptivity',
+      label: 'Molar Absorptivity (M⁻¹cm⁻¹)',
+      type: 'number',
+      unit: 'M⁻¹cm⁻¹',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Extinction coefficient'
+    },
+    {
+      name: 'pathLength',
+      label: 'Path Length (cm)',
+      type: 'number',
+      unit: 'cm',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Length of light path through sample'
+    }
+  ],
+
+  'HPLC Calculator': [
+    {
+      name: 'retentionTime1',
+      label: 'Retention Time 1 (min)',
+      type: 'number',
+      unit: 'minutes',
+      required: true,
+      min: 0,
+      step: 0.01,
+      helpText: 'Retention time of first peak'
+    },
+    {
+      name: 'retentionTime2',
+      label: 'Retention Time 2 (min)',
+      type: 'number',
+      unit: 'minutes',
+      required: true,
+      min: 0,
+      step: 0.01,
+      helpText: 'Retention time of second peak'
+    },
+    {
+      name: 'peakWidth1',
+      label: 'Peak Width 1 (min)',
+      type: 'number',
+      unit: 'minutes',
+      required: true,
+      min: 0,
+      step: 0.01,
+      helpText: 'Width at base of first peak'
+    },
+    {
+      name: 'peakWidth2',
+      label: 'Peak Width 2 (min)',
+      type: 'number',
+      unit: 'minutes',
+      required: true,
+      min: 0,
+      step: 0.01,
+      helpText: 'Width at base of second peak'
+    }
+  ],
+
+  'Mass Spectrometry Calculator': [
+    {
+      name: 'molecularWeight',
+      label: 'Molecular Weight (Da)',
+      type: 'number',
+      unit: 'Da',
+      required: true,
+      min: 0,
+      step: 0.01,
+      helpText: 'Molecular weight of the compound'
+    },
+    {
+      name: 'charge',
+      label: 'Charge',
+      type: 'number',
+      required: true,
+      min: -10,
+      max: 10,
+      step: 1,
+      helpText: 'Charge state of the ion'
+    },
+    {
+      name: 'hydrogenIons',
+      label: 'Hydrogen Ions',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Number of protons added'
+    }
+  ],
+
+  'NMR Calculator': [
+    {
+      name: 'sampleFrequency',
+      label: 'Sample Frequency (MHz)',
+      type: 'number',
+      unit: 'MHz',
+      required: true,
+      min: 0,
+      step: 0.001,
+      helpText: 'Frequency of sample signal'
+    },
+    {
+      name: 'referenceFrequency',
+      label: 'Reference Frequency (MHz)',
+      type: 'number',
+      unit: 'MHz',
+      required: true,
+      min: 0,
+      step: 0.001,
+      helpText: 'Frequency of reference signal'
+    },
+    {
+      name: 'couplingConstant',
+      label: 'Coupling Constant (Hz)',
+      type: 'number',
+      unit: 'Hz',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'J-coupling constant'
+    }
+  ],
+
+  'X-ray Crystallography Calculator': [
+    {
+      name: 'wavelength',
+      label: 'Wavelength (Å)',
+      type: 'number',
+      unit: 'Å',
+      required: true,
+      min: 0,
+      step: 0.01,
+      helpText: 'X-ray wavelength'
+    },
+    {
+      name: 'diffractionAngle',
+      label: 'Diffraction Angle (degrees)',
+      type: 'number',
+      unit: 'degrees',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Bragg angle'
+    },
+    {
+      name: 'unitCellA',
+      label: 'Unit Cell A (Å)',
+      type: 'number',
+      unit: 'Å',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Unit cell parameter a'
+    },
+    {
+      name: 'unitCellB',
+      label: 'Unit Cell B (Å)',
+      type: 'number',
+      unit: 'Å',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Unit cell parameter b'
+    },
+    {
+      name: 'unitCellC',
+      label: 'Unit Cell C (Å)',
+      type: 'number',
+      unit: 'Å',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Unit cell parameter c'
+    }
+  ],
+
+  'Cryo-EM Calculator': [
+    {
+      name: 'electronWavelength',
+      label: 'Electron Wavelength (Å)',
+      type: 'number',
+      unit: 'Å',
+      required: true,
+      min: 0,
+      step: 0.001,
+      helpText: 'De Broglie wavelength of electrons'
+    },
+    {
+      name: 'defocus',
+      label: 'Defocus (μm)',
+      type: 'number',
+      unit: 'μm',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Defocus value'
+    },
+    {
+      name: 'particleSize',
+      label: 'Particle Size (nm)',
+      type: 'number',
+      unit: 'nm',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Size of particles being imaged'
+    },
+    {
+      name: 'accelerationVoltage',
+      label: 'Acceleration Voltage (kV)',
+      type: 'number',
+      unit: 'kV',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Electron acceleration voltage'
+    }
+  ],
+
+  'Bioinformatics Calculator': [
+    {
+      name: 'identicalPositions',
+      label: 'Identical Positions',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Number of identical positions'
+    },
+    {
+      name: 'totalPositions',
+      label: 'Total Positions',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Total number of positions compared'
+    },
+    {
+      name: 'gapPenalty',
+      label: 'Gap Penalty',
+      type: 'number',
+      required: true,
+      min: -100,
+      step: 1,
+      helpText: 'Penalty for gaps in alignment'
+    },
+    {
+      name: 'mismatchPenalty',
+      label: 'Mismatch Penalty',
+      type: 'number',
+      required: true,
+      min: -100,
+      step: 1,
+      helpText: 'Penalty for mismatches'
+    }
+  ],
+
+  'Machine Learning Calculator': [
+    {
+      name: 'truePositives',
+      label: 'True Positives',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Number of true positive predictions'
+    },
+    {
+      name: 'falsePositives',
+      label: 'False Positives',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Number of false positive predictions'
+    },
+    {
+      name: 'trueNegatives',
+      label: 'True Negatives',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Number of true negative predictions'
+    },
+    {
+      name: 'falseNegatives',
+      label: 'False Negatives',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Number of false negative predictions'
+    }
+  ],
+
+  'Statistical Power Calculator': [
+    {
+      name: 'effectSize',
+      label: 'Effect Size',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 0.01,
+      helpText: 'Cohen\'s d effect size'
+    },
+    {
+      name: 'sampleSize',
+      label: 'Sample Size',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Number of participants'
+    },
+    {
+      name: 'alpha',
+      label: 'Alpha Level',
+      type: 'number',
+      required: true,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      helpText: 'Significance level (usually 0.05)'
+    },
+    {
+      name: 'standardDeviation',
+      label: 'Standard Deviation',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 0.01,
+      helpText: 'Standard deviation of the population'
+    }
+  ],
+
+  'Correlation Calculator': [
+    {
+      name: 'xValues',
+      label: 'X Values',
+      type: 'text',
+      required: true,
+      placeholder: '1,2,3,4,5',
+      helpText: 'Comma-separated X values'
+    },
+    {
+      name: 'yValues',
+      label: 'Y Values',
+      type: 'text',
+      required: true,
+      placeholder: '2,4,6,8,10',
+      helpText: 'Comma-separated Y values'
+    },
+    {
+      name: 'correlationType',
+      label: 'Correlation Type',
+      type: 'select',
+      options: ['pearson', 'spearman', 'kendall'],
+      required: true,
+      helpText: 'Type of correlation to calculate'
+    }
+  ],
+
+  'ANOVA Calculator': [
+    {
+      name: 'groupData',
+      label: 'Group Data',
+      type: 'text',
+      required: true,
+      placeholder: '10,12,11;15,17,16;18,20,19',
+      helpText: 'Semicolon-separated groups, comma-separated values within groups'
+    },
+    {
+      name: 'alpha',
+      label: 'Alpha Level',
+      type: 'number',
+      required: true,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      helpText: 'Significance level (usually 0.05)'
+    }
+  ],
+
+  'Chi-Square Calculator': [
+    {
+      name: 'observedValues',
+      label: 'Observed Values',
+      type: 'text',
+      required: true,
+      placeholder: '25,75',
+      helpText: 'Comma-separated observed frequencies'
+    },
+    {
+      name: 'expectedValues',
+      label: 'Expected Values',
+      type: 'text',
+      required: true,
+      placeholder: '20,80',
+      helpText: 'Comma-separated expected frequencies'
+    },
+    {
+      name: 'degreesOfFreedom',
+      label: 'Degrees of Freedom',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Degrees of freedom for the test'
+    }
+  ],
+
+  'Regression Calculator': [
+    {
+      name: 'xValues',
+      label: 'X Values',
+      type: 'text',
+      required: true,
+      placeholder: '1,2,3,4,5',
+      helpText: 'Comma-separated X values'
+    },
+    {
+      name: 'yValues',
+      label: 'Y Values',
+      type: 'text',
+      required: true,
+      placeholder: '2,4,6,8,10',
+      helpText: 'Comma-separated Y values'
+    },
+    {
+      name: 'regressionType',
+      label: 'Regression Type',
+      type: 'select',
+      options: ['linear', 'multiple'],
+      required: true,
+      helpText: 'Type of regression to perform'
+    }
+  ],
+
+  'Survival Analysis Calculator': [
+    {
+      name: 'timePoints',
+      label: 'Time Points',
+      type: 'text',
+      required: true,
+      placeholder: '1,2,3,4,5',
+      helpText: 'Comma-separated time points'
+    },
+    {
+      name: 'events',
+      label: 'Events',
+      type: 'text',
+      required: true,
+      placeholder: '1,1,0,1,0',
+      helpText: 'Comma-separated event indicators (1=event, 0=censored)'
+    },
+    {
+      name: 'censored',
+      label: 'Censored',
+      type: 'text',
+      required: true,
+      placeholder: '0,0,1,0,1',
+      helpText: 'Comma-separated censoring indicators (1=censored, 0=event)'
+    }
+  ],
+
+  'Meta-Analysis Calculator': [
+    {
+      name: 'effectSizes',
+      label: 'Effect Sizes',
+      type: 'text',
+      required: true,
+      placeholder: '0.5,0.6,0.4',
+      helpText: 'Comma-separated effect sizes'
+    },
+    {
+      name: 'standardErrors',
+      label: 'Standard Errors',
+      type: 'text',
+      required: true,
+      placeholder: '0.1,0.1,0.1',
+      helpText: 'Comma-separated standard errors'
+    },
+    {
+      name: 'sampleSizes',
+      label: 'Sample Sizes',
+      type: 'text',
+      required: true,
+      placeholder: '100,100,100',
+      helpText: 'Comma-separated sample sizes'
+    }
+  ],
+
+  'Pharmacokinetics Calculator': [
+    {
+      name: 'eliminationRate',
+      label: 'Elimination Rate (h⁻¹)',
+      type: 'number',
+      unit: 'h⁻¹',
+      required: true,
+      min: 0,
+      step: 0.001,
+      helpText: 'First-order elimination rate constant'
+    },
+    {
+      name: 'dose',
+      label: 'Dose (mg)',
+      type: 'number',
+      unit: 'mg',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Administered dose'
+    },
+    {
+      name: 'areaUnderCurve',
+      label: 'AUC (mg·h/L)',
+      type: 'number',
+      unit: 'mg·h/L',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Area under the concentration-time curve'
+    },
+    {
+      name: 'volumeDistribution',
+      label: 'Volume of Distribution (L)',
+      type: 'number',
+      unit: 'L',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Apparent volume of distribution'
+    }
+  ],
+
+  'Toxicology Calculator': [
+    {
+      name: 'noael',
+      label: 'NOAEL (mg/kg/day)',
+      type: 'number',
+      unit: 'mg/kg/day',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'No Observed Adverse Effect Level'
+    },
+    {
+      name: 'humanExposure',
+      label: 'Human Exposure (mg/kg/day)',
+      type: 'number',
+      unit: 'mg/kg/day',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Estimated human exposure level'
+    },
+    {
+      name: 'ld50',
+      label: 'LD50 (mg/kg)',
+      type: 'number',
+      unit: 'mg/kg',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Lethal dose for 50% of population'
+    },
+    {
+      name: 'bodyWeight',
+      label: 'Body Weight (kg)',
+      type: 'number',
+      unit: 'kg',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Body weight for calculations'
+    }
+  ],
+
+  'Neuroscience Calculator': [
+    {
+      name: 'restingPotential',
+      label: 'Resting Potential (mV)',
+      type: 'number',
+      unit: 'mV',
+      required: true,
+      min: -100,
+      max: 0,
+      step: 1,
+      helpText: 'Resting membrane potential'
+    },
+    {
+      name: 'thresholdPotential',
+      label: 'Threshold Potential (mV)',
+      type: 'number',
+      unit: 'mV',
+      required: true,
+      min: -100,
+      max: 0,
+      step: 1,
+      helpText: 'Action potential threshold'
+    },
+    {
+      name: 'timeConstant',
+      label: 'Time Constant (ms)',
+      type: 'number',
+      unit: 'ms',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Membrane time constant'
+    },
+    {
+      name: 'membraneResistance',
+      label: 'Membrane Resistance (MΩ)',
+      type: 'number',
+      unit: 'MΩ',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Input resistance'
+    }
+  ],
+
+  'Immunology Calculator': [
+    {
+      name: 'dilutionFactor',
+      label: 'Dilution Factor',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Dilution factor used'
+    },
+    {
+      name: 'antibodyConcentration',
+      label: 'Antibody Concentration (μg/mL)',
+      type: 'number',
+      unit: 'μg/mL',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Concentration of antibody'
+    },
+    {
+      name: 'cytokineLevel',
+      label: 'Cytokine Level (pg/mL)',
+      type: 'number',
+      unit: 'pg/mL',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Cytokine concentration'
+    },
+    {
+      name: 'cellCount',
+      label: 'Cell Count (cells/μL)',
+      type: 'number',
+      unit: 'cells/μL',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Number of immune cells'
+    }
+  ],
+
+  'Ecology Calculator': [
+    {
+      name: 'populationSize',
+      label: 'Population Size',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Number of individuals in population'
+    },
+    {
+      name: 'growthRate',
+      label: 'Growth Rate',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 0.001,
+      helpText: 'Population growth rate'
+    },
+    {
+      name: 'speciesCounts',
+      label: 'Species Counts',
+      type: 'text',
+      required: 'text',
+      placeholder: '50,30,20',
+      helpText: 'Comma-separated counts for each species'
+    },
+    {
+      name: 'carryingCapacity',
+      label: 'Carrying Capacity',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Maximum population size environment can support'
+    }
+  ],
+
+  'Climate Science Calculator': [
+    {
+      name: 'radiativeForcing',
+      label: 'Radiative Forcing (W/m²)',
+      type: 'number',
+      unit: 'W/m²',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Radiative forcing value'
+    },
+    {
+      name: 'climateSensitivity',
+      label: 'Climate Sensitivity (°C/(W/m²))',
+      type: 'number',
+      unit: '°C/(W/m²)',
+      required: true,
+      min: 0,
+      step: 0.01,
+      helpText: 'Climate sensitivity parameter'
+    },
+    {
+      name: 'temperatureAnomaly',
+      label: 'Temperature Anomaly (°C)',
+      type: 'number',
+      unit: '°C',
+      required: true,
+      min: -10,
+      max: 10,
+      step: 0.1,
+      helpText: 'Temperature change from baseline'
+    },
+    {
+      name: 'carbonConcentration',
+      label: 'Carbon Concentration (ppm)',
+      type: 'number',
+      unit: 'ppm',
+      required: true,
+      min: 0,
+      step: 1,
+      helpText: 'Atmospheric CO2 concentration'
+    }
+  ],
+
+  'Materials Science Calculator': [
+    {
+      name: 'stress',
+      label: 'Stress (MPa)',
+      type: 'number',
+      unit: 'MPa',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Applied stress'
+    },
+    {
+      name: 'strain',
+      label: 'Strain',
+      type: 'number',
+      required: true,
+      min: 0,
+      step: 0.001,
+      helpText: 'Applied strain'
+    },
+    {
+      name: 'elasticModulus',
+      label: 'Elastic Modulus (GPa)',
+      type: 'number',
+      unit: 'GPa',
+      required: true,
+      min: 0,
+      step: 0.1,
+      helpText: 'Young\'s modulus (leave empty to calculate)'
+    },
+    {
+      name: 'poissonRatio',
+      label: 'Poisson\'s Ratio',
+      type: 'number',
+      required: true,
+      min: 0,
+      max: 0.5,
+      step: 0.01,
+      helpText: 'Poisson\'s ratio of the material'
     }
   ]
 };

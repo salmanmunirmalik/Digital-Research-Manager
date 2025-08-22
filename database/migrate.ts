@@ -63,6 +63,9 @@ class DatabaseMigrator {
 
   async runMigrations(migrationsDir: string = './database/migrations') {
     try {
+      console.log('🚀 Starting migration process...');
+      console.log('📁 Migrations directory:', path.resolve(migrationsDir));
+      
       await this.init();
       
       const executedMigrations = await this.getExecutedMigrations();
@@ -71,13 +74,22 @@ class DatabaseMigrator {
       console.log(`📋 Found ${migrationFiles.length} migration files`);
       console.log(`📋 ${executedMigrations.length} migrations already executed`);
       
+      if (migrationFiles.length === 0) {
+        console.log('⚠️  No migration files found!');
+        return;
+      }
+      
       for (const file of migrationFiles) {
+        console.log(`📄 Processing file: ${file}`);
         const migrationId = path.basename(file, '.sql');
+        console.log(`🆔 Migration ID: ${migrationId}`);
         
         if (!executedMigrations.includes(migrationId)) {
           console.log(`🔄 Running migration: ${migrationId}`);
           
           const sql = fs.readFileSync(file, 'utf8');
+          console.log(`📝 SQL content length: ${sql.length} characters`);
+          
           const migration: Migration = {
             id: migrationId,
             name: path.basename(file),
@@ -119,21 +131,19 @@ class DatabaseMigrator {
 }
 
 // CLI usage
-if (require.main === module) {
-  const migrator = new DatabaseMigrator();
-  
-  migrator.runMigrations()
-    .then(() => {
-      console.log('🚀 Migration script completed successfully');
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error('💥 Migration script failed:', error);
-      process.exit(1);
-    })
-    .finally(async () => {
-      await migrator.close();
-    });
-}
+const migrator = new DatabaseMigrator();
+
+migrator.runMigrations()
+  .then(() => {
+    console.log('🚀 Migration script completed successfully');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('💥 Migration script failed:', error);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await migrator.close();
+  });
 
 export default DatabaseMigrator;

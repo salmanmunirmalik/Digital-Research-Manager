@@ -20,6 +20,7 @@ import HelpForumPage from './pages/HelpForumPage';
 import ConferenceNewsPage from './pages/ConferenceNewsPage';
 import CalculatorHubPage from './pages/CalculatorHubPage';
 import ReferenceLibraryPage from './pages/ReferenceLibraryPage';
+import ResourceExchangePage from './pages/ResourceExchangePage';
 
 import ResearchAssistantPage from './pages/ResearchAssistantPage';
 import LoginPage from './pages/LoginPage';
@@ -29,6 +30,7 @@ import UnauthorizedPage from './pages/UnauthorizedPage';
 import BioinformaticsToolsPage from './pages/BioinformaticsToolsPage';
 import MolecularBiologyPage from './pages/MolecularBiologyPage';
 import DataAnalyticsPage from './pages/DataAnalyticsPage';
+import LandingPage from './pages/LandingPage';
 
 // Demo Layout Component (temporary for demo)
 const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -205,13 +207,14 @@ const AppContent: React.FC = () => {
   return (
     <Routes>
       {/* Public routes */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
       
       {/* Protected routes */}
       <Route 
-        path="/" 
+        path="/home" 
         element={
           <ProtectedRoute>
             <Navigate to="/dashboard" replace />
@@ -237,11 +240,11 @@ const AppContent: React.FC = () => {
         } 
       />
       
-      {/* Lab Management - Admin and PI only */}
+      {/* Lab Management - All authenticated users */}
       <Route 
         path="/lab-management" 
         element={
-          <ProtectedRoute allowedRoles={['admin', 'principal_researcher']}>
+          <ProtectedRoute>
             <DemoLayout><LabManagementPage /></DemoLayout>
           </ProtectedRoute>
         } 
@@ -303,6 +306,16 @@ const AppContent: React.FC = () => {
         element={
           <ProtectedRoute>
             <DemoLayout><AutomatedPresentationsPage /></DemoLayout>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Resource Exchange - All authenticated users */}
+      <Route 
+        path="/resource-exchange" 
+        element={
+          <ProtectedRoute>
+            <DemoLayout><ResourceExchangePage /></DemoLayout>
           </ProtectedRoute>
         } 
       />

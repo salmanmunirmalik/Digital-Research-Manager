@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import RoleTestComponent from '../components/RoleTestComponent';
 import { 
   CalendarIcon, 
   CheckCircleIcon, 
@@ -483,10 +482,7 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Role Test Component - Debug Information */}
-      <div className="mb-6">
-        <RoleTestComponent />
-      </div>
+
 
       {/* Main Dashboard Content */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">

@@ -92,7 +92,7 @@ interface LabNotebookComment {
 
 
 const LabNotebookPage: React.FC = () => {
-  const { user, token } = useAuth();
+  const { user, token, demoLogin } = useAuth();
   const [entries, setEntries] = useState<LabNotebookEntry[]>([]);
   const [labs, setLabs] = useState<any[]>([]);
   const [labMembers, setLabMembers] = useState<any[]>([]);
@@ -134,7 +134,7 @@ const LabNotebookPage: React.FC = () => {
     results: '',
     conclusions: '',
     next_steps: '',
-    lab_id: '',
+    lab_id: user?.lab_id || '',
     project_id: '',
     tags: [''],
     privacy_level: 'lab',
@@ -162,13 +162,31 @@ const LabNotebookPage: React.FC = () => {
   const [shareLinkType, setShareLinkType] = useState<'view' | 'edit' | 'comment'>('view');
   const [shareLink, setShareLink] = useState<string>('');
 
+  // Auto-authenticate users for demo purposes
+  useEffect(() => {
+    if (!user && !token) {
+      demoLogin();
+    }
+  }, [user, token, demoLogin]);
+
   useEffect(() => {
     fetchEntries();
     fetchLabs();
     fetchLabMembers();
   }, [filters]);
 
+  // Update entryForm lab_id when user or labs change
+  useEffect(() => {
+    if (user?.lab_id) {
+      setEntryForm(prev => ({ ...prev, lab_id: user.lab_id }));
+    } else if (labs.length > 0) {
+      setEntryForm(prev => ({ ...prev, lab_id: labs[0].id }));
+    }
+  }, [user?.lab_id, labs]);
+
   const fetchEntries = async () => {
+    const authToken = token || 'demo-token-123';
+    
     try {
       setIsLoading(true);
       const queryParams = new URLSearchParams();
@@ -178,14 +196,13 @@ const LabNotebookPage: React.FC = () => {
 
       const response = await fetch(`http://localhost:5001/api/lab-notebooks?${queryParams}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
         }
       });
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Entries data:', data);
         setEntries(data.entries || []);
       } else {
         throw new Error('Failed to fetch entries');
@@ -222,20 +239,50 @@ const LabNotebookPage: React.FC = () => {
 
   const handleCreateEntry = async () => {
     try {
+      // Validate required fields
+      if (!entryForm.title?.trim()) {
+        setError('Title is required');
+        return;
+      }
+      if (!entryForm.content?.trim()) {
+        setError('Content is required');
+        return;
+      }
+
+      // Get valid lab_id from user or first available lab or use default demo lab
+      const validLabId = user?.lab_id || labs[0]?.id || '650e8400-e29b-41d4-a716-446655440000';
+      
+      // Use demo token if no token available (for auto-authentication)
+      const authToken = token || 'demo-token-123';
+      
+      setError(''); // Clear any previous errors
+      
       const response = await fetch('http://localhost:5001/api/lab-notebooks', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...entryForm,
-          author_id: user?.id,
-          lab_id: entryForm.lab_id || labs[0]?.id
+          title: entryForm.title,
+          content: entryForm.content,
+          entry_type: entryForm.entry_type,
+          status: entryForm.status,
+          priority: entryForm.priority,
+          objectives: entryForm.objectives,
+          methodology: entryForm.methodology,
+          results: entryForm.results,
+          conclusions: entryForm.conclusions,
+          next_steps: entryForm.next_steps,
+          lab_id: validLabId,
+          project_id: entryForm.project_id || null,
+          tags: entryForm.tags.filter(tag => tag.trim() !== ''),
+          privacy_level: entryForm.privacy_level
         })
       });
 
       if (response.ok) {
+        // Close modal and reset form
         setShowCreateModal(false);
         setEntryForm({
           title: '',
@@ -267,21 +314,29 @@ const LabNotebookPage: React.FC = () => {
             completed: false
           }]
         });
-        fetchEntries();
+        
+        // Refresh the entries list
+        await fetchEntries();
+      } else {
+        const errorData = await response.json();
+        setError(`Failed to create entry: ${errorData.error || 'Unknown error'}`);
       }
     } catch (err) {
-      setError('Failed to create entry');
+      setError('Failed to create entry. Please try again.');
     }
   };
 
   const handleUpdateEntry = async () => {
     if (!selectedEntry) return;
     
+    // Auto-authenticate if needed
+    const authToken = token || 'demo-token-123';
+
     try {
       const response = await fetch(`http://localhost:5001/api/lab-notebooks/${selectedEntry.id}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(entryForm)
@@ -290,26 +345,35 @@ const LabNotebookPage: React.FC = () => {
       if (response.ok) {
         setShowEditModal(false);
         fetchEntries();
+      } else {
+        const errorData = await response.json();
+        setError(`Failed to update entry: ${errorData.error || 'Unknown error'}`);
       }
     } catch (err) {
       setError('Failed to update entry');
     }
   };
 
-  const handleDeleteEntry = async (id: string) => {
+    const handleDeleteEntry = async (id: string) => {
     if (!confirm('Are you sure you want to delete this entry?')) return;
     
+    // Auto-authenticate if needed
+    const authToken = token || 'demo-token-123';
+
     try {
       const response = await fetch(`http://localhost:5001/api/lab-notebooks/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
         }
       });
 
       if (response.ok) {
         fetchEntries();
+      } else {
+        const errorData = await response.json();
+        setError(`Failed to delete entry: ${errorData.error || 'Unknown error'}`);
       }
     } catch (err) {
       setError('Failed to delete entry');
@@ -711,6 +775,8 @@ const LabNotebookPage: React.FC = () => {
               </div>
               </div>
 
+
+
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
@@ -939,96 +1005,126 @@ const LabNotebookPage: React.FC = () => {
                 </button>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <form onSubmit={(e) => { 
+                e.preventDefault(); 
+                handleCreateEntry(); 
+              }} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
-                  <Input
-                    placeholder="Enter entry title"
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Title <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      placeholder="Enter entry title"
                     value={entryForm.title}
-                    onChange={(e) => setEntryForm({...entryForm, title: e.target.value})}
+                      onChange={(e) => setEntryForm({...entryForm, title: e.target.value})}
+                    required
+                      className={!entryForm.title ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}
                   />
+                    {!entryForm.title && (
+                      <p className="mt-1 text-sm text-red-600">Title is required</p>
+                    )}
                 </div>
-                
+                  
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                  <Select
-                    value={entryForm.entry_type}
-                    onChange={(e) => setEntryForm({...entryForm, entry_type: e.target.value as any})}
-                  >
-                    <option value="experiment">Experiment</option>
-                    <option value="observation">Observation</option>
-                    <option value="protocol">Protocol</option>
-                    <option value="analysis">Analysis</option>
-                    <option value="idea">Idea</option>
-                    <option value="meeting">Meeting</option>
-                  </Select>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <Select
+                      value={entryForm.entry_type}
+                      onChange={(e) => setEntryForm({...entryForm, entry_type: e.target.value as any})}
+                    >
+                      <option value="experiment">Experiment</option>
+                      <option value="observation">Observation</option>
+                      <option value="protocol">Protocol</option>
+                      <option value="analysis">Analysis</option>
+                      <option value="idea">Idea</option>
+                      <option value="meeting">Meeting</option>
+                    </Select>
               </div>
 
               <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                  <Select
-                    value={entryForm.status}
-                    onChange={(e) => setEntryForm({...entryForm, status: e.target.value as any})}
-                  >
-                    <option value="planning">Planning</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="on_hold">On Hold</option>
-                    <option value="failed">Failed</option>
-                  </Select>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <Select
+                      value={entryForm.status}
+                      onChange={(e) => setEntryForm({...entryForm, status: e.target.value as any})}
+                    >
+                      <option value="planning">Planning</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                      <option value="on_hold">On Hold</option>
+                      <option value="failed">Failed</option>
+                    </Select>
               </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
-                  <Select
-                    value={entryForm.priority}
-                    onChange={(e) => setEntryForm({...entryForm, priority: e.target.value as any})}
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="critical">Critical</option>
-                  </Select>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                    <Select
+                      value={entryForm.priority}
+                      onChange={(e) => setEntryForm({...entryForm, priority: e.target.value as any})}
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="critical">Critical</option>
+                    </Select>
               </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Content</label>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Content <span className="text-red-500">*</span>
+                    </label>
                 <textarea
-                    placeholder="Describe your entry..."
-                    value={entryForm.content}
-                    onChange={(e) => setEntryForm({...entryForm, content: e.target.value})}
-                    className="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Describe your entry..."
+                      value={entryForm.content}
+                      onChange={(e) => setEntryForm({...entryForm, content: e.target.value})}
+                      required
+                      className={`w-full h-32 px-3 py-2 border rounded-md focus:ring-2 focus:border-transparent transition-colors ${
+                        !entryForm.content 
+                          ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                          : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                      }`}
+                    />
+                    {!entryForm.content && (
+                      <p className="mt-1 text-sm text-red-600">Content is required</p>
+                    )}
+              </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Objectives</label>
+                <textarea
+                      placeholder="What are you trying to achieve?"
+                      value={entryForm.objectives}
+                      onChange={(e) => setEntryForm({...entryForm, objectives: e.target.value})}
+                      className="w-full h-24 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Objectives</label>
-                <textarea
-                    placeholder="What are you trying to achieve?"
-                    value={entryForm.objectives}
-                    onChange={(e) => setEntryForm({...entryForm, objectives: e.target.value})}
-                    className="w-full h-24 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Tags (comma-separated)</label>
-                  <Input
-                    placeholder="Enter tags separated by commas"
-                    value={entryForm.tags.join(', ')}
-                    onChange={(e) => setEntryForm({...entryForm, tags: e.target.value.split(',').map(t => t.trim()).filter(t => t)})}
-                  />
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Tags (comma-separated)</label>
+                    <Input
+                      placeholder="Enter tags separated by commas"
+                      value={entryForm.tags.join(', ')}
+                      onChange={(e) => setEntryForm({...entryForm, tags: e.target.value.split(',').map(t => t.trim()).filter(t => t)})}
+                    />
                   </div>
               </div>
 
-              <div className="flex justify-end gap-3 mt-6">
-                <Button variant="ghost" onClick={() => setShowCreateModal(false)}>
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                  <Button 
+                  type="button"
+                    variant="ghost" 
+                    onClick={() => setShowCreateModal(false)}
+                >
                   Cancel
-                </Button>
-                <Button onClick={handleCreateEntry}>
-                  Create Entry
-                </Button>
+                  </Button>
+                  <Button 
+                  type="submit"
+                    disabled={!entryForm.title || !entryForm.content}
+                    className="min-w-[120px]"
+                >
+                    Create Entry
+                  </Button>
               </div>
+            </form>
             </div>
           </div>
         </div>

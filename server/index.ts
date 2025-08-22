@@ -43,6 +43,23 @@ const authenticateToken = async (req: any, res: any, next: any) => {
       return res.status(401).json({ error: 'Missing or invalid Authorization header' });
     }
     const token = authHeader.split(' ')[1];
+    
+    // Demo token handling for testing
+    if (token === 'demo-token-123') {
+      // Use a demo user for testing
+      req.user = {
+        id: '550e8400-e29b-41d4-a716-446655440003',
+        email: 'demo@researchlab.com',
+        username: 'student',
+        first_name: 'Demo',
+        last_name: 'User',
+        role: 'student',
+        status: 'active',
+        lab_id: '650e8400-e29b-41d4-a716-446655440000'
+      };
+      return next();
+    }
+    
     const payload: any = jwt.verify(token, JWT_SECRET);
 
     // Load user from DB
@@ -975,6 +992,7 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
       methodology, 
       results, 
       conclusions, 
+      next_steps,
       lab_id,
       project_id,
       tags,
@@ -996,16 +1014,16 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Access denied to this lab' });
     }
 
-    // Create lab notebook entry
+    // Create lab notebook entry - only insert fields that exist in the database
     const result = await pool.query(`
       INSERT INTO lab_notebook_entries (
-        title, content, entry_type, results, conclusions, 
+        title, content, entry_type, results, conclusions, next_steps,
         lab_id, project_id, author_id, privacy_level, tags
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `, [
-      title, content, entry_type || 'experiment', results, conclusions,
+      title, content, entry_type || 'experiment', results || '', conclusions || '', next_steps || '',
       lab_id, project_id, req.user.id, privacy_level, tags || []
     ]);
 
@@ -1182,45 +1200,6 @@ app.put('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
   }
 });
 
-app.delete('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Get entry
-    const entry = await pool.query(`
-      SELECT * FROM lab_notebook_entries WHERE id = $1
-    `, [id]);
-
-    if (entry.rows.length === 0) {
-      return res.status(404).json({ error: 'Lab notebook entry not found' });
-    }
-
-    // Check permissions (creator, lab PI, or admin)
-    if (entry.rows[0].author_id !== req.user.id && req.user.role !== 'admin') {
-      const labAccess = await pool.query(`
-        SELECT role FROM lab_members 
-        WHERE lab_id = $1 AND user_id = $2 AND role = 'principal_researcher'
-      `, [entry.rows[0].lab_id, req.user.id]);
-
-      if (labAccess.rows.length === 0) {
-        return res.status(403).json({ error: 'Insufficient permissions to delete this entry' });
-      }
-    }
-
-    // Soft delete (mark as inactive by setting lab_id to null)
-    await pool.query(`
-      UPDATE lab_notebook_entries SET lab_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1
-    `, [id]);
-
-    console.log('📓 Lab notebook entry deleted:', { entryId: id, deletedBy: req.user.username });
-
-    res.json({ message: 'Lab notebook entry deleted successfully' });
-
-  } catch (error) {
-    console.error('💥 Delete lab notebook error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
 
 // Share lab notebook entry with individual users
 app.post('/api/lab-notebooks/:id/share', authenticateToken, async (req, res) => {
@@ -2042,6 +2021,433 @@ app.get('/api/instruments/categories', authenticateToken, async (req, res) => {
   }
 });
 
+// ===== RESOURCE EXCHANGE (SUPPLIES) =====
+app.post('/api/exchange/requests', authenticateToken, async (req, res) => {
+  try {
+    const {
+      item_name,
+      category,
+      quantity,
+      unit,
+      urgency = 'normal',
+      needed_by,
+      location_preference = 'institution',
+      notes,
+      lab_id,
+      requester_lab_id
+    } = req.body;
+
+    // Accept both lab_id and requester_lab_id for compatibility
+    const finalLabId = lab_id || requester_lab_id;
+
+    if (!item_name || !finalLabId) {
+      return res.status(400).json({ error: 'item_name and lab_id are required' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO resource_exchange_requests (
+        requester_lab_id, requester_user_id, item_name, category, quantity, unit,
+        urgency, needed_by, location_preference, notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING *
+    `, [finalLabId, req.user.id, item_name, category, quantity, unit, urgency, needed_by, location_preference, notes]);
+
+    res.status(201).json({ request: result.rows[0] });
+  } catch (error) {
+    console.error('Create exchange request error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/exchange/requests', authenticateToken, async (req, res) => {
+  try {
+    const { status, search, institution, scope } = req.query as any;
+
+    let query = `
+      SELECT r.*, l.name as requester_lab_name, l.institution
+      FROM resource_exchange_requests r
+      JOIN labs l ON r.requester_lab_id = l.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    let p = 0;
+
+    if (status) { p++; query += ` AND r.status = $${p}`; params.push(status); }
+    if (search) { p++; query += ` AND (r.item_name ILIKE $${p} OR r.category ILIKE $${p})`; params.push(`%${search}%`); }
+    if (institution) { p++; query += ` AND l.institution ILIKE $${p}`; params.push(`%${institution}%`); }
+    if (scope) { p++; query += ` AND r.location_preference = $${p}`; params.push(scope); }
+
+    query += ' ORDER BY r.created_at DESC';
+
+    const result = await pool.query(query, params);
+    res.json({ requests: result.rows });
+  } catch (error) {
+    console.error('Get exchange requests error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/exchange/requests/:id/status', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const allowed = ['open','matched','fulfilled','cancelled'];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    const result = await pool.query(`
+      UPDATE resource_exchange_requests
+      SET status = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING *
+    `, [status, id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Request not found' });
+    res.json({ request: result.rows[0] });
+  } catch (error) {
+    console.error('Update exchange request status error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/exchange/requests/:id/offers', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity, unit, message } = req.body;
+
+    const reqCheck = await pool.query('SELECT id FROM resource_exchange_requests WHERE id = $1', [id]);
+    if (reqCheck.rows.length === 0) return res.status(404).json({ error: 'Request not found' });
+
+    // Determine provider lab from current user's active membership
+    const labRes = await pool.query(`
+      SELECT lab_id FROM lab_members WHERE user_id = $1 AND is_active = true LIMIT 1
+    `, [req.user.id]);
+    if (labRes.rows.length === 0) return res.status(400).json({ error: 'No active lab membership for provider' });
+    const providerLabId = labRes.rows[0].lab_id;
+
+    const result = await pool.query(`
+      INSERT INTO resource_exchange_offers (
+        request_id, provider_lab_id, provider_user_id, quantity, unit, message
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `, [id, providerLabId, req.user.id, quantity, unit, message]);
+
+    res.status(201).json({ offer: result.rows[0] });
+  } catch (error) {
+    console.error('Create exchange offer error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/exchange/offers', authenticateToken, async (req, res) => {
+  try {
+    const { request_id } = req.query as any;
+    let query = `
+      SELECT o.*, l.name as provider_lab_name
+      FROM resource_exchange_offers o
+      JOIN labs l ON o.provider_lab_id = l.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    let p = 0;
+    if (request_id) { p++; query += ` AND o.request_id = $${p}`; params.push(request_id); }
+    query += ' ORDER BY o.created_at DESC';
+    const result = await pool.query(query, params);
+    res.json({ offers: result.rows });
+  } catch (error) {
+    console.error('Get exchange offers error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/exchange/offers/:id/status', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const allowed = ['pending','accepted','declined','fulfilled','withdrawn'];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    const result = await pool.query(`
+      UPDATE resource_exchange_offers
+      SET status = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING *
+    `, [status, id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Offer not found' });
+    res.json({ offer: result.rows[0] });
+  } catch (error) {
+    console.error('Update exchange offer status error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ===== SHARED INSTRUMENTS DIRECTORY =====
+app.post('/api/instruments/:id/share', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { sharing_scope = 'institution', access_policy, external_contact_email, is_shared = true } = req.body;
+
+    const existing = await pool.query('SELECT id FROM shared_instruments WHERE instrument_id = $1', [id]);
+    if (existing.rows.length > 0) {
+      const result = await pool.query(`
+        UPDATE shared_instruments
+        SET sharing_scope = $1, access_policy = $2, external_contact_email = $3, is_shared = $4, updated_at = CURRENT_TIMESTAMP
+        WHERE instrument_id = $5
+        RETURNING *
+      `, [sharing_scope, access_policy, external_contact_email, is_shared, id]);
+      return res.json({ shared: result.rows[0] });
+    } else {
+      const result = await pool.query(`
+        INSERT INTO shared_instruments (instrument_id, sharing_scope, access_policy, external_contact_email, is_shared)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `, [id, sharing_scope, access_policy, external_contact_email, is_shared]);
+      return res.status(201).json({ shared: result.rows[0] });
+    }
+  } catch (error) {
+    console.error('Share instrument error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/instruments/shared', authenticateToken, async (req, res) => {
+  try {
+    const { scope, institution, availability = 'available', search } = req.query as any;
+    let query = `
+      SELECT i.*, l.name as lab_name, l.institution, s.sharing_scope, s.access_policy, s.external_contact_email
+      FROM shared_instruments s
+      JOIN instruments i ON s.instrument_id = i.id
+      JOIN labs l ON i.lab_id = l.id
+      WHERE s.is_shared = true
+    `;
+    const params: any[] = [];
+    let p = 0;
+    if (scope) { p++; query += ` AND s.sharing_scope = $${p}`; params.push(scope); }
+    if (institution) { p++; query += ` AND l.institution ILIKE $${p}`; params.push(`%${institution}%`); }
+    if (availability) { p++; query += ` AND i.status = $${p}`; params.push(availability); }
+    if (search) { p++; query += ` AND (i.name ILIKE $${p} OR i.category ILIKE $${p})`; params.push(`%${search}%`); }
+    query += ' ORDER BY i.name ASC';
+    const result = await pool.query(query, params);
+    res.json({ instruments: result.rows });
+  } catch (error) {
+    console.error('Get shared instruments error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ===== INSTRUMENT BOOKINGS =====
+app.post('/api/instruments/:id/book', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      booking_date,
+      start_time,
+      end_time,
+      duration_minutes,
+      purpose,
+      research_project,
+      urgency = 'normal',
+      notes
+    } = req.body;
+
+    if (!booking_date || !start_time || !end_time || !duration_minutes || !purpose) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Check if instrument is available for the requested time
+    const conflictCheck = await pool.query(`
+      SELECT id FROM instrument_bookings 
+      WHERE instrument_id = $1 
+      AND booking_date = $2 
+      AND status IN ('pending', 'approved')
+      AND (
+        (start_time <= $3 AND end_time > $3) OR
+        (start_time < $4 AND end_time >= $4) OR
+        (start_time >= $3 AND end_time <= $4)
+      )
+    `, [id, booking_date, start_time, end_time]);
+
+    if (conflictCheck.rows.length > 0) {
+      return res.status(409).json({ error: 'Time slot conflicts with existing booking' });
+    }
+
+    // Check if instrument is unavailable (maintenance, etc.)
+    const unavailableCheck = await pool.query(`
+      SELECT id FROM instrument_unavailable_periods 
+      WHERE instrument_id = $1 
+      AND start_datetime::date <= $2 
+      AND end_datetime::date >= $2
+    `, [id, booking_date]);
+
+    if (unavailableCheck.rows.length > 0) {
+      return res.status(409).json({ error: 'Instrument unavailable on requested date' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO instrument_bookings (
+        instrument_id, user_id, lab_id, booking_date, start_time, end_time,
+        duration_minutes, purpose, research_project, urgency, notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING *
+    `, [id, req.user.id, req.user.lab_id || 'c8ace470-5e21-4d3b-ab95-da6084311657', booking_date, start_time, end_time, duration_minutes, purpose, research_project, urgency, notes]);
+
+    res.status(201).json({ booking: result.rows[0] });
+  } catch (error) {
+    console.error('Create instrument booking error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/instruments/:id/bookings', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { date, status } = req.query as any;
+
+    let query = `
+      SELECT b.*, u.username, u.first_name, u.last_name, l.name as lab_name
+      FROM instrument_bookings b
+      JOIN users u ON b.user_id = u.id
+      JOIN labs l ON b.lab_id = l.id
+      WHERE b.instrument_id = $1
+    `;
+    const params: any[] = [id];
+    let p = 1;
+
+    if (date) { p++; query += ` AND b.booking_date = $${p}`; params.push(date); }
+    if (status) { p++; query += ` AND b.status = $${p}`; params.push(status); }
+
+    query += ' ORDER BY b.booking_date DESC, b.start_time ASC';
+
+    const result = await pool.query(query, params);
+    res.json({ bookings: result.rows });
+  } catch (error) {
+    console.error('Get instrument bookings error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/instruments/:id/availability', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { date } = req.query as any;
+
+    if (!date) {
+      return res.status(400).json({ error: 'Date parameter required' });
+    }
+
+    // Get available time slots for the instrument on the specified date
+    const dayOfWeek = new Date(date).getDay();
+    
+    const slotsResult = await pool.query(`
+      SELECT * FROM instrument_booking_slots 
+      WHERE instrument_id = $1 AND day_of_week = $2 AND is_active = true
+    `, [id, dayOfWeek]);
+
+    if (slotsResult.rows.length === 0) {
+      return res.json({ available_slots: [], unavailable_periods: [] });
+    }
+
+    const slot = slotsResult.rows[0];
+    const startTime = slot.start_time;
+    const endTime = slot.end_time;
+    const slotDuration = slot.slot_duration_minutes;
+
+    // Generate time slots
+    const availableSlots = [];
+    let currentTime = new Date(`2000-01-01 ${startTime}`);
+    const endDateTime = new Date(`2000-01-01 ${endTime}`);
+
+    while (currentTime < endDateTime) {
+      const slotStart = currentTime.toTimeString().slice(0, 5);
+      const slotEnd = new Date(currentTime.getTime() + slotDuration * 60000).toTimeString().slice(0, 5);
+      
+      if (new Date(`2000-01-01 ${slotEnd}`) <= endDateTime) {
+        availableSlots.push({
+          start_time: slotStart,
+          end_time: slotEnd,
+          duration_minutes: slotDuration
+        });
+      }
+      
+      currentTime = new Date(currentTime.getTime() + slotDuration * 60000);
+    }
+
+    // Get existing bookings for the date
+    const bookingsResult = await pool.query(`
+      SELECT start_time, end_time FROM instrument_bookings 
+      WHERE instrument_id = $1 AND booking_date = $2 AND status IN ('pending', 'approved')
+      ORDER BY start_time
+    `, [id, date]);
+
+    // Get unavailable periods
+    const unavailableResult = await pool.query(`
+      SELECT start_datetime, end_datetime, reason FROM instrument_unavailable_periods 
+      WHERE instrument_id = $1 AND start_datetime::date <= $2 AND end_datetime::date >= $2
+    `, [id, date]);
+
+    res.json({
+      available_slots: availableSlots,
+      existing_bookings: bookingsResult.rows,
+      unavailable_periods: unavailableResult.rows
+    });
+  } catch (error) {
+    console.error('Get instrument availability error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/bookings/:id/status', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, rejection_reason } = req.body;
+
+    if (!['approved', 'rejected', 'cancelled', 'completed'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const updateData: any = { status };
+    if (status === 'approved') {
+      updateData.approved_by = req.user.id;
+      updateData.approved_at = new Date();
+    } else if (status === 'rejected' && rejection_reason) {
+      updateData.rejection_reason = rejection_reason;
+    }
+
+    const result = await pool.query(`
+      UPDATE instrument_bookings 
+      SET ${Object.keys(updateData).map((key, index) => `${key} = $${index + 2}`).join(', ')}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `, [id, ...Object.values(updateData)]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    res.json({ booking: result.rows[0] });
+  } catch (error) {
+    console.error('Update booking status error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/bookings/my', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT b.*, i.name as instrument_name, i.category, l.name as lab_name
+      FROM instrument_bookings b
+      JOIN instruments i ON b.instrument_id = i.id
+      JOIN labs l ON b.lab_id = l.id
+      WHERE b.user_id = $1
+      ORDER BY b.booking_date DESC, b.start_time ASC
+    `, [req.user.id]);
+
+    res.json({ bookings: result.rows });
+  } catch (error) {
+    console.error('Get my bookings error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 // ===== LAB NOTEBOOK ROUTES =====
 
 // Get all lab notebook entries with filters

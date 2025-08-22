@@ -6,7 +6,7 @@ import {
   BookmarkIcon, 
   HistoryIcon,
   BeakerIcon,
-  BarChartIcon,
+  BarChartIcon, 
   PipetteIcon,
   BrainCircuitIcon,
   LightbulbIcon,
@@ -124,12 +124,12 @@ const CalculatorHubPage: React.FC = () => {
   const calculatorsByCategory = Object.values(CALCULATOR_DEFINITIONS)
     .filter(calc => !excludedCategories.includes(calc.category))
     .reduce((acc, calc) => {
-      if (!acc[calc.category]) {
-        acc[calc.category] = [];
-      }
-      acc[calc.category].push(calc);
-      return acc;
-    }, {} as Record<string, typeof CALCULATOR_DEFINITIONS[keyof typeof CALCULATOR_DEFINITIONS][]>);
+    if (!acc[calc.category]) {
+      acc[calc.category] = [];
+    }
+    acc[calc.category].push(calc);
+    return acc;
+  }, {} as Record<string, typeof CALCULATOR_DEFINITIONS[keyof typeof CALCULATOR_DEFINITIONS][]>);
 
   const filteredCalculators = Object.entries(calculatorsByCategory)
     .filter(([category]) => selectedCalcCategory === 'all' || category === selectedCalcCategory)
@@ -361,7 +361,7 @@ const CalculatorHubPage: React.FC = () => {
     );
   };
 
-  return (
+    return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Enhanced Header */}
@@ -371,7 +371,7 @@ const CalculatorHubPage: React.FC = () => {
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-3 sm:mb-4">
             🧮 Calculators
-          </h1>
+        </h1>
           <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto mb-4 sm:mb-6 px-4">
             Advanced scientific calculators and unit conversion tools for research, laboratory work, and academic studies
           </p>
@@ -390,20 +390,20 @@ const CalculatorHubPage: React.FC = () => {
               <div className="text-2xl sm:text-3xl font-bold text-indigo-600">∞</div>
               <div className="text-xs sm:text-sm text-gray-500">Calculations</div>
             </div>
-          </div>
+                </div>
 
           {/* Search Bar */}
           <div className="max-w-2xl mx-auto px-4">
             <div className="relative">
               <SearchIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
               <input
-                type="text"
+            type="text"
                 placeholder="Search calculators (e.g., molarity, dilution, pH, statistics)..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-12 pr-6 py-3 sm:py-4 text-base sm:text-lg border-2 border-gray-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 shadow-lg"
-              />
-            </div>
+          />
+                    </div>
           </div>
         </div>
 
@@ -437,7 +437,7 @@ const CalculatorHubPage: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+                    </div>
 
         {/* Basic Calculators Tab */}
         {activeTab === 'calculators' && (
@@ -486,7 +486,7 @@ const CalculatorHubPage: React.FC = () => {
                         <p className={`text-sm font-medium capitalize ${
                           selectedCalcCategory === category ? 'text-white' : 'text-gray-700'
                         }`}>
-                          {category}
+                    {category}
                         </p>
                       </div>
                     </button>
@@ -497,40 +497,228 @@ const CalculatorHubPage: React.FC = () => {
             {/* Calculator Interface */}
             <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Calculator Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Calculator</label>
-                  <select
-                    value={calcState.selectedCalculator || ''}
-                    onChange={(e) => handleCalculatorSelect(e.target.value as CalculatorName)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  >
-                    <option value="">Choose a calculator...</option>
-                    {filteredCalculators.map(([category, calcs]) => (
-                      <optgroup key={category} label={category}>
-                        {(calcs as Array<typeof CALCULATOR_DEFINITIONS[keyof typeof CALCULATOR_DEFINITIONS]>).map((calc) => (
-                          <option key={calc.name} value={calc.name}>
-                            {calc.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                  
-                  {calcState.selectedCalculator && (
-                    <div className="mt-4 p-4 bg-blue-50 rounded-xl">
-                      <h4 className="font-medium text-blue-900 mb-2">
-                        {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].name}
-                      </h4>
-                      <p className="text-sm text-blue-700 mb-3">
-                        {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].description}
-                      </p>
-                      <div className="text-xs text-blue-600">
-                        <strong>Formula:</strong> {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].formula}
-                      </div>
+                                                {/* Enhanced Calculator Selection Interface */}
+                        <div className="space-y-8">
+                          {/* Quick Calculator Picker */}
+                          <div className="bg-gradient-to-r from-gray-50 to-blue-50/50 rounded-2xl p-6 border border-gray-200">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="p-2 bg-blue-100 rounded-lg">
+                                <LightbulbIcon className="w-5 h-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Quick Access</h4>
+                                <p className="text-sm text-gray-600">Popular calculators for instant use</p>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                              {Object.entries(CALCULATOR_DEFINITIONS)
+                                .filter(([name, calc]) => {
+                                  const matchesSearch = calc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                       calc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                       calc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+                                  
+                                  const matchesCategory = selectedCalcCategory === 'all' || calc.category === selectedCalcCategory;
+                                  
+                                  return matchesSearch && matchesCategory;
+                                })
+                                .slice(0, 8) // Show only first 8 for quick access
+                                .map(([name, calc]) => (
+                      <button
+                                    key={name}
+                                    onClick={() => handleCalculatorSelect(name as CalculatorName)}
+                                    className={`group p-3 rounded-xl text-left transition-all duration-200 ${
+                                      calcState.selectedCalculator === name
+                                        ? 'bg-blue-600 text-white shadow-lg'
+                                        : 'bg-white hover:bg-blue-50 hover:shadow-md border border-gray-200 hover:border-blue-300'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <CalculatorIcon className={`w-4 h-4 ${
+                                        calcState.selectedCalculator === name
+                                          ? 'text-white'
+                                          : 'text-gray-500 group-hover:text-blue-600'
+                                      }`} />
+                                      <div className={`w-1.5 h-1.5 rounded-full ${
+                                        calcState.selectedCalculator === name
+                                          ? 'bg-blue-200'
+                                          : 'bg-gray-300 group-hover:bg-blue-400'
+                                      }`}></div>
+                                    </div>
+                                    <div className={`text-sm font-medium line-clamp-2 ${
+                                      calcState.selectedCalculator === name
+                                        ? 'text-white'
+                                        : 'text-gray-900 group-hover:text-blue-900'
+                                    }`}>
+                                      {calc.name}
+                                </div>
+                      </button>
+                            ))}
+                        </div>
                     </div>
-                  )}
+
+                          {/* Selected Calculator Details */}
+                          {calcState.selectedCalculator && (
+                            <div className="relative overflow-hidden bg-white border-2 border-blue-200 rounded-2xl">
+                              {/* Background Pattern */}
+                              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-indigo-50"></div>
+                              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-100/50 to-transparent rounded-bl-full"></div>
+                              
+                              <div className="relative p-6">
+                                <div className="flex items-start gap-4 mb-6">
+                                  <div className="p-3 bg-blue-100 rounded-xl">
+                                    <CalculatorIcon className="w-6 h-6 text-blue-600" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <h4 className="text-xl font-bold text-gray-900 mb-2">
+                                      {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].name}
+                                    </h4>
+                                    <p className="text-gray-700 leading-relaxed">
+                                      {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].description}
+                                    </p>
+                                  </div>
+                                  <div className="px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-medium">
+                                    Selected
                 </div>
+                </div>
+                
+                                <div className="space-y-4">
+                                  <div className="p-4 bg-gray-50 rounded-xl">
+                                    <h5 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                                      Formula
+                                    </h5>
+                                    <p className="font-mono text-sm bg-white border border-gray-200 px-3 py-2 rounded-lg text-gray-800">
+                                      {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].formula}
+                  </p>
+                    </div>
+                                  
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-3 bg-blue-50 rounded-lg">
+                                      <div className="text-xs font-medium text-blue-600 uppercase tracking-wider mb-1">Category</div>
+                                      <div className="text-sm font-semibold text-blue-900">
+                                        {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].category}
+                                      </div>
+                 </div>
+                                    <div className="p-3 bg-indigo-50 rounded-lg">
+                                      <div className="text-xs font-medium text-indigo-600 uppercase tracking-wider mb-1">Type</div>
+                                      <div className="text-sm font-semibold text-indigo-900">
+                                        {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].subCategory}
+                    </div>
+                    </div>
+                </div>
+                </div>
+                </div>
+              </div>
+                          )}
+
+                          {/* Calculator Grid Display */}
+                          <div>
+                            {/* Minimal Header */}
+                            <div className="mb-6">
+                              <div className="flex items-center justify-between">
+                                <h3 className="text-xl font-semibold text-gray-900">
+                                  All Calculators 
+                                  <span className="text-gray-500 font-normal text-base ml-2">
+                                    ({Object.entries(CALCULATOR_DEFINITIONS).filter(([name, calc]) => {
+                                      const matchesSearch = calc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                           calc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                           calc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+                                      
+                                      const matchesCategory = selectedCalcCategory === 'all' || calc.category === selectedCalcCategory;
+                                      
+                                      return matchesSearch && matchesCategory;
+                                    }).length})
+                                  </span>
+                                </h3>
+                              </div>
+                            </div>
+                            
+                            {/* Clean Calculator Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                              {Object.entries(CALCULATOR_DEFINITIONS)
+                                .filter(([name, calc]) => {
+                                  const matchesSearch = calc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                       calc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                       calc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+                                  
+                                  const matchesCategory = selectedCalcCategory === 'all' || calc.category === selectedCalcCategory;
+                                  
+                                  return matchesSearch && matchesCategory;
+                                })
+                                .map(([name, calc]) => (
+                                  <div
+                                    key={name}
+                                    className={`group relative bg-white rounded-xl border transition-all duration-200 cursor-pointer ${
+                                      calcState.selectedCalculator === name
+                                        ? 'border-blue-500 shadow-md'
+                                        : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
+                                    }`}
+                                    onClick={() => handleCalculatorSelect(name as CalculatorName)}
+                                  >
+                                    <div className="p-4">
+                                      {/* Header Row */}
+                                      <div className="flex items-start justify-between mb-3">
+                                        <div className="flex-1 min-w-0">
+                                          <h4 className={`font-semibold text-base leading-tight line-clamp-1 ${
+                                            calcState.selectedCalculator === name
+                                              ? 'text-blue-900'
+                                              : 'text-gray-900 group-hover:text-blue-800'
+                                          }`}>
+                                            {calc.name}
+                                          </h4>
+                                        </div>
+                                        {calcState.selectedCalculator === name && (
+                                          <div className="ml-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      {/* Description */}
+                                      <p className="text-gray-600 text-sm leading-relaxed line-clamp-2 mb-3">
+                                        {calc.description}
+                                      </p>
+                                      
+                                      {/* Footer */}
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="text-gray-500 font-medium">
+                                          {calc.category.split(' & ')[0]}
+                                        </span>
+                                        <span className={`px-2 py-1 rounded-full font-medium ${
+                                          calcState.selectedCalculator === name
+                                            ? 'bg-blue-100 text-blue-700'
+                                            : 'bg-gray-100 text-gray-600 group-hover:bg-blue-50 group-hover:text-blue-600'
+                                        }`}>
+                                          {calc.tags[0] || calc.subCategory}
+                                        </span>
+                                      </div>
+                                    </div>
+                </div>
+                  ))}
+                            </div>
+                            
+                            {/* Empty State */}
+                            {Object.entries(CALCULATOR_DEFINITIONS).filter(([name, calc]) => {
+                              const matchesSearch = calc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                   calc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                   calc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+                              
+                              const matchesCategory = selectedCalcCategory === 'all' || calc.category === selectedCalcCategory;
+                              
+                              return matchesSearch && matchesCategory;
+                            }).length === 0 && (
+                              <div className="text-center py-12">
+                                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                  <SearchIcon className="w-6 h-6 text-gray-400" />
+                                </div>
+                                <h3 className="text-base font-semibold text-gray-900 mb-1">No calculators found</h3>
+                                <p className="text-gray-600 text-sm">
+                                  Try adjusting your search or category filter.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
 
                 {/* Calculator Inputs */}
                 {calcState.selectedCalculator && (
@@ -551,13 +739,13 @@ const CalculatorHubPage: React.FC = () => {
                           <div className="text-xs text-gray-500 mt-1">Unit: {input.unit}</div>
                         </div>
                       ))}
-                    </div>
-                    
+                </div>
+
                     <button
-                      onClick={handleCalculate}
+                  onClick={handleCalculate}
                       className="w-full mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-8 rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-                    >
-                      Calculate
+                >
+                  Calculate
                     </button>
                   </div>
                 )}
@@ -574,7 +762,7 @@ const CalculatorHubPage: React.FC = () => {
                       </div>
                       <div className="text-xl text-gray-600">
                         {calcState.result.unit}
-                      </div>
+                </div>
                     </div>
                     <div className="space-y-3">
                       {calcState.result.explanation && (
@@ -593,12 +781,12 @@ const CalculatorHubPage: React.FC = () => {
                         <div className="p-3 bg-blue-50 rounded-lg">
                           <div className="text-sm font-medium text-blue-800">Suggestions</div>
                           <div className="text-sm text-blue-700">{calcState.result.suggestions.join(', ')}</div>
-                        </div>
+                    </div>
                       )}
                     </div>
                   </div>
                 </div>
-              )}
+                    )}
 
               {/* Error Display */}
               {calcState.error && (
@@ -607,7 +795,7 @@ const CalculatorHubPage: React.FC = () => {
                     <strong>Error:</strong> {calcState.error}
                   </div>
                 </div>
-              )}
+                    )}
             </div>
 
             {/* Recent Calculations */}
@@ -636,8 +824,8 @@ const CalculatorHubPage: React.FC = () => {
                 </div>
               </div>
             )}
-          </div>
-        )}
+            </div>
+              )}
 
         {/* Unit Converter Tab */}
         {activeTab === 'converter' && (
@@ -666,7 +854,7 @@ const CalculatorHubPage: React.FC = () => {
                   </div>
                 </button>
               ))}
-            </div>
+                    </div>
 
             {/* Converter Interface */}
             <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
@@ -699,7 +887,7 @@ const CalculatorHubPage: React.FC = () => {
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     placeholder="Enter value"
                   />
-                </div>
+                            </div>
 
                 {/* To Unit */}
                 <div>
@@ -740,8 +928,8 @@ const CalculatorHubPage: React.FC = () => {
                     <div className="text-xl text-gray-600">
                       {toUnit}
                     </div>
-                  </div>
-                </div>
+                             </div>
+                    </div>
               )}
             </div>
 
@@ -767,16 +955,16 @@ const CalculatorHubPage: React.FC = () => {
                       <span className="text-sm text-gray-500 capitalize">
                         {conversion.category}
                       </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                      </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
           </div>
-        )}
-      </div>
-    </div>
-  );
+          )}
+                                        </div>
+        </div>
+    );
 };
 
 export default CalculatorHubPage;

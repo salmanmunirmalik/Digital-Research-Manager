@@ -6,6 +6,52 @@ export type UserStatus = 'active' | 'inactive' | 'suspended' | 'pending_verifica
 export type PrivacyLevel = 'personal' | 'lab' | 'global';
 export type DataType = 'protocol' | 'experiment' | 'inventory' | 'instrument' | 'result' | 'note' | 'attachment';
 
+// Calculator Types
+export type CalculatorName = string;
+
+export interface CalculatorInput {
+  name: string;
+  label: string;
+  type: 'number' | 'text' | 'select';
+  unit?: string;
+  required: boolean;
+  min?: number;
+  max?: number;
+  step?: number | string;
+  helpText: string;
+  placeholder?: string;
+  options?: string[];
+}
+
+export interface CalculatorResult {
+  value: number;
+  unit: string;
+  confidence?: number;
+  explanation?: string;
+  warnings?: string[];
+  suggestions?: string[];
+}
+
+export interface CalculatorInfo {
+  name: string;
+  category: string;
+  subCategory: string;
+  description: string;
+  formula: string;
+  units: {
+    inputs: Record<string, string>;
+    output: string;
+  };
+  examples: Array<{
+    title: string;
+    inputs: Record<string, any>;
+    expectedOutput: number;
+    explanation: string;
+  }>;
+  references: string[];
+  tags: string[];
+}
+
 // Core User Types
 export interface User {
   id: string;

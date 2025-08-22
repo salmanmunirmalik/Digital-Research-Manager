@@ -17,6 +17,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  demoLogin: () => void;
   register: (userData: any) => Promise<void>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
@@ -25,13 +26,13 @@ interface AuthContextType {
 
 // Mock demo user data
 const mockUser: User = {
-  id: 'demo-user-123',
+  id: '550e8400-e29b-41d4-a716-446655440003',
   username: 'demo_user',
   email: 'demo@researchlab.com',
   first_name: 'Demo',
   last_name: 'User',
-  role: 'Principal Investigator',
-  lab_id: 'demo-lab-123',
+  role: 'student',
+  lab_id: '650e8400-e29b-41d4-a716-446655440000',
   created_at: new Date().toISOString()
 };
 
@@ -63,16 +64,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const storedToken = localStorage.getItem('authToken');
         const storedUser = localStorage.getItem('user');
         
-        console.log(`🔄 Initializing AuthContext:`);
-        console.log(`   Token exists: ${!!storedToken}`);
-        console.log(`   User exists: ${!!storedUser}`);
-        
         if (storedToken && storedUser) {
           const userData = JSON.parse(storedUser);
-          console.log(`📋 User loaded from localStorage:`, userData);
-          console.log(`   User Role: ${userData.role}`);
-          console.log(`   User Email: ${userData.email}`);
-          
           setToken(storedToken);
           setUser(userData);
         }
@@ -94,20 +87,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!resp.ok) throw new Error('Login failed');
       const data = await resp.json();
       
-      // Debug logging
-      console.log(`🔐 Login Response:`, data);
-      console.log(`   User Role: ${data.user.role}`);
-      console.log(`   User Email: ${data.user.email}`);
-      
       setUser(data.user);
       setToken(data.token);
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      
-      console.log(`✅ User set in context:`, data.user);
     } finally {
       setLoading(false);
     }
+  };
+
+  const demoLogin = () => {
+    setUser(mockUser);
+    setToken(mockToken);
+    localStorage.setItem('authToken', mockToken);
+    localStorage.setItem('user', JSON.stringify(mockUser));
   };
 
   const register = async (userData: any) => {
@@ -183,6 +176,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: !!user && !!token,
     isLoading,
     login,
+    demoLogin,
     register,
     logout,
     updateProfile,

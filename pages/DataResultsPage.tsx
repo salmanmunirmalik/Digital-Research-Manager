@@ -1038,7 +1038,7 @@ const DataResultsPage: React.FC = () => {
 
   // Datasheet Interface
   const renderManualEntry = () => {
-    console.log('Rendering datasheet with data:', datasheetData); // Debug log
+    
     return (
     <div className="space-y-6">
       <Card>

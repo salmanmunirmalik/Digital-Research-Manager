@@ -41,11 +41,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const userRole = user.role;
     
     // Debug logging
-    console.log(`🔐 Route Protection Check:`);
-    console.log(`   User: ${user.email} (${user.first_name} ${user.last_name})`);
-    console.log(`   User Role: ${userRole}`);
-    console.log(`   Required Role: ${requiredRole}`);
-    console.log(`   Allowed Roles: ${allowedRoles}`);
+
     
     // Check if user has required role (exact match)
     if (requiredRole) {
@@ -54,20 +50,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         : [requiredRole];
       
       if (!hasAllowedRole(userRole, required)) {
-        console.log(`❌ Access denied: User role ${userRole} not in required roles ${required}`);
         return <Navigate to="/unauthorized" replace />;
       }
     }
     
     // Check if user has one of the allowed roles
     if (allowedRoles) {
-      if (!hasAllowedRole(userRole, allowedRoles)) {
-        console.log(`❌ Access denied: User role ${userRole} not in allowed roles ${allowedRoles}`);
-        return <Navigate to="/unauthorized" replace />;
-      }
+          if (!hasAllowedRole(userRole, allowedRoles)) {
+      return <Navigate to="/unauthorized" replace />;
+    }
     }
     
-    console.log(`✅ Access granted for user role ${userRole}`);
+
   }
 
   return <>{children}</>;

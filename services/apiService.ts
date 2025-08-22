@@ -1,6 +1,6 @@
-import { Protocol, Project, ResultEntry, InventoryItem, Instrument, TeamMember } from '../types';
+import { Protocol, Project, ResultEntry, InventoryItem, Instrument } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+const API_BASE_URL = (typeof window !== 'undefined' && (window as any).__ENV__?.VITE_API_URL) || 'http://localhost:5001/api';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -243,6 +243,108 @@ export const instrumentsAPI = {
   }
 };
 
+// Resource Exchange API
+export const exchangeAPI = {
+  createRequest: async (data: {
+    lab_id: string;
+    item_name: string;
+    category?: string;
+    quantity?: number;
+    unit?: string;
+    urgency?: string;
+    needed_by?: string;
+    location_preference?: string;
+    notes?: string;
+  }) => {
+    return apiRequest<{ request: any }>('/exchange/requests', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  listRequests: async (filters?: { status?: string; search?: string; institution?: string; scope?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.institution) params.append('institution', filters.institution);
+    if (filters?.scope) params.append('scope', filters.scope);
+    const qs = params.toString();
+    return apiRequest<{ requests: any[] }>(`/exchange/requests${qs ? `?${qs}` : ''}`);
+  },
+
+  updateRequestStatus: async (id: string, status: string) => {
+    return apiRequest<{ request: any }>(`/exchange/requests/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
+    });
+  },
+
+  createOffer: async (requestId: string, data: { quantity?: number; unit?: string; message?: string }) => {
+    return apiRequest<{ offer: any }>(`/exchange/requests/${requestId}/offers`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  listOffers: async (requestId?: string) => {
+    const params = new URLSearchParams();
+    if (requestId) params.append('request_id', requestId);
+    const qs = params.toString();
+    return apiRequest<{ offers: any[] }>(`/exchange/offers${qs ? `?${qs}` : ''}`);
+  },
+
+  updateOfferStatus: async (id: string, status: string) => {
+    return apiRequest<{ offer: any }>(`/exchange/offers/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
+    });
+  },
+};
+
+// Shared Instruments Directory API
+export const sharedInstrumentsAPI = {
+  shareInstrument: async (instrumentId: string, data: { sharing_scope?: string; access_policy?: string; external_contact_email?: string; is_shared?: boolean }) => {
+    return apiRequest<{ shared: any }>(`/instruments/${instrumentId}/share`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  listShared: async (filters?: { scope?: string; institution?: string; availability?: string; search?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.scope) params.append('scope', filters.scope);
+    if (filters?.institution) params.append('institution', filters.institution);
+    if (filters?.availability) params.append('availability', filters.availability);
+    if (filters?.search) params.append('search', filters.search);
+    const qs = params.toString();
+    return apiRequest<{ instruments: any[] }>(`/instruments/shared${qs ? `?${qs}` : ''}`);
+  }
+};
+
+// Instrument Bookings API
+export const instrumentBookingsAPI = {
+  createBooking: async (instrumentId: string, bookingData: any) => 
+    apiRequest(`/instruments/${instrumentId}/book`, { method: 'POST', body: JSON.stringify(bookingData) }),
+  
+  getAvailability: async (instrumentId: string, date: string) => 
+    apiRequest(`/instruments/${instrumentId}/availability?date=${date}`),
+  
+  getBookings: async (instrumentId: string, date?: string, status?: string) => {
+    const params = new URLSearchParams();
+    if (date) params.append('date', date);
+    if (status) params.append('status', status);
+    return apiRequest(`/instruments/${instrumentId}/bookings?${params.toString()}`);
+  },
+  
+  updateBookingStatus: async (bookingId: string, status: string, rejectionReason?: string) => 
+    apiRequest(`/bookings/${bookingId}/status`, { 
+      method: 'PUT', 
+      body: JSON.stringify({ status, ...(rejectionReason && { rejection_reason: rejectionReason }) }) 
+    }),
+  
+  getMyBookings: async () => apiRequest('/bookings/my'),
+};
+
 // Data API
 export const dataAPI = {
   getAll: async (filters?: { search?: string; tags?: string; protocolId?: string }) => {
@@ -268,11 +370,11 @@ export const dataAPI = {
 // Team API
 export const teamAPI = {
   getAll: async () => {
-    return apiRequest<{ members: TeamMember[] }>('/team');
+    return apiRequest<{ members: any[] }>('/team');
   },
 
   getById: async (id: string) => {
-    return apiRequest<{ member: TeamMember }>(`/team/${id}`);
+    return apiRequest<{ member: any }>(`/team/${id}`);
   },
 
   updateStatus: async (id: string, status: string) => {
