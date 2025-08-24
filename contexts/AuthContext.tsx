@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { authAPI } from '../services/apiService';
 
 interface User {
   id: string;
@@ -57,7 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setLoading] = useState(true);
 
-  // Load from localStorage and verify with backend
+  // Load from localStorage on mount
   useEffect(() => {
     const init = async () => {
       try {
@@ -79,18 +80,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const resp = await fetch((import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api' + '/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      if (!resp.ok) throw new Error('Login failed');
-      const data = await resp.json();
-      
+      const data = await authAPI.login(email, password);
       setUser(data.user);
       setToken(data.token);
-      localStorage.setItem('authToken', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -106,17 +101,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (userData: any) => {
     setLoading(true);
     try {
-      const resp = await fetch(((import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api') + '/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData)
-      });
-      if (!resp.ok) throw new Error('Registration failed');
-      const data = await resp.json();
+      const data = await authAPI.register(userData.username, userData.email, userData.password, userData.role);
       setUser(data.user);
       setToken(data.token);
-      localStorage.setItem('authToken', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+    } catch (error) {
+      console.error('Registration failed:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -124,14 +114,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
-      const tokenLocal = localStorage.getItem('authToken');
-      await fetch(((import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api') + '/auth/logout', {
-        method: 'POST',
-        headers: { 'Authorization': tokenLocal ? `Bearer ${tokenLocal}` : '' }
-      });
+      await authAPI.logout();
+    } catch (error) {
+      console.log('Logout API call failed, but local data cleared');
     } finally {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
       setUser(null);
       setToken(null);
     }
@@ -140,16 +126,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateProfile = async (data: Partial<User>) => {
     setLoading(true);
     try {
-      const tokenLocal = localStorage.getItem('authToken');
-      const resp = await fetch(((import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api') + '/auth/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': tokenLocal ? `Bearer ${tokenLocal}` : '' },
-        body: JSON.stringify(data)
-      });
-      if (!resp.ok) throw new Error('Profile update failed');
-      const body = await resp.json();
-      setUser(body.user);
-      localStorage.setItem('user', JSON.stringify(body.user));
+      const response = await authAPI.updateProfile(data);
+      setUser(response.user);
+      localStorage.setItem('user', JSON.stringify(response.user));
+    } catch (error) {
+      console.error('Profile update failed:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -158,13 +140,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const changePassword = async (currentPassword: string, newPassword: string) => {
     setLoading(true);
     try {
-      const tokenLocal = localStorage.getItem('authToken');
-      const resp = await fetch(((import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api') + '/auth/change-password', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': tokenLocal ? `Bearer ${tokenLocal}` : '' },
-        body: JSON.stringify({ currentPassword, newPassword })
-      });
-      if (!resp.ok) throw new Error('Password change failed');
+      await authAPI.changePassword(currentPassword, newPassword);
+    } catch (error) {
+      console.error('Password change failed:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -180,7 +159,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     updateProfile,
-    changePassword,
+    changePassword
   };
 
   return (

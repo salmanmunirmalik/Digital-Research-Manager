@@ -1,6 +1,7 @@
 import { Protocol, Project, ResultEntry, InventoryItem, Instrument } from '../types';
 
-const API_BASE_URL = (typeof window !== 'undefined' && (window as any).__ENV__?.VITE_API_URL) || 'http://localhost:5001/api';
+// Simple environment-based API URL configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -11,7 +12,7 @@ const getAuthHeaders = () => {
   };
 };
 
-// Generic API request function
+// Generic API request function with better error handling
 const apiRequest = async <T>(
   endpoint: string,
   options: RequestInit = {}
@@ -37,7 +38,7 @@ const apiRequest = async <T>(
   }
 };
 
-// Authentication API
+// Authentication API with simplified logic
 export const authAPI = {
   login: async (email: string, password: string) => {
     const response = await apiRequest<{ token: string; user: any }>('/auth/login', {
@@ -45,7 +46,7 @@ export const authAPI = {
       body: JSON.stringify({ email, password })
     });
     
-    // Store token in localStorage
+    // Store token and user data
     localStorage.setItem('authToken', response.token);
     localStorage.setItem('user', JSON.stringify(response.user));
     
@@ -58,7 +59,7 @@ export const authAPI = {
       body: JSON.stringify({ username, email, password, role })
     });
     
-    // Store token in localStorage
+    // Store token and user data
     localStorage.setItem('authToken', response.token);
     localStorage.setItem('user', JSON.stringify(response.user));
     
@@ -66,12 +67,15 @@ export const authAPI = {
   },
 
   logout: async () => {
+    // Clear local storage immediately
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    
+    // Try to call logout API (but don't fail if it doesn't work)
     try {
       await apiRequest('/auth/logout', { method: 'POST' });
-    } finally {
-      // Clear local storage regardless of API call success
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
+    } catch (error) {
+      console.log('Logout API call failed, but local data cleared');
     }
   },
 
