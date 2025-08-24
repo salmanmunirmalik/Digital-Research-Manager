@@ -1,5 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   BeakerIcon, 
   ChartBarIcon, 
@@ -14,6 +15,14 @@ import {
 } from '@heroicons/react/24/outline';
 
 const LandingPage: React.FC = () => {
+  const { demoLogin } = useAuth();
+  const navigate = useNavigate();
+
+  const handleDemoMode = () => {
+    demoLogin();
+    navigate('/dashboard');
+  };
+
   const features = [
     {
       icon: BeakerIcon,
@@ -86,7 +95,7 @@ const LandingPage: React.FC = () => {
                 to="/register"
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
               >
-                Get Started
+                Sign Up
               </Link>
             </div>
           </div>
@@ -110,16 +119,23 @@ const LandingPage: React.FC = () => {
                 to="/register"
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 inline-flex items-center"
               >
-                Start Free Trial
+                Sign Up
                 <ArrowRightIcon className="w-5 h-5 ml-2" />
               </Link>
               <Link
                 to="/login"
                 className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-xl text-lg font-semibold hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 inline-flex items-center"
               >
-                View Demo
+                Sign In
                 <RocketLaunchIcon className="w-5 h-5 ml-2" />
               </Link>
+              <button
+                onClick={handleDemoMode}
+                className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 inline-flex items-center"
+              >
+                Demo Mode
+                <StarIcon className="w-5 h-5 ml-2" />
+              </button>
             </div>
           </div>
         </div>
@@ -133,6 +149,9 @@ const LandingPage: React.FC = () => {
       {/* Stats Section */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-12 text-center">
+            Expected Target 2026
+          </h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
@@ -186,14 +205,14 @@ const LandingPage: React.FC = () => {
               to="/register"
               className="bg-white text-blue-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-100 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 inline-flex items-center justify-center"
             >
-              Start Your Free Trial
+              Sign Up Now
               <ArrowRightIcon className="w-5 h-5 ml-2" />
             </Link>
             <Link
               to="/login"
               className="border-2 border-white text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-white hover:text-blue-600 transition-all duration-200 inline-flex items-center justify-center"
             >
-              Sign In to Existing Account
+              Sign In
             </Link>
           </div>
         </div>
