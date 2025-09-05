@@ -118,6 +118,29 @@ const DashboardPage: React.FC = () => {
     currentGoal: null
   });
 
+  // Progressive Disclosure States
+  const [expandedSections, setExpandedSections] = useState<{
+    stickyNotes: boolean;
+    tasks: boolean;
+    experiments: boolean;
+    notebook: boolean;
+    activity: boolean;
+  }>({
+    stickyNotes: false,
+    tasks: false,
+    experiments: false,
+    notebook: false,
+    activity: false
+  });
+
+  const [defaultItemCounts] = useState({
+    stickyNotes: 3,
+    tasks: 4,
+    experiments: 3,
+    notebook: 4,
+    activity: 5
+  });
+
   // Interactive states
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [quickAddType, setQuickAddType] = useState<'task' | 'event' | 'note' | 'experiment'>('task');
@@ -380,6 +403,20 @@ const DashboardPage: React.FC = () => {
       references: [],
       collaborators: []
     });
+  };
+
+  // Progressive Disclosure Helper Functions
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const getDisplayItems = (items: any[], section: keyof typeof defaultItemCounts) => {
+    const isExpanded = expandedSections[section];
+    const defaultCount = defaultItemCounts[section];
+    return isExpanded ? items : items.slice(0, defaultCount);
   };
 
   const getTypeIcon = (type: string) => {
@@ -1041,16 +1078,26 @@ const DashboardPage: React.FC = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Sticky Notes</h2>
-              <button 
-                onClick={() => {
-                  setQuickAddType('note');
-                  setShowQuickAddModal(true);
-                }}
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
-              >
-                <PlusIcon className="w-4 h-4 mr-1" />
-                Add Note
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    setQuickAddType('note');
+                    setShowQuickAddModal(true);
+                  }}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
+                >
+                  <PlusIcon className="w-4 h-4 mr-1" />
+                  Add Note
+                </button>
+                {stickyNotes.length > defaultItemCounts.stickyNotes && (
+                  <button
+                    onClick={() => toggleSection('stickyNotes')}
+                    className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+                  >
+                    {expandedSections.stickyNotes ? 'Show Less' : `Show All ${stickyNotes.length}`}
+                  </button>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {stickyNotes.length === 0 ? (
@@ -1061,10 +1108,10 @@ const DashboardPage: React.FC = () => {
                   <p>No sticky notes yet. Add your first note!</p>
                 </div>
               ) : (
-                stickyNotes
-                  .sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
-                  .slice(0, 4)
-                  .map((note) => (
+                getDisplayItems(
+                  stickyNotes.sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0)),
+                  'stickyNotes'
+                ).map((note) => (
                     <div 
                       key={note.id} 
                       className={`p-4 rounded-lg border-l-4 group hover:shadow-md transition-all ${
@@ -1192,7 +1239,15 @@ const DashboardPage: React.FC = () => {
                     <PlusIcon className="w-4 h-4 mr-1" />
                     Add Task
                   </button>
-                <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">View All</button>
+                  {tasks.length > defaultItemCounts.tasks && (
+                    <button
+                      onClick={() => toggleSection('tasks')}
+                      className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+                    >
+                      {expandedSections.tasks ? 'Show Less' : `Show All ${tasks.length}`}
+                    </button>
+                  )}
+                </div>
               </div>
               </div>
               
@@ -1205,7 +1260,9 @@ const DashboardPage: React.FC = () => {
                 const urgentTasks = [...new Set([...highPriorityTasks, ...overdueTasks])];
                 const otherTasks = tasks.filter(task => 
                   task.status !== 'completed' && !urgentTasks.includes(task)
-                ).slice(0, 3);
+                );
+                
+                const displayOtherTasks = getDisplayItems(otherTasks, 'tasks');
                 
                 return (
                   <div className="space-y-4">
@@ -1264,13 +1321,13 @@ const DashboardPage: React.FC = () => {
                     )}
                     
                     {/* Other Tasks */}
-                    {otherTasks.length > 0 && (
+                    {displayOtherTasks.length > 0 && (
                       <div className="space-y-3">
                         <div className="flex items-center gap-2 mb-2">
                           <ClockIcon className="w-4 h-4 text-blue-600" />
                           <h3 className="text-sm font-semibold text-blue-800">Other Tasks ({otherTasks.length})</h3>
                         </div>
-                        {otherTasks.map((task) => (
+                        {displayOtherTasks.map((task) => (
                           <div key={task.id} className={`flex items-center justify-between p-3 rounded-lg border transition-all ${task.status === 'completed' ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
                             <div className="flex items-center space-x-3">
                               <input 
@@ -1322,7 +1379,7 @@ const DashboardPage: React.FC = () => {
               </div>
                     )}
                     
-                    {urgentTasks.length === 0 && otherTasks.length === 0 && (
+                    {urgentTasks.length === 0 && displayOtherTasks.length === 0 && (
                       <div className="text-center py-8 text-gray-500">
                         <CheckCircleIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                         <p>No pending tasks. Great job!</p>
@@ -1424,13 +1481,23 @@ const DashboardPage: React.FC = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Lab Notebook Entries</h2>
-                <button 
-                  onClick={() => setShowCreateEntryModal(true)}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
-                >
-                  <PlusIcon className="w-4 h-4 mr-1" />
-                  Add Entry
-                </button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setShowCreateEntryModal(true)}
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
+                  >
+                    <PlusIcon className="w-4 h-4 mr-1" />
+                    Add Entry
+                  </button>
+                  {notebookEntries.length > defaultItemCounts.notebook && (
+                    <button
+                      onClick={() => toggleSection('notebook')}
+                      className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+                    >
+                      {expandedSections.notebook ? 'Show Less' : `Show All ${notebookEntries.length}`}
+                    </button>
+                  )}
+                </div>
               </div>
               
               <div className="space-y-4">
@@ -1440,7 +1507,7 @@ const DashboardPage: React.FC = () => {
                     <p>No notebook entries yet. Create your first entry!</p>
                   </div>
                 ) : (
-                  notebookEntries.map((entry) => (
+                  getDisplayItems(notebookEntries, 'notebook').map((entry) => (
                     <div key={entry.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
@@ -1586,6 +1653,14 @@ const DashboardPage: React.FC = () => {
               >
                 Clear
               </button>
+              {recentActivity.length > defaultItemCounts.activity && (
+                <button
+                  onClick={() => toggleSection('activity')}
+                  className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+                >
+                  {expandedSections.activity ? 'Show Less' : `Show All ${recentActivity.length}`}
+                </button>
+              )}
             </div>
             <div className="space-y-4">
               {recentActivity.length === 0 ? (
@@ -1597,10 +1672,17 @@ const DashboardPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {recentActivity.slice(0, 5).map((activity, index) => (
+                  {getDisplayItems(recentActivity, 'activity').map((activity, index) => (
                     <div key={activity.id} className="flex items-start space-x-3 group hover:bg-gray-50 p-2 rounded-lg transition-colors">
                       <div className="flex-shrink-0 mt-1">
-                        <div className={`w-2 h-2 rounded-full bg-${activity.color}-500`}></div>
+                        <div className={`w-2 h-2 rounded-full ${
+                          activity.color === 'green' ? 'bg-green-500' :
+                          activity.color === 'blue' ? 'bg-blue-500' :
+                          activity.color === 'purple' ? 'bg-purple-500' :
+                          activity.color === 'orange' ? 'bg-orange-500' :
+                          activity.color === 'red' ? 'bg-red-500' :
+                          'bg-gray-500'
+                        }`}></div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-700 leading-relaxed">{activity.message}</p>
@@ -1617,11 +1699,6 @@ const DashboardPage: React.FC = () => {
                       </div>
                     </div>
                   ))}
-                  {recentActivity.length > 5 && (
-                    <button className="w-full text-center text-sm text-blue-600 hover:text-blue-700 py-2 border-t border-gray-100">
-                      View all {recentActivity.length} activities
-                    </button>
-                  )}
                 </div>
               )}
             </div>
