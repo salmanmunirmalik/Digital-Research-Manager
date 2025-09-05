@@ -419,6 +419,117 @@ const DashboardPage: React.FC = () => {
     return isExpanded ? items : items.slice(0, defaultCount);
   };
 
+  // Contextual Intelligence Helper Functions
+  const getTimeOfDay = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 18) return 'afternoon';
+    return 'evening';
+  };
+
+  const getContextualGreeting = () => {
+    const timeOfDay = getTimeOfDay();
+    const userName = user?.full_name?.split(' ')[0] || 'Researcher';
+    
+    switch (timeOfDay) {
+      case 'morning':
+        return `Good morning, ${userName}! Ready to start your research day?`;
+      case 'afternoon':
+        return `Good afternoon, ${userName}! How's your research progress?`;
+      case 'evening':
+        return `Good evening, ${userName}! Time to wrap up your research?`;
+      default:
+        return `Welcome back, ${userName}!`;
+    }
+  };
+
+  const getContextualPriorities = () => {
+    const timeOfDay = getTimeOfDay();
+    
+    switch (timeOfDay) {
+      case 'morning':
+        return {
+          focus: 'planning',
+          suggestion: 'Review your objectives and plan experiments',
+          icon: '🌅',
+          color: 'blue'
+        };
+      case 'afternoon':
+        return {
+          focus: 'execution',
+          suggestion: 'Execute experiments and collect data',
+          icon: '🔬',
+          color: 'green'
+        };
+      case 'evening':
+        return {
+          focus: 'analysis',
+          suggestion: 'Analyze results and document findings',
+          icon: '📊',
+          color: 'purple'
+        };
+      default:
+        return {
+          focus: 'general',
+          suggestion: 'Continue your research work',
+          icon: '🧪',
+          color: 'gray'
+        };
+    }
+  };
+
+  const getContextualTasks = () => {
+    const timeOfDay = getTimeOfDay();
+    const allTasks = tasks.filter(task => task.status !== 'completed');
+    
+    switch (timeOfDay) {
+      case 'morning':
+        // Show planning and preparation tasks first
+        return allTasks.sort((a, b) => {
+          const planningTypes = ['planning', 'preparation', 'review'];
+          const aIsPlanning = planningTypes.some(type => 
+            a.title.toLowerCase().includes(type) || a.description.toLowerCase().includes(type)
+          );
+          const bIsPlanning = planningTypes.some(type => 
+            b.title.toLowerCase().includes(type) || b.description.toLowerCase().includes(type)
+          );
+          if (aIsPlanning && !bIsPlanning) return -1;
+          if (!aIsPlanning && bIsPlanning) return 1;
+          return 0;
+        });
+      case 'afternoon':
+        // Show execution and experiment tasks first
+        return allTasks.sort((a, b) => {
+          const executionTypes = ['experiment', 'data', 'execute', 'run', 'test'];
+          const aIsExecution = executionTypes.some(type => 
+            a.title.toLowerCase().includes(type) || a.description.toLowerCase().includes(type)
+          );
+          const bIsExecution = executionTypes.some(type => 
+            b.title.toLowerCase().includes(type) || b.description.toLowerCase().includes(type)
+          );
+          if (aIsExecution && !bIsExecution) return -1;
+          if (!aIsExecution && bIsExecution) return 1;
+          return 0;
+        });
+      case 'evening':
+        // Show analysis and documentation tasks first
+        return allTasks.sort((a, b) => {
+          const analysisTypes = ['analysis', 'document', 'write', 'report', 'review'];
+          const aIsAnalysis = analysisTypes.some(type => 
+            a.title.toLowerCase().includes(type) || a.description.toLowerCase().includes(type)
+          );
+          const bIsAnalysis = analysisTypes.some(type => 
+            b.title.toLowerCase().includes(type) || b.description.toLowerCase().includes(type)
+          );
+          if (aIsAnalysis && !bIsAnalysis) return -1;
+          if (!aIsAnalysis && bIsAnalysis) return 1;
+          return 0;
+        });
+      default:
+        return allTasks;
+    }
+  };
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'experiment': return '🧪';
@@ -893,23 +1004,62 @@ const DashboardPage: React.FC = () => {
                 'bg-red-100 text-red-800'
               }`}>
                 {cognitiveLoad === 'low' ? 'Low Load' : cognitiveLoad === 'medium' ? 'Medium Load' : 'High Load'}
+              </div>
+              <div className="px-3 py-1 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-full text-sm font-medium flex items-center gap-2">
+                <span>{getContextualPriorities().icon}</span>
+                <span className="text-blue-800">{getContextualPriorities().focus.charAt(0).toUpperCase() + getContextualPriorities().focus.slice(1)} Time</span>
+              </div>
             </div>
+            
+            <div className="mb-4">
+              <p className="text-gray-900 font-medium mb-1">{getContextualGreeting()}</p>
+              <p className="text-gray-600 text-sm">{getContextualPriorities().suggestion}</p>
             </div>
             
             <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
               <div className="flex items-center gap-2">
                 <BrainIcon className="w-4 h-4 text-blue-600" />
-                <span className="capitalize">{userContext.timeOfDay} • {userContext.workPattern} mode</span>
+                <span className="capitalize">{getTimeOfDay()} • {userContext.workPattern} mode</span>
               </div>
-              {user && (
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500">Welcome,</span>
-                  <span className="font-medium text-gray-900">{user.name || 'Researcher'}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <LightBulbIcon className="w-4 h-4 text-yellow-600" />
+                <span>Cognitive optimizations active</span>
+              </div>
             </div>
 
-            {/* Cognitive Insights Banner */}
+            {/* Contextual Insights Banner */}
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-lg">{getContextualPriorities().icon}</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-purple-900 mb-2">Contextual Research Insights</h3>
+                  <div className="space-y-2">
+                    <div className="text-sm text-purple-800 bg-white bg-opacity-60 rounded-md p-2">
+                      <span className="font-medium">🎯</span>
+                      <span className="ml-2">{getContextualPriorities().suggestion}</span>
+                    </div>
+                    {(() => {
+                      const timeOfDay = getTimeOfDay();
+                      const contextualTips = {
+                        morning: 'Start with reviewing yesterday\'s results and planning today\'s experiments',
+                        afternoon: 'Focus on data collection and active experimentation',
+                        evening: 'Perfect time for analysis, documentation, and preparing for tomorrow'
+                      };
+                      return (
+                        <div className="text-sm text-purple-800 bg-white bg-opacity-60 rounded-md p-2">
+                          <span className="font-medium">💡</span>
+                          <span className="ml-2">{contextualTips[timeOfDay] || contextualTips.morning}</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Smart Cognitive Insights Banner */}
             {cognitiveInsights.length > 0 && (
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <div className="flex items-start gap-3">
@@ -1253,13 +1403,14 @@ const DashboardPage: React.FC = () => {
               
               {/* Cognitive Task Prioritization */}
               {(() => {
-                const highPriorityTasks = tasks.filter(task => task.priority === 'high' && task.status !== 'completed');
-                const overdueTasks = tasks.filter(task => 
-                  task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed'
+                const contextualTasks = getContextualTasks();
+                const highPriorityTasks = contextualTasks.filter(task => task.priority === 'high');
+                const overdueTasks = contextualTasks.filter(task => 
+                  task.due_date && new Date(task.due_date) < new Date()
                 );
                 const urgentTasks = [...new Set([...highPriorityTasks, ...overdueTasks])];
-                const otherTasks = tasks.filter(task => 
-                  task.status !== 'completed' && !urgentTasks.includes(task)
+                const otherTasks = contextualTasks.filter(task => 
+                  !urgentTasks.includes(task)
                 );
                 
                 const displayOtherTasks = getDisplayItems(otherTasks, 'tasks');
