@@ -9,7 +9,6 @@ import { getUserDisplayName, getRoleDisplayName } from './utils/roleAccess';
 // Import all pages
 import DashboardPage from './pages/DashboardPage';
 import LabManagementPage from './pages/LabManagementPage';
-import LabNotebookPage from './pages/LabNotebookPage';
 import ProtocolsPage from './pages/ProtocolsPage';
 import InventoryPage from './pages/InventoryPage';
 import InstrumentsPage from './pages/InstrumentsPage';
@@ -273,14 +272,6 @@ const AppContent: React.FC = () => {
       />
       
       {/* Lab Notebook - All authenticated users */}
-      <Route 
-        path="/lab-notebook" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><LabNotebookPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
       
       {/* Protocols - All authenticated users */}
       <Route 

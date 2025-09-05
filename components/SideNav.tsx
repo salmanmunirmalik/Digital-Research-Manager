@@ -56,7 +56,6 @@ const SideNav: React.FC = () => {
       title: 'Dashboard',
       items: [
         { name: 'Dashboard', to: '/dashboard', icon: HomeIcon, description: 'Personal dashboard and overview' },
-        { name: 'My Notebook', to: '/lab-notebook', icon: BookOpenIcon, description: 'Personal experiment records and notes' }
       ]
     });
 

@@ -55,6 +55,33 @@ const DashboardPage: React.FC = () => {
     active_projects: 0
   });
 
+  // Lab Notebook States
+  const [notebookEntries, setNotebookEntries] = useState<any[]>([]);
+  const [labs, setLabs] = useState<any[]>([]);
+  const [labMembers, setLabMembers] = useState<any[]>([]);
+  const [notebookFilters, setNotebookFilters] = useState({
+    search: '',
+    lab_id: '',
+    entry_type: '',
+    status: ''
+  });
+  const [showCreateEntryModal, setShowCreateEntryModal] = useState(false);
+  const [entryForm, setEntryForm] = useState({
+    title: '',
+    content: '',
+    entry_type: 'experiment' as 'experiment' | 'observation' | 'protocol' | 'analysis' | 'idea' | 'meeting',
+    status: 'planning' as 'planning' | 'in_progress' | 'completed' | 'on_hold' | 'failed',
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
+    objectives: '',
+    methodology: '',
+    results: '',
+    conclusions: '',
+    next_steps: '',
+    lab_id: '',
+    tags: [] as string[],
+    privacy_level: 'lab' as 'private' | 'lab' | 'institution' | 'public'
+  });
+
   // Cognitive Enhancement States
   const [cognitiveInsights, setCognitiveInsights] = useState<Array<{
     id: string;
@@ -292,6 +319,122 @@ const DashboardPage: React.FC = () => {
       currentGoal: null // Could be set based on user preferences or recent activity
     });
   };
+
+  // Lab Notebook Functions
+  const fetchNotebookEntries = async () => {
+    try {
+      const queryParams = new URLSearchParams();
+      Object.entries(notebookFilters).forEach(([key, value]) => {
+        if (value) queryParams.append(key, String(value));
+      });
+
+      const response = await fetch(`http://localhost:5001/api/lab-notebooks?${queryParams}`, {
+        headers: {
+          'Authorization': `Bearer demo-token-123`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setNotebookEntries(data.entries || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch notebook entries:', err);
+    }
+  };
+
+  const fetchLabs = async () => {
+    try {
+      const response = await fetch('http://localhost:5001/api/labs', {
+        headers: {
+          'Authorization': `Bearer demo-token-123`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setLabs(data.labs || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch labs:', err);
+    }
+  };
+
+  const createNotebookEntry = async () => {
+    try {
+      const response = await fetch('http://localhost:5001/api/lab-notebooks', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer demo-token-123`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(entryForm)
+      });
+
+      if (response.ok) {
+        setShowCreateEntryModal(false);
+        setEntryForm({
+          title: '',
+          content: '',
+          entry_type: 'experiment',
+          status: 'planning',
+          priority: 'medium',
+          objectives: '',
+          methodology: '',
+          results: '',
+          conclusions: '',
+          next_steps: '',
+          lab_id: '',
+          tags: [],
+          privacy_level: 'lab'
+        });
+        fetchNotebookEntries();
+      }
+    } catch (err) {
+      console.error('Failed to create notebook entry:', err);
+    }
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'experiment': return '🧪';
+      case 'observation': return '👁️';
+      case 'protocol': return '📋';
+      case 'analysis': return '📊';
+      case 'idea': return '💡';
+      case 'meeting': return '👥';
+      default: return '📝';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'planning': return 'bg-gray-100 text-gray-800';
+      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'on_hold': return 'bg-yellow-100 text-yellow-800';
+      case 'failed': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'low': return 'bg-green-100 text-green-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'critical': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Initialize notebook data
+  useEffect(() => {
+    fetchNotebookEntries();
+    fetchLabs();
+  }, [notebookFilters]);
 
   // Mock data - replace with real API calls
   useEffect(() => {
@@ -1199,6 +1342,107 @@ const DashboardPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Lab Notebook Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Lab Notebook</h2>
+              <button 
+                onClick={() => setShowCreateEntryModal(true)}
+                className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
+              >
+                <PlusIcon className="w-4 h-4 mr-1" />
+                New Entry
+              </button>
+            </div>
+            
+            {/* Notebook Filters */}
+            <div className="flex items-center gap-4 mb-4">
+              <div className="relative flex-1 max-w-md">
+                <input
+                  type="text"
+                  placeholder="Search entries..."
+                  value={notebookFilters.search}
+                  onChange={(e) => setNotebookFilters({...notebookFilters, search: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <select
+                value={notebookFilters.entry_type}
+                onChange={(e) => setNotebookFilters({...notebookFilters, entry_type: e.target.value})}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Types</option>
+                <option value="experiment">Experiment</option>
+                <option value="observation">Observation</option>
+                <option value="protocol">Protocol</option>
+                <option value="analysis">Analysis</option>
+                <option value="idea">Idea</option>
+                <option value="meeting">Meeting</option>
+              </select>
+              <select
+                value={notebookFilters.status}
+                onChange={(e) => setNotebookFilters({...notebookFilters, status: e.target.value})}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Status</option>
+                <option value="planning">Planning</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="on_hold">On Hold</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+
+            {/* Notebook Entries */}
+            <div className="space-y-4">
+              {notebookEntries.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <BookOpenIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p>No notebook entries yet. Create your first entry!</p>
+                </div>
+              ) : (
+                notebookEntries.slice(0, focusMode ? 3 : 6).map((entry) => (
+                  <div key={entry.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                        {getTypeIcon(entry.entry_type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold text-gray-900 truncate">{entry.title}</h3>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(entry.status)}`}>
+                              {entry.status.replace('_', ' ')}
+                            </span>
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(entry.priority)}`}>
+                              {entry.priority}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-gray-600 text-sm line-clamp-2 mb-2">{entry.content}</p>
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <span>{entry.creator_name}</span>
+                          <span>{new Date(entry.created_at).toLocaleDateString()}</span>
+                          <span>{entry.lab_name}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+              {notebookEntries.length > (focusMode ? 3 : 6) && (
+                <div className="text-center py-2">
+                  <button 
+                    onClick={() => setFocusMode(false)}
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  >
+                    Show All {notebookEntries.length} Entries
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
         {/* Right Column - Calendar & Lab Overview */}
         <div className="lg:col-span-4 space-y-6">
           {/* Calendar Section - Compact Design */}
@@ -1536,6 +1780,129 @@ const DashboardPage: React.FC = () => {
                 >
                   <PlusIcon className="w-4 h-4 mr-1 inline" />
                   Add {quickAddType.charAt(0).toUpperCase() + quickAddType.slice(1)}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Entry Modal */}
+      {showCreateEntryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">Create New Entry</h2>
+                <button
+                  onClick={() => setShowCreateEntryModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                  <input
+                    type="text"
+                    value={entryForm.title}
+                    onChange={(e) => setEntryForm({...entryForm, title: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter entry title..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Content</label>
+                  <textarea
+                    value={entryForm.content}
+                    onChange={(e) => setEntryForm({...entryForm, content: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={4}
+                    placeholder="Describe your entry..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <select
+                      value={entryForm.entry_type}
+                      onChange={(e) => setEntryForm({...entryForm, entry_type: e.target.value as any})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="experiment">Experiment</option>
+                      <option value="observation">Observation</option>
+                      <option value="protocol">Protocol</option>
+                      <option value="analysis">Analysis</option>
+                      <option value="idea">Idea</option>
+                      <option value="meeting">Meeting</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <select
+                      value={entryForm.status}
+                      onChange={(e) => setEntryForm({...entryForm, status: e.target.value as any})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="planning">Planning</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                      <option value="on_hold">On Hold</option>
+                      <option value="failed">Failed</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                    <select
+                      value={entryForm.priority}
+                      onChange={(e) => setEntryForm({...entryForm, priority: e.target.value as any})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="critical">Critical</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Privacy</label>
+                    <select
+                      value={entryForm.privacy_level}
+                      onChange={(e) => setEntryForm({...entryForm, privacy_level: e.target.value as any})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="private">Private</option>
+                      <option value="lab">Lab</option>
+                      <option value="institution">Institution</option>
+                      <option value="public">Public</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setShowCreateEntryModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createNotebookEntry}
+                  disabled={!entryForm.title.trim() || !entryForm.content.trim()}
+                  className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <PlusIcon className="w-4 h-4 mr-1 inline" />
+                  Create Entry
                 </button>
               </div>
             </div>
