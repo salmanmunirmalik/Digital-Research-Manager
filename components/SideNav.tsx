@@ -51,12 +51,13 @@ const SideNav: React.FC = () => {
   const getNavItems = () => {
     const baseItems = [];
 
-    // Dashboard - Available to all
+    // My Notebook - Static item (no collapsible section)
     baseItems.push({
-      title: 'Dashboard',
+      title: 'My Notebook',
       items: [
-        { name: 'Dashboard', to: '/dashboard', icon: HomeIcon, description: 'Personal dashboard and overview' },
-      ]
+        { name: 'My Notebook', to: '/dashboard', icon: HomeIcon, description: 'Personal dashboard and overview' },
+      ],
+      isStatic: true // Add flag to indicate this should be static
     });
 
     // Data & Results - Available to all
@@ -109,34 +110,9 @@ const SideNav: React.FC = () => {
       <nav className="flex-1 p-3 space-y-2 overflow-y-auto">
         {navItems.map((section, sectionIndex) => (
           <div key={sectionIndex} className="group">
-            {/* Section Header - Enhanced Design */}
-            <button
-              onClick={() => toggleSection(section.title)}
-              className="w-full flex items-center justify-between px-3 py-3 text-sm font-semibold text-gray-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all duration-200 group-hover:bg-blue-50 border border-transparent hover:border-blue-200"
-            >
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                  {section.title}
-                </span>
-              </div>
-              <svg
-                className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
-                  expandedSections.has(section.title) ? 'rotate-180 text-blue-500' : ''
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            
-            {/* Section Items - Enhanced Dropdown */}
-            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              expandedSections.has(section.title) ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-            }`}>
-              <div className="space-y-1 mt-3 ml-4 pl-4 border-l-2 border-gray-100">
+            {section.isStatic ? (
+              // Static item - always visible, no collapsible behavior
+              <div className="space-y-1">
                 {section.items.map((item, itemIndex) => (
                   <NavLink
                     key={itemIndex}
@@ -162,7 +138,65 @@ const SideNav: React.FC = () => {
                   </NavLink>
                 ))}
               </div>
-            </div>
+            ) : (
+              // Collapsible section
+              <>
+                {/* Section Header - Enhanced Design */}
+                <button
+                  onClick={() => toggleSection(section.title)}
+                  className="w-full flex items-center justify-between px-3 py-3 text-sm font-semibold text-gray-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all duration-200 group-hover:bg-blue-50 border border-transparent hover:border-blue-200"
+                >
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                      {section.title}
+                    </span>
+                  </div>
+                  <svg
+                    className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
+                      expandedSections.has(section.title) ? 'rotate-180 text-blue-500' : ''
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {/* Section Items - Enhanced Dropdown */}
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                  expandedSections.has(section.title) ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                }`}>
+                  <div className="space-y-1 mt-3 ml-4 pl-4 border-l-2 border-gray-100">
+                    {section.items.map((item, itemIndex) => (
+                      <NavLink
+                        key={itemIndex}
+                        to={item.to}
+                        className={({ isActive }) =>
+                          `group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                            isActive
+                              ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-200 shadow-sm transform scale-105'
+                              : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:transform hover:scale-105'
+                          }`
+                        }
+                        title={item.description}
+                      >
+                        <item.icon className={`w-4 h-4 mr-3 flex-shrink-0 transition-colors duration-200 ${
+                          'text-blue-600'
+                        }`} />
+                        <span className="flex-1 min-w-0 truncate">{item.name}</span>
+                        
+                        {/* Enhanced Hover indicator */}
+                        <div className={`w-2 h-2 rounded-full transition-all duration-200 flex-shrink-0 ${
+                          'bg-blue-600'
+                        }`}></div>
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         ))}
       </nav>

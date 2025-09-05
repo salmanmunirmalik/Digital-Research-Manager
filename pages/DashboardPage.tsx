@@ -118,29 +118,6 @@ const DashboardPage: React.FC = () => {
     currentGoal: null
   });
 
-  // Progressive Disclosure States
-  const [expandedSections, setExpandedSections] = useState<{
-    stickyNotes: boolean;
-    tasks: boolean;
-    experiments: boolean;
-    notebook: boolean;
-    activity: boolean;
-  }>({
-    stickyNotes: false,
-    tasks: false,
-    experiments: false,
-    notebook: false,
-    activity: false
-  });
-
-  const [defaultItemCounts] = useState({
-    stickyNotes: 3,
-    tasks: 4,
-    experiments: 3,
-    notebook: 4,
-    activity: 5
-  });
-
   // Interactive states
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [quickAddType, setQuickAddType] = useState<'task' | 'event' | 'note' | 'experiment'>('task');
@@ -403,131 +380,6 @@ const DashboardPage: React.FC = () => {
       references: [],
       collaborators: []
     });
-  };
-
-  // Progressive Disclosure Helper Functions
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
-
-  const getDisplayItems = (items: any[], section: keyof typeof defaultItemCounts) => {
-    const isExpanded = expandedSections[section];
-    const defaultCount = defaultItemCounts[section];
-    return isExpanded ? items : items.slice(0, defaultCount);
-  };
-
-  // Contextual Intelligence Helper Functions
-  const getTimeOfDay = () => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return 'morning';
-    if (hour >= 12 && hour < 18) return 'afternoon';
-    return 'evening';
-  };
-
-  const getContextualGreeting = () => {
-    const timeOfDay = getTimeOfDay();
-    const userName = user?.full_name?.split(' ')[0] || 'Researcher';
-    
-    switch (timeOfDay) {
-      case 'morning':
-        return `Good morning, ${userName}! Ready to start your research day?`;
-      case 'afternoon':
-        return `Good afternoon, ${userName}! How's your research progress?`;
-      case 'evening':
-        return `Good evening, ${userName}! Time to wrap up your research?`;
-      default:
-        return `Welcome back, ${userName}!`;
-    }
-  };
-
-  const getContextualPriorities = () => {
-    const timeOfDay = getTimeOfDay();
-    
-    switch (timeOfDay) {
-      case 'morning':
-        return {
-          focus: 'planning',
-          suggestion: 'Review your objectives and plan experiments',
-          icon: '🌅',
-          color: 'blue'
-        };
-      case 'afternoon':
-        return {
-          focus: 'execution',
-          suggestion: 'Execute experiments and collect data',
-          icon: '🔬',
-          color: 'green'
-        };
-      case 'evening':
-        return {
-          focus: 'analysis',
-          suggestion: 'Analyze results and document findings',
-          icon: '📊',
-          color: 'purple'
-        };
-      default:
-        return {
-          focus: 'general',
-          suggestion: 'Continue your research work',
-          icon: '🧪',
-          color: 'gray'
-        };
-    }
-  };
-
-  const getContextualTasks = () => {
-    const timeOfDay = getTimeOfDay();
-    const allTasks = tasks.filter(task => task.status !== 'completed');
-    
-    switch (timeOfDay) {
-      case 'morning':
-        // Show planning and preparation tasks first
-        return allTasks.sort((a, b) => {
-          const planningTypes = ['planning', 'preparation', 'review'];
-          const aIsPlanning = planningTypes.some(type => 
-            a.title.toLowerCase().includes(type) || a.description.toLowerCase().includes(type)
-          );
-          const bIsPlanning = planningTypes.some(type => 
-            b.title.toLowerCase().includes(type) || b.description.toLowerCase().includes(type)
-          );
-          if (aIsPlanning && !bIsPlanning) return -1;
-          if (!aIsPlanning && bIsPlanning) return 1;
-          return 0;
-        });
-      case 'afternoon':
-        // Show execution and experiment tasks first
-        return allTasks.sort((a, b) => {
-          const executionTypes = ['experiment', 'data', 'execute', 'run', 'test'];
-          const aIsExecution = executionTypes.some(type => 
-            a.title.toLowerCase().includes(type) || a.description.toLowerCase().includes(type)
-          );
-          const bIsExecution = executionTypes.some(type => 
-            b.title.toLowerCase().includes(type) || b.description.toLowerCase().includes(type)
-          );
-          if (aIsExecution && !bIsExecution) return -1;
-          if (!aIsExecution && bIsExecution) return 1;
-          return 0;
-        });
-      case 'evening':
-        // Show analysis and documentation tasks first
-        return allTasks.sort((a, b) => {
-          const analysisTypes = ['analysis', 'document', 'write', 'report', 'review'];
-          const aIsAnalysis = analysisTypes.some(type => 
-            a.title.toLowerCase().includes(type) || a.description.toLowerCase().includes(type)
-          );
-          const bIsAnalysis = analysisTypes.some(type => 
-            b.title.toLowerCase().includes(type) || b.description.toLowerCase().includes(type)
-          );
-          if (aIsAnalysis && !bIsAnalysis) return -1;
-          if (!aIsAnalysis && bIsAnalysis) return 1;
-          return 0;
-        });
-      default:
-        return allTasks;
-    }
   };
 
   const getTypeIcon = (type: string) => {
@@ -997,69 +849,30 @@ const DashboardPage: React.FC = () => {
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-3">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">My Notebook</h1>
               <div className={`px-3 py-1 rounded-full text-xs font-medium ${
                 cognitiveLoad === 'low' ? 'bg-green-100 text-green-800' :
                 cognitiveLoad === 'medium' ? 'bg-yellow-100 text-yellow-800' :
                 'bg-red-100 text-red-800'
               }`}>
                 {cognitiveLoad === 'low' ? 'Low Load' : cognitiveLoad === 'medium' ? 'Medium Load' : 'High Load'}
-              </div>
-              <div className="px-3 py-1 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-full text-sm font-medium flex items-center gap-2">
-                <span>{getContextualPriorities().icon}</span>
-                <span className="text-blue-800">{getContextualPriorities().focus.charAt(0).toUpperCase() + getContextualPriorities().focus.slice(1)} Time</span>
-              </div>
             </div>
-            
-            <div className="mb-4">
-              <p className="text-gray-900 font-medium mb-1">{getContextualGreeting()}</p>
-              <p className="text-gray-600 text-sm">{getContextualPriorities().suggestion}</p>
             </div>
             
             <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
               <div className="flex items-center gap-2">
                 <BrainIcon className="w-4 h-4 text-blue-600" />
-                <span className="capitalize">{getTimeOfDay()} • {userContext.workPattern} mode</span>
+                <span className="capitalize">{userContext.timeOfDay} • {userContext.workPattern} mode</span>
               </div>
-              <div className="flex items-center gap-2">
-                <LightBulbIcon className="w-4 h-4 text-yellow-600" />
-                <span>Cognitive optimizations active</span>
-              </div>
+              {user && (
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500">Welcome,</span>
+                  <span className="font-medium text-gray-900">{user.name || 'Researcher'}</span>
+                </div>
+              )}
             </div>
 
-            {/* Contextual Insights Banner */}
-            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4 mb-4">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-lg">{getContextualPriorities().icon}</span>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-purple-900 mb-2">Contextual Research Insights</h3>
-                  <div className="space-y-2">
-                    <div className="text-sm text-purple-800 bg-white bg-opacity-60 rounded-md p-2">
-                      <span className="font-medium">🎯</span>
-                      <span className="ml-2">{getContextualPriorities().suggestion}</span>
-                    </div>
-                    {(() => {
-                      const timeOfDay = getTimeOfDay();
-                      const contextualTips = {
-                        morning: 'Start with reviewing yesterday\'s results and planning today\'s experiments',
-                        afternoon: 'Focus on data collection and active experimentation',
-                        evening: 'Perfect time for analysis, documentation, and preparing for tomorrow'
-                      };
-  return (
-                        <div className="text-sm text-purple-800 bg-white bg-opacity-60 rounded-md p-2">
-                          <span className="font-medium">💡</span>
-                          <span className="ml-2">{contextualTips[timeOfDay] || contextualTips.morning}</span>
-            </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Smart Cognitive Insights Banner */}
+            {/* Cognitive Insights Banner */}
             {cognitiveInsights.length > 0 && (
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <div className="flex items-start gap-3">
@@ -1228,26 +1041,16 @@ const DashboardPage: React.FC = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Sticky Notes</h2>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => {
-                    setQuickAddType('note');
-                    setShowQuickAddModal(true);
-                  }}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
-                >
-                  <PlusIcon className="w-4 h-4 mr-1" />
-                  Add Note
+              <button 
+                onClick={() => {
+                  setQuickAddType('note');
+                  setShowQuickAddModal(true);
+                }}
+                className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
+              >
+                <PlusIcon className="w-4 h-4 mr-1" />
+                Add Note
               </button>
-                {stickyNotes.length > defaultItemCounts.stickyNotes && (
-                  <button
-                    onClick={() => toggleSection('stickyNotes')}
-                    className="text-gray-500 hover:text-gray-700 text-sm font-medium"
-                  >
-                    {expandedSections.stickyNotes ? 'Show Less' : `Show All ${stickyNotes.length}`}
-                  </button>
-                )}
-              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {stickyNotes.length === 0 ? (
@@ -1258,10 +1061,10 @@ const DashboardPage: React.FC = () => {
                   <p>No sticky notes yet. Add your first note!</p>
                 </div>
               ) : (
-                getDisplayItems(
-                  stickyNotes.sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0)),
-                  'stickyNotes'
-                ).map((note) => (
+                stickyNotes
+                  .sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
+                  .slice(0, 4)
+                  .map((note) => (
                     <div 
                       key={note.id} 
                       className={`p-4 rounded-lg border-l-4 group hover:shadow-md transition-all ${
@@ -1376,7 +1179,7 @@ const DashboardPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                     <span className="text-xs text-gray-500">High Priority</span>
-              </div>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <button 
@@ -1389,31 +1192,20 @@ const DashboardPage: React.FC = () => {
                     <PlusIcon className="w-4 h-4 mr-1" />
                     Add Task
                   </button>
-                  {tasks.length > defaultItemCounts.tasks && (
-                    <button
-                      onClick={() => toggleSection('tasks')}
-                      className="text-gray-500 hover:text-gray-700 text-sm font-medium"
-                    >
-                      {expandedSections.tasks ? 'Show Less' : `Show All ${tasks.length}`}
-                    </button>
-                  )}
-                </div>
+                <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">View All</button>
               </div>
               </div>
               
               {/* Cognitive Task Prioritization */}
               {(() => {
-                const contextualTasks = getContextualTasks();
-                const highPriorityTasks = contextualTasks.filter(task => task.priority === 'high');
-                const overdueTasks = contextualTasks.filter(task => 
-                  task.due_date && new Date(task.due_date) < new Date()
+                const highPriorityTasks = tasks.filter(task => task.priority === 'high' && task.status !== 'completed');
+                const overdueTasks = tasks.filter(task => 
+                  task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed'
                 );
                 const urgentTasks = [...new Set([...highPriorityTasks, ...overdueTasks])];
-                const otherTasks = contextualTasks.filter(task => 
-                  !urgentTasks.includes(task)
-                );
-                
-                const displayOtherTasks = getDisplayItems(otherTasks, 'tasks');
+                const otherTasks = tasks.filter(task => 
+                  task.status !== 'completed' && !urgentTasks.includes(task)
+                ).slice(0, 3);
                 
                 return (
                   <div className="space-y-4">
@@ -1472,13 +1264,13 @@ const DashboardPage: React.FC = () => {
                     )}
                     
                     {/* Other Tasks */}
-                    {displayOtherTasks.length > 0 && (
+                    {otherTasks.length > 0 && (
                       <div className="space-y-3">
                         <div className="flex items-center gap-2 mb-2">
                           <ClockIcon className="w-4 h-4 text-blue-600" />
                           <h3 className="text-sm font-semibold text-blue-800">Other Tasks ({otherTasks.length})</h3>
                         </div>
-                        {displayOtherTasks.map((task) => (
+                        {otherTasks.map((task) => (
                           <div key={task.id} className={`flex items-center justify-between p-3 rounded-lg border transition-all ${task.status === 'completed' ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
                             <div className="flex items-center space-x-3">
                               <input 
@@ -1530,7 +1322,7 @@ const DashboardPage: React.FC = () => {
               </div>
                     )}
                     
-                    {urgentTasks.length === 0 && displayOtherTasks.length === 0 && (
+                    {urgentTasks.length === 0 && otherTasks.length === 0 && (
                       <div className="text-center py-8 text-gray-500">
                         <CheckCircleIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                         <p>No pending tasks. Great job!</p>
@@ -1621,34 +1413,24 @@ const DashboardPage: React.FC = () => {
                           <CheckCircleIcon className="w-4 h-4 text-green-500" title="Completed" />
                     )}
                   </div>
-              </div>
+                    </div>
                   </div>
                 ))
               )}
+              </div>
             </div>
-          </div>
 
             {/* Lab Notebook Entries */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Lab Notebook Entries</h2>
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => setShowCreateEntryModal(true)}
-                    className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
-                  >
-                    <PlusIcon className="w-4 h-4 mr-1" />
-                    Add Entry
-                  </button>
-                  {notebookEntries.length > defaultItemCounts.notebook && (
-                    <button
-                      onClick={() => toggleSection('notebook')}
-                      className="text-gray-500 hover:text-gray-700 text-sm font-medium"
-                    >
-                      {expandedSections.notebook ? 'Show Less' : `Show All ${notebookEntries.length}`}
-                    </button>
-                  )}
-              </div>
+                <button 
+                  onClick={() => setShowCreateEntryModal(true)}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
+                >
+                  <PlusIcon className="w-4 h-4 mr-1" />
+                  Add Entry
+                </button>
               </div>
               
               <div className="space-y-4">
@@ -1658,7 +1440,7 @@ const DashboardPage: React.FC = () => {
                     <p>No notebook entries yet. Create your first entry!</p>
                   </div>
                 ) : (
-                  getDisplayItems(notebookEntries, 'notebook').map((entry) => (
+                  notebookEntries.map((entry) => (
                     <div key={entry.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
@@ -1797,23 +1579,13 @@ const DashboardPage: React.FC = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setRecentActivity([])}
-                  className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors"
-                  title="Clear activity"
-                >
-                  Clear
-                </button>
-                {recentActivity.length > defaultItemCounts.activity && (
-                  <button
-                    onClick={() => toggleSection('activity')}
-                    className="text-gray-500 hover:text-gray-700 text-sm font-medium"
-                  >
-                    {expandedSections.activity ? 'Show Less' : `Show All ${recentActivity.length}`}
-                  </button>
-                )}
-              </div>
+              <button 
+                onClick={() => setRecentActivity([])}
+                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors"
+                title="Clear activity"
+              >
+                Clear
+              </button>
             </div>
             <div className="space-y-4">
               {recentActivity.length === 0 ? (
@@ -1825,17 +1597,10 @@ const DashboardPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {getDisplayItems(recentActivity, 'activity').map((activity, index) => (
+                  {recentActivity.slice(0, 5).map((activity, index) => (
                     <div key={activity.id} className="flex items-start space-x-3 group hover:bg-gray-50 p-2 rounded-lg transition-colors">
                       <div className="flex-shrink-0 mt-1">
-                        <div className={`w-2 h-2 rounded-full ${
-                          activity.color === 'green' ? 'bg-green-500' :
-                          activity.color === 'blue' ? 'bg-blue-500' :
-                          activity.color === 'purple' ? 'bg-purple-500' :
-                          activity.color === 'orange' ? 'bg-orange-500' :
-                          activity.color === 'red' ? 'bg-red-500' :
-                          'bg-gray-500'
-                        }`}></div>
+                        <div className={`w-2 h-2 rounded-full bg-${activity.color}-500`}></div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-700 leading-relaxed">{activity.message}</p>
@@ -1849,9 +1614,14 @@ const DashboardPage: React.FC = () => {
                             {activity.type === 'task' && <CheckCircleIcon className="w-3 h-3 text-indigo-500" />}
                           </div>
                         </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                  {recentActivity.length > 5 && (
+                    <button className="w-full text-center text-sm text-blue-600 hover:text-blue-700 py-2 border-t border-gray-100">
+                      View all {recentActivity.length} activities
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1895,7 +1665,7 @@ const DashboardPage: React.FC = () => {
 
               {/* Task Form */}
               {quickAddType === 'task' && (
-              <div className="space-y-4">
+                <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
                     <input
@@ -1905,7 +1675,7 @@ const DashboardPage: React.FC = () => {
                       placeholder="Enter task title..."
                       className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                </div>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                     <textarea
@@ -1915,7 +1685,7 @@ const DashboardPage: React.FC = () => {
                       rows={3}
                       className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     />
-                </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
@@ -1928,7 +1698,7 @@ const DashboardPage: React.FC = () => {
                         <option value="medium">Medium</option>
                         <option value="high">High</option>
                       </select>
-                </div>
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
                       <input
@@ -1937,8 +1707,8 @@ const DashboardPage: React.FC = () => {
                         onChange={(e) => setNewTaskDueDate(e.target.value)}
                         className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-              </div>
-            </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1954,7 +1724,7 @@ const DashboardPage: React.FC = () => {
                       placeholder="Enter event title..."
                       className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                </div>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                     <textarea
@@ -1964,7 +1734,7 @@ const DashboardPage: React.FC = () => {
                       rows={2}
                       className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     />
-                </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
@@ -1974,7 +1744,7 @@ const DashboardPage: React.FC = () => {
                         onChange={(e) => setNewEventDate(e.target.value)}
                         className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-                </div>
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
                       <input
@@ -1983,9 +1753,9 @@ const DashboardPage: React.FC = () => {
                         onChange={(e) => setNewEventTime(e.target.value)}
                         className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
               )}
 
               {/* Note Form */}
@@ -2000,7 +1770,7 @@ const DashboardPage: React.FC = () => {
                       rows={4}
                       className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     />
-          </div>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
                     <div className="flex items-center space-x-2">
@@ -2017,8 +1787,8 @@ const DashboardPage: React.FC = () => {
                           title={`${color} note`}
                         />
                       ))}
-        </div>
-      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
