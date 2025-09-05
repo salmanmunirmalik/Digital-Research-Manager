@@ -322,79 +322,74 @@ const DashboardPage: React.FC = () => {
 
   // Lab Notebook Functions
   const fetchNotebookEntries = async () => {
-    try {
-      const queryParams = new URLSearchParams();
-      Object.entries(notebookFilters).forEach(([key, value]) => {
-        if (value) queryParams.append(key, String(value));
-      });
-
-      const response = await fetch(`http://localhost:5001/api/lab-notebooks?${queryParams}`, {
-        headers: {
-          'Authorization': `Bearer demo-token-123`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setNotebookEntries(data.entries || []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch notebook entries:', err);
-    }
+    // For now, we'll use mock data instead of API calls
+    // The mock data is already set in the useEffect
+    console.log('Notebook entries loaded from mock data');
   };
 
   const fetchLabs = async () => {
-    try {
-      const response = await fetch('http://localhost:5001/api/labs', {
-        headers: {
-          'Authorization': `Bearer demo-token-123`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setLabs(data.labs || []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch labs:', err);
-    }
+    // For now, we'll use mock data instead of API calls
+    // The mock data is already set in the useEffect
+    console.log('Labs loaded from mock data');
   };
 
   const createNotebookEntry = async () => {
-    try {
-      const response = await fetch('http://localhost:5001/api/lab-notebooks', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer demo-token-123`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(entryForm)
-      });
+    // Create new entry with mock data
+    const newEntry = {
+      id: Date.now().toString(),
+      title: entryForm.title,
+      content: entryForm.content,
+      entry_type: entryForm.entry_type,
+      status: entryForm.status,
+      priority: entryForm.priority,
+      objectives: entryForm.objectives,
+      methodology: entryForm.methodology,
+      results: entryForm.results,
+      conclusions: entryForm.conclusions,
+      next_steps: entryForm.next_steps,
+      lab_id: entryForm.lab_id || 'lab1',
+      lab_name: 'Molecular Biology Lab',
+      creator_name: user?.name || 'Dr. Sarah Johnson',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      tags: entryForm.tags
+    };
 
-      if (response.ok) {
-        setShowCreateEntryModal(false);
-        setEntryForm({
-          title: '',
-          content: '',
-          entry_type: 'experiment',
-          status: 'planning',
-          priority: 'medium',
-          objectives: '',
-          methodology: '',
-          results: '',
-          conclusions: '',
-          next_steps: '',
-          lab_id: '',
-          tags: [],
-          privacy_level: 'lab'
-        });
-        fetchNotebookEntries();
-      }
-    } catch (err) {
-      console.error('Failed to create notebook entry:', err);
-    }
+    // Add to existing entries
+    setNotebookEntries(prev => [newEntry, ...prev]);
+    
+    // Close modal and reset form
+    setShowCreateEntryModal(false);
+    setEntryForm({
+      title: '',
+      content: '',
+      entry_type: 'experiment',
+      status: 'planning',
+      priority: 'medium',
+      objectives: '',
+      methodology: '',
+      results: '',
+      conclusions: '',
+      next_steps: '',
+      lab_id: '',
+      tags: [],
+      privacy_level: 'lab'
+    });
+  };
+
+  // Filter notebook entries based on current filters
+  const getFilteredNotebookEntries = () => {
+    return notebookEntries.filter(entry => {
+      const matchesSearch = !notebookFilters.search || 
+        entry.title.toLowerCase().includes(notebookFilters.search.toLowerCase()) ||
+        entry.content.toLowerCase().includes(notebookFilters.search.toLowerCase());
+      
+      const matchesType = !notebookFilters.entry_type || entry.entry_type === notebookFilters.entry_type;
+      const matchesStatus = !notebookFilters.status || entry.status === notebookFilters.status;
+      const matchesLab = !notebookFilters.lab_id || entry.lab_id === notebookFilters.lab_id;
+      
+      return matchesSearch && matchesType && matchesStatus && matchesLab;
+    });
   };
 
   const getTypeIcon = (type: string) => {
@@ -463,6 +458,146 @@ const DashboardPage: React.FC = () => {
         tags: ['presentation', 'meeting'],
         created_at: '2024-01-08T14:00:00Z',
         updated_at: '2024-01-08T14:00:00Z'
+      }
+    ]);
+
+    // Mock notebook entries
+    setNotebookEntries([
+      {
+        id: '1',
+        title: 'PCR Optimization Experiment',
+        content: 'Testing different annealing temperatures for optimal PCR results. Initial results show 55°C works best for our primer set.',
+        entry_type: 'experiment',
+        status: 'in_progress',
+        priority: 'high',
+        objectives: 'Find optimal annealing temperature for PCR amplification',
+        methodology: 'Test temperatures from 50°C to 65°C in 5°C increments',
+        results: '55°C showed best amplification with minimal primer dimers',
+        conclusions: 'Optimal temperature identified, ready for scale-up',
+        next_steps: 'Test with different primer concentrations',
+        lab_id: 'lab1',
+        lab_name: 'Molecular Biology Lab',
+        creator_name: 'Dr. Sarah Johnson',
+        created_at: '2024-01-10T09:00:00Z',
+        updated_at: '2024-01-10T15:30:00Z',
+        tags: ['PCR', 'optimization', 'molecular-biology']
+      },
+      {
+        id: '2',
+        title: 'Cell Culture Observation',
+        content: 'HeLa cells showing normal morphology after 48 hours. Confluence at 80%, ready for passaging.',
+        entry_type: 'observation',
+        status: 'completed',
+        priority: 'medium',
+        objectives: 'Monitor cell health and morphology',
+        methodology: 'Daily observation under microscope',
+        results: 'Cells healthy, good morphology, 80% confluence',
+        conclusions: 'Cells ready for next experiment',
+        next_steps: 'Passage cells for next experiment',
+        lab_id: 'lab1',
+        lab_name: 'Molecular Biology Lab',
+        creator_name: 'Dr. Sarah Johnson',
+        created_at: '2024-01-09T14:00:00Z',
+        updated_at: '2024-01-09T14:00:00Z',
+        tags: ['cell-culture', 'HeLa', 'observation']
+      },
+      {
+        id: '3',
+        title: 'Protein Extraction Protocol',
+        content: 'Standardized protocol for protein extraction from tissue samples. Includes lysis buffer composition and centrifugation parameters.',
+        entry_type: 'protocol',
+        status: 'completed',
+        priority: 'medium',
+        objectives: 'Create standardized protein extraction protocol',
+        methodology: 'Test different lysis buffers and conditions',
+        results: 'RIPA buffer with protease inhibitors works best',
+        conclusions: 'Protocol standardized and documented',
+        next_steps: 'Train lab members on new protocol',
+        lab_id: 'lab1',
+        lab_name: 'Molecular Biology Lab',
+        creator_name: 'Dr. Sarah Johnson',
+        created_at: '2024-01-08T10:00:00Z',
+        updated_at: '2024-01-08T10:00:00Z',
+        tags: ['protocol', 'protein-extraction', 'standardization']
+      },
+      {
+        id: '4',
+        title: 'Data Analysis - Gene Expression',
+        content: 'Analyzing RNA-seq data from treated vs control samples. Found 150 differentially expressed genes.',
+        entry_type: 'analysis',
+        status: 'in_progress',
+        priority: 'high',
+        objectives: 'Identify differentially expressed genes',
+        methodology: 'RNA-seq analysis using DESeq2',
+        results: '150 genes with significant expression changes',
+        conclusions: 'Treatment shows significant gene expression changes',
+        next_steps: 'Validate top candidates with qPCR',
+        lab_id: 'lab1',
+        lab_name: 'Molecular Biology Lab',
+        creator_name: 'Dr. Sarah Johnson',
+        created_at: '2024-01-07T16:00:00Z',
+        updated_at: '2024-01-10T11:00:00Z',
+        tags: ['RNA-seq', 'gene-expression', 'bioinformatics']
+      },
+      {
+        id: '5',
+        title: 'Research Idea - CRISPR Screening',
+        content: 'New idea for genome-wide CRISPR screen to identify genes involved in drug resistance. Could be high-impact project.',
+        entry_type: 'idea',
+        status: 'planning',
+        priority: 'medium',
+        objectives: 'Develop CRISPR screening approach',
+        methodology: 'Genome-wide CRISPR library screening',
+        results: 'Conceptual framework developed',
+        conclusions: 'Feasible approach with high potential',
+        next_steps: 'Write grant proposal',
+        lab_id: 'lab1',
+        lab_name: 'Molecular Biology Lab',
+        creator_name: 'Dr. Sarah Johnson',
+        created_at: '2024-01-06T13:00:00Z',
+        updated_at: '2024-01-06T13:00:00Z',
+        tags: ['CRISPR', 'screening', 'drug-resistance', 'idea']
+      },
+      {
+        id: '6',
+        title: 'Weekly Lab Meeting Notes',
+        content: 'Discussed progress on three ongoing projects. PCR optimization going well, need to order more reagents for next phase.',
+        entry_type: 'meeting',
+        status: 'completed',
+        priority: 'low',
+        objectives: 'Review project progress and plan next steps',
+        methodology: 'Weekly team meeting',
+        results: 'All projects on track, identified needs',
+        conclusions: 'Good progress, need reagent order',
+        next_steps: 'Order reagents, continue experiments',
+        lab_id: 'lab1',
+        lab_name: 'Molecular Biology Lab',
+        creator_name: 'Dr. Sarah Johnson',
+        created_at: '2024-01-05T11:00:00Z',
+        updated_at: '2024-01-05T11:00:00Z',
+        tags: ['meeting', 'progress-review', 'planning']
+      }
+    ]);
+
+    // Mock labs data
+    setLabs([
+      {
+        id: 'lab1',
+        name: 'Molecular Biology Lab',
+        description: 'Advanced molecular biology research',
+        created_at: '2024-01-01T00:00:00Z'
+      },
+      {
+        id: 'lab2',
+        name: 'Cell Biology Lab',
+        description: 'Cell biology and microscopy research',
+        created_at: '2024-01-01T00:00:00Z'
+      },
+      {
+        id: 'lab3',
+        name: 'Biochemistry Lab',
+        description: 'Protein biochemistry and enzymology',
+        created_at: '2024-01-01T00:00:00Z'
       }
     ]);
 
@@ -744,24 +879,6 @@ const DashboardPage: React.FC = () => {
       color: 'from-orange-500 to-red-500'
     }
   ];
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'text-red-600 bg-red-100';
-      case 'medium': return 'text-yellow-600 bg-yellow-100';
-      case 'low': return 'text-green-600 bg-green-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'text-green-600 bg-green-100';
-      case 'in_progress': return 'text-blue-600 bg-blue-100';
-      case 'pending': return 'text-yellow-600 bg-yellow-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
 
   return (
     <div className="page-container">
@@ -1395,51 +1512,56 @@ const DashboardPage: React.FC = () => {
 
             {/* Notebook Entries */}
             <div className="space-y-4">
-              {notebookEntries.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <BookOpenIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p>No notebook entries yet. Create your first entry!</p>
-                </div>
-              ) : (
-                notebookEntries.slice(0, focusMode ? 3 : 6).map((entry) => (
-                  <div key={entry.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                        {getTypeIcon(entry.entry_type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold text-gray-900 truncate">{entry.title}</h3>
-                          <div className="flex items-center gap-2">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(entry.status)}`}>
-                              {entry.status.replace('_', ' ')}
-                            </span>
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(entry.priority)}`}>
-                              {entry.priority}
-                            </span>
+              {(() => {
+                const filteredEntries = getFilteredNotebookEntries();
+                return filteredEntries.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <BookOpenIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>No notebook entries found. Create your first entry!</p>
+                  </div>
+                ) : (
+                  <>
+                    {filteredEntries.slice(0, focusMode ? 3 : 6).map((entry) => (
+                      <div key={entry.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                            {getTypeIcon(entry.entry_type)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-2">
+                              <h3 className="font-semibold text-gray-900 truncate">{entry.title}</h3>
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(entry.status)}`}>
+                                  {entry.status.replace('_', ' ')}
+                                </span>
+                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(entry.priority)}`}>
+                                  {entry.priority}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="text-gray-600 text-sm line-clamp-2 mb-2">{entry.content}</p>
+                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                              <span>{entry.creator_name}</span>
+                              <span>{new Date(entry.created_at).toLocaleDateString()}</span>
+                              <span>{entry.lab_name}</span>
+                            </div>
                           </div>
                         </div>
-                        <p className="text-gray-600 text-sm line-clamp-2 mb-2">{entry.content}</p>
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <span>{entry.creator_name}</span>
-                          <span>{new Date(entry.created_at).toLocaleDateString()}</span>
-                          <span>{entry.lab_name}</span>
-                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))
-              )}
-              {notebookEntries.length > (focusMode ? 3 : 6) && (
-                <div className="text-center py-2">
-                  <button 
-                    onClick={() => setFocusMode(false)}
-                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                  >
-                    Show All {notebookEntries.length} Entries
-                  </button>
-                </div>
-              )}
+                    ))}
+                    {filteredEntries.length > (focusMode ? 3 : 6) && (
+                      <div className="text-center py-2">
+                        <button 
+                          onClick={() => setFocusMode(false)}
+                          className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                        >
+                          Show All {filteredEntries.length} Entries
+                        </button>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
 
