@@ -230,15 +230,6 @@ const AppContent: React.FC = () => {
         } 
       />
       
-      {/* General protected routes */}
-      <Route 
-        path="/home" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><DashboardPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
       
       {/* Lab Management - All authenticated users */}
       <Route 
