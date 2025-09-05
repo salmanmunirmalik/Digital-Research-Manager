@@ -417,22 +417,6 @@ const AppContent: React.FC = () => {
 
       {/* Quick Action Routes - All authenticated users */}
       <Route 
-        path="/notebook" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><LabNotebookPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/notebook/new" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><LabNotebookPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
         path="/protocols/new" 
         element={
           <ProtectedRoute>
