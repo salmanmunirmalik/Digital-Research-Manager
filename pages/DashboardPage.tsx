@@ -1047,11 +1047,11 @@ const DashboardPage: React.FC = () => {
                         afternoon: 'Focus on data collection and active experimentation',
                         evening: 'Perfect time for analysis, documentation, and preparing for tomorrow'
                       };
-                      return (
+  return (
                         <div className="text-sm text-purple-800 bg-white bg-opacity-60 rounded-md p-2">
                           <span className="font-medium">💡</span>
                           <span className="ml-2">{contextualTips[timeOfDay] || contextualTips.morning}</span>
-                        </div>
+            </div>
                       );
                     })()}
                   </div>
@@ -1238,7 +1238,7 @@ const DashboardPage: React.FC = () => {
                 >
                   <PlusIcon className="w-4 h-4 mr-1" />
                   Add Note
-                </button>
+              </button>
                 {stickyNotes.length > defaultItemCounts.stickyNotes && (
                   <button
                     onClick={() => toggleSection('stickyNotes')}
@@ -1376,7 +1376,7 @@ const DashboardPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                     <span className="text-xs text-gray-500">High Priority</span>
-                  </div>
+              </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <button 
@@ -1621,12 +1621,12 @@ const DashboardPage: React.FC = () => {
                           <CheckCircleIcon className="w-4 h-4 text-green-500" title="Completed" />
                     )}
                   </div>
-                    </div>
+              </div>
                   </div>
                 ))
               )}
-              </div>
             </div>
+          </div>
 
             {/* Lab Notebook Entries */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -1648,7 +1648,7 @@ const DashboardPage: React.FC = () => {
                       {expandedSections.notebook ? 'Show Less' : `Show All ${notebookEntries.length}`}
                     </button>
                   )}
-                </div>
+              </div>
               </div>
               
               <div className="space-y-4">
@@ -1797,21 +1797,23 @@ const DashboardPage: React.FC = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-              <button 
-                onClick={() => setRecentActivity([])}
-                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors"
-                title="Clear activity"
-              >
-                Clear
-              </button>
-              {recentActivity.length > defaultItemCounts.activity && (
-                <button
-                  onClick={() => toggleSection('activity')}
-                  className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setRecentActivity([])}
+                  className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors"
+                  title="Clear activity"
                 >
-                  {expandedSections.activity ? 'Show Less' : `Show All ${recentActivity.length}`}
+                  Clear
                 </button>
-              )}
+                {recentActivity.length > defaultItemCounts.activity && (
+                  <button
+                    onClick={() => toggleSection('activity')}
+                    className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+                  >
+                    {expandedSections.activity ? 'Show Less' : `Show All ${recentActivity.length}`}
+                  </button>
+                )}
+              </div>
             </div>
             <div className="space-y-4">
               {recentActivity.length === 0 ? (
@@ -1847,15 +1849,15 @@ const DashboardPage: React.FC = () => {
                             {activity.type === 'task' && <CheckCircleIcon className="w-3 h-3 text-indigo-500" />}
                           </div>
                         </div>
-                      </div>
                     </div>
-                  ))}
+                  </div>
+                ))}
                 </div>
               )}
             </div>
           </div>
-        </div>
-      </div>
+              </div>
+            </div>
 
       {/* Quick Add Modal */}
       {showQuickAddModal && (
@@ -1893,7 +1895,7 @@ const DashboardPage: React.FC = () => {
 
               {/* Task Form */}
               {quickAddType === 'task' && (
-                <div className="space-y-4">
+              <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
                     <input
@@ -1903,7 +1905,7 @@ const DashboardPage: React.FC = () => {
                       placeholder="Enter task title..."
                       className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                  </div>
+                </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                     <textarea
@@ -1913,7 +1915,7 @@ const DashboardPage: React.FC = () => {
                       rows={3}
                       className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     />
-                  </div>
+                </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
@@ -1926,7 +1928,7 @@ const DashboardPage: React.FC = () => {
                         <option value="medium">Medium</option>
                         <option value="high">High</option>
                       </select>
-                    </div>
+                </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
                       <input
@@ -1935,8 +1937,8 @@ const DashboardPage: React.FC = () => {
                         onChange={(e) => setNewTaskDueDate(e.target.value)}
                         className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-                    </div>
-                  </div>
+              </div>
+            </div>
                 </div>
               )}
 
@@ -1952,7 +1954,7 @@ const DashboardPage: React.FC = () => {
                       placeholder="Enter event title..."
                       className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                  </div>
+                </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                     <textarea
@@ -1962,7 +1964,7 @@ const DashboardPage: React.FC = () => {
                       rows={2}
                       className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     />
-                  </div>
+                </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
@@ -1972,7 +1974,7 @@ const DashboardPage: React.FC = () => {
                         onChange={(e) => setNewEventDate(e.target.value)}
                         className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-                    </div>
+                </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
                       <input
@@ -1981,9 +1983,9 @@ const DashboardPage: React.FC = () => {
                         onChange={(e) => setNewEventTime(e.target.value)}
                         className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-                    </div>
-                  </div>
                 </div>
+              </div>
+            </div>
               )}
 
               {/* Note Form */}
@@ -1998,7 +2000,7 @@ const DashboardPage: React.FC = () => {
                       rows={4}
                       className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     />
-                  </div>
+          </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
                     <div className="flex items-center space-x-2">
@@ -2015,8 +2017,8 @@ const DashboardPage: React.FC = () => {
                           title={`${color} note`}
                         />
                       ))}
-                    </div>
-                  </div>
+        </div>
+      </div>
                 </div>
               )}
 
