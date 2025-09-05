@@ -1856,8 +1856,8 @@ const DashboardPage: React.FC = () => {
               )}
             </div>
           </div>
-              </div>
-            </div>
+        </div>
+      </div>
 
       {/* Quick Add Modal */}
       {showQuickAddModal && (
