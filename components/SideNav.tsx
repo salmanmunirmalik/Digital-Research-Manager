@@ -104,18 +104,7 @@ const SideNav: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* App Branding */}
-      <div className="p-4 border-b border-gray-200 flex-shrink-0 bg-gradient-to-r from-blue-50 to-indigo-50">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
-            <span className="text-white text-lg font-bold">DR</span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-bold text-gray-900">Research Lab</h2>
-            <p className="text-xs text-blue-600 font-medium">Digital Research Manager</p>
-          </div>
-        </div>
-      </div>
+      {/* App Branding - Removed */}
 
       {/* Enhanced Navigation Items */}
       <nav className="flex-1 p-3 space-y-2 overflow-y-auto">
