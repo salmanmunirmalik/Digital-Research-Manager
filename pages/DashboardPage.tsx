@@ -812,9 +812,9 @@ const DashboardPage: React.FC = () => {
 
 
       {/* Main Dashboard Content */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
         {/* Left Column - Sticky Notes & Tasks */}
-        <div className="xl:col-span-2 space-y-6 lg:space-y-8">
+        <div className="lg:col-span-8 space-y-6 lg:space-y-8">
           {/* Sticky Notes Section */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
@@ -970,8 +970,8 @@ const DashboardPage: React.FC = () => {
                     <PlusIcon className="w-4 h-4 mr-1" />
                     Add Task
                   </button>
-                  <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">View All</button>
-                </div>
+                <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">View All</button>
+              </div>
               </div>
               
               {/* Cognitive Task Prioritization */}
@@ -989,23 +989,23 @@ const DashboardPage: React.FC = () => {
                   <div className="space-y-4">
                     {/* Urgent Tasks */}
                     {urgentTasks.length > 0 && (
-                      <div className="space-y-3">
+              <div className="space-y-3">
                         <div className="flex items-center gap-2 mb-2">
                           <ExclamationTriangleIcon className="w-4 h-4 text-red-600" />
                           <h3 className="text-sm font-semibold text-red-800">Urgent ({urgentTasks.length})</h3>
                         </div>
                         {urgentTasks.map((task) => (
                           <div key={task.id} className="flex items-center justify-between p-4 rounded-lg border-2 border-red-200 bg-red-50 transition-all hover:shadow-md">
-                            <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-3">
                               <input 
                                 type="checkbox" 
                                 checked={task.status === 'completed'}
                                 onChange={() => toggleTaskComplete(task.id)}
                                 className="w-4 h-4 text-red-600 rounded transition-colors"
                               />
-                              <div>
-                                <p className="font-medium text-gray-900">{task.title}</p>
-                                <p className="text-sm text-gray-600">{task.description}</p>
+                      <div>
+                        <p className="font-medium text-gray-900">{task.title}</p>
+                        <p className="text-sm text-gray-600">{task.description}</p>
                                 <div className="flex items-center space-x-2 mt-1">
                                   <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
                                     {task.priority}
@@ -1064,21 +1064,21 @@ const DashboardPage: React.FC = () => {
                                 <p className={`text-sm ${task.status === 'completed' ? 'text-gray-400' : 'text-gray-600'}`}>
                                   {task.description}
                                 </p>
-                                <div className="flex items-center space-x-2 mt-1">
-                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(task.priority)}`}>
-                                    {task.priority}
-                                  </span>
-                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(task.status)}`}>
-                                    {task.status}
-                                  </span>
-                                  {task.due_date && (
-                                    <span className="text-xs text-gray-500">
-                                      Due: {new Date(task.due_date).toLocaleDateString()}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(task.priority)}`}>
+                            {task.priority}
+                          </span>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(task.status)}`}>
+                            {task.status}
+                          </span>
+                          {task.due_date && (
+                            <span className="text-xs text-gray-500">
+                              Due: {new Date(task.due_date).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                             <div className="flex items-center space-x-1">
                               <button 
                                 onClick={() => setEditingTaskId(task.id)}
@@ -1093,20 +1093,20 @@ const DashboardPage: React.FC = () => {
                                 title="Delete task"
                               >
                                 <TrashIcon className="w-4 h-4" />
-                              </button>
+                    </button>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                  </div>
+                ))}
+              </div>
                     )}
                     
                     {urgentTasks.length === 0 && otherTasks.length === 0 && (
                       <div className="text-center py-8 text-gray-500">
                         <CheckCircleIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                         <p>No pending tasks. Great job!</p>
-                      </div>
+              </div>
                     )}
-                  </div>
+                    </div>
                 );
               })()}
             </div>
@@ -1199,30 +1199,47 @@ const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-        {/* Right Column - Calendar & Events */}
-          <div className="space-y-8">
-          {/* Calendar Section - Larger Size */}
+        {/* Right Column - Calendar & Lab Overview */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* Calendar Section - Compact Design */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-gray-900">Calendar</h2>
+              <button 
+                onClick={() => {
+                  setQuickAddType('event');
+                  setShowQuickAddModal(true);
+                }}
+                className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                <PlusIcon className="w-4 h-4 mr-1" />
+                Add Event
+              </button>
+            </div>
+            
+            {/* Calendar Header */}
               <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Personal Calendar</h2>
-              <div className="flex items-center space-x-2">
-                <button 
-                  onClick={() => {
-                    setQuickAddType('event');
-                    setShowQuickAddModal(true);
-                  }}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
-                >
-                  <PlusIcon className="w-4 h-4 mr-1" />
-                  Add Event
+              <h3 className="text-sm font-semibold text-gray-900">
+                {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </h3>
+              <div className="flex items-center space-x-1">
+                <button className="p-1 hover:bg-gray-100 rounded">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button className="p-1 hover:bg-gray-100 rounded">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </button>
               </div>
             </div>
             
-            {/* Calendar Grid - Larger Cells */}
-            <div className="grid grid-cols-7 gap-1 mb-4">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+            {/* Calendar Grid - Compact */}
+            <div className="grid grid-cols-7 gap-1 mb-3">
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) => (
+                <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
                   {day}
                 </div>
               ))}
@@ -1234,7 +1251,6 @@ const DashboardPage: React.FC = () => {
                 const currentMonth = date.getMonth();
                 const currentYear = date.getFullYear();
                 const firstDay = new Date(currentYear, currentMonth, 1);
-                const lastDay = new Date(currentYear, currentMonth + 1, 0);
                 const startDate = new Date(firstDay);
                 startDate.setDate(startDate.getDate() - firstDay.getDay());
                 
@@ -1251,31 +1267,27 @@ const DashboardPage: React.FC = () => {
                 return (
                   <div
                     key={i}
-                    className={`min-h-[100px] p-2 border border-gray-100 text-sm ${
-                      isCurrentMonth ? 'bg-white' : 'bg-gray-50'
-                    } ${isToday ? 'ring-2 ring-blue-500' : ''}`}
-                  >
-                    <div className={`text-right mb-2 ${
+                    className={`aspect-square flex flex-col items-center justify-center text-xs rounded-lg transition-colors ${
                       isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
-                    } ${isToday ? 'font-bold text-blue-600' : ''}`}>
-                      {cellDate.getDate()}
+                    } ${isToday ? 'bg-blue-600 text-white font-semibold' : 'hover:bg-gray-100'}`}
+                  >
+                    <span className="font-medium">{cellDate.getDate()}</span>
+                    {dayEvents.length > 0 && (
+                      <div className="flex space-x-0.5 mt-1">
+                        {dayEvents.slice(0, 2).map((_, eventIndex) => (
+                          <div
+                            key={eventIndex}
+                            className={`w-1 h-1 rounded-full ${
+                              isToday ? 'bg-white' : 'bg-blue-500'
+                            }`}
+                          />
+                        ))}
+                        {dayEvents.length > 2 && (
+                          <div className={`w-1 h-1 rounded-full ${
+                            isToday ? 'bg-white opacity-50' : 'bg-gray-400'
+                          }`} />
+                      )}
                     </div>
-                    
-                    {/* Event indicators */}
-                    {dayEvents.slice(0, 3).map((event, eventIndex) => (
-                      <div
-                        key={eventIndex}
-                        className="text-xs p-1 mb-1 bg-blue-100 text-blue-800 rounded truncate"
-                        title={event.title}
-                      >
-                        {event.title}
-                  </div>
-                ))}
-                    
-                    {dayEvents.length > 3 && (
-                      <div className="text-xs text-gray-500 text-center">
-                        +{dayEvents.length - 3} more
-                      </div>
                     )}
                   </div>
                 );
@@ -1283,112 +1295,150 @@ const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Upcoming Events */}
+          {/* Upcoming Events - Compact Design */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Upcoming Events</h2>
-              <button 
-                onClick={() => {
-                  setQuickAddType('event');
-                  setShowQuickAddModal(true);
-                }}
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
-              >
-                <PlusIcon className="w-4 h-4 mr-1" />
-                Add Event
-              </button>
+              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                {events.length} events
+              </span>
             </div>
             <div className="space-y-3">
               {events.length === 0 ? (
                 <div className="text-center py-6 text-gray-500">
-                  <CalendarIcon className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                  <CalendarIcon className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                   <p className="text-sm">No upcoming events</p>
                 </div>
               ) : (
-                events.slice(0, 4).map((event) => (
-                  <div key={event.id} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 hover:shadow-md transition-all">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0"></div>
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900 text-sm">{event.title}</p>
-                      <p className="text-xs text-gray-600">{event.description}</p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(event.start_time).toLocaleDateString()} at {new Date(event.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-1 flex-shrink-0">
-                      <button className="text-gray-400 hover:text-blue-600 p-1 rounded transition-colors" title="Edit event">
-                        <EditIcon className="w-3 h-3" />
-                      </button>
-                      <button 
-                        onClick={() => setEvents(prev => prev.filter(e => e.id !== event.id))}
-                        className="text-gray-400 hover:text-red-600 p-1 rounded transition-colors" 
-                        title="Delete event"
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
+                events.slice(0, 3).map((event) => (
+                  <div key={event.id} className="group p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100 hover:shadow-sm transition-all">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 text-sm truncate">{event.title}</h4>
+                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">{event.description}</p>
+                        <div className="flex items-center mt-2 text-xs text-gray-500">
+                          <CalendarIcon className="w-3 h-3 mr-1" />
+                          <span>{new Date(event.start_time).toLocaleDateString()} at {new Date(event.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                        <button className="text-gray-400 hover:text-blue-600 p-1 rounded transition-colors" title="Edit event">
+                          <EditIcon className="w-3 h-3" />
+                        </button>
+                        <button 
+                          onClick={() => setEvents(prev => prev.filter(e => e.id !== event.id))}
+                          className="text-gray-400 hover:text-red-600 p-1 rounded transition-colors" 
+                          title="Delete event"
+                        >
+                          <TrashIcon className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))
               )}
+              {events.length > 3 && (
+                <button className="w-full text-center text-sm text-blue-600 hover:text-blue-700 py-2 border-t border-gray-100">
+                  View all {events.length} events
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Lab Overview - Card Design */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Lab Overview</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Members</p>
+                    <p className="text-2xl font-bold text-blue-900 mt-1">{stats.lab_members}</p>
+                  </div>
+                  <UsersIcon className="w-8 h-8 text-blue-500" />
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Projects</p>
+                    <p className="text-2xl font-bold text-green-900 mt-1">{stats.active_projects}</p>
+                  </div>
+                  <BookOpenIcon className="w-8 h-8 text-green-500" />
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-purple-600 uppercase tracking-wide">Tasks</p>
+                    <p className="text-2xl font-bold text-purple-900 mt-1">{stats.pending_tasks}</p>
+                  </div>
+                  <CheckCircleIcon className="w-8 h-8 text-purple-500" />
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-orange-600 uppercase tracking-wide">Events</p>
+                    <p className="text-2xl font-bold text-orange-900 mt-1">{stats.upcoming_events}</p>
+                  </div>
+                  <CalendarIcon className="w-8 h-8 text-orange-500" />
+                </div>
               </div>
             </div>
+          </div>
 
-            {/* Lab Stats */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Lab Overview</h2>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Lab Members</span>
-                  <span className="font-semibold text-gray-900">{stats.lab_members}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Active Projects</span>
-                  <span className="font-semibold text-gray-900">{stats.active_projects}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">This Week's Tasks</span>
-                  <span className="font-semibold text-gray-900">{stats.pending_tasks}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Activity */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          {/* Recent Activity - Timeline Design */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
               <button 
                 onClick={() => setRecentActivity([])}
-                className="text-gray-400 hover:text-gray-600 text-sm"
+                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors"
                 title="Clear activity"
               >
                 Clear
               </button>
             </div>
-              <div className="space-y-3">
+            <div className="space-y-4">
               {recentActivity.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
-                    <span className="text-gray-400 text-2xl">📊</span>
-                </div>
-                  <p>No recent activity to show.</p>
+                    <ChartBarIcon className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <p className="text-sm">No recent activity to show.</p>
                 </div>
               ) : (
-                recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-center space-x-3 text-sm hover:bg-gray-50 p-2 rounded-lg transition-colors">
-                    <div className={`w-2 h-2 rounded-full bg-${activity.color}-500 flex-shrink-0`}></div>
-                    <div className="flex-1">
-                      <span className="text-gray-700">{activity.message}</span>
-                      <div className="text-xs text-gray-500 mt-1">{activity.timestamp}</div>
+                <div className="space-y-3">
+                  {recentActivity.slice(0, 5).map((activity, index) => (
+                    <div key={activity.id} className="flex items-start space-x-3 group hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                      <div className="flex-shrink-0 mt-1">
+                        <div className={`w-2 h-2 rounded-full bg-${activity.color}-500`}></div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-700 leading-relaxed">{activity.message}</p>
+                        <div className="flex items-center mt-1 space-x-2">
+                          <span className="text-xs text-gray-500">{activity.timestamp}</span>
+                          <div className="flex items-center space-x-1">
+                            {activity.type === 'protocol' && <BookOpenIcon className="w-3 h-3 text-green-500" />}
+                            {activity.type === 'member' && <UsersIcon className="w-3 h-3 text-blue-500" />}
+                            {activity.type === 'equipment' && <BeakerIcon className="w-3 h-3 text-purple-500" />}
+                            {activity.type === 'experiment' && <BeakerIcon className="w-3 h-3 text-orange-500" />}
+                            {activity.type === 'task' && <CheckCircleIcon className="w-3 h-3 text-indigo-500" />}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {recentActivity.length > 5 && (
+                    <button className="w-full text-center text-sm text-blue-600 hover:text-blue-700 py-2 border-t border-gray-100">
+                      View all {recentActivity.length} activities
+                    </button>
+                  )}
                 </div>
-                    <div className="flex items-center space-x-1">
-                      {activity.type === 'protocol' && <BookOpenIcon className="w-3 h-3 text-green-500" />}
-                      {activity.type === 'member' && <UsersIcon className="w-3 h-3 text-blue-500" />}
-                      {activity.type === 'equipment' && <BeakerIcon className="w-3 h-3 text-purple-500" />}
-                      {activity.type === 'experiment' && <BeakerIcon className="w-3 h-3 text-orange-500" />}
-                      {activity.type === 'task' && <CheckCircleIcon className="w-3 h-3 text-indigo-500" />}
-                </div>
-              </div>
-                ))
               )}
             </div>
           </div>
