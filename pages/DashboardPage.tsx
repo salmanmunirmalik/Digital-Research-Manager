@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   CalendarIcon, 
   CheckCircleIcon, 
@@ -20,7 +21,14 @@ import {
   PinIcon,
   AlertCircleIcon,
   PlayIcon,
-  PauseIcon
+  PauseIcon,
+  EyeIcon,
+  LightBulbIcon,
+  ExclamationTriangleIcon,
+  ArrowRightIcon,
+  SparklesIcon,
+  BrainIcon,
+  TargetIcon
 } from '../components/icons';
 import { 
   Task, 
@@ -32,6 +40,7 @@ import {
 } from '../types';
 
 const DashboardPage: React.FC = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -44,6 +53,42 @@ const DashboardPage: React.FC = () => {
     upcoming_events: 0,
     lab_members: 0,
     active_projects: 0
+  });
+
+  // Cognitive Enhancement States
+  const [cognitiveInsights, setCognitiveInsights] = useState<Array<{
+    id: string;
+    type: 'insight' | 'suggestion' | 'alert' | 'achievement';
+    title: string;
+    description: string;
+    priority: 'low' | 'medium' | 'high';
+    action?: {
+      label: string;
+      route: string;
+    };
+    icon: string;
+    color: string;
+  }>>([]);
+  
+  const [focusMode, setFocusMode] = useState(false);
+  const [smartSuggestions, setSmartSuggestions] = useState<Array<{
+    id: string;
+    type: 'next_action' | 'optimization' | 'reminder';
+    title: string;
+    description: string;
+    confidence: number;
+    action: string;
+  }>>([]);
+  
+  const [cognitiveLoad, setCognitiveLoad] = useState<'low' | 'medium' | 'high'>('medium');
+  const [userContext, setUserContext] = useState<{
+    timeOfDay: 'morning' | 'afternoon' | 'evening';
+    workPattern: 'focused' | 'collaborative' | 'administrative';
+    currentGoal: string | null;
+  }>({
+    timeOfDay: 'morning',
+    workPattern: 'focused',
+    currentGoal: null
   });
 
   // Interactive states
@@ -70,7 +115,183 @@ const DashboardPage: React.FC = () => {
   }>>([]);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Cognitive Enhancement Functions
+  const generateCognitiveInsights = () => {
+    const insights = [];
+    
+    // Time-based insights
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour < 12) {
+      insights.push({
+        id: 'morning-focus',
+        type: 'insight' as const,
+        title: 'Morning Focus Time',
+        description: 'Your brain is most alert now. Perfect for complex analytical tasks.',
+        priority: 'medium' as const,
+        action: { label: 'Start Deep Work', route: '/lab-notebook' },
+        icon: 'BrainIcon',
+        color: 'blue'
+      });
+    }
+    
+    // Task-based insights
+    const overdueTasks = tasks.filter(task => 
+      task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed'
+    );
+    if (overdueTasks.length > 0) {
+      insights.push({
+        id: 'overdue-alert',
+        type: 'alert' as const,
+        title: `${overdueTasks.length} Overdue Task${overdueTasks.length > 1 ? 's' : ''}`,
+        description: 'These tasks need immediate attention to maintain project momentum.',
+        priority: 'high' as const,
+        action: { label: 'View Tasks', route: '/tasks' },
+        icon: 'ExclamationTriangleIcon',
+        color: 'red'
+      });
+    }
+    
+    // Productivity insights
+    const completedToday = tasks.filter(task => 
+      task.status === 'completed' && 
+      new Date(task.updated_at).toDateString() === new Date().toDateString()
+    );
+    if (completedToday.length >= 3) {
+      insights.push({
+        id: 'productivity-win',
+        type: 'achievement' as const,
+        title: 'Productivity Streak!',
+        description: `You've completed ${completedToday.length} tasks today. Keep the momentum going!`,
+        priority: 'low' as const,
+        icon: 'SparklesIcon',
+        color: 'green'
+      });
+    }
+    
+    // Lab efficiency insights
+    const activeExperiments = experimentUpdates.filter(exp => exp.progress_percentage > 0 && exp.progress_percentage < 100);
+    if (activeExperiments.length > 0) {
+      insights.push({
+        id: 'experiment-progress',
+        type: 'suggestion' as const,
+        title: 'Active Experiments',
+        description: `${activeExperiments.length} experiment${activeExperiments.length > 1 ? 's' : ''} in progress. Consider updating progress.`,
+        priority: 'medium' as const,
+        action: { label: 'Update Progress', route: '/lab-notebook' },
+        icon: 'BeakerIcon',
+        color: 'purple'
+      });
+    }
+    
+    setCognitiveInsights(insights);
+  };
 
+  const generateSmartSuggestions = () => {
+    const suggestions = [];
+    
+    // Next action suggestions based on user patterns
+    const pendingTasks = tasks.filter(task => task.status === 'pending');
+    if (pendingTasks.length > 0) {
+      const highPriorityTask = pendingTasks.find(task => task.priority === 'high');
+      if (highPriorityTask) {
+        suggestions.push({
+          id: 'high-priority-task',
+          type: 'next_action' as const,
+          title: 'High Priority Task',
+          description: `"${highPriorityTask.title}" needs attention`,
+          confidence: 0.9,
+          action: 'Complete high priority task'
+        });
+      }
+    }
+    
+    // Time-based suggestions
+    const hour = new Date().getHours();
+    if (hour >= 14 && hour <= 16) {
+      suggestions.push({
+        id: 'afternoon-collaboration',
+        type: 'optimization' as const,
+        title: 'Collaboration Window',
+        description: 'Afternoon is ideal for team meetings and collaborative work',
+        confidence: 0.7,
+        action: 'Schedule team collaboration'
+      });
+    }
+    
+    // Resource optimization
+    const upcomingEvents = events.filter(event => 
+      new Date(event.start_time) > new Date() && 
+      new Date(event.start_time) < new Date(Date.now() + 24 * 60 * 60 * 1000)
+    );
+    if (upcomingEvents.length > 0) {
+      suggestions.push({
+        id: 'prepare-for-events',
+        type: 'reminder' as const,
+        title: 'Upcoming Events',
+        description: `You have ${upcomingEvents.length} event${upcomingEvents.length > 1 ? 's' : ''} tomorrow. Prepare materials.`,
+        confidence: 0.8,
+        action: 'Prepare for upcoming events'
+      });
+    }
+    
+    setSmartSuggestions(suggestions);
+  };
+
+  const calculateCognitiveLoad = () => {
+    let load = 0;
+    
+    // Factor in number of pending tasks
+    load += tasks.filter(task => task.status === 'pending').length * 0.1;
+    
+    // Factor in upcoming deadlines
+    const urgentTasks = tasks.filter(task => 
+      task.due_date && 
+      new Date(task.due_date) < new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) &&
+      task.status !== 'completed'
+    );
+    load += urgentTasks.length * 0.2;
+    
+    // Factor in active experiments
+    load += experimentUpdates.filter(exp => exp.progress_percentage > 0 && exp.progress_percentage < 100).length * 0.15;
+    
+    // Factor in upcoming events
+    load += events.filter(event => 
+      new Date(event.start_time) > new Date() && 
+      new Date(event.start_time) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    ).length * 0.1;
+    
+    if (load < 2) setCognitiveLoad('low');
+    else if (load < 4) setCognitiveLoad('medium');
+    else setCognitiveLoad('high');
+  };
+
+  const updateUserContext = () => {
+    const hour = new Date().getHours();
+    let timeOfDay: 'morning' | 'afternoon' | 'evening';
+    
+    if (hour >= 6 && hour < 12) timeOfDay = 'morning';
+    else if (hour >= 12 && hour < 18) timeOfDay = 'afternoon';
+    else timeOfDay = 'evening';
+    
+    // Determine work pattern based on user activity
+    const collaborativeTasks = tasks.filter(task => 
+      task.tags?.includes('meeting') || task.tags?.includes('collaboration')
+    );
+    const adminTasks = tasks.filter(task => 
+      task.tags?.includes('admin') || task.tags?.includes('documentation')
+    );
+    
+    let workPattern: 'focused' | 'collaborative' | 'administrative';
+    if (collaborativeTasks.length > adminTasks.length) workPattern = 'collaborative';
+    else if (adminTasks.length > collaborativeTasks.length) workPattern = 'administrative';
+    else workPattern = 'focused';
+    
+    setUserContext({
+      timeOfDay,
+      workPattern,
+      currentGoal: null // Could be set based on user preferences or recent activity
+    });
+  };
 
   // Mock data - replace with real API calls
   useEffect(() => {
@@ -190,7 +411,18 @@ const DashboardPage: React.FC = () => {
       { id: '4', type: 'experiment', message: 'Cell culture experiment started', timestamp: '2 days ago', color: 'orange' },
       { id: '5', type: 'task', message: 'Data analysis task completed', timestamp: '3 days ago', color: 'green' }
     ]);
+
+    // Initialize cognitive enhancements
+    updateUserContext();
+    calculateCognitiveLoad();
   }, []);
+
+  // Update cognitive insights when data changes
+  useEffect(() => {
+    generateCognitiveInsights();
+    generateSmartSuggestions();
+    calculateCognitiveLoad();
+  }, [tasks, events, experimentUpdates]);
 
   // Interactive functions
   const addNewTask = () => {
@@ -390,80 +622,175 @@ const DashboardPage: React.FC = () => {
 
   return (
     <div className="page-container">
-      {/* Page Header */}
+      {/* Enhanced Cognitive Header */}
       <div className="page-section">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-            <p className="text-gray-600 text-base sm:text-lg">Welcome back! Here's what's happening today.</p>
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-3">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
+              <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                cognitiveLoad === 'low' ? 'bg-green-100 text-green-800' :
+                cognitiveLoad === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-red-100 text-red-800'
+              }`}>
+                {cognitiveLoad === 'low' ? 'Low Load' : cognitiveLoad === 'medium' ? 'Medium Load' : 'High Load'}
+            </div>
+            </div>
+            
+            <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+              <div className="flex items-center gap-2">
+                <BrainIcon className="w-4 h-4 text-blue-600" />
+                <span className="capitalize">{userContext.timeOfDay} • {userContext.workPattern} mode</span>
+              </div>
+              {user && (
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500">Welcome,</span>
+                  <span className="font-medium text-gray-900">{user.name || 'Researcher'}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Cognitive Insights Banner */}
+            {cognitiveInsights.length > 0 && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <LightBulbIcon className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-blue-900 mb-1">Smart Insights</h3>
+                    <div className="space-y-2">
+                      {cognitiveInsights.slice(0, 2).map((insight) => (
+                        <div key={insight.id} className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="text-sm text-blue-800 font-medium">{insight.title}</p>
+                            <p className="text-xs text-blue-600">{insight.description}</p>
+                          </div>
+                          {insight.action && (
+                            <Link
+                              to={insight.action.route}
+                              className="ml-3 px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
+                            >
+                              {insight.action.label}
+                            </Link>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="flex items-center space-x-2 sm:space-x-4">
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <button 
+              onClick={() => setFocusMode(!focusMode)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                focusMode 
+                  ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <TargetIcon className="w-4 h-4 inline mr-2" />
+              {focusMode ? 'Exit Focus' : 'Focus Mode'}
+            </button>
             <button 
               onClick={() => setShowQuickAddModal(true)}
-              className="btn-primary w-full sm:w-auto"
+              className="btn-primary"
             >
-              <PlusIcon className="w-4 h-4 inline mr-2" />
-              Quick Add
-            </button>
+                <PlusIcon className="w-4 h-4 inline mr-2" />
+                Quick Add
+              </button>
           </div>
         </div>
       </div>
 
-      {/* Stats Overview */}
+        {/* Stats Overview */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className="page-section">
-          <div className="flex items-center">
+            <div className="flex items-center">
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0">
               <BookOpenIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-            </div>
+              </div>
             <div className="ml-3 sm:ml-4 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600">Total Protocols</p>
               <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.total_protocols}</p>
+              </div>
             </div>
           </div>
-        </div>
-        
+          
         <div className="page-section">
-          <div className="flex items-center">
+            <div className="flex items-center">
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
               <BeakerIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-            </div>
+              </div>
             <div className="ml-3 sm:ml-4 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600">Active Experiments</p>
               <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.total_experiments}</p>
+              </div>
             </div>
           </div>
-        </div>
-        
+          
         <div className="page-section">
-          <div className="flex items-center">
+            <div className="flex items-center">
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center flex-shrink-0">
               <CheckCircleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-            </div>
+              </div>
             <div className="ml-3 sm:ml-4 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600">Pending Tasks</p>
               <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.pending_tasks}</p>
+              </div>
             </div>
           </div>
-        </div>
-        
+          
         <div className="page-section">
-          <div className="flex items-center">
+            <div className="flex items-center">
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center flex-shrink-0">
               <CalendarIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-            </div>
+              </div>
             <div className="ml-3 sm:ml-4 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600">Upcoming Events</p>
               <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.upcoming_events}</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+
+      {/* Smart Suggestions Section */}
+      {smartSuggestions.length > 0 && (
+        <div className="page-section">
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <SparklesIcon className="w-6 h-6 text-purple-600" />
+              <h2 className="text-lg font-semibold text-purple-900">Smart Suggestions</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {smartSuggestions.map((suggestion) => (
+                <div key={suggestion.id} className="bg-white rounded-lg p-4 border border-purple-100">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-medium text-gray-900 text-sm">{suggestion.title}</h3>
+                    <div className="flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full ${
+                        suggestion.confidence > 0.8 ? 'bg-green-500' :
+                        suggestion.confidence > 0.6 ? 'bg-yellow-500' : 'bg-red-500'
+                      }`}></div>
+                      <span className="text-xs text-gray-500">{Math.round(suggestion.confidence * 100)}%</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">{suggestion.description}</p>
+                  <button className="text-xs text-purple-600 hover:text-purple-700 font-medium">
+                    {suggestion.action} →
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Dashboard Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-          <button
+              <button
             onClick={refreshDashboard}
             disabled={refreshing}
             className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 w-full sm:w-auto"
@@ -479,7 +806,7 @@ const DashboardPage: React.FC = () => {
             <PlusIcon className="w-4 h-4 mr-2" />
             Quick Add
           </button>
-        </div>
+                </div>
       </div>
 
 
@@ -619,96 +946,180 @@ const DashboardPage: React.FC = () => {
                     </div>
                   ))
               )}
-            </div>
           </div>
+        </div>
 
-          {/* Tasks Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Tasks</h2>
-              <div className="flex items-center space-x-2">
-                <button 
-                  onClick={() => {
-                    setQuickAddType('task');
-                    setShowQuickAddModal(true);
-                  }}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
-                >
-                  <PlusIcon className="w-4 h-4 mr-1" />
-                  Add Task
-                </button>
+            {/* Enhanced Tasks Section with Cognitive Prioritization */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-semibold text-gray-900">Priority Tasks</h2>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    <span className="text-xs text-gray-500">High Priority</span>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button 
+                    onClick={() => {
+                      setQuickAddType('task');
+                      setShowQuickAddModal(true);
+                    }}
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
+                  >
+                    <PlusIcon className="w-4 h-4 mr-1" />
+                    Add Task
+                  </button>
+                  <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">View All</button>
+                </div>
+              </div>
+              
+              {/* Cognitive Task Prioritization */}
+              {(() => {
+                const highPriorityTasks = tasks.filter(task => task.priority === 'high' && task.status !== 'completed');
+                const overdueTasks = tasks.filter(task => 
+                  task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed'
+                );
+                const urgentTasks = [...new Set([...highPriorityTasks, ...overdueTasks])];
+                const otherTasks = tasks.filter(task => 
+                  task.status !== 'completed' && !urgentTasks.includes(task)
+                ).slice(0, 3);
+                
+                return (
+                  <div className="space-y-4">
+                    {/* Urgent Tasks */}
+                    {urgentTasks.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <ExclamationTriangleIcon className="w-4 h-4 text-red-600" />
+                          <h3 className="text-sm font-semibold text-red-800">Urgent ({urgentTasks.length})</h3>
+                        </div>
+                        {urgentTasks.map((task) => (
+                          <div key={task.id} className="flex items-center justify-between p-4 rounded-lg border-2 border-red-200 bg-red-50 transition-all hover:shadow-md">
+                            <div className="flex items-center space-x-3">
+                              <input 
+                                type="checkbox" 
+                                checked={task.status === 'completed'}
+                                onChange={() => toggleTaskComplete(task.id)}
+                                className="w-4 h-4 text-red-600 rounded transition-colors"
+                              />
+                              <div>
+                                <p className="font-medium text-gray-900">{task.title}</p>
+                                <p className="text-sm text-gray-600">{task.description}</p>
+                                <div className="flex items-center space-x-2 mt-1">
+                                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                                    {task.priority}
+                                  </span>
+                                  {task.due_date && (
+                                    <span className={`text-xs ${
+                                      new Date(task.due_date) < new Date() ? 'text-red-600 font-semibold' : 'text-gray-500'
+                                    }`}>
+                                      {new Date(task.due_date) < new Date() ? 'OVERDUE' : `Due: ${new Date(task.due_date).toLocaleDateString()}`}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <button 
+                                onClick={() => setEditingTaskId(task.id)}
+                                className="text-gray-400 hover:text-blue-600 p-1 rounded transition-colors"
+                                title="Edit task"
+                              >
+                                <EditIcon className="w-4 h-4" />
+                              </button>
+                              <button 
+                                onClick={() => deleteTask(task.id)}
+                                className="text-gray-400 hover:text-red-600 p-1 rounded transition-colors"
+                                title="Delete task"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Other Tasks */}
+                    {otherTasks.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <ClockIcon className="w-4 h-4 text-blue-600" />
+                          <h3 className="text-sm font-semibold text-blue-800">Other Tasks ({otherTasks.length})</h3>
+                        </div>
+                        {otherTasks.map((task) => (
+                          <div key={task.id} className={`flex items-center justify-between p-3 rounded-lg border transition-all ${task.status === 'completed' ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                            <div className="flex items-center space-x-3">
+                              <input 
+                                type="checkbox" 
+                                checked={task.status === 'completed'}
+                                onChange={() => toggleTaskComplete(task.id)}
+                                className="w-4 h-4 text-blue-600 rounded transition-colors"
+                              />
+                              <div>
+                                <p className={`font-medium ${task.status === 'completed' ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                                  {task.title}
+                                </p>
+                                <p className={`text-sm ${task.status === 'completed' ? 'text-gray-400' : 'text-gray-600'}`}>
+                                  {task.description}
+                                </p>
+                                <div className="flex items-center space-x-2 mt-1">
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(task.priority)}`}>
+                                    {task.priority}
+                                  </span>
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(task.status)}`}>
+                                    {task.status}
+                                  </span>
+                                  {task.due_date && (
+                                    <span className="text-xs text-gray-500">
+                                      Due: {new Date(task.due_date).toLocaleDateString()}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <button 
+                                onClick={() => setEditingTaskId(task.id)}
+                                className="text-gray-400 hover:text-blue-600 p-1 rounded transition-colors"
+                                title="Edit task"
+                              >
+                                <EditIcon className="w-4 h-4" />
+                              </button>
+                              <button 
+                                onClick={() => deleteTask(task.id)}
+                                className="text-gray-400 hover:text-red-600 p-1 rounded transition-colors"
+                                title="Delete task"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {urgentTasks.length === 0 && otherTasks.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <CheckCircleIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                        <p>No pending tasks. Great job!</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+
+
+
+            {/* Experiment Updates */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Experiment Updates</h2>
                 <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">View All</button>
               </div>
-            </div>
-            <div className="space-y-3">
-              {tasks.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <CheckCircleIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p>No tasks yet. Create your first task!</p>
-                </div>
-              ) : (
-                tasks.map((task) => (
-                  <div key={task.id} className={`flex items-center justify-between p-3 rounded-lg border transition-all ${task.status === 'completed' ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-                    <div className="flex items-center space-x-3">
-                      <input 
-                        type="checkbox" 
-                        checked={task.status === 'completed'}
-                        onChange={() => toggleTaskComplete(task.id)}
-                        className="w-4 h-4 text-blue-600 rounded transition-colors"
-                      />
-                      <div>
-                        <p className={`font-medium ${task.status === 'completed' ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
-                          {task.title}
-                        </p>
-                        <p className={`text-sm ${task.status === 'completed' ? 'text-gray-400' : 'text-gray-600'}`}>
-                          {task.description}
-                        </p>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(task.priority)}`}>
-                            {task.priority}
-                          </span>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(task.status)}`}>
-                            {task.status}
-                          </span>
-                          {task.due_date && (
-                            <span className="text-xs text-gray-500">
-                              Due: {new Date(task.due_date).toLocaleDateString()}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <button 
-                        onClick={() => setEditingTaskId(task.id)}
-                        className="text-gray-400 hover:text-blue-600 p-1 rounded transition-colors"
-                        title="Edit task"
-                      >
-                        <EditIcon className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => deleteTask(task.id)}
-                        className="text-gray-400 hover:text-red-600 p-1 rounded transition-colors"
-                        title="Delete task"
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-
-
-          {/* Experiment Updates */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Experiment Updates</h2>
-              <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">View All</button>
-            </div>
-            <div className="space-y-4">
+              <div className="space-y-4">
               {experimentUpdates.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <BeakerIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
@@ -720,9 +1131,9 @@ const DashboardPage: React.FC = () => {
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="font-medium text-gray-900">{update.title}</h3>
                       <div className="flex items-center space-x-2">
-                        <span className="text-sm text-blue-600 font-medium">
+                      <span className="text-sm text-blue-600 font-medium">
                           {update.progress_percentage}%
-                        </span>
+                      </span>
                         <div className="flex items-center space-x-1">
                           <button 
                             onClick={() => updateExperimentProgress(update.id, Math.max(0, update.progress_percentage - 10))}
@@ -738,7 +1149,7 @@ const DashboardPage: React.FC = () => {
                           >
                             +
                           </button>
-                        </div>
+                    </div>
                       </div>
                     </div>
                     
@@ -778,21 +1189,21 @@ const DashboardPage: React.FC = () => {
                           <PlayIcon className="w-4 h-4 text-green-500" title="In Progress" />
                         ) : (
                           <CheckCircleIcon className="w-4 h-4 text-green-500" title="Completed" />
-                        )}
-                      </div>
+                    )}
+                  </div>
                     </div>
                   </div>
                 ))
               )}
+              </div>
             </div>
           </div>
-        </div>
 
         {/* Right Column - Calendar & Events */}
-        <div className="space-y-8">
+          <div className="space-y-8">
           {/* Calendar Section - Larger Size */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Personal Calendar</h2>
               <div className="flex items-center space-x-2">
                 <button 
@@ -858,8 +1269,8 @@ const DashboardPage: React.FC = () => {
                         title={event.title}
                       >
                         {event.title}
-                      </div>
-                    ))}
+                  </div>
+                ))}
                     
                     {dayEvents.length > 3 && (
                       <div className="text-xs text-gray-500 text-center">
@@ -919,30 +1330,30 @@ const DashboardPage: React.FC = () => {
                   </div>
                 ))
               )}
-            </div>
-          </div>
-
-          {/* Lab Stats */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Lab Overview</h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Lab Members</span>
-                <span className="font-semibold text-gray-900">{stats.lab_members}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Active Projects</span>
-                <span className="font-semibold text-gray-900">{stats.active_projects}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">This Week's Tasks</span>
-                <span className="font-semibold text-gray-900">{stats.pending_tasks}</span>
               </div>
             </div>
-          </div>
 
-          {/* Recent Activity */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            {/* Lab Stats */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Lab Overview</h2>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Lab Members</span>
+                  <span className="font-semibold text-gray-900">{stats.lab_members}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Active Projects</span>
+                  <span className="font-semibold text-gray-900">{stats.active_projects}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">This Week's Tasks</span>
+                  <span className="font-semibold text-gray-900">{stats.pending_tasks}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Activity */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
               <button 
@@ -953,12 +1364,12 @@ const DashboardPage: React.FC = () => {
                 Clear
               </button>
             </div>
-            <div className="space-y-3">
+              <div className="space-y-3">
               {recentActivity.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
                     <span className="text-gray-400 text-2xl">📊</span>
-                  </div>
+                </div>
                   <p>No recent activity to show.</p>
                 </div>
               ) : (
@@ -968,15 +1379,15 @@ const DashboardPage: React.FC = () => {
                     <div className="flex-1">
                       <span className="text-gray-700">{activity.message}</span>
                       <div className="text-xs text-gray-500 mt-1">{activity.timestamp}</div>
-                    </div>
+                </div>
                     <div className="flex items-center space-x-1">
                       {activity.type === 'protocol' && <BookOpenIcon className="w-3 h-3 text-green-500" />}
                       {activity.type === 'member' && <UsersIcon className="w-3 h-3 text-blue-500" />}
                       {activity.type === 'equipment' && <BeakerIcon className="w-3 h-3 text-purple-500" />}
                       {activity.type === 'experiment' && <BeakerIcon className="w-3 h-3 text-orange-500" />}
                       {activity.type === 'task' && <CheckCircleIcon className="w-3 h-3 text-indigo-500" />}
-                    </div>
-                  </div>
+                </div>
+              </div>
                 ))
               )}
             </div>
