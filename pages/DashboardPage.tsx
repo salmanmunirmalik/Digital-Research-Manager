@@ -867,11 +867,11 @@ const DashboardPage: React.FC = () => {
               {focusMode ? 'Exit Focus' : 'Focus Mode'}
             </button>
                           <button
-              onClick={() => setShowCreateEntryModal(true)}
+              onClick={() => setShowQuickAddModal(true)}
               className="btn-primary"
             >
                 <PlusIcon className="w-4 h-4 inline mr-2" />
-                Add Entry
+                Quick Add
               </button>
           </div>
         </div>
