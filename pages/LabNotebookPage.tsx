@@ -97,6 +97,42 @@ const LabNotebookPage: React.FC = () => {
   const [labs, setLabs] = useState<any[]>([]);
   const [labMembers, setLabMembers] = useState<any[]>([]);
   
+  // Cognitive Enhancement States
+  const [cognitiveInsights, setCognitiveInsights] = useState<Array<{
+    id: string;
+    type: 'insight' | 'suggestion' | 'alert' | 'achievement';
+    title: string;
+    description: string;
+    priority: 'low' | 'medium' | 'high';
+    action?: {
+      label: string;
+      route: string;
+    };
+    icon: string;
+    color: string;
+  }>>([]);
+  
+  const [smartSuggestions, setSmartSuggestions] = useState<Array<{
+    id: string;
+    type: 'next_action' | 'optimization' | 'reminder';
+    title: string;
+    description: string;
+    confidence: number;
+    action: string;
+  }>>([]);
+  
+  const [cognitiveLoad, setCognitiveLoad] = useState<'low' | 'medium' | 'high'>('medium');
+  const [focusMode, setFocusMode] = useState(false);
+  const [userContext, setUserContext] = useState<{
+    timeOfDay: 'morning' | 'afternoon' | 'evening';
+    workPattern: 'focused' | 'collaborative' | 'administrative';
+    currentGoal: string | null;
+  }>({
+    timeOfDay: 'morning',
+    workPattern: 'focused',
+    currentGoal: null
+  });
+  
   // Ensure entries is always an array
   const safeEntries = Array.isArray(entries) ? entries : [];
   const [isLoading, setIsLoading] = useState(true);
@@ -183,6 +219,161 @@ const LabNotebookPage: React.FC = () => {
       setEntryForm(prev => ({ ...prev, lab_id: labs[0].id }));
     }
   }, [user?.lab_id, labs]);
+
+  // Cognitive Enhancement Functions
+  const generateCognitiveInsights = () => {
+    const insights = [];
+    
+    // Analyze entry patterns
+    const recentEntries = safeEntries.filter(entry => 
+      new Date(entry.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    );
+    
+    if (recentEntries.length === 0) {
+      insights.push({
+        id: 'no-recent-entries',
+        type: 'suggestion' as const,
+        title: 'Start Documenting',
+        description: 'No entries created this week. Consider documenting your current research activities.',
+        priority: 'medium' as const,
+        action: { label: 'Create Entry', route: '#' },
+        icon: '📝',
+        color: 'blue'
+      });
+    }
+    
+    // Check for incomplete experiments
+    const incompleteExperiments = safeEntries.filter(entry => 
+      entry.entry_type === 'experiment' && entry.status === 'in_progress'
+    );
+    
+    if (incompleteExperiments.length > 0) {
+      insights.push({
+        id: 'incomplete-experiments',
+        type: 'alert' as const,
+        title: `${incompleteExperiments.length} Active Experiments`,
+        description: 'You have ongoing experiments that may need attention or updates.',
+        priority: 'high' as const,
+        action: { label: 'Review', route: '#' },
+        icon: '🧪',
+        color: 'orange'
+      });
+    }
+    
+    // Check for overdue milestones
+    const overdueMilestones = safeEntries.flatMap(entry => 
+      entry.milestones?.filter(milestone => 
+        new Date(milestone.due_date) < new Date() && !milestone.completed
+      ) || []
+    );
+    
+    if (overdueMilestones.length > 0) {
+      insights.push({
+        id: 'overdue-milestones',
+        type: 'alert' as const,
+        title: `${overdueMilestones.length} Overdue Milestones`,
+        description: 'Some project milestones are past their due dates.',
+        priority: 'high' as const,
+        action: { label: 'Update', route: '#' },
+        icon: '⚠️',
+        color: 'red'
+      });
+    }
+    
+    setCognitiveInsights(insights);
+  };
+
+  const generateSmartSuggestions = () => {
+    const suggestions = [];
+    
+    // Suggest next actions based on entry types
+    const experimentEntries = safeEntries.filter(entry => entry.entry_type === 'experiment');
+    const protocolEntries = safeEntries.filter(entry => entry.entry_type === 'protocol');
+    
+    if (experimentEntries.length > 0 && protocolEntries.length === 0) {
+      suggestions.push({
+        id: 'create-protocol',
+        type: 'next_action' as const,
+        title: 'Document Protocols',
+        description: 'Consider creating protocol entries for your experimental procedures.',
+        confidence: 0.8,
+        action: 'Create protocol entry'
+      });
+    }
+    
+    // Suggest collaboration based on privacy levels
+    const privateEntries = safeEntries.filter(entry => entry.privacy_level === 'private');
+    if (privateEntries.length > safeEntries.length * 0.8) {
+      suggestions.push({
+        id: 'increase-collaboration',
+        type: 'optimization' as const,
+        title: 'Increase Collaboration',
+        description: 'Most entries are private. Consider sharing more with your lab.',
+        confidence: 0.7,
+        action: 'Review privacy settings'
+      });
+    }
+    
+    setSmartSuggestions(suggestions);
+  };
+
+  const calculateCognitiveLoad = () => {
+    const totalEntries = safeEntries.length;
+    const activeExperiments = safeEntries.filter(entry => 
+      entry.entry_type === 'experiment' && entry.status === 'in_progress'
+    ).length;
+    const overdueItems = safeEntries.flatMap(entry => 
+      entry.milestones?.filter(milestone => 
+        new Date(milestone.due_date) < new Date() && !milestone.completed
+      ) || []
+    ).length;
+    
+    let load: 'low' | 'medium' | 'high' = 'low';
+    
+    if (totalEntries > 50 || activeExperiments > 5 || overdueItems > 3) {
+      load = 'high';
+    } else if (totalEntries > 20 || activeExperiments > 2 || overdueItems > 1) {
+      load = 'medium';
+    }
+    
+    setCognitiveLoad(load);
+  };
+
+  const updateUserContext = () => {
+    const hour = new Date().getHours();
+    const timeOfDay = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
+    
+    // Determine work pattern based on recent activity
+    const recentActivity = safeEntries.filter(entry => 
+      new Date(entry.created_at) > new Date(Date.now() - 24 * 60 * 60 * 1000)
+    );
+    
+    let workPattern: 'focused' | 'collaborative' | 'administrative' = 'focused';
+    if (recentActivity.some(entry => entry.entry_type === 'meeting')) {
+      workPattern = 'collaborative';
+    } else if (recentActivity.some(entry => entry.entry_type === 'protocol')) {
+      workPattern = 'administrative';
+    }
+    
+    setUserContext({
+      timeOfDay,
+      workPattern,
+      currentGoal: null
+    });
+  };
+
+  // Initialize cognitive enhancements
+  useEffect(() => {
+    updateUserContext();
+    calculateCognitiveLoad();
+  }, []);
+
+  // Update cognitive insights when data changes
+  useEffect(() => {
+    generateCognitiveInsights();
+    generateSmartSuggestions();
+    calculateCognitiveLoad();
+  }, [safeEntries]);
 
   const fetchEntries = async () => {
     const authToken = token || 'demo-token-123';
@@ -653,7 +844,7 @@ const LabNotebookPage: React.FC = () => {
           </CardContent>
         </Card>
       ))}
-    </div>
+          </div>
   );
 
   const renderKanbanView = () => {
@@ -668,8 +859,8 @@ const LabNotebookPage: React.FC = () => {
               <span className="text-sm text-gray-500">
                 {safeEntries.filter(e => e.status === status).length} entries
               </span>
-              </div>
-            
+          </div>
+
             <div className="space-y-3">
               {safeEntries
                 .filter(entry => entry.status === status)
@@ -740,12 +931,12 @@ const LabNotebookPage: React.FC = () => {
                     >
                       <TrashIcon className="w-4 h-4" />
                         </Button>
-              </div>
+          </div>
                     </CardContent>
                   </Card>
                 ))}
-            </div>
-          </div>
+        </div>
+      </div>
         ))}
       </div>
     );
@@ -756,24 +947,84 @@ const LabNotebookPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <BookOpenIcon className="h-8 w-8 text-blue-600" />
-                Lab Notebook
-              </h1>
-              <p className="text-gray-600 mt-2">Your digital research companion - track experiments, observations, and breakthroughs</p>
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-3">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Lab Notebook</h1>
+                <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  cognitiveLoad === 'low' ? 'bg-green-100 text-green-800' :
+                  cognitiveLoad === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {cognitiveLoad === 'low' ? 'Low Load' : cognitiveLoad === 'medium' ? 'Medium Load' : 'High Load'}
+              </div>
+              </div>
+              <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                <div className="flex items-center gap-2">
+                  <BookOpenIcon className="w-4 h-4 text-blue-600" />
+                  <span className="capitalize">{userContext.timeOfDay} • {userContext.workPattern} mode</span>
+                </div>
+                {user && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">Welcome,</span>
+                    <span className="font-medium text-gray-900">{user.name || 'Researcher'}</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Cognitive Insights Banner */}
+              {cognitiveInsights.length > 0 && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <LightbulbIcon className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-blue-900 mb-1">Smart Insights</h3>
+                      <div className="space-y-2">
+                        {cognitiveInsights.slice(0, 2).map((insight) => (
+                          <div key={insight.id} className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <p className="text-sm text-blue-800 font-medium">{insight.title}</p>
+                              <p className="text-xs text-blue-600">{insight.description}</p>
+                            </div>
+                            {insight.action && (
+                <button
+                                onClick={() => setShowCreateModal(true)}
+                                className="ml-3 px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
+                >
+                                {insight.action.label}
+                </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             
-            <Button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-            >
-              <PlusIcon className="w-5 h-5 mr-2" />
-              New Entry
-            </Button>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <button
+                onClick={() => setFocusMode(!focusMode)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  focusMode
+                    ? 'bg-purple-600 text-white hover:bg-purple-700'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <EyeIcon className="w-4 h-4 inline mr-2" />
+                {focusMode ? 'Exit Focus' : 'Focus Mode'}
+                    </button>
+              <Button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              >
+                <PlusIcon className="w-5 h-5 mr-2" />
+                New Entry
+              </Button>
+            </div>
               </div>
-              </div>
+            </div>
 
 
 
@@ -789,7 +1040,7 @@ const LabNotebookPage: React.FC = () => {
                   <p className="text-sm font-medium text-gray-600">Total Entries</p>
                   <p className="text-2xl font-bold text-gray-900">{safeEntries.length}</p>
               </div>
-            </div>
+              </div>
             </CardContent>
           </Card>
           
@@ -804,7 +1055,7 @@ const LabNotebookPage: React.FC = () => {
                   <p className="text-2xl font-bold text-gray-900">
                     {safeEntries.filter(e => e.status === 'in_progress').length}
                   </p>
-                </div>
+            </div>
               </div>
             </CardContent>
           </Card>
@@ -841,6 +1092,41 @@ const LabNotebookPage: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Smart Suggestions Section */}
+        {smartSuggestions.length > 0 && (
+          <div className="mb-8">
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <SparklesIcon className="w-6 h-6 text-purple-600" />
+                <h2 className="text-lg font-semibold text-purple-900">Smart Suggestions</h2>
+                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {smartSuggestions.map((suggestion) => (
+                  <div key={suggestion.id} className="bg-white rounded-lg p-4 border border-purple-100">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-medium text-gray-900 text-sm">{suggestion.title}</h3>
+                      <div className="flex items-center gap-1">
+                        <div className={`w-2 h-2 rounded-full ${
+                          suggestion.confidence > 0.8 ? 'bg-green-500' :
+                          suggestion.confidence > 0.6 ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}></div>
+                        <span className="text-xs text-gray-500">{Math.round(suggestion.confidence * 100)}%</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{suggestion.description}</p>
+                    <button 
+                      onClick={() => setShowCreateModal(true)}
+                      className="text-xs text-purple-600 hover:text-purple-700 font-medium"
+                    >
+                      {suggestion.action} →
+                    </button>
+                  </div>
+                ))}
+                </div>
+              </div>
+              </div>
+        )}
 
         {/* Filters and Controls */}
         <Card className="mb-6">
@@ -900,27 +1186,8 @@ const LabNotebookPage: React.FC = () => {
                   <option value="on_hold">On Hold</option>
                   <option value="failed">Failed</option>
                 </Select>
-                </div>
-
-              {/* View Options */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">View:</span>
-                <div className="flex bg-gray-100 rounded-lg p-1">
-                  {(['timeline', 'kanban', 'calendar', 'list'] as const).map((mode) => (
-                      <button
-                      key={mode}
-                      onClick={() => setViewMode(mode)}
-                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                        viewMode === mode
-                          ? 'bg-white text-gray-900 shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                      </button>
-                  ))}
-                </div>
               </div>
+
 
               <Button variant="ghost" onClick={fetchEntries}>
                 <RefreshCwIcon className="w-4 h-4 mr-2" />
@@ -951,22 +1218,7 @@ const LabNotebookPage: React.FC = () => {
             </Card>
           ) : (
             <>
-              {viewMode === 'timeline' && renderTimelineView()}
-              {viewMode === 'kanban' && renderKanbanView()}
-              {viewMode === 'calendar' && (
-                <Card>
-                  <CardContent className="p-6">
-                    <p className="text-center text-gray-600">Calendar view coming soon...</p>
-                  </CardContent>
-                </Card>
-              )}
-              {viewMode === 'list' && (
-                <Card>
-                  <CardContent className="p-6">
-                    <p className="text-center text-gray-600">List view coming soon...</p>
-                  </CardContent>
-                </Card>
-              )}
+              {renderTimelineView()}
             </>
                     )}
                   </div>
