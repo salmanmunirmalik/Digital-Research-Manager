@@ -193,7 +193,7 @@ const SideNav: React.FC = () => {
           
           {/* App Info */}
           <div className="flex items-center justify-between text-xs">
-            <span className="text-gray-500 truncate">Digital Research Manager</span>
+            <span className="text-gray-500 truncate">Version</span>
             <span className="flex-shrink-0 text-blue-600 font-semibold">v2.0</span>
           </div>
           
