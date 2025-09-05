@@ -845,10 +845,12 @@ const LabNotebookPage: React.FC = () => {
         {/* Filters and Controls */}
         <Card className="mb-6">
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
-                <div className="relative">
+
+            {/* Single-line Filter Bar */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4 flex-1">
+                {/* Search */}
+                <div className="relative flex-1 max-w-md">
                   <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Search entries..."
@@ -857,26 +859,24 @@ const LabNotebookPage: React.FC = () => {
                     className="pl-10"
                   />
                 </div>
-              </div>
-              
-                <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Lab</label>
+
+                {/* Lab Filter */}
                 <Select
                   value={filters.lab_id}
                   onChange={(e) => setFilters({...filters, lab_id: e.target.value})}
+                  className="w-32"
                 >
                   <option value="">All Labs</option>
                   {labs.map((lab) => (
                       <option key={lab.id} value={lab.id}>{lab.name}</option>
                     ))}
                 </Select>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                {/* Type Filter */}
                 <Select
                   value={filters.entry_type}
                   onChange={(e) => setFilters({...filters, entry_type: e.target.value})}
+                  className="w-32"
                 >
                   <option value="">All Types</option>
                   <option value="experiment">Experiment</option>
@@ -886,15 +886,14 @@ const LabNotebookPage: React.FC = () => {
                   <option value="idea">Idea</option>
                   <option value="meeting">Meeting</option>
                 </Select>
-              </div>
 
-                <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                {/* Status Filter */}
                 <Select
                   value={filters.status}
                   onChange={(e) => setFilters({...filters, status: e.target.value})}
+                  className="w-32"
                 >
-                  <option value="">All Statuses</option>
+                  <option value="">All Status</option>
                   <option value="planning">Planning</option>
                   <option value="in_progress">In Progress</option>
                   <option value="completed">Completed</option>
@@ -902,41 +901,24 @@ const LabNotebookPage: React.FC = () => {
                   <option value="failed">Failed</option>
                 </Select>
                 </div>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700">View:</span>
-                  <div className="flex bg-gray-100 rounded-lg p-1">
-                    {(['timeline', 'kanban', 'calendar', 'list'] as const).map((mode) => (
-                      <button
-                        key={mode}
-                        onClick={() => setViewMode(mode)}
-                        className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                          viewMode === mode
-                            ? 'bg-white text-gray-900 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                      </button>
-                    ))}
-                </div>
-              </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700">Group by:</span>
-                  <Select
-                    value={groupBy}
-                    onChange={(e) => setGroupBy(e.target.value as any)}
-                    className="w-32"
-                  >
-                    <option value="status">Status</option>
-                    <option value="priority">Priority</option>
-                    <option value="type">Type</option>
-                    <option value="lab">Lab</option>
-                  </Select>
+              {/* View Options */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">View:</span>
+                <div className="flex bg-gray-100 rounded-lg p-1">
+                  {(['timeline', 'kanban', 'calendar', 'list'] as const).map((mode) => (
+                      <button
+                      key={mode}
+                      onClick={() => setViewMode(mode)}
+                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                        viewMode === mode
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                      </button>
+                  ))}
                 </div>
               </div>
 
@@ -954,7 +936,7 @@ const LabNotebookPage: React.FC = () => {
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
               <p className="mt-4 text-gray-600">Loading entries...</p>
-            </div>
+              </div>
           ) : safeEntries.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
