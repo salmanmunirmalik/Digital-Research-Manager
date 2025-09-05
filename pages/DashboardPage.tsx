@@ -57,29 +57,12 @@ const DashboardPage: React.FC = () => {
 
   // Lab Notebook States
   const [notebookEntries, setNotebookEntries] = useState<any[]>([]);
-  const [labs, setLabs] = useState<any[]>([]);
-  const [labMembers, setLabMembers] = useState<any[]>([]);
-  const [notebookFilters, setNotebookFilters] = useState({
-    search: '',
-    lab_id: '',
-    entry_type: '',
-    status: ''
-  });
   const [showCreateEntryModal, setShowCreateEntryModal] = useState(false);
   const [entryForm, setEntryForm] = useState({
     title: '',
     content: '',
     entry_type: 'experiment' as 'experiment' | 'observation' | 'protocol' | 'analysis' | 'idea' | 'meeting',
-    status: 'planning' as 'planning' | 'in_progress' | 'completed' | 'on_hold' | 'failed',
-    priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
-    objectives: '',
-    methodology: '',
-    results: '',
-    conclusions: '',
-    next_steps: '',
-    lab_id: '',
-    tags: [] as string[],
-    privacy_level: 'lab' as 'private' | 'lab' | 'institution' | 'public'
+    status: 'planning' as 'planning' | 'in_progress' | 'completed' | 'on_hold' | 'failed'
   });
 
   // Cognitive Enhancement States
@@ -321,18 +304,6 @@ const DashboardPage: React.FC = () => {
   };
 
   // Lab Notebook Functions
-  const fetchNotebookEntries = async () => {
-    // For now, we'll use mock data instead of API calls
-    // The mock data is already set in the useEffect
-    console.log('Notebook entries loaded from mock data');
-  };
-
-  const fetchLabs = async () => {
-    // For now, we'll use mock data instead of API calls
-    // The mock data is already set in the useEffect
-    console.log('Labs loaded from mock data');
-  };
-
   const createNotebookEntry = async () => {
     // Create new entry with mock data
     const newEntry = {
@@ -341,18 +312,12 @@ const DashboardPage: React.FC = () => {
       content: entryForm.content,
       entry_type: entryForm.entry_type,
       status: entryForm.status,
-      priority: entryForm.priority,
-      objectives: entryForm.objectives,
-      methodology: entryForm.methodology,
-      results: entryForm.results,
-      conclusions: entryForm.conclusions,
-      next_steps: entryForm.next_steps,
-      lab_id: entryForm.lab_id || 'lab1',
+      priority: 'medium',
+      lab_id: 'lab1',
       lab_name: 'Molecular Biology Lab',
       creator_name: user?.name || 'Dr. Sarah Johnson',
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      tags: entryForm.tags
+      updated_at: new Date().toISOString()
     };
 
     // Add to existing entries
@@ -364,31 +329,7 @@ const DashboardPage: React.FC = () => {
       title: '',
       content: '',
       entry_type: 'experiment',
-      status: 'planning',
-      priority: 'medium',
-      objectives: '',
-      methodology: '',
-      results: '',
-      conclusions: '',
-      next_steps: '',
-      lab_id: '',
-      tags: [],
-      privacy_level: 'lab'
-    });
-  };
-
-  // Filter notebook entries based on current filters
-  const getFilteredNotebookEntries = () => {
-    return notebookEntries.filter(entry => {
-      const matchesSearch = !notebookFilters.search || 
-        entry.title.toLowerCase().includes(notebookFilters.search.toLowerCase()) ||
-        entry.content.toLowerCase().includes(notebookFilters.search.toLowerCase());
-      
-      const matchesType = !notebookFilters.entry_type || entry.entry_type === notebookFilters.entry_type;
-      const matchesStatus = !notebookFilters.status || entry.status === notebookFilters.status;
-      const matchesLab = !notebookFilters.lab_id || entry.lab_id === notebookFilters.lab_id;
-      
-      return matchesSearch && matchesType && matchesStatus && matchesLab;
+      status: 'planning'
     });
   };
 
@@ -424,12 +365,6 @@ const DashboardPage: React.FC = () => {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
-
-  // Initialize notebook data
-  useEffect(() => {
-    fetchNotebookEntries();
-    fetchLabs();
-  }, [notebookFilters]);
 
   // Mock data - replace with real API calls
   useEffect(() => {
@@ -576,28 +511,6 @@ const DashboardPage: React.FC = () => {
         created_at: '2024-01-05T11:00:00Z',
         updated_at: '2024-01-05T11:00:00Z',
         tags: ['meeting', 'progress-review', 'planning']
-      }
-    ]);
-
-    // Mock labs data
-    setLabs([
-      {
-        id: 'lab1',
-        name: 'Molecular Biology Lab',
-        description: 'Advanced molecular biology research',
-        created_at: '2024-01-01T00:00:00Z'
-      },
-      {
-        id: 'lab2',
-        name: 'Cell Biology Lab',
-        description: 'Cell biology and microscopy research',
-        created_at: '2024-01-01T00:00:00Z'
-      },
-      {
-        id: 'lab3',
-        name: 'Biochemistry Lab',
-        description: 'Protein biochemistry and enzymology',
-        created_at: '2024-01-01T00:00:00Z'
       }
     ]);
 
@@ -1459,109 +1372,43 @@ const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Lab Notebook Section */}
+          {/* Lab Notebook Entries */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Lab Notebook</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Recent Entries</h2>
               <button 
                 onClick={() => setShowCreateEntryModal(true)}
                 className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
               >
                 <PlusIcon className="w-4 h-4 mr-1" />
-                New Entry
+                Add Entry
               </button>
             </div>
             
-            {/* Notebook Filters */}
-            <div className="flex items-center gap-4 mb-4">
-              <div className="relative flex-1 max-w-md">
-                <input
-                  type="text"
-                  placeholder="Search entries..."
-                  value={notebookFilters.search}
-                  onChange={(e) => setNotebookFilters({...notebookFilters, search: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <select
-                value={notebookFilters.entry_type}
-                onChange={(e) => setNotebookFilters({...notebookFilters, entry_type: e.target.value})}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All Types</option>
-                <option value="experiment">Experiment</option>
-                <option value="observation">Observation</option>
-                <option value="protocol">Protocol</option>
-                <option value="analysis">Analysis</option>
-                <option value="idea">Idea</option>
-                <option value="meeting">Meeting</option>
-              </select>
-              <select
-                value={notebookFilters.status}
-                onChange={(e) => setNotebookFilters({...notebookFilters, status: e.target.value})}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All Status</option>
-                <option value="planning">Planning</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="on_hold">On Hold</option>
-                <option value="failed">Failed</option>
-              </select>
-            </div>
-
-            {/* Notebook Entries */}
-            <div className="space-y-4">
-              {(() => {
-                const filteredEntries = getFilteredNotebookEntries();
-                return filteredEntries.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <BookOpenIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p>No notebook entries found. Create your first entry!</p>
+            <div className="space-y-3">
+              {notebookEntries.slice(0, 4).map((entry) => (
+                <div key={entry.id} className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm">
+                    {getTypeIcon(entry.entry_type)}
                   </div>
-                ) : (
-                  <>
-                    {filteredEntries.slice(0, focusMode ? 3 : 6).map((entry) => (
-                      <div key={entry.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                            {getTypeIcon(entry.entry_type)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-2">
-                              <h3 className="font-semibold text-gray-900 truncate">{entry.title}</h3>
-                              <div className="flex items-center gap-2">
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(entry.status)}`}>
-                                  {entry.status.replace('_', ' ')}
-                                </span>
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(entry.priority)}`}>
-                                  {entry.priority}
-                                </span>
-                              </div>
-                            </div>
-                            <p className="text-gray-600 text-sm line-clamp-2 mb-2">{entry.content}</p>
-                            <div className="flex items-center gap-4 text-xs text-gray-500">
-                              <span>{entry.creator_name}</span>
-                              <span>{new Date(entry.created_at).toLocaleDateString()}</span>
-                              <span>{entry.lab_name}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {filteredEntries.length > (focusMode ? 3 : 6) && (
-                      <div className="text-center py-2">
-                        <button 
-                          onClick={() => setFocusMode(false)}
-                          className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                        >
-                          Show All {filteredEntries.length} Entries
-                        </button>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-gray-900 text-sm truncate">{entry.title}</h3>
+                    <p className="text-gray-600 text-xs line-clamp-1 mt-1">{entry.content}</p>
+                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-2">
+                      <span className={`px-2 py-1 rounded-full ${getStatusColor(entry.status)}`}>
+                        {entry.status.replace('_', ' ')}
+                      </span>
+                      <span>{new Date(entry.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {notebookEntries.length === 0 && (
+                <div className="text-center py-6 text-gray-500">
+                  <BookOpenIcon className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No entries yet. Add your first entry!</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1912,21 +1759,21 @@ const DashboardPage: React.FC = () => {
       {/* Create Entry Modal */}
       {showCreateEntryModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-md w-full mx-4">
             <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Create New Entry</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Add Entry</h2>
                 <button
                   onClick={() => setShowCreateEntryModal(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
-                  <XMarkIcon className="w-6 h-6" />
+                  <XMarkIcon className="w-5 h-5" />
                 </button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
                   <input
                     type="text"
                     value={entryForm.title}
@@ -1937,19 +1784,19 @@ const DashboardPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Content</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
                   <textarea
                     value={entryForm.content}
                     onChange={(e) => setEntryForm({...entryForm, content: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows={4}
+                    rows={3}
                     placeholder="Describe your entry..."
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                     <select
                       value={entryForm.entry_type}
                       onChange={(e) => setEntryForm({...entryForm, entry_type: e.target.value as any})}
@@ -1965,7 +1812,7 @@ const DashboardPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select
                       value={entryForm.status}
                       onChange={(e) => setEntryForm({...entryForm, status: e.target.value as any})}
@@ -1976,36 +1823,6 @@ const DashboardPage: React.FC = () => {
                       <option value="completed">Completed</option>
                       <option value="on_hold">On Hold</option>
                       <option value="failed">Failed</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
-                    <select
-                      value={entryForm.priority}
-                      onChange={(e) => setEntryForm({...entryForm, priority: e.target.value as any})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="critical">Critical</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Privacy</label>
-                    <select
-                      value={entryForm.privacy_level}
-                      onChange={(e) => setEntryForm({...entryForm, privacy_level: e.target.value as any})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="private">Private</option>
-                      <option value="lab">Lab</option>
-                      <option value="institution">Institution</option>
-                      <option value="public">Public</option>
                     </select>
                   </div>
                 </div>
@@ -2021,10 +1838,9 @@ const DashboardPage: React.FC = () => {
                 <button
                   onClick={createNotebookEntry}
                   disabled={!entryForm.title.trim() || !entryForm.content.trim()}
-                  className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <PlusIcon className="w-4 h-4 mr-1 inline" />
-                  Create Entry
+                  Add Entry
                 </button>
               </div>
             </div>
