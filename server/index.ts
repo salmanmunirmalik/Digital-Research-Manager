@@ -3164,6 +3164,371 @@ app.get('/api/data/results/stats/overview', authenticateToken, async (req, res) 
   }
 });
 
+// --- RESEARCH DASHBOARD ROUTES ---
+
+// Research Projects Management
+app.get('/api/research/projects', authenticateToken, async (req, res) => {
+  try {
+    const { lab_id, status, priority } = req.query;
+    const userId = (req as any).user.id;
+
+    let query = `
+      SELECT p.*, 
+             u.first_name || ' ' || u.last_name as lead_researcher_name,
+             COUNT(pm.id) as milestone_count,
+             COUNT(CASE WHEN pm.completed = true THEN 1 END) as completed_milestones
+      FROM projects p
+      JOIN users u ON p.lead_researcher_id = u.id
+      LEFT JOIN project_milestones pm ON p.id = pm.project_id
+      WHERE p.lab_id = $1
+    `;
+    
+    const queryParams = [lab_id];
+    let paramCount = 1;
+
+    if (status) {
+      paramCount++;
+      query += ` AND p.status = $${paramCount}`;
+      queryParams.push(status);
+    }
+
+    if (priority) {
+      paramCount++;
+      query += ` AND p.priority = $${paramCount}`;
+      queryParams.push(priority);
+    }
+
+    query += ` GROUP BY p.id, u.first_name, u.last_name ORDER BY p.created_at DESC`;
+
+    const result = await pool.query(query, queryParams);
+    res.json({ projects: result.rows });
+  } catch (error) {
+    console.error('Error fetching research projects:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Research Deadlines Management
+app.get('/api/research/deadlines', authenticateToken, async (req, res) => {
+  try {
+    const { lab_id, priority, status, type } = req.query;
+    const userId = (req as any).user.id;
+
+    let query = `
+      SELECT rd.*, 
+             u.first_name || ' ' || u.last_name as assigned_to_name,
+             p.title as project_title
+      FROM research_deadlines rd
+      LEFT JOIN users u ON rd.assigned_to = u.id
+      LEFT JOIN projects p ON rd.related_project_id = p.id
+      WHERE rd.related_lab_id = $1
+    `;
+    
+    const queryParams = [lab_id];
+    let paramCount = 1;
+
+    if (priority) {
+      paramCount++;
+      query += ` AND rd.priority = $${paramCount}`;
+      queryParams.push(priority);
+    }
+
+    if (status) {
+      paramCount++;
+      query += ` AND rd.status = $${paramCount}`;
+      queryParams.push(status);
+    }
+
+    if (type) {
+      paramCount++;
+      query += ` AND rd.deadline_type = $${paramCount}`;
+      queryParams.push(type);
+    }
+
+    query += ` ORDER BY rd.deadline_date ASC`;
+
+    const result = await pool.query(query, queryParams);
+    res.json({ deadlines: result.rows });
+  } catch (error) {
+    console.error('Error fetching research deadlines:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Research Activities Feed
+app.get('/api/research/activities', authenticateToken, async (req, res) => {
+  try {
+    const { lab_id, type, limit = 50 } = req.query;
+    const userId = (req as any).user.id;
+
+    let query = `
+      SELECT ra.*, 
+             u.first_name || ' ' || u.last_name as user_name,
+             p.title as project_title
+      FROM research_activities ra
+      JOIN users u ON ra.user_id = u.id
+      LEFT JOIN projects p ON ra.project_id = p.id
+      WHERE ra.lab_id = $1
+    `;
+    
+    const queryParams = [lab_id];
+    let paramCount = 1;
+
+    if (type) {
+      paramCount++;
+      query += ` AND ra.activity_type = $${paramCount}`;
+      queryParams.push(type);
+    }
+
+    query += ` ORDER BY ra.created_at DESC LIMIT $${paramCount + 1}`;
+    queryParams.push(parseInt(limit as string));
+
+    const result = await pool.query(query, queryParams);
+    res.json({ activities: result.rows });
+  } catch (error) {
+    console.error('Error fetching research activities:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Research Insights Management
+app.get('/api/research/insights', authenticateToken, async (req, res) => {
+  try {
+    const { lab_id, priority, category, user_id } = req.query;
+    const userId = (req as any).user.id;
+
+    let query = `
+      SELECT ri.*, 
+             u.first_name || ' ' || u.last_name as user_name,
+             p.title as project_title
+      FROM research_insights ri
+      LEFT JOIN users u ON ri.user_id = u.id
+      LEFT JOIN projects p ON ri.project_id = p.id
+      WHERE ri.lab_id = $1 AND (ri.user_id IS NULL OR ri.user_id = $2)
+    `;
+    
+    const queryParams = [lab_id, userId];
+    let paramCount = 2;
+
+    if (priority) {
+      paramCount++;
+      query += ` AND ri.priority = $${paramCount}`;
+      queryParams.push(priority);
+    }
+
+    if (category) {
+      paramCount++;
+      query += ` AND ri.category = $${paramCount}`;
+      queryParams.push(category);
+    }
+
+    query += ` ORDER BY ri.priority DESC, ri.created_at DESC`;
+
+    const result = await pool.query(query, queryParams);
+    res.json({ insights: result.rows });
+  } catch (error) {
+    console.error('Error fetching research insights:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Research Metrics Calculation
+app.get('/api/research/metrics', authenticateToken, async (req, res) => {
+  try {
+    const { lab_id } = req.query;
+    const userId = (req as any).user.id;
+
+    // Use the database function to calculate metrics
+    const result = await pool.query('SELECT calculate_research_metrics($1) as metrics', [lab_id]);
+    const metrics = result.rows[0].metrics;
+
+    res.json({ metrics });
+  } catch (error) {
+    console.error('Error calculating research metrics:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Research Collaborations Management
+app.get('/api/research/collaborations', authenticateToken, async (req, res) => {
+  try {
+    const { lab_id, status, type } = req.query;
+    const userId = (req as any).user.id;
+
+    let query = `
+      SELECT rc.*, 
+             u.first_name || ' ' || u.last_name as lead_researcher_name,
+             COUNT(cp.id) as partner_count
+      FROM research_collaborations rc
+      JOIN users u ON rc.lead_researcher_id = u.id
+      LEFT JOIN collaboration_partners cp ON rc.id = cp.collaboration_id
+      WHERE rc.lab_id = $1
+    `;
+    
+    const queryParams = [lab_id];
+    let paramCount = 1;
+
+    if (status) {
+      paramCount++;
+      query += ` AND rc.status = $${paramCount}`;
+      queryParams.push(status);
+    }
+
+    if (type) {
+      paramCount++;
+      query += ` AND rc.collaboration_type = $${paramCount}`;
+      queryParams.push(type);
+    }
+
+    query += ` GROUP BY rc.id, u.first_name, u.last_name ORDER BY rc.created_at DESC`;
+
+    const result = await pool.query(query, queryParams);
+    res.json({ collaborations: result.rows });
+  } catch (error) {
+    console.error('Error fetching research collaborations:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ==============================================
+// RESEARCHER PORTFOLIO ROUTES
+// ==============================================
+
+// Test route
+app.get('/api/researcher-portfolio/test', (req, res) => {
+  res.json({ message: 'Researcher portfolio API is working!' });
+});
+
+// Get researcher profile
+app.get('/api/researcher-portfolio/profiles/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const result = await pool.query(`
+      SELECT rp.*, u.first_name, u.last_name, u.email, u.role
+      FROM researcher_profiles rp
+      JOIN users u ON rp.user_id = u.id
+      WHERE rp.user_id = $1
+    `, [userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    res.json({ profile: result.rows[0] });
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+// Get researcher publications
+app.get('/api/researcher-portfolio/publications/:researcherId', async (req, res) => {
+  try {
+    const { researcherId } = req.params;
+    
+    const result = await pool.query(`
+      SELECT * FROM researcher_publications 
+      WHERE researcher_id = $1 
+      ORDER BY publication_date DESC
+    `, [researcherId]);
+
+    res.json({ publications: result.rows });
+  } catch (error) {
+    console.error('Error fetching publications:', error);
+    res.status(500).json({ error: 'Failed to fetch publications' });
+  }
+});
+
+// Find potential co-supervisors
+app.post('/api/researcher-portfolio/matching/find-supervisors', authenticateToken, async (req, res) => {
+  try {
+    const { research_interests, research_domains, max_results = 10 } = req.body;
+    const student_id = req.user.id;
+
+    // Get student profile
+    const studentProfile = await pool.query(`
+      SELECT research_interests, research_domains FROM researcher_profiles 
+      WHERE user_id = $1
+    `, [student_id]);
+
+    const studentInterests = studentProfile.rows[0]?.research_interests || research_interests || [];
+    const studentDomains = studentProfile.rows[0]?.research_domains || research_domains || [];
+
+    // Find matching supervisors
+    const result = await pool.query(`
+      SELECT 
+        u.id, u.first_name, u.last_name, u.email,
+        rp.institution, rp.position, rp.research_interests, rp.research_domains,
+        rp.expertise_areas, rp.availability_status, rp.max_students, rp.current_students,
+        rp.total_publications, rp.total_citations, rp.h_index,
+        calculate_research_compatibility($1, rp.research_domains, rp.research_interests) as compatibility_score
+      FROM users u
+      JOIN researcher_profiles rp ON u.id = rp.user_id
+      WHERE u.role IN ('principal_researcher', 'co_supervisor')
+        AND rp.availability_status = 'available'
+        AND rp.current_students < rp.max_students
+      ORDER BY compatibility_score DESC
+      LIMIT $2
+    `, [JSON.stringify(studentInterests), parseInt(max_results)]);
+
+    res.json({ 
+      supervisors: result.rows,
+      studentProfile: {
+        interests: studentInterests,
+        domains: studentDomains
+      }
+    });
+  } catch (error) {
+    console.error('Error finding supervisors:', error);
+    res.status(500).json({ error: 'Failed to find supervisors' });
+  }
+});
+
+// Get exchange opportunities
+app.get('/api/researcher-portfolio/exchange/opportunities', async (req, res) => {
+  try {
+    const { domain, status = 'active', limit = 20 } = req.query;
+    
+    let sql = `
+      SELECT 
+        reo.*, 
+        u.first_name, u.last_name, u.email as host_email,
+        l.name as lab_name, l.institution
+      FROM research_exchange_opportunities reo
+      JOIN users u ON reo.host_researcher_id = u.id
+      JOIN labs l ON reo.host_lab_id = l.id
+      WHERE reo.status = $1
+    `;
+    const params: any[] = [status];
+    let paramCount = 1;
+
+    if (domain) {
+      paramCount++;
+      sql += ` AND $${paramCount} = ANY(reo.research_domains)`;
+      params.push(domain);
+    }
+
+    sql += ` ORDER BY reo.created_at DESC LIMIT $${paramCount + 1}`;
+    params.push(parseInt(limit as string));
+
+    const result = await pool.query(sql, params);
+    res.json({ opportunities: result.rows });
+  } catch (error) {
+    console.error('Error fetching exchange opportunities:', error);
+    res.status(500).json({ error: 'Failed to fetch exchange opportunities' });
+  }
+});
+
+// ==============================================
+// CROSS-ENTITY INTEGRATION ROUTES
+// ==============================================
+
+// Import cross-entity integration routes
+import crossEntityIntegrationRoutes from './routes/crossEntityIntegration';
+
+app.use('/api/cross-entity', crossEntityIntegrationRoutes);
+
 // Start server
 const startServer = async () => {
   try {
@@ -3174,6 +3539,14 @@ const startServer = async () => {
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
+      console.log('📱 Frontend URL: http://localhost:5173');
+      console.log('🔧 API URL: http://localhost:5001/api');
+      console.log('🗄️  Database: PostgreSQL');
+
+      // Add researcher portfolio test route
+      app.get('/api/researcher-portfolio/test', (req, res) => {
+        res.json({ message: 'Researcher portfolio API is working!' });
+      });
       console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
       console.log(`🔧 API URL: http://localhost:${PORT}/api`);
       console.log(`🗄️  Database: PostgreSQL`);
