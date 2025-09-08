@@ -8,6 +8,7 @@ import { getUserDisplayName, getRoleDisplayName } from './utils/roleAccess';
 
 // Import all pages
 import DashboardPage from './pages/DashboardPage';
+import LabNotebookPage from './pages/LabNotebookPage';
 import LabManagementPage from './pages/LabManagementPage';
 import ProtocolsPage from './pages/ProtocolsPage';
 import InventoryPage from './pages/InventoryPage';
@@ -20,6 +21,8 @@ import ConferenceNewsPage from './pages/ConferenceNewsPage';
 import CalculatorHubPage from './pages/CalculatorHubPage';
 import ReferenceLibraryPage from './pages/ReferenceLibraryPage';
 import ResourceExchangePage from './pages/ResourceExchangePage';
+import ResearcherPortfolioPage from './pages/ResearcherPortfolioPage';
+import CoSupervisorDiscoveryPage from './pages/CoSupervisorDiscoveryPage';
 
 import ResearchAssistantPage from './pages/ResearchAssistantPage';
 import LoginPage from './pages/LoginPage';
@@ -107,7 +110,7 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   <p className="text-sm font-semibold text-gray-900">
                     {getUserDisplayName(user)}
                   </p>
-                  <p className="text-xs text-blue-600 font-medium">{getRoleDisplayName(user?.role)}</p>
+                  <p className="text-xs text-blue-600 font-medium">{getRoleDisplayName(user?.role || 'student')}</p>
                 </div>
                 <svg className="w-4 h-4 text-gray-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -130,7 +133,7 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         <p className="text-xs text-gray-600 truncate">{user?.email}</p>
                         <div className="flex items-center mt-1">
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {getRoleDisplayName(user?.role)}
+                            {getRoleDisplayName(user?.role || 'student')}
                           </span>
                         </div>
                       </div>
@@ -243,6 +246,24 @@ const AppContent: React.FC = () => {
         } 
       />
       
+      {/* Enhanced Cross-Entity Integration Routes */}
+          <Route
+            path="/researcher-portfolio"
+            element={
+              <ProtectedRoute>
+                <DemoLayout><ResearcherPortfolioPage /></DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/co-supervisor-discovery"
+            element={
+              <ProtectedRoute>
+                <DemoLayout><CoSupervisorDiscoveryPage /></DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+      
       {/* Profile and Settings */}
       <Route 
         path="/profile" 
@@ -272,6 +293,14 @@ const AppContent: React.FC = () => {
       />
       
       {/* Lab Notebook - All authenticated users */}
+      <Route 
+        path="/lab-notebook" 
+        element={
+          <ProtectedRoute>
+            <DemoLayout><LabNotebookPage /></DemoLayout>
+          </ProtectedRoute>
+        } 
+      />
       
       {/* Protocols - All authenticated users */}
       <Route 

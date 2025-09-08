@@ -28,37 +28,43 @@ const LandingPage: React.FC = () => {
       icon: BeakerIcon,
       title: 'Lab Management',
       description: 'Streamline your research operations with comprehensive lab management tools.',
-      color: 'from-blue-500 to-blue-600'
+      color: 'from-blue-500 to-blue-600',
+      link: '/lab-management'
     },
     {
       icon: DocumentTextIcon,
       title: 'Protocol Management',
       description: 'Create, organize, and share research protocols with your team.',
-      color: 'from-green-500 to-green-600'
+      color: 'from-green-500 to-green-600',
+      link: '/protocols'
     },
     {
       icon: ChartBarIcon,
       title: 'Data Analytics',
       description: 'Advanced data analysis tools for research insights and visualization.',
-      color: 'from-purple-500 to-purple-600'
+      color: 'from-purple-500 to-purple-600',
+      link: '/data-analytics'
     },
     {
       icon: UsersIcon,
       title: 'Team Collaboration',
       description: 'Foster collaboration with real-time sharing and communication tools.',
-      color: 'from-orange-500 to-orange-600'
+      color: 'from-orange-500 to-orange-600',
+      link: '/help-forum'
     },
     {
       icon: CogIcon,
       title: 'Research Tools',
       description: 'Access to specialized tools for molecular biology and bioinformatics.',
-      color: 'from-red-500 to-red-600'
+      color: 'from-red-500 to-red-600',
+      link: '/calculator-hub'
     },
     {
       icon: ShieldCheckIcon,
       title: 'Secure & Compliant',
       description: 'Enterprise-grade security with role-based access control.',
-      color: 'from-indigo-500 to-indigo-600'
+      color: 'from-indigo-500 to-indigo-600',
+      link: '/dashboard'
     }
   ];
 
@@ -178,13 +184,17 @@ const LandingPage: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <div key={index} className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-2">
+              <Link
+                key={index}
+                to={feature.link}
+                className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-2 block"
+              >
                 <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center mb-6`}>
                   <feature.icon className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">{feature.title}</h3>
                 <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -241,18 +251,18 @@ const LandingPage: React.FC = () => {
             <div>
               <h4 className="font-semibold mb-4">Platform</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><Link to="/features" className="hover:text-white transition-colors">Features</Link></li>
-                <li><Link to="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                <li><Link to="/security" className="hover:text-white transition-colors">Security</Link></li>
+                <li><Link to="/dashboard" className="hover:text-white transition-colors">Features</Link></li>
+                <li><Link to="/login" className="hover:text-white transition-colors">Get Started</Link></li>
+                <li><Link to="/help-forum" className="hover:text-white transition-colors">Community</Link></li>
               </ul>
             </div>
             
             <div>
               <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><Link to="/help" className="hover:text-white transition-colors">Help Center</Link></li>
-                <li><Link to="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
-                <li><Link to="/docs" className="hover:text-white transition-colors">Documentation</Link></li>
+                <li><Link to="/help-forum" className="hover:text-white transition-colors">Help Forum</Link></li>
+                <li><Link to="/dashboard" className="hover:text-white transition-colors">Dashboard</Link></li>
+                <li><Link to="/protocols" className="hover:text-white transition-colors">Protocols</Link></li>
               </ul>
             </div>
           </div>

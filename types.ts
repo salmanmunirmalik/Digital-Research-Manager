@@ -52,506 +52,266 @@ export interface CalculatorInfo {
   tags: string[];
 }
 
-// Core User Types
+export interface ConversionCategory {
+  name: string;
+  units: Unit[];
+}
+
+export interface Unit {
+  name: string;
+  symbol: string;
+  factor: number;
+  baseUnit: string;
+}
+
+export interface ConversionHistory {
+  id: string;
+  fromValue: number;
+  fromUnit: string;
+  toValue: number;
+  toUnit: string;
+  category: string;
+  timestamp: string;
+}
+
+// User Types
 export interface User {
   id: string;
   email: string;
-  username: string;
-  first_name: string;
-  last_name: string;
+  name: string;
   role: UserRole;
   status: UserStatus;
-  avatar_url?: string;
-  bio?: string;
-  research_interests?: string[];
+  lab_id: string;
   created_at: string;
   updated_at: string;
   last_login?: string;
-  email_verified: boolean;
+  profile?: {
+    bio?: string;
+    expertise?: string[];
+    institution?: string;
+    department?: string;
+    phone?: string;
+    avatar?: string;
+  };
 }
 
-export interface UserCreate {
-  email: string;
-  username: string;
-  password: string;
-  first_name: string;
-  last_name: string;
-  role?: UserRole;
-  bio?: string;
-  research_interests?: string[];
-}
-
-export interface UserUpdate {
-  first_name?: string;
-  last_name?: string;
-  bio?: string;
-  research_interests?: string[];
-  avatar_url?: string;
-}
-
-export interface UserLogin {
-  email: string;
-  password: string;
-}
-
-export interface UserAuth {
-  user: User;
-  token: string;
-  refresh_token: string;
-}
-
-// Lab Management Types
+// Lab Types
 export interface Lab {
   id: string;
   name: string;
   description?: string;
-  institution?: string;
+  institution: string;
   department?: string;
-  principal_researcher_id: string;
-  co_supervisor_id?: string;
-  logo_url?: string;
-  website_url?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  address?: string;
   created_at: string;
   updated_at: string;
-  is_active: boolean;
+  settings?: {
+    timezone?: string;
+    currency?: string;
+    units?: 'metric' | 'imperial';
+    privacy_default?: PrivacyLevel;
+  };
 }
 
-export interface LabCreate {
-  name: string;
-  description?: string;
-  institution?: string;
-  department?: string;
-  co_supervisor_id?: string;
-  logo_url?: string;
-  website_url?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  address?: string;
-}
-
-export interface LabMember {
-  id: string;
-  lab_id: string;
-  user_id: string;
-  role: UserRole;
-  joined_at: string;
-  permissions: Record<string, any>;
-  is_active: boolean;
-  user?: User;
-}
-
-export interface LabMemberCreate {
-  lab_id: string;
-  user_id: string;
-  role: UserRole;
-  permissions?: Record<string, any>;
-}
-
-// Project Management Types
+// Project Types
 export interface Project {
   id: string;
-  title: string;
+  name: string;
   description?: string;
   lab_id: string;
-  lead_researcher_id: string;
-  status: string;
-  start_date?: string;
-  end_date?: string;
-  budget?: number;
-  objectives?: string[];
+  created_by: string;
   created_at: string;
   updated_at: string;
-}
-
-export interface ProjectCreate {
-  title: string;
-  description?: string;
-  lab_id: string;
-  status?: string;
+  status: 'active' | 'completed' | 'on_hold' | 'cancelled';
   start_date?: string;
   end_date?: string;
   budget?: number;
-  objectives?: string[];
+  tags: string[];
+  privacy_level: PrivacyLevel;
 }
 
-export interface ProjectMember {
-  id: string;
-  project_id: string;
-  user_id: string;
-  role: string;
-  joined_at: string;
-  permissions: Record<string, any>;
-  user?: User;
-}
-
-// Protocol Management Types
+// Protocol Types
 export interface Protocol {
   id: string;
   title: string;
   description?: string;
-  category?: string;
-  version: string;
-  author_id: string;
-  lab_id?: string;
+  category: string;
+  steps: ProtocolStep[];
+  materials: ProtocolMaterial[];
+  equipment: ProtocolEquipment[];
+  safety_notes?: string[];
+  estimated_duration?: number; // in minutes
+  difficulty_level?: 'beginner' | 'intermediate' | 'advanced';
+  created_by: string;
+  lab_id: string;
   project_id?: string;
-  privacy_level: PrivacyLevel;
-  content: string;
-  materials?: string[];
-  equipment?: string[];
-  safety_notes?: string;
-  estimated_duration?: number;
-  difficulty_level?: string;
-  tags?: string[];
-  is_approved: boolean;
-  approved_by?: string;
-  approved_at?: string;
+  is_public: boolean;
   created_at: string;
   updated_at: string;
-  author?: User;
-  lab?: Lab;
-  project?: Project;
+  tags: string[];
+  privacy_level: PrivacyLevel;
+  version: number;
+  parent_protocol_id?: string;
 }
 
-export interface ProtocolCreate {
+export interface ProtocolStep {
+  id: string;
+  step_number: number;
+  title: string;
+  description: string;
+  duration?: number; // in minutes
+  temperature?: number;
+  notes?: string;
+  warnings?: string[];
+  images?: string[];
+  videos?: string[];
+}
+
+export interface ProtocolMaterial {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  supplier?: string;
+  catalog_number?: string;
+  notes?: string;
+}
+
+export interface ProtocolEquipment {
+  id: string;
+  name: string;
+  model?: string;
+  supplier?: string;
+  notes?: string;
+}
+
+// Experiment Types
+export interface Experiment {
+  id: string;
   title: string;
   description?: string;
-  category?: string;
-  content: string;
-  materials?: string[];
-  equipment?: string[];
-  safety_notes?: string;
-  estimated_duration?: number;
-  difficulty_level?: string;
-  tags?: string[];
-  privacy_level?: PrivacyLevel;
-  lab_id?: string;
-  project_id?: string;
-}
-
-export interface ProtocolSharing {
-  id: string;
   protocol_id: string;
-  shared_with_user_id?: string;
-  shared_with_lab_id?: string;
-  permission_level: string;
-  shared_at: string;
-  expires_at?: string;
-}
-
-// Lab Notebook Types
-export interface LabNotebookEntry {
-  id: string;
-  title: string;
-  content: string;
-  author_id: string;
-  lab_id?: string;
   project_id?: string;
-  entry_type: string;
-  privacy_level: PrivacyLevel;
-  tags?: string[];
-  experiment_date?: string;
-  results?: string;
-  conclusions?: string;
-  next_steps?: string;
-  attachments?: string[];
+  created_by: string;
+  lab_id: string;
+  status: 'planned' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
+  start_date?: string;
+  end_date?: string;
+  results?: ExperimentResult[];
+  notes?: string;
   created_at: string;
   updated_at: string;
-  author?: User;
-  lab?: Lab;
-  project?: Project;
+  tags: string[];
+  privacy_level: PrivacyLevel;
 }
 
-export interface LabNotebookEntryCreate {
-  title: string;
-  content: string;
-  entry_type?: string;
-  privacy_level?: PrivacyLevel;
-  tags?: string[];
-  experiment_date?: string;
-  results?: string;
-  conclusions?: string;
-  next_steps?: string;
-  attachments?: string[];
-  lab_id?: string;
-  project_id?: string;
+export interface ExperimentResult {
+  id: string;
+  experiment_id: string;
+  parameter: string;
+  value: number | string;
+  unit?: string;
+  notes?: string;
+  created_at: string;
 }
 
-// Inventory Management Types
+// Inventory Types
 export interface InventoryItem {
   id: string;
   name: string;
   description?: string;
-  category?: string;
-  lab_id: string;
-  location?: string;
+  category: string;
   quantity: number;
-  unit?: string;
-  min_quantity: number;
+  unit: string;
   supplier?: string;
-  supplier_contact?: string;
+  catalog_number?: string;
   cost_per_unit?: number;
-  last_restocked?: string;
   expiry_date?: string;
-  storage_conditions?: string;
-  notes?: string;
+  storage_location?: string;
+  lab_id: string;
+  created_by: string;
   created_at: string;
   updated_at: string;
-  lab?: Lab;
+  tags: string[];
+  privacy_level: PrivacyLevel;
 }
 
-export interface InventoryItemCreate {
-  name: string;
-  description?: string;
-  category?: string;
-  location?: string;
-  quantity: number;
-  unit?: string;
-  min_quantity?: number;
-  supplier?: string;
-  supplier_contact?: string;
-  cost_per_unit?: number;
-  last_restocked?: string;
-  expiry_date?: string;
-  storage_conditions?: string;
-  notes?: string;
-}
-
-// Instrument Management Types
+// Instrument Types
 export interface Instrument {
   id: string;
   name: string;
-  description?: string;
-  category?: string;
+  model?: string;
+  manufacturer?: string;
+  category: string;
+  status: 'available' | 'in_use' | 'maintenance' | 'out_of_order';
+  location?: string;
   lab_id: string;
-  location?: string;
-  model?: string;
-  serial_number?: string;
-  manufacturer?: string;
-  purchase_date?: string;
-  warranty_expiry?: string;
-  calibration_due_date?: string;
-  status: string;
-  maintenance_notes?: string;
-  user_manual_url?: string;
+  created_by: string;
   created_at: string;
   updated_at: string;
-  lab?: Lab;
-}
-
-export interface InstrumentCreate {
-  name: string;
-  description?: string;
-  category?: string;
-  location?: string;
-  model?: string;
-  serial_number?: string;
-  manufacturer?: string;
-  purchase_date?: string;
-  warranty_expiry?: string;
-  calibration_due_date?: string;
-  status?: string;
-  maintenance_notes?: string;
-  user_manual_url?: string;
-}
-
-export interface InstrumentBooking {
-  id: string;
-  instrument_id: string;
-  user_id: string;
-  start_time: string;
-  end_time: string;
-  purpose?: string;
-  status: string;
-  approved_by?: string;
-  approved_at?: string;
-  created_at: string;
-  instrument?: Instrument;
-  user?: User;
-}
-
-export interface InstrumentBookingCreate {
-  instrument_id: string;
-  start_time: string;
-  end_time: string;
-  purpose?: string;
-}
-
-// Task Management Types
-export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  user_id: string;
-  assigned_by?: string;
-  lab_id?: string;
-  project_id?: string;
-  priority: string;
-  status: string;
-  due_date?: string;
-  completed_at?: string;
-  tags?: string[];
-  created_at: string;
-  updated_at: string;
-  user?: User;
-  assigned_by_user?: User;
-  lab?: Lab;
-  project?: Project;
-}
-
-export interface TaskCreate {
-  title: string;
-  description?: string;
-  priority?: string;
-  due_date?: string;
-  tags?: string[];
-  lab_id?: string;
-  project_id?: string;
-}
-
-// Sticky Notes Types
-export interface StickyNote {
-  id: string;
-  user_id: string;
-  content: string;
-  color: string;
-  position_x: number;
-  position_y: number;
-  is_pinned: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface StickyNoteCreate {
-  content: string;
-  color?: string;
-  position_x?: number;
-  position_y?: number;
-  is_pinned?: boolean;
-}
-
-export interface StickyNoteUpdate {
-  content?: string;
-  color?: string;
-  position_x?: number;
-  position_y?: number;
-  is_pinned?: boolean;
-}
-
-// Calendar Types
-export interface CalendarEvent {
-  id: string;
-  user_id: string;
-  title: string;
-  description?: string;
-  start_time: string;
-  end_time: string;
-  all_day: boolean;
-  location?: string;
-  event_type: string;
-  lab_id?: string;
-  project_id?: string;
-  attendees?: string[];
-  reminder_minutes: number;
-  created_at: string;
-  updated_at: string;
-  user?: User;
-  lab?: Lab;
-  project?: Project;
-}
-
-export interface CalendarEventCreate {
-  title: string;
-  description?: string;
-  start_time: string;
-  end_time: string;
-  all_day?: boolean;
-  location?: string;
-  event_type?: string;
-  lab_id?: string;
-  project_id?: string;
-  attendees?: string[];
-  reminder_minutes?: number;
-}
-
-// Experiment Updates Types
-export interface ExperimentUpdate {
-  id: string;
-  user_id: string;
-  title: string;
-  content: string;
-  experiment_id?: string;
-  lab_id?: string;
-  project_id?: string;
-  update_type: string;
-  progress_percentage: number;
-  challenges?: string;
-  solutions?: string;
-  next_milestone?: string;
-  due_date?: string;
-  tags?: string[];
-  created_at: string;
-  updated_at: string;
-  user?: User;
-  lab?: Lab;
-  project?: Project;
-}
-
-export interface ExperimentUpdateCreate {
-  title: string;
-  content: string;
-  experiment_id?: string;
-  update_type?: string;
-  progress_percentage?: number;
-  challenges?: string;
-  solutions?: string;
-  next_milestone?: string;
-  due_date?: string;
-  tags?: string[];
-  lab_id?: string;
-  project_id?: string;
-}
-
-// Data Sharing Types
-export interface DataSharing {
-  id: string;
-  data_type: DataType;
-  data_id: string;
-  owner_id: string;
+  specifications?: Record<string, any>;
+  maintenance_schedule?: {
+    last_maintenance?: string;
+    next_maintenance?: string;
+    maintenance_notes?: string;
+  };
+  tags: string[];
   privacy_level: PrivacyLevel;
-  shared_with_users?: string[];
-  shared_with_labs?: string[];
+}
+
+// Result Types
+export interface Result {
+  id: string;
+  experiment_id: string;
+  title: string;
+  description?: string;
+  data_type: DataType;
+  data: any; // Flexible data structure
+  analysis?: string;
+  conclusions?: string;
+  created_by: string;
+  lab_id: string;
+  project_id?: string;
+  created_at: string;
+  updated_at: string;
+  tags: string[];
+  privacy_level: PrivacyLevel;
   is_public: boolean;
-  access_requests?: string[];
+  attachments?: string[];
+}
+
+// Note Types
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  type: 'general' | 'protocol' | 'experiment' | 'inventory' | 'instrument';
+  related_id?: string; // ID of related protocol, experiment, etc.
+  created_by: string;
+  lab_id: string;
+  project_id?: string;
   created_at: string;
   updated_at: string;
-  owner?: User;
-}
-
-export interface DataSharingCreate {
-  data_type: DataType;
-  data_id: string;
+  tags: string[];
   privacy_level: PrivacyLevel;
-  shared_with_users?: string[];
-  shared_with_labs?: string[];
-  is_public?: boolean;
+  is_public: boolean;
 }
 
-// Audit Log Types
-export interface AuditLog {
+// Attachment Types
+export interface Attachment {
   id: string;
-  user_id?: string;
-  action: string;
-  table_name?: string;
-  record_id?: string;
-  old_values?: Record<string, any>;
-  new_values?: Record<string, any>;
-  ip_address?: string;
-  user_agent?: string;
+  filename: string;
+  original_filename: string;
+  file_type: string;
+  file_size: number;
+  file_path: string;
+  uploaded_by: string;
+  lab_id: string;
+  related_type?: DataType;
+  related_id?: string;
   created_at: string;
-  user?: User;
+  tags: string[];
+  privacy_level: PrivacyLevel;
+  is_public: boolean;
 }
 
 // Dashboard Types
@@ -564,267 +324,232 @@ export interface DashboardStats {
   active_projects: number;
 }
 
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  priority: 'low' | 'medium' | 'high';
+  due_date?: string;
+  assigned_to?: string;
+  created_by: string;
+  lab_id: string;
+  project_id?: string;
+  created_at: string;
+  updated_at: string;
+  tags: string[];
+  privacy_level: PrivacyLevel;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  start_time: string;
+  end_time: string;
+  location?: string;
+  attendees?: string[];
+  created_by: string;
+  lab_id: string;
+  project_id?: string;
+  created_at: string;
+  updated_at: string;
+  tags: string[];
+  privacy_level: PrivacyLevel;
+  is_public: boolean;
+}
+
+export interface StickyNote {
+  id: string;
+  title: string;
+  content: string;
+  color: 'yellow' | 'blue' | 'green' | 'purple' | 'pink' | 'orange';
+  position: {
+    x: number;
+    y: number;
+  };
+  created_by: string;
+  lab_id: string;
+  created_at: string;
+  updated_at: string;
+  privacy_level: PrivacyLevel;
+}
+
+export interface ExperimentUpdate {
+  id: string;
+  experiment_id: string;
+  title: string;
+  description: string;
+  status: 'success' | 'failure' | 'partial' | 'in_progress';
+  created_by: string;
+  lab_id: string;
+  created_at: string;
+  updated_at: string;
+  tags: string[];
+  privacy_level: PrivacyLevel;
+}
+
 export interface QuickAction {
   id: string;
   title: string;
   description: string;
   icon: string;
   route: string;
-  color: string;
-}
-
-// API Response Types
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  total_pages: number;
-}
-
-// Search and Filter Types
-export interface SearchFilters {
-  query?: string;
-  category?: string;
-  tags?: string[];
-  date_from?: string;
-  date_to?: string;
-  privacy_level?: PrivacyLevel;
-  lab_id?: string;
-  project_id?: string;
-  user_id?: string;
-}
-
-export interface SortOptions {
-  field: string;
-  direction: 'asc' | 'desc';
-}
-
-// Notification Types
-export interface Notification {
-  id: string;
-  user_id: string;
-  title: string;
-  message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
-  read: boolean;
-  created_at: string;
-  action_url?: string;
-}
-
-// Permission Types
-export interface Permission {
-  resource: string;
-  actions: string[];
-}
-
-export interface RolePermissions {
-  role: UserRole;
-  permissions: Permission[];
-}
-
-// Form Types
-export interface FormField {
-  name: string;
-  label: string;
-  type: 'text' | 'email' | 'password' | 'textarea' | 'select' | 'date' | 'number' | 'checkbox' | 'radio';
-  required?: boolean;
-  placeholder?: string;
-  options?: { value: string; label: string }[];
-  validation?: {
-    min?: number;
-    max?: number;
-    pattern?: string;
-    message?: string;
-  };
-}
-
-export interface FormConfig {
-  fields: FormField[];
-  submitText?: string;
-  cancelText?: string;
-}
-
-// UI Component Types
-export interface NavItem {
-  id: string;
-  title: string;
-  route: string;
-  icon: string;
-  badge?: number;
-  children?: NavItem[];
-}
-
-export interface Breadcrumb {
-  title: string;
-  route?: string;
-  active?: boolean;
-}
-
-// Chart and Analytics Types
-export interface ChartData {
-  labels: string[];
-  datasets: {
-    label: string;
-    data: number[];
-    backgroundColor?: string;
-    borderColor?: string;
-    borderWidth?: number;
-  }[];
-}
-
-export interface TableData {
-  columns: {
-    key: string;
-    label: string;
-    sortable?: boolean;
-    width?: string;
-  }[];
-  rows: Record<string, any>[];
-}
-
-// File Upload Types
-export interface FileUpload {
-  id: string;
-  filename: string;
-  original_name: string;
-  mime_type: string;
-  size: number;
-  url: string;
-  uploaded_by: string;
-  uploaded_at: string;
-}
-
-export interface FileUploadCreate {
-  file: File;
-  description?: string;
-  tags?: string[];
-}
-
-// Export Types
-export interface ExportOptions {
-  format: 'pdf' | 'csv' | 'excel' | 'json';
-  include_attachments?: boolean;
-  date_range?: {
-    from: string;
-    to: string;
-  };
-  filters?: SearchFilters;
-}
-
-// Import Types
-export interface ImportOptions {
-  format: 'csv' | 'excel' | 'json';
-  file: File;
-  mapping?: Record<string, string>;
-  update_existing?: boolean;
-}
-
-// WebSocket Types
-export interface WebSocketMessage {
-  type: 'notification' | 'update' | 'chat' | 'system';
-  payload: any;
-  timestamp: string;
-  user_id?: string;
-}
-
-// Error Types
-export interface ApiError {
-  code: string;
-  message: string;
-  details?: any;
-  timestamp: string;
-}
-
-// Success Types
-export interface SuccessMessage {
-  message: string;
-  data?: any;
-  timestamp: string;
-}
-
-// Results & Data Types
-export interface ResultEntry {
-  id: string;
-  title: string;
-  summary: string;
-  author: string;
-  date: string;
-  tags: string[];
-  source: 'Manual' | 'Notebook Summary' | 'Import';
-  dataPreview: DataPreview;
-  lab_id: string;
-  project_id?: string;
-  privacy_level: PrivacyLevel;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface DataPreview {
-  type: 'table' | 'graph' | 'text' | 'image';
-  content: any;
-}
-
-export interface DataEntryForm {
-  title: string;
-  summary: string;
-  data_type: 'experiment' | 'observation' | 'measurement' | 'survey' | 'simulation' | 'other';
-  data_format: 'spreadsheet' | 'manual' | 'import';
-  lab_id: string;
-  project_id?: string;
-  tags: string[];
-  privacy_level: PrivacyLevel;
-  
-  // For spreadsheet data
-  spreadsheet_data?: {
-    headers: string[];
-    rows: string[][];
-    file_name?: string;
-    file_type?: 'excel' | 'csv' | 'tsv';
-  };
-  
-  // For manual entry
-  manual_data?: {
-    fields: Array<{
-      name: string;
-      type: 'text' | 'number' | 'date' | 'boolean' | 'select';
-      value: string | number | boolean;
-      required: boolean;
-      options?: string[];
-    }>;
-  };
-  
-  // For imported data
-  import_data?: {
-    source: string;
-    original_format: string;
-    metadata: Record<string, any>;
-  };
-}
-
-export interface DataTemplate {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  fields: Array<{
-    name: string;
-    type: 'text' | 'number' | 'date' | 'boolean' | 'select';
-    required: boolean;
-    default_value?: string | number | boolean;
-    options?: string[];
-    validation_rules?: Record<string, any>;
-  }>;
+  category: 'protocol' | 'experiment' | 'inventory' | 'instrument' | 'result' | 'note';
   created_by: string;
   lab_id: string;
-  is_public: boolean;
   created_at: string;
   updated_at: string;
+  tags: string[];
+  privacy_level: PrivacyLevel;
+}
+
+// Research Data Entry Types
+export interface ResearchDataEntry {
+  id: string;
+  title: string;
+  description?: string;
+  data_type: 'experiment' | 'analysis' | 'image' | 'document' | 'protocol' | 'code';
+  category: string;
+  date: string;
+  status: 'draft' | 'in_review' | 'approved' | 'published';
+  author: string;
+  lab: string;
+  files: Array<{
+    name: string;
+    type: string;
+    size: number;
+    url: string;
+    uploadedAt: string;
+  }>;
+  metadata: {
+    experimentDate?: string;
+    sampleCount?: number;
+    replicates?: number;
+    conditions?: string[];
+    instruments?: string[];
+    reagents?: string[];
+    notes?: string;
+  };
+  analysis?: {
+    method: string;
+    software: string;
+    parameters: Record<string, any>;
+    results: Record<string, any>;
+  };
+  protocol?: {
+    steps: string[];
+    duration: number;
+    difficulty: 'easy' | 'medium' | 'hard';
+    equipment: string[];
+  };
+  created_at: string;
+  updated_at: string;
+  tags: string[];
+  privacy_level: PrivacyLevel;
+}
+
+// Research-Focused Dashboard Types
+export interface ResearchProject {
+  id: string;
+  title: string;
+  status: 'planning' | 'active' | 'analysis' | 'writing' | 'published';
+  progress: number;
+  team: string[];
+  deadline: string;
+  priority: 'high' | 'medium' | 'low';
+  publications: number;
+  citations: number;
+  funding?: {
+    amount: number;
+    source: string;
+    endDate: string;
+  };
+  milestones: Array<{
+    id: string;
+    title: string;
+    dueDate: string;
+    completed: boolean;
+  }>;
+}
+
+export interface ResearchMetrics {
+  totalProjects: number;
+  activeExperiments: number;
+  publicationsThisYear: number;
+  citationsTotal: number;
+  collaborationScore: number;
+  productivityTrend: 'up' | 'down' | 'stable';
+  fundingSecured: number;
+  grantApplications: number;
+  conferencePresentations: number;
+}
+
+export interface ResearchDeadline {
+  id: string;
+  title: string;
+  type: 'grant' | 'conference' | 'publication' | 'experiment' | 'thesis' | 'review';
+  deadline: string;
+  priority: 'high' | 'medium' | 'low';
+  description?: string;
+  relatedProject?: string;
+  status: 'upcoming' | 'submitted' | 'completed' | 'missed';
+}
+
+export interface ResearchActivity {
+  id: string;
+  type: 'experiment' | 'publication' | 'collaboration' | 'milestone' | 'grant' | 'conference';
+  title: string;
+  description?: string;
+  timestamp: string;
+  user: string;
+  relatedProject?: string;
+  impact?: 'high' | 'medium' | 'low';
+}
+
+export interface ResearchInsight {
+  id: string;
+  type: 'opportunity' | 'warning' | 'achievement' | 'suggestion' | 'trend';
+  title: string;
+  description: string;
+  action?: { 
+    label: string; 
+    route: string; 
+    type: 'navigate' | 'modal' | 'external';
+  };
+  priority: 'high' | 'medium' | 'low';
+  confidence: number; // 0-100
+  category: 'grants' | 'collaborations' | 'publications' | 'productivity' | 'trends';
+  expiresAt?: string;
+}
+
+export interface Collaboration {
+  id: string;
+  title: string;
+  type: 'internal' | 'external' | 'industry' | 'international';
+  status: 'active' | 'proposed' | 'completed' | 'on_hold';
+  partners: Array<{
+    name: string;
+    institution: string;
+    role: string;
+    contact: string;
+  }>;
+  startDate: string;
+  endDate?: string;
+  description?: string;
+  outcomes?: string[];
+  publications?: number;
+  funding?: number;
+}
+
+export interface ResearchTrend {
+  id: string;
+  title: string;
+  category: 'methodology' | 'technology' | 'collaboration' | 'funding';
+  description: string;
+  impact: 'high' | 'medium' | 'low';
+  timeframe: 'short' | 'medium' | 'long';
+  relevance: number; // 0-100
+  sources: string[];
+  recommendations?: string[];
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { exchangeAPI, sharedInstrumentsAPI } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 import InstrumentBookingCalendar from '../components/InstrumentBookingCalendar';
+import { BellIcon, XMarkIcon, StarIcon } from '../components/icons';
 
 interface ExchangeRequest {
   id: string;
@@ -40,6 +41,32 @@ interface SharedInstrument {
   status: string;
   external_contact_email: string;
   access_policy: string;
+  rating?: number;
+  review_count?: number;
+}
+
+interface Notification {
+  id: string;
+  type: 'request_match' | 'offer_received' | 'exchange_completed' | 'rating_received' | 'booking_confirmed';
+  title: string;
+  message: string;
+  from_lab: string;
+  from_user: string;
+  timestamp: Date;
+  read: boolean;
+  related_id: string;
+  priority: 'low' | 'medium' | 'high';
+}
+
+interface Rating {
+  id: string;
+  exchange_id: string;
+  rater_lab: string;
+  rated_lab: string;
+  rating: number;
+  review: string;
+  category: 'supplies' | 'instruments';
+  created_at: Date;
 }
 
 const ResourceExchangePage: React.FC = () => {
@@ -89,6 +116,21 @@ const ResourceExchangePage: React.FC = () => {
   // Real-time simulation
   const [updateInterval, setUpdateInterval] = useState<NodeJS.Timeout | null>(null);
 
+  // Notification and rating states
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [ratings, setRatings] = useState<Rating[]>([]);
+  const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [selectedExchangeForRating, setSelectedExchangeForRating] = useState<{
+    id: string;
+    lab_name: string;
+    category: 'supplies' | 'instruments';
+  } | null>(null);
+  const [ratingForm, setRatingForm] = useState({
+    rating: 5,
+    review: ''
+  });
+
   // Load data functions
   const loadRequests = useCallback(async () => {
     setLoading(true);
@@ -123,6 +165,171 @@ const ResourceExchangePage: React.FC = () => {
       console.error('Failed to load shared instruments:', error);
     }
   }, [instrumentFilters.scope, instrumentFilters.availability, instrumentFilters.search]);
+
+  // Notification and rating functions
+  const loadNotifications = useCallback(async () => {
+    // Mock notifications - in real app, this would come from WebSocket or API
+    const mockNotifications: Notification[] = [
+      {
+        id: '1',
+        type: 'offer_received',
+        title: 'New Offer Received',
+        message: 'Molecular Biology Lab has offered 50ml of Taq Polymerase for your PCR reagents request',
+        from_lab: 'Molecular Biology Lab',
+        from_user: 'Dr. Sarah Chen',
+        timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
+        read: false,
+        related_id: 'req_1',
+        priority: 'high'
+      },
+      {
+        id: '2',
+        type: 'request_match',
+        title: 'Request Match Found',
+        message: 'Your request for Cell Culture Medium matches with Biochemistry Lab inventory',
+        from_lab: 'Biochemistry Lab',
+        from_user: 'Alex Rodriguez',
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+        read: true,
+        related_id: 'req_2',
+        priority: 'medium'
+      },
+      {
+        id: '3',
+        type: 'exchange_completed',
+        title: 'Exchange Completed',
+        message: 'Your exchange with Cell Biology Lab has been completed successfully',
+        from_lab: 'Cell Biology Lab',
+        from_user: 'Maria Garcia',
+        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+        read: true,
+        related_id: 'ex_1',
+        priority: 'low'
+      },
+      {
+        id: '4',
+        type: 'rating_received',
+        title: 'New Rating Received',
+        message: 'You received a 5-star rating from Dr. Sarah Chen for your recent exchange',
+        from_lab: 'Molecular Biology Lab',
+        from_user: 'Dr. Sarah Chen',
+        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+        read: false,
+        related_id: 'ex_2',
+        priority: 'medium'
+      },
+      {
+        id: '5',
+        type: 'booking_confirmed',
+        title: 'Instrument Booking Confirmed',
+        message: 'Your booking for PCR Machine has been confirmed for tomorrow 2:00 PM',
+        from_lab: 'Genomics Lab',
+        from_user: 'Dr. John Smith',
+        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+        read: true,
+        related_id: 'booking_1',
+        priority: 'medium'
+      }
+    ];
+    
+    setNotifications(mockNotifications);
+  }, []);
+
+  const loadRatings = useCallback(async () => {
+    // Mock ratings - in real app, this would come from API
+    const mockRatings: Rating[] = [
+      {
+        id: '1',
+        exchange_id: 'ex_1',
+        rater_lab: 'Molecular Biology Lab',
+        rated_lab: 'Current Lab',
+        rating: 5,
+        review: 'Excellent service! The reagents were exactly as described and delivered on time.',
+        category: 'supplies',
+        created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+      },
+      {
+        id: '2',
+        exchange_id: 'ex_2',
+        rater_lab: 'Biochemistry Lab',
+        rated_lab: 'Current Lab',
+        rating: 4,
+        review: 'Good quality materials, but delivery was slightly delayed.',
+        category: 'supplies',
+        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+      },
+      {
+        id: '3',
+        exchange_id: 'ex_3',
+        rater_lab: 'Cell Biology Lab',
+        rated_lab: 'Current Lab',
+        rating: 5,
+        review: 'Perfect instrument sharing experience. Very professional and helpful.',
+        category: 'instruments',
+        created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      }
+    ];
+    
+    setRatings(mockRatings);
+  }, []);
+
+  const markNotificationAsRead = (notificationId: string) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === notificationId ? { ...notif, read: true } : notif
+      )
+    );
+  };
+
+  const markAllNotificationsAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notif => ({ ...notif, read: true }))
+    );
+  };
+
+  const submitRating = () => {
+    if (!selectedExchangeForRating) return;
+    
+    const newRating: Rating = {
+      id: Date.now().toString(),
+      exchange_id: selectedExchangeForRating.id,
+      rater_lab: 'Current Lab',
+      rated_lab: selectedExchangeForRating.lab_name,
+      rating: ratingForm.rating,
+      review: ratingForm.review,
+      category: selectedExchangeForRating.category,
+      created_at: new Date()
+    };
+    
+    setRatings(prev => [...prev, newRating]);
+    setShowRatingModal(false);
+    setRatingForm({ rating: 5, review: '' });
+    setSelectedExchangeForRating(null);
+    
+    // Show success notification
+    const successNotification: Notification = {
+      id: Date.now().toString(),
+      type: 'rating_received',
+      title: 'Rating Submitted',
+      message: `Your ${ratingForm.rating}-star rating for ${selectedExchangeForRating.lab_name} has been submitted`,
+      from_lab: 'System',
+      from_user: 'System',
+      timestamp: new Date(),
+      read: false,
+      related_id: selectedExchangeForRating.id,
+      priority: 'low'
+    };
+    
+    setNotifications(prev => [successNotification, ...prev]);
+  };
+
+  const getLabRating = (labName: string): { average: number; count: number } => {
+    const labRatings = ratings.filter(r => r.rated_lab === labName);
+    if (labRatings.length === 0) return { average: 0, count: 0 };
+    
+    const average = labRatings.reduce((sum, r) => sum + r.rating, 0) / labRatings.length;
+    return { average: Math.round(average * 10) / 10, count: labRatings.length };
+  };
 
   // Form handlers
   const handleRequestSubmit = async (e: React.FormEvent) => {
@@ -233,6 +440,12 @@ const ResourceExchangePage: React.FC = () => {
     loadRequests();
   }, [loadRequests]);
 
+  // Load notifications and ratings
+  useEffect(() => {
+    loadNotifications();
+    loadRatings();
+  }, [loadNotifications, loadRatings]);
+
   // Update form when user changes
   useEffect(() => {
     if (user?.lab_id) {
@@ -306,52 +519,114 @@ const ResourceExchangePage: React.FC = () => {
             <p className="text-gray-600 mt-1">Request supplies from nearby labs and find shared instruments across institutions.</p>
           </div>
           
-          {/* Demo Login Button */}
-          <button
-            onClick={() => {
-              localStorage.setItem('authToken', 'demo-token-123');
-              localStorage.setItem('user', JSON.stringify({
-                id: '550e8400-e29b-41d4-a716-446655440003',
-                username: 'student',
-                email: 'demo@researchlab.com',
-                first_name: 'Demo',
-                last_name: 'User',
-                role: 'student',
-                lab_id: 'c8ace470-5e21-4d3b-ab95-da6084311657'
-              }));
-              window.location.reload();
-            }}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-          >
-            Demo Login
-          </button>
-          
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <div className={`w-3 h-3 rounded-full ${realTimeUpdates ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
-              <span className="text-sm text-gray-600">
-                {realTimeUpdates ? 'Live Updates' : 'Manual Updates'}
-              </span>
-            </div>
-            
+          {/* Notification Bell */}
+          <div className="relative">
             <button
-              onClick={() => setRealTimeUpdates(!realTimeUpdates)}
-              className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                realTimeUpdates 
-                  ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+              className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              {realTimeUpdates ? 'Disable Live' : 'Enable Live'}
+              <BellIcon className="w-6 h-6" />
+              {notifications.filter(n => !n.read).length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {notifications.filter(n => !n.read).length}
+                </span>
+              )}
             </button>
             
-            {lastUpdate && (
-              <div className="text-xs text-gray-500">
-                Last update: {formatTimeAgo(lastUpdate.toISOString())}
+            {/* Notification Panel */}
+            {showNotificationPanel && (
+              <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={markAllNotificationsAsRead}
+                        className="text-sm text-blue-600 hover:text-blue-700"
+                      >
+                        Mark all read
+                      </button>
+                      <button
+                        onClick={() => setShowNotificationPanel(false)}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <XMarkIcon className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="max-h-96 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500">
+                      No notifications
+                    </div>
+                  ) : (
+                    notifications.map((notification) => (
+                      <div
+                        key={notification.id}
+                        className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
+                          !notification.read ? 'bg-blue-50' : ''
+                        }`}
+                        onClick={() => markNotificationAsRead(notification.id)}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                            notification.priority === 'high' ? 'bg-red-500' :
+                            notification.priority === 'medium' ? 'bg-yellow-500' :
+                            'bg-green-500'
+                          }`}></div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="text-sm font-medium text-gray-900 truncate">
+                                {notification.title}
+                              </h4>
+                              {!notification.read && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
+                            <div className="flex items-center justify-between text-xs text-gray-500">
+                              <span>{notification.from_lab}</span>
+                              <span>{notification.timestamp.toLocaleTimeString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             )}
           </div>
         </div>
+      </div>
+
+      {/* Real-time Updates Controls */}
+      <div className="flex items-center space-x-4 mb-6">
+        <div className="flex items-center space-x-2">
+          <div className={`w-3 h-3 rounded-full ${realTimeUpdates ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+          <span className="text-sm text-gray-600">
+            {realTimeUpdates ? 'Live Updates' : 'Manual Updates'}
+          </span>
+        </div>
+        
+        <button
+          onClick={() => setRealTimeUpdates(!realTimeUpdates)}
+          className={`px-3 py-1 text-xs rounded-full transition-colors ${
+            realTimeUpdates 
+              ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          {realTimeUpdates ? 'Disable Live' : 'Enable Live'}
+        </button>
+        
+        {lastUpdate && (
+          <div className="text-xs text-gray-500">
+            Last update: {formatTimeAgo(lastUpdate.toISOString())}
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2 mb-6">
@@ -884,6 +1159,82 @@ const ResourceExchangePage: React.FC = () => {
             loadSharedInstruments();
           }}
         />
+      )}
+
+      {/* Rating Modal */}
+      {showRatingModal && selectedExchangeForRating && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Rate Exchange</h3>
+                <button
+                  onClick={() => setShowRatingModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Rate your experience with <span className="font-medium">{selectedExchangeForRating.lab_name}</span>
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setRatingForm(prev => ({ ...prev, rating: star }))}
+                        className={`w-8 h-8 ${
+                          star <= ratingForm.rating
+                            ? 'text-yellow-400'
+                            : 'text-gray-300'
+                        } hover:text-yellow-400 transition-colors`}
+                      >
+                        <StarIcon className="w-full h-full fill-current" />
+                      </button>
+                    ))}
+                    <span className="ml-2 text-sm text-gray-600">
+                      {ratingForm.rating} star{ratingForm.rating !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Review (optional)</label>
+                  <textarea
+                    value={ratingForm.review}
+                    onChange={(e) => setRatingForm(prev => ({ ...prev, review: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="Share your experience with this lab..."
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    onClick={() => setShowRatingModal(false)}
+                    className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={submitRating}
+                    className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <StarIcon className="w-4 h-4" />
+                    Submit Rating
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

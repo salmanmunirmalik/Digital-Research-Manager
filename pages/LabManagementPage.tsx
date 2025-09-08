@@ -14,7 +14,8 @@ import {
   BeakerIcon,
   ClipboardPasteIcon,
   PackageIcon,
-  FlaskConicalIcon
+  FlaskConicalIcon,
+  XMarkIcon
 } from '../components/icons';
 
 interface LabMember {
@@ -36,6 +37,47 @@ interface LabProject {
   endDate: string;
 }
 
+interface InventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  supplier: string;
+  catalogNumber: string;
+  quantity: number;
+  unit: string;
+  location: string;
+  expiryDate?: string;
+  cost: number;
+  status: 'in_stock' | 'low_stock' | 'out_of_stock' | 'expired';
+  lastUpdated: string;
+  notes?: string;
+  barcode?: string;
+  minQuantity: number;
+  maxQuantity: number;
+  reorderPoint: number;
+}
+
+interface InventoryTransaction {
+  id: string;
+  itemId: string;
+  type: 'in' | 'out' | 'adjustment' | 'transfer';
+  quantity: number;
+  reason: string;
+  performedBy: string;
+  timestamp: string;
+  notes?: string;
+}
+
+interface InventoryAlert {
+  id: string;
+  itemId: string;
+  type: 'low_stock' | 'expired' | 'expiring_soon' | 'overstock' | 'out_of_stock';
+  message: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  timestamp: string;
+  acknowledged: boolean;
+}
+
 const LabManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   
@@ -48,6 +90,42 @@ const LabManagementPage: React.FC = () => {
   // Form states
   const [members, setMembers] = useState<LabMember[]>([]);
   const [projects, setProjects] = useState<LabProject[]>([]);
+  
+  // Inventory states
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [inventoryTransactions, setInventoryTransactions] = useState<InventoryTransaction[]>([]);
+  const [inventoryAlerts, setInventoryAlerts] = useState<InventoryAlert[]>([]);
+  const [showInventoryModal, setShowInventoryModal] = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryItem | null>(null);
+  const [inventoryForm, setInventoryForm] = useState({
+    name: '',
+    category: '',
+    supplier: '',
+    catalogNumber: '',
+    quantity: 0,
+    unit: 'pcs',
+    location: '',
+    expiryDate: '',
+    cost: 0,
+    notes: '',
+    barcode: '',
+    minQuantity: 0,
+    maxQuantity: 0,
+    reorderPoint: 0
+  });
+  const [transactionForm, setTransactionForm] = useState({
+    type: 'out' as 'in' | 'out' | 'adjustment' | 'transfer',
+    quantity: 0,
+    reason: '',
+    notes: ''
+  });
+  const [inventoryFilters, setInventoryFilters] = useState({
+    category: '',
+    status: '',
+    location: '',
+    search: ''
+  });
   
   // Action handlers
   const handleAddMember = () => {
@@ -78,11 +156,284 @@ const LabManagementPage: React.FC = () => {
     setShowAddMemberModal(false);
     setShowNewProjectModal(false);
   };
+
+  // Inventory management functions
+  const loadInventoryData = () => {
+    // Mock inventory data
+    const mockInventoryItems: InventoryItem[] = [
+      {
+        id: '1',
+        name: 'Taq Polymerase',
+        category: 'Enzymes',
+        supplier: 'Thermo Fisher',
+        catalogNumber: 'EP0402',
+        quantity: 15,
+        unit: 'ml',
+        location: 'Freezer A-1',
+        expiryDate: '2024-12-31',
+        cost: 250.00,
+        status: 'in_stock',
+        lastUpdated: '2024-01-15',
+        notes: 'High fidelity polymerase',
+        barcode: '1234567890123',
+        minQuantity: 5,
+        maxQuantity: 50,
+        reorderPoint: 10
+      },
+      {
+        id: '2',
+        name: 'Cell Culture Medium',
+        category: 'Media',
+        supplier: 'Gibco',
+        catalogNumber: '11965-092',
+        quantity: 2,
+        unit: 'L',
+        location: 'Fridge B-2',
+        expiryDate: '2024-06-15',
+        cost: 180.00,
+        status: 'low_stock',
+        lastUpdated: '2024-01-10',
+        notes: 'DMEM with high glucose',
+        barcode: '1234567890124',
+        minQuantity: 5,
+        maxQuantity: 20,
+        reorderPoint: 8
+      },
+      {
+        id: '3',
+        name: 'Antibody Anti-GAPDH',
+        category: 'Antibodies',
+        supplier: 'Abcam',
+        catalogNumber: 'ab8245',
+        quantity: 0,
+        unit: 'μl',
+        location: 'Freezer C-3',
+        expiryDate: '2024-03-20',
+        cost: 320.00,
+        status: 'out_of_stock',
+        lastUpdated: '2024-01-05',
+        notes: 'Mouse monoclonal',
+        barcode: '1234567890125',
+        minQuantity: 1,
+        maxQuantity: 10,
+        reorderPoint: 2
+      },
+      {
+        id: '4',
+        name: 'PCR Tubes',
+        category: 'Consumables',
+        supplier: 'Eppendorf',
+        catalogNumber: '0030123456',
+        quantity: 500,
+        unit: 'pcs',
+        location: 'Room 101',
+        cost: 45.00,
+        status: 'in_stock',
+        lastUpdated: '2024-01-20',
+        notes: '0.2ml clear tubes',
+        barcode: '1234567890126',
+        minQuantity: 100,
+        maxQuantity: 1000,
+        reorderPoint: 200
+      }
+    ];
+
+    const mockTransactions: InventoryTransaction[] = [
+      {
+        id: '1',
+        itemId: '1',
+        type: 'out',
+        quantity: 2,
+        reason: 'PCR experiment',
+        performedBy: 'Dr. Sarah Johnson',
+        timestamp: '2024-01-20T10:30:00Z',
+        notes: 'Used for gene expression analysis'
+      },
+      {
+        id: '2',
+        itemId: '2',
+        type: 'in',
+        quantity: 5,
+        reason: 'New shipment',
+        performedBy: 'Alex Thompson',
+        timestamp: '2024-01-18T14:15:00Z',
+        notes: 'Received from supplier'
+      },
+      {
+        id: '3',
+        itemId: '3',
+        type: 'out',
+        quantity: 1,
+        reason: 'Western blot',
+        performedBy: 'Emily Rodriguez',
+        timestamp: '2024-01-15T09:45:00Z',
+        notes: 'Used for protein detection'
+      }
+    ];
+
+    const mockAlerts: InventoryAlert[] = [
+      {
+        id: '1',
+        itemId: '2',
+        type: 'low_stock',
+        message: 'Cell Culture Medium is running low (2L remaining)',
+        severity: 'medium',
+        timestamp: '2024-01-20T08:00:00Z',
+        acknowledged: false
+      },
+      {
+        id: '2',
+        itemId: '3',
+        type: 'out_of_stock',
+        message: 'Antibody Anti-GAPDH is out of stock',
+        severity: 'high',
+        timestamp: '2024-01-15T10:00:00Z',
+        acknowledged: false
+      },
+      {
+        id: '3',
+        itemId: '2',
+        type: 'expiring_soon',
+        message: 'Cell Culture Medium expires in 5 months',
+        severity: 'low',
+        timestamp: '2024-01-20T08:00:00Z',
+        acknowledged: true
+      }
+    ];
+
+    setInventoryItems(mockInventoryItems);
+    setInventoryTransactions(mockTransactions);
+    setInventoryAlerts(mockAlerts);
+  };
+
+  const addInventoryItem = () => {
+    const newItem: InventoryItem = {
+      id: Date.now().toString(),
+      ...inventoryForm,
+      status: 'in_stock',
+      lastUpdated: new Date().toISOString()
+    };
+    
+    setInventoryItems(prev => [...prev, newItem]);
+    setShowInventoryModal(false);
+    setInventoryForm({
+      name: '',
+      category: '',
+      supplier: '',
+      catalogNumber: '',
+      quantity: 0,
+      unit: 'pcs',
+      location: '',
+      expiryDate: '',
+      cost: 0,
+      notes: '',
+      barcode: '',
+      minQuantity: 0,
+      maxQuantity: 0,
+      reorderPoint: 0
+    });
+  };
+
+  const processInventoryTransaction = () => {
+    if (!selectedInventoryItem) return;
+
+    const transaction: InventoryTransaction = {
+      id: Date.now().toString(),
+      itemId: selectedInventoryItem.id,
+      type: transactionForm.type,
+      quantity: transactionForm.quantity,
+      reason: transactionForm.reason,
+      performedBy: 'Current User',
+      timestamp: new Date().toISOString(),
+      notes: transactionForm.notes
+    };
+
+    // Update inventory quantity
+    setInventoryItems(prev => 
+      prev.map(item => {
+        if (item.id === selectedInventoryItem.id) {
+          let newQuantity = item.quantity;
+          if (transactionForm.type === 'in') {
+            newQuantity += transactionForm.quantity;
+          } else if (transactionForm.type === 'out') {
+            newQuantity -= transactionForm.quantity;
+          } else if (transactionForm.type === 'adjustment') {
+            newQuantity = transactionForm.quantity;
+          }
+
+          // Update status based on quantity
+          let newStatus = 'in_stock';
+          if (newQuantity <= 0) {
+            newStatus = 'out_of_stock';
+          } else if (newQuantity <= item.reorderPoint) {
+            newStatus = 'low_stock';
+          }
+
+          return {
+            ...item,
+            quantity: newQuantity,
+            status: newStatus as any,
+            lastUpdated: new Date().toISOString()
+          };
+        }
+        return item;
+      })
+    );
+
+    setInventoryTransactions(prev => [transaction, ...prev]);
+    setShowTransactionModal(false);
+    setTransactionForm({
+      type: 'out',
+      quantity: 0,
+      reason: '',
+      notes: ''
+    });
+    setSelectedInventoryItem(null);
+  };
+
+  const acknowledgeAlert = (alertId: string) => {
+    setInventoryAlerts(prev =>
+      prev.map(alert =>
+        alert.id === alertId ? { ...alert, acknowledged: true } : alert
+      )
+    );
+  };
+
+  const getInventoryStatusColor = (status: string) => {
+    switch (status) {
+      case 'in_stock':
+        return 'bg-green-100 text-green-800';
+      case 'low_stock':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'out_of_stock':
+        return 'bg-red-100 text-red-800';
+      case 'expired':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getAlertSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'high':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'low':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
   
   // Initialize with mock data
   React.useEffect(() => {
     setMembers(mockMembers);
     setProjects(mockProjects);
+    loadInventoryData();
   }, []);
   
   // Mock data for demo
@@ -734,93 +1085,266 @@ const LabManagementPage: React.FC = () => {
 
       {activeTab === 'inventory' && (
         <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900">Lab Inventory</h2>
-              <button className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-sm">
-                <PlusIcon className="w-4 h-4 mr-2" />
-                Add Item
-              </button>
+          {/* Inventory Alerts */}
+          {inventoryAlerts.filter(alert => !alert.acknowledged).length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Inventory Alerts</h2>
+              <div className="space-y-3">
+                {inventoryAlerts.filter(alert => !alert.acknowledged).map((alert) => (
+                  <div
+                    key={alert.id}
+                    className={`p-4 rounded-lg border ${getAlertSeverityColor(alert.severity)}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="font-medium">{alert.message}</p>
+                        <p className="text-sm opacity-75">
+                          {new Date(alert.timestamp).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => acknowledgeAlert(alert.id)}
+                        className="ml-4 px-3 py-1 text-sm bg-white bg-opacity-50 hover:bg-opacity-75 rounded-md transition-colors"
+                      >
+                        Acknowledge
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Inventory Overview Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <PackageIcon className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Items</p>
+                  <p className="text-2xl font-bold text-gray-900">{inventoryItems.length}</p>
+                </div>
+              </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <PackageIcon className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">PCR Primers</h3>
-                    <p className="text-sm text-gray-600">Stock: 150 units</p>
-                  </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <PackageIcon className="w-6 h-6 text-yellow-600" />
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Category:</span>
-                    <span className="font-medium">Reagents</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Location:</span>
-                    <span className="font-medium">Freezer A</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Status:</span>
-                    <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">In Stock</span>
-                  </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Low Stock</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {inventoryItems.filter(item => item.status === 'low_stock').length}
+                  </p>
                 </div>
               </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                  <PackageIcon className="w-6 h-6 text-red-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Out of Stock</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {inventoryItems.filter(item => item.status === 'out_of_stock').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <PackageIcon className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Value</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    ${inventoryItems.reduce((sum, item) => sum + (item.cost * item.quantity), 0).toFixed(0)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
 
-              <div className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <PackageIcon className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Cell Culture Media</h3>
-                    <p className="text-sm text-gray-600">Stock: 25 bottles</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Category:</span>
-                    <span className="font-medium">Media</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Location:</span>
-                    <span className="font-medium">Fridge B</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Status:</span>
-                    <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">In Stock</span>
-                  </div>
-                </div>
+          {/* Inventory Management */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-gray-900">Inventory Management</h2>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setShowInventoryModal(true)}
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-sm"
+                >
+                  <PlusIcon className="w-4 h-4 mr-2" />
+                  Add Item
+                </button>
               </div>
+            </div>
 
-              <div className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                    <PackageIcon className="w-5 h-5 text-red-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Antibodies</h3>
-                    <p className="text-sm text-gray-600">Stock: 3 units</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Category:</span>
-                    <span className="font-medium">Reagents</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Location:</span>
-                    <span className="font-medium">Freezer A</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Status:</span>
-                    <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">Low Stock</span>
-                  </div>
-                </div>
+            {/* Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select
+                  value={inventoryFilters.category}
+                  onChange={(e) => setInventoryFilters(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Categories</option>
+                  <option value="Enzymes">Enzymes</option>
+                  <option value="Media">Media</option>
+                  <option value="Antibodies">Antibodies</option>
+                  <option value="Consumables">Consumables</option>
+                </select>
               </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={inventoryFilters.status}
+                  onChange={(e) => setInventoryFilters(prev => ({ ...prev, status: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Status</option>
+                  <option value="in_stock">In Stock</option>
+                  <option value="low_stock">Low Stock</option>
+                  <option value="out_of_stock">Out of Stock</option>
+                  <option value="expired">Expired</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <select
+                  value={inventoryFilters.location}
+                  onChange={(e) => setInventoryFilters(prev => ({ ...prev, location: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Locations</option>
+                  <option value="Freezer A-1">Freezer A-1</option>
+                  <option value="Fridge B-2">Fridge B-2</option>
+                  <option value="Freezer C-3">Freezer C-3</option>
+                  <option value="Room 101">Room 101</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                <input
+                  type="text"
+                  value={inventoryFilters.search}
+                  onChange={(e) => setInventoryFilters(prev => ({ ...prev, search: e.target.value }))}
+                  placeholder="Search items..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Inventory Table */}
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {inventoryItems
+                    .filter(item => {
+                      if (inventoryFilters.category && item.category !== inventoryFilters.category) return false;
+                      if (inventoryFilters.status && item.status !== inventoryFilters.status) return false;
+                      if (inventoryFilters.location && item.location !== inventoryFilters.location) return false;
+                      if (inventoryFilters.search && !item.name.toLowerCase().includes(inventoryFilters.search.toLowerCase())) return false;
+                      return true;
+                    })
+                    .map((item) => (
+                    <tr key={item.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                          <div className="text-sm text-gray-500">{item.supplier} - {item.catalogNumber}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.category}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {item.quantity} {item.unit}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.location}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getInventoryStatusColor(item.status)}`}>
+                          {item.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.cost.toFixed(2)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => {
+                            setSelectedInventoryItem(item);
+                            setShowTransactionModal(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-900 mr-3"
+                        >
+                          Transaction
+                        </button>
+                        <button
+                          onClick={() => handleEditItem(item)}
+                          className="text-green-600 hover:text-green-900"
+                        >
+                          Edit
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Recent Transactions */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Transactions</h2>
+            <div className="space-y-3">
+              {inventoryTransactions.slice(0, 5).map((transaction) => {
+                const item = inventoryItems.find(i => i.id === transaction.itemId);
+                return (
+                  <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        transaction.type === 'in' ? 'bg-green-100' : 'bg-red-100'
+                      }`}>
+                        <span className={`text-sm font-medium ${
+                          transaction.type === 'in' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {transaction.type === 'in' ? '+' : '-'}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {transaction.type === 'in' ? 'Added' : 'Used'} {transaction.quantity} {item?.unit} of {item?.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {transaction.reason} • {transaction.performedBy}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {new Date(transaction.timestamp).toLocaleDateString()}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1308,6 +1832,262 @@ const LabManagementPage: React.FC = () => {
                   className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
                 >
                   Create Project
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Inventory Item Modal */}
+      {showInventoryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Add Inventory Item</h3>
+                <button
+                  onClick={() => setShowInventoryModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Item Name</label>
+                  <input
+                    type="text"
+                    value={inventoryForm.name}
+                    onChange={(e) => setInventoryForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter item name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                  <select
+                    value={inventoryForm.category}
+                    onChange={(e) => setInventoryForm(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Select category</option>
+                    <option value="Enzymes">Enzymes</option>
+                    <option value="Media">Media</option>
+                    <option value="Antibodies">Antibodies</option>
+                    <option value="Consumables">Consumables</option>
+                    <option value="Equipment">Equipment</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Supplier</label>
+                  <input
+                    type="text"
+                    value={inventoryForm.supplier}
+                    onChange={(e) => setInventoryForm(prev => ({ ...prev, supplier: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter supplier name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Catalog Number</label>
+                  <input
+                    type="text"
+                    value={inventoryForm.catalogNumber}
+                    onChange={(e) => setInventoryForm(prev => ({ ...prev, catalogNumber: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter catalog number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                  <input
+                    type="number"
+                    value={inventoryForm.quantity}
+                    onChange={(e) => setInventoryForm(prev => ({ ...prev, quantity: parseInt(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter quantity"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Unit</label>
+                  <select
+                    value={inventoryForm.unit}
+                    onChange={(e) => setInventoryForm(prev => ({ ...prev, unit: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="pcs">Pieces</option>
+                    <option value="ml">Milliliters</option>
+                    <option value="μl">Microliters</option>
+                    <option value="L">Liters</option>
+                    <option value="mg">Milligrams</option>
+                    <option value="g">Grams</option>
+                    <option value="kg">Kilograms</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                  <input
+                    type="text"
+                    value={inventoryForm.location}
+                    onChange={(e) => setInventoryForm(prev => ({ ...prev, location: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter storage location"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
+                  <input
+                    type="date"
+                    value={inventoryForm.expiryDate}
+                    onChange={(e) => setInventoryForm(prev => ({ ...prev, expiryDate: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Cost ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={inventoryForm.cost}
+                    onChange={(e) => setInventoryForm(prev => ({ ...prev, cost: parseFloat(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter cost per unit"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Reorder Point</label>
+                  <input
+                    type="number"
+                    value={inventoryForm.reorderPoint}
+                    onChange={(e) => setInventoryForm(prev => ({ ...prev, reorderPoint: parseInt(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter reorder point"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                  <textarea
+                    value={inventoryForm.notes}
+                    onChange={(e) => setInventoryForm(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="Enter any additional notes"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-6">
+                <button
+                  onClick={() => setShowInventoryModal(false)}
+                  className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={addInventoryItem}
+                  className="px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                >
+                  Add Item
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transaction Modal */}
+      {showTransactionModal && selectedInventoryItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Process Transaction</h3>
+                <button
+                  onClick={() => setShowTransactionModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600">Item: <span className="font-medium">{selectedInventoryItem.name}</span></p>
+                <p className="text-sm text-gray-600">Current Stock: <span className="font-medium">{selectedInventoryItem.quantity} {selectedInventoryItem.unit}</span></p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Transaction Type</label>
+                  <select
+                    value={transactionForm.type}
+                    onChange={(e) => setTransactionForm(prev => ({ ...prev, type: e.target.value as any }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="out">Use/Remove</option>
+                    <option value="in">Add/Receive</option>
+                    <option value="adjustment">Adjustment</option>
+                    <option value="transfer">Transfer</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                  <input
+                    type="number"
+                    value={transactionForm.quantity}
+                    onChange={(e) => setTransactionForm(prev => ({ ...prev, quantity: parseInt(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter quantity"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Reason</label>
+                  <input
+                    type="text"
+                    value={transactionForm.reason}
+                    onChange={(e) => setTransactionForm(prev => ({ ...prev, reason: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter reason for transaction"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Notes (optional)</label>
+                  <textarea
+                    value={transactionForm.notes}
+                    onChange={(e) => setTransactionForm(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={2}
+                    placeholder="Enter any additional notes"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-6">
+                <button
+                  onClick={() => setShowTransactionModal(false)}
+                  className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={processInventoryTransaction}
+                  className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                >
+                  Process Transaction
                 </button>
               </div>
             </div>

@@ -26,7 +26,8 @@ import {
   BarChartIcon,
   SettingsIcon,
   RocketIcon,
-  BrainCircuitIcon
+  BrainCircuitIcon,
+  DnaIcon
 } from './icons';
 import { getUserDisplayName, getRoleDisplayName, getRolePermissions } from '../utils/roleAccess';
 
@@ -51,49 +52,67 @@ const SideNav: React.FC = () => {
   const getNavItems = () => {
     const baseItems = [];
 
-    // My Notebook - Static item (no collapsible section)
+    // Dashboard - Static item (always visible)
     baseItems.push({
-      title: 'My Notebook',
+      title: 'Dashboard',
       items: [
-        { name: 'My Notebook', to: '/dashboard', icon: HomeIcon, description: 'Personal dashboard and overview' },
+        { name: 'Dashboard', to: '/dashboard', icon: HomeIcon, description: 'Personal dashboard and overview' },
       ],
-      isStatic: true // Add flag to indicate this should be static
+      isStatic: true
     });
 
-    // Data & Results - Available to all
+    // Research Workflow - Core research activities
     baseItems.push({
-      title: 'Data & Results',
+      title: 'Research Workflow',
       items: [
+        { name: 'Lab Notebook', to: '/lab-notebook', icon: BookOpenIcon, description: 'Digital lab notebook and experiment tracking' },
+        { name: 'Protocols', to: '/protocols', icon: BeakerIcon, description: 'Research protocols and methods database' },
         { name: 'Data & Results', to: '/data-results', icon: ChartBarIcon, description: 'Research data and analysis' },
         { name: 'Research Assistant', to: '/research-assistant', icon: LightbulbIcon, description: 'AI-powered research helper' },
-        { name: 'Data Sharing', to: '/data-sharing', icon: DatabaseIcon, description: 'Global data sharing platform' }
+        { name: 'Automated Presentations', to: '/presentations', icon: PresentationChartLineIcon, description: 'Generate presentations from research data' }
       ]
     });
 
-    // Tools & Resources - Available to all
-    baseItems.push({
-      title: 'Tools & Resources',
-      items: [
-        { name: 'Calculators', to: '/calculator-hub', icon: CalculatorIcon, description: 'Scientific calculators and unit conversion' },
-        { name: 'Global Protocol Directory', to: '/protocols', icon: BeakerIcon, description: 'Research protocols and methods database' },
-        { name: 'Conferences', to: '/conferences', icon: NewspaperIcon, description: 'Upcoming events and workshops' }
-      ]
-    });
-
-    // Lab Management - Available to all
+    // Lab Management - Lab operations and resources
     baseItems.push({
       title: 'Lab Management',
       items: [
-        { name: 'Lab Management', to: '/lab-management', icon: BeakerIcon, description: 'Manage lab resources, inventory, and protocols' }
+        { name: 'Lab Management', to: '/lab-management', icon: BuildingOfficeIcon, description: 'Manage lab resources and operations' },
+        { name: 'Inventory', to: '/inventory', icon: ClipboardListIcon, description: 'Track reagents, supplies, and equipment' },
+        { name: 'Instruments', to: '/instruments', icon: CogIcon, description: 'Schedule and manage lab equipment' },
+        { name: 'Resource Exchange', to: '/resource-exchange', icon: UsersIcon, description: 'Share supplies and instruments across labs' }
       ]
     });
 
-    // Collaboration - Available to all
+    // Tools & Calculators - Scientific tools and utilities
+    baseItems.push({
+      title: 'Tools & Calculators',
+      items: [
+        { name: 'Calculator Hub', to: '/calculator-hub', icon: CalculatorIcon, description: 'Scientific calculators and unit conversion' },
+        { name: 'Bioinformatics Tools', to: '/bioinformatics-tools', icon: BrainCircuitIcon, description: 'Bioinformatics analysis tools' },
+        { name: 'Molecular Biology', to: '/molecular-biology', icon: DnaIcon, description: 'Molecular biology tools and resources' }
+      ]
+    });
+
+    // Collaboration - Community and sharing features
     baseItems.push({
       title: 'Collaboration',
       items: [
-        { name: 'Resource Exchange', to: '/resource-exchange', icon: UsersIcon, description: 'Share supplies and find shared instruments across labs' },
-        { name: 'Help Forum', to: '/help-forum', icon: QuestionMarkCircleIcon, description: 'Community help and support' }
+        { name: 'Researcher Portfolio', to: '/researcher-portfolio', icon: UserIcon, description: 'AI-powered researcher portfolio and publication management' },
+        { name: 'Co-Supervisor Discovery', to: '/co-supervisor-discovery', icon: UsersIcon, description: 'Find co-supervisors and research exchange opportunities' },
+        { name: 'Data Sharing', to: '/data-sharing', icon: DatabaseIcon, description: 'Global data sharing platform' },
+        { name: 'Help Forum', to: '/help-forum', icon: QuestionMarkCircleIcon, description: 'Community help and support' },
+        { name: 'Conferences', to: '/conferences', icon: NewspaperIcon, description: 'Upcoming events and workshops' },
+        { name: 'Reference Library', to: '/reference-library', icon: BookOpenIcon, description: 'Research references and literature' }
+      ]
+    });
+
+    // System - User settings and automation
+    baseItems.push({
+      title: 'System',
+      items: [
+        { name: 'Profile', to: '/profile', icon: UserIcon, description: 'User profile and preferences' },
+        { name: 'Settings', to: '/settings', icon: SettingsIcon, description: 'Application settings and configuration' }
       ]
     });
 

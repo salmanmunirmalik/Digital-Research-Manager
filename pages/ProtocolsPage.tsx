@@ -13,7 +13,8 @@ import {
   ClockIcon,
   TagIcon,
   UserIcon,
-  BuildingOfficeIcon
+  BuildingOfficeIcon,
+  XMarkIcon
 } from '../components/icons';
 import { Lab } from '../types';
 
@@ -51,6 +52,50 @@ interface ProtocolSharing {
   username: string | null;
 }
 
+interface ProtocolTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  difficulty_level: string;
+  estimated_duration: number;
+  materials_template: string[];
+  content_template: string;
+  safety_notes_template: string;
+  tags: string[];
+  created_by: string;
+  created_at: string;
+  usage_count: number;
+  rating: number;
+  is_public: boolean;
+  lab_name: string;
+}
+
+interface CollaborativeSession {
+  id: string;
+  protocol_id: string;
+  user_id: string;
+  user_name: string;
+  lab_name: string;
+  is_active: boolean;
+  last_seen: string;
+  current_section: string;
+  cursor_position: number;
+}
+
+interface ProtocolComment {
+  id: string;
+  protocol_id: string;
+  user_id: string;
+  user_name: string;
+  content: string;
+  section: string;
+  line_number?: number;
+  created_at: string;
+  is_resolved: boolean;
+  replies: ProtocolComment[];
+}
+
 const ProtocolsPage: React.FC = () => {
   const { user: authUser, token } = useAuth();
   
@@ -67,6 +112,32 @@ const ProtocolsPage: React.FC = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Template and collaboration states
+  const [templates, setTemplates] = useState<ProtocolTemplate[]>([]);
+  const [collaborativeSessions, setCollaborativeSessions] = useState<CollaborativeSession[]>([]);
+  const [protocolComments, setProtocolComments] = useState<ProtocolComment[]>([]);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showCollaborationPanel, setShowCollaborationPanel] = useState(false);
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<ProtocolTemplate | null>(null);
+  const [templateForm, setTemplateForm] = useState({
+    name: '',
+    description: '',
+    category: '',
+    difficulty_level: 'beginner',
+    estimated_duration: 1,
+    materials_template: [''],
+    content_template: '',
+    safety_notes_template: '',
+    tags: [''],
+    is_public: false
+  });
+  const [commentForm, setCommentForm] = useState({
+    content: '',
+    section: 'general',
+    line_number: 0
+  });
 
   // Comprehensive mock protocols data
   const mockProtocols: Protocol[] = [
@@ -585,14 +656,20 @@ const ProtocolsPage: React.FC = () => {
     // Use mock data instead of API calls
     setProtocols(mockProtocols);
     setLabs([
-      { id: 'lab-1', name: 'Molecular Genetics Lab', institution: 'University Research Center', department: 'Biology' },
-      { id: 'lab-2', name: 'Cell Biology Lab', institution: 'University Research Center', department: 'Biology' },
-      { id: 'lab-3', name: 'Immunology Lab', institution: 'University Research Center', department: 'Immunology' },
-      { id: 'lab-4', name: 'Proteomics Core Facility', institution: 'University Research Center', department: 'Biochemistry' },
-      { id: 'lab-5', name: 'Genomics Core Facility', institution: 'University Research Center', department: 'Genetics' },
-      { id: 'lab-6', name: 'Analytical Chemistry Lab', institution: 'University Research Center', department: 'Chemistry' }
+      { id: 'lab-1', name: 'Molecular Genetics Lab', institution: 'University Research Center', department: 'Biology', principal_researcher_id: 'user-1', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z', is_active: true },
+      { id: 'lab-2', name: 'Cell Biology Lab', institution: 'University Research Center', department: 'Biology', principal_researcher_id: 'user-2', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z', is_active: true },
+      { id: 'lab-3', name: 'Immunology Lab', institution: 'University Research Center', department: 'Immunology', principal_researcher_id: 'user-3', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z', is_active: true },
+      { id: 'lab-4', name: 'Proteomics Core Facility', institution: 'University Research Center', department: 'Biochemistry', principal_researcher_id: 'user-4', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z', is_active: true },
+      { id: 'lab-5', name: 'Genomics Core Facility', institution: 'University Research Center', department: 'Genetics', principal_researcher_id: 'user-5', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z', is_active: true },
+      { id: 'lab-6', name: 'Analytical Chemistry Lab', institution: 'University Research Center', department: 'Chemistry', principal_researcher_id: 'user-6', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z', is_active: true }
     ]);
     setCategories(['Molecular Biology', 'Protein Analysis', 'Cell Culture', 'Microscopy', 'Flow Cytometry', 'Immunoassays', 'Proteomics', 'Genomics', 'Cell Biology', 'Analytical Chemistry']);
+    
+    // Load template and collaboration data
+    loadTemplates();
+    loadCollaborativeSessions();
+    loadProtocolComments();
+    
     setIsLoading(false);
     
     // Debug logging
@@ -893,6 +970,278 @@ const ProtocolsPage: React.FC = () => {
     }
   };
 
+  // Template and collaboration functions
+  const loadTemplates = () => {
+    // Mock template data
+    const mockTemplates: ProtocolTemplate[] = [
+      {
+        id: '1',
+        name: 'Molecular Biology Template',
+        description: 'Standard template for molecular biology protocols including PCR, cloning, and sequencing',
+        category: 'Molecular Biology',
+        difficulty_level: 'intermediate',
+        estimated_duration: 8,
+        materials_template: [
+          'DNA template',
+          'Primers (forward and reverse)',
+          'PCR master mix',
+          'Agarose gel',
+          'Loading dye',
+          'Molecular weight marker'
+        ],
+        content_template: `1. Prepare PCR reaction mix
+2. Add template DNA
+3. Run PCR program
+4. Analyze results on agarose gel
+5. Purify PCR product if needed
+6. Sequence or clone as required`,
+        safety_notes_template: 'Wear gloves and lab coat. Handle ethidium bromide carefully. Dispose of gels properly.',
+        tags: ['PCR', 'Molecular Biology', 'DNA'],
+        created_by: 'Dr. Sarah Johnson',
+        created_at: '2024-01-15T10:00:00Z',
+        usage_count: 25,
+        rating: 4.5,
+        is_public: true,
+        lab_name: 'Molecular Genetics Lab'
+      },
+      {
+        id: '2',
+        name: 'Cell Culture Template',
+        description: 'Comprehensive template for cell culture protocols including maintenance, passaging, and cryopreservation',
+        category: 'Cell Culture',
+        difficulty_level: 'beginner',
+        estimated_duration: 4,
+        materials_template: [
+          'Complete medium',
+          'Trypsin-EDTA solution',
+          'PBS',
+          'Cell culture flasks',
+          'CO2 incubator',
+          'Laminar flow hood'
+        ],
+        content_template: `1. Check cell confluence
+2. Remove old medium
+3. Wash with PBS
+4. Add trypsin-EDTA
+5. Incubate until cells detach
+6. Neutralize with complete medium
+7. Centrifuge and resuspend
+8. Split at appropriate ratio`,
+        safety_notes_template: 'Work in laminar flow hood. Use sterile technique. Handle human cells with appropriate precautions.',
+        tags: ['Cell Culture', 'Passaging', 'Sterile Technique'],
+        created_by: 'Emily Rodriguez',
+        created_at: '2024-01-10T14:30:00Z',
+        usage_count: 18,
+        rating: 4.2,
+        is_public: true,
+        lab_name: 'Cell Biology Lab'
+      },
+      {
+        id: '3',
+        name: 'Protein Analysis Template',
+        description: 'Template for protein extraction, quantification, and analysis protocols',
+        category: 'Protein Analysis',
+        difficulty_level: 'intermediate',
+        estimated_duration: 6,
+        materials_template: [
+          'Lysis buffer',
+          'Protease inhibitors',
+          'Protein assay kit',
+          'SDS-PAGE gel',
+          'Transfer buffer',
+          'Primary antibodies',
+          'Secondary antibodies'
+        ],
+        content_template: `1. Lyse cells/tissues
+2. Centrifuge to remove debris
+3. Quantify protein concentration
+4. Prepare samples for SDS-PAGE
+5. Run gel electrophoresis
+6. Transfer to membrane
+7. Block membrane
+8. Incubate with antibodies
+9. Detect signal`,
+        safety_notes_template: 'Wear gloves and lab coat. Handle acrylamide carefully. Dispose of gels in designated containers.',
+        tags: ['Protein Analysis', 'Western Blot', 'SDS-PAGE'],
+        created_by: 'Dr. Michael Chen',
+        created_at: '2024-01-08T09:15:00Z',
+        usage_count: 12,
+        rating: 4.0,
+        is_public: false,
+        lab_name: 'Cell Biology Lab'
+      }
+    ];
+
+    setTemplates(mockTemplates);
+  };
+
+  const loadCollaborativeSessions = () => {
+    // Mock collaborative sessions
+    const mockSessions: CollaborativeSession[] = [
+      {
+        id: '1',
+        protocol_id: '1',
+        user_id: 'user-2',
+        user_name: 'Dr. Michael Chen',
+        lab_name: 'Cell Biology Lab',
+        is_active: true,
+        last_seen: new Date().toISOString(),
+        current_section: 'materials',
+        cursor_position: 15
+      },
+      {
+        id: '2',
+        protocol_id: '1',
+        user_id: 'user-3',
+        user_name: 'Emily Rodriguez',
+        lab_name: 'Cell Biology Lab',
+        is_active: true,
+        last_seen: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
+        current_section: 'content',
+        cursor_position: 8
+      },
+      {
+        id: '3',
+        protocol_id: '2',
+        user_id: 'user-4',
+        user_name: 'Alex Thompson',
+        lab_name: 'Molecular Genetics Lab',
+        is_active: false,
+        last_seen: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+        current_section: 'safety_notes',
+        cursor_position: 5
+      }
+    ];
+
+    setCollaborativeSessions(mockSessions);
+  };
+
+  const loadProtocolComments = () => {
+    // Mock comments data
+    const mockComments: ProtocolComment[] = [
+      {
+        id: '1',
+        protocol_id: '1',
+        user_id: 'user-2',
+        user_name: 'Dr. Michael Chen',
+        content: 'Consider adding a troubleshooting section for common PCR issues',
+        section: 'content',
+        line_number: 3,
+        created_at: '2024-01-20T10:30:00Z',
+        is_resolved: false,
+        replies: [
+          {
+            id: '1-1',
+            protocol_id: '1',
+            user_id: 'user-1',
+            user_name: 'Dr. Sarah Johnson',
+            content: 'Good suggestion! I\'ll add that section.',
+            section: 'content',
+            line_number: 3,
+            created_at: '2024-01-20T11:00:00Z',
+            is_resolved: false,
+            replies: []
+          }
+        ]
+      },
+      {
+        id: '2',
+        protocol_id: '1',
+        user_id: 'user-3',
+        user_name: 'Emily Rodriguez',
+        content: 'The incubation time might need adjustment for different cell types',
+        section: 'content',
+        line_number: 6,
+        created_at: '2024-01-20T14:15:00Z',
+        is_resolved: false,
+        replies: []
+      }
+    ];
+
+    setProtocolComments(mockComments);
+  };
+
+  const createTemplate = () => {
+    const newTemplate: ProtocolTemplate = {
+      id: Date.now().toString(),
+      ...templateForm,
+      created_by: user.username || 'Current User',
+      created_at: new Date().toISOString(),
+      usage_count: 0,
+      rating: 0,
+      lab_name: 'Current Lab'
+    };
+
+    setTemplates(prev => [...prev, newTemplate]);
+    setShowTemplateModal(false);
+    setTemplateForm({
+      name: '',
+      description: '',
+      category: '',
+      difficulty_level: 'beginner',
+      estimated_duration: 1,
+      materials_template: [''],
+      content_template: '',
+      safety_notes_template: '',
+      tags: [''],
+      is_public: false
+    });
+  };
+
+  const useTemplate = (template: ProtocolTemplate) => {
+    setProtocolForm({
+      title: template.name,
+      description: template.description,
+      category: template.category,
+      difficulty_level: template.difficulty_level,
+      estimated_duration: template.estimated_duration,
+      materials: template.materials_template,
+      content: template.content_template,
+      safety_notes: template.safety_notes_template,
+      tags: template.tags,
+      lab_id: '',
+      privacy_level: 'lab'
+    });
+
+    // Update template usage count
+    setTemplates(prev =>
+      prev.map(t => t.id === template.id ? { ...t, usage_count: t.usage_count + 1 } : t)
+    );
+
+    setSelectedTemplate(null);
+  };
+
+  const addComment = () => {
+    const newComment: ProtocolComment = {
+      id: Date.now().toString(),
+      protocol_id: selectedProtocol?.id || '',
+      user_id: user.id || 'demo-user',
+      user_name: user.username || 'Current User',
+      content: commentForm.content,
+      section: commentForm.section,
+      line_number: commentForm.line_number,
+      created_at: new Date().toISOString(),
+      is_resolved: false,
+      replies: []
+    };
+
+    setProtocolComments(prev => [...prev, newComment]);
+    setShowCommentModal(false);
+    setCommentForm({
+      content: '',
+      section: 'general',
+      line_number: 0
+    });
+  };
+
+  const resolveComment = (commentId: string) => {
+    setProtocolComments(prev =>
+      prev.map(comment =>
+        comment.id === commentId ? { ...comment, is_resolved: true } : comment
+      )
+    );
+  };
+
   const openEditModal = (protocol: Protocol) => {
     setSelectedProtocol(protocol);
     setProtocolForm({
@@ -966,13 +1315,120 @@ const ProtocolsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Research Protocols</h1>
           <p className="text-gray-600">Create, manage, and share research protocols</p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center space-x-2"
-        >
-          <PlusIcon className="w-5 h-5" />
-          <span>Create Protocol</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setShowTemplateModal(true)}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 flex items-center space-x-2"
+          >
+            <PlusIcon className="w-4 h-4" />
+            <span>Create Template</span>
+          </button>
+          <button
+            onClick={() => setShowCollaborationPanel(!showCollaborationPanel)}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 flex items-center space-x-2"
+          >
+            <UserIcon className="w-4 h-4" />
+            <span>Collaboration</span>
+            {collaborativeSessions.filter(s => s.is_active).length > 0 && (
+              <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {collaborativeSessions.filter(s => s.is_active).length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center space-x-2"
+          >
+            <PlusIcon className="w-5 h-5" />
+            <span>Create Protocol</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Collaboration Panel */}
+      {showCollaborationPanel && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Active Collaborations</h2>
+          <div className="space-y-4">
+            {collaborativeSessions.filter(session => session.is_active).map((session) => (
+              <div key={session.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <UserIcon className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{session.user_name}</p>
+                    <p className="text-sm text-gray-600">{session.lab_name}</p>
+                    <p className="text-xs text-gray-500">
+                      Editing {session.current_section} • Position {session.cursor_position}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-gray-500">Active</span>
+                </div>
+              </div>
+            ))}
+            {collaborativeSessions.filter(session => session.is_active).length === 0 && (
+              <p className="text-gray-500 text-center py-4">No active collaborations</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Protocol Templates */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold text-gray-900">Protocol Templates</h2>
+          <button
+            onClick={() => setShowTemplateModal(true)}
+            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+          >
+            View All Templates
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {templates.slice(0, 3).map((template) => (
+            <div key={template.id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900 mb-1">{template.name}</h3>
+                  <p className="text-sm text-gray-600 mb-2">{template.description}</p>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                      {template.category}
+                    </span>
+                    <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+                      {template.difficulty_level}
+                    </span>
+                  </div>
+                </div>
+                {template.is_public && (
+                  <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                    Public
+                  </span>
+                )}
+              </div>
+              
+              <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                <span>Used {template.usage_count} times</span>
+                <span>★ {template.rating}</span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">{template.created_by}</span>
+                <button
+                  onClick={() => useTemplate(template)}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  Use Template
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {error && (
@@ -1833,6 +2289,221 @@ const ProtocolsPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Protocol Templates</h3>
+                <button
+                  onClick={() => setShowTemplateModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Create New Template Section */}
+              <div className="mb-8 p-4 bg-gray-50 rounded-lg">
+                <h4 className="text-md font-semibold text-gray-900 mb-4">Create New Template</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Template Name</label>
+                    <input
+                      type="text"
+                      value={templateForm.name}
+                      onChange={(e) => setTemplateForm(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter template name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                    <select
+                      value={templateForm.category}
+                      onChange={(e) => setTemplateForm(prev => ({ ...prev, category: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select category</option>
+                      {categories.map(category => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea
+                      value={templateForm.description}
+                      onChange={(e) => setTemplateForm(prev => ({ ...prev, description: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows={2}
+                      placeholder="Enter template description"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty Level</label>
+                    <select
+                      value={templateForm.difficulty_level}
+                      onChange={(e) => setTemplateForm(prev => ({ ...prev, difficulty_level: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="beginner">Beginner</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="advanced">Advanced</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Duration (hours)</label>
+                    <input
+                      type="number"
+                      value={templateForm.estimated_duration}
+                      onChange={(e) => setTemplateForm(prev => ({ ...prev, estimated_duration: parseInt(e.target.value) || 1 }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      min="1"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={templateForm.is_public}
+                        onChange={(e) => setTemplateForm(prev => ({ ...prev, is_public: e.target.checked }))}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700">Make this template public</span>
+                    </label>
+                  </div>
+                </div>
+                <div className="flex justify-end mt-4">
+                  <button
+                    onClick={createTemplate}
+                    className="px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                  >
+                    Create Template
+                  </button>
+                </div>
+              </div>
+
+              {/* Existing Templates */}
+              <div className="space-y-4">
+                <h4 className="text-md font-semibold text-gray-900">Available Templates</h4>
+                {templates.map((template) => (
+                  <div key={template.id} className="p-4 border border-gray-200 rounded-lg">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h5 className="font-medium text-gray-900 mb-1">{template.name}</h5>
+                        <p className="text-sm text-gray-600 mb-2">{template.description}</p>
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                            {template.category}
+                          </span>
+                          <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+                            {template.difficulty_level}
+                          </span>
+                          {template.is_public && (
+                            <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                              Public
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                      <span>Created by {template.created_by} • Used {template.usage_count} times</span>
+                      <span>★ {template.rating}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">{template.lab_name}</span>
+                      <button
+                        onClick={() => useTemplate(template)}
+                        className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                      >
+                        Use Template
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Comment Modal */}
+      {showCommentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Add Comment</h3>
+                <button
+                  onClick={() => setShowCommentModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Section</label>
+                  <select
+                    value={commentForm.section}
+                    onChange={(e) => setCommentForm(prev => ({ ...prev, section: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="general">General</option>
+                    <option value="materials">Materials</option>
+                    <option value="content">Protocol Steps</option>
+                    <option value="safety_notes">Safety Notes</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Line Number (optional)</label>
+                  <input
+                    type="number"
+                    value={commentForm.line_number}
+                    onChange={(e) => setCommentForm(prev => ({ ...prev, line_number: parseInt(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    min="0"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Comment</label>
+                  <textarea
+                    value={commentForm.content}
+                    onChange={(e) => setCommentForm(prev => ({ ...prev, content: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={4}
+                    placeholder="Enter your comment or suggestion"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-6">
+                <button
+                  onClick={() => setShowCommentModal(false)}
+                  className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={addComment}
+                  className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                >
+                  Add Comment
+                </button>
               </div>
             </div>
           </div>

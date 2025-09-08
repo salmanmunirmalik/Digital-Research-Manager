@@ -22,7 +22,20 @@ import {
   DnaIcon,
   MicroscopeIcon,
   AtomIcon,
-  FlaskIcon
+  FlaskIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
+  DocumentTextIcon,
+  CopyIcon,
+  PlusIcon,
+  FolderIcon,
+  TagIcon,
+  UserIcon,
+  GlobeIcon,
+  LockIcon,
+  PlayIcon,
+  XMarkIcon
 } from '../components/icons';
 import { 
   CALCULATOR_DEFINITIONS, 
@@ -67,134 +80,57 @@ interface ConversionHistory {
   timestamp: Date;
 }
 
-interface CalculatorState {
-  selectedCalculator: CalculatorName | null;
-  inputs: Record<string, any>;
-  result: CalculatorResult | null;
-  error: string | null;
-  showHistory: boolean;
-  favorites: CalculatorName[];
-  recentCalculations: Array<{
-    id: string;
-    calculator: CalculatorName;
-    inputs: Record<string, any>;
-    result: CalculatorResult;
-    timestamp: Date;
-  }>;
-  savedCalculations: Array<{
-    id: string;
-    name: string;
-    calculator: CalculatorName;
-    inputs: Record<string, any>;
-    result: CalculatorResult;
-    notes: string;
-    timestamp: Date;
-  }>;
-}
-
 const CalculatorHubPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'calculators' | 'converter'>('calculators');
+  // Core state management
+  const [activeTab, setActiveTab] = useState<'calculators' | 'converters'>('calculators');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCalcCategory, setSelectedCalcCategory] = useState<string>('all');
+  const [selectedCalcCategory, setSelectedCalcCategory] = useState('all');
   
   // Calculator state
-  const [calcState, setCalcState] = useState<CalculatorState>({
-    selectedCalculator: null,
-    inputs: {},
-    result: null,
-    error: null,
-    showHistory: false,
-    favorites: [],
-    recentCalculations: [],
-    savedCalculations: []
+  const [calcState, setCalcState] = useState({
+    selectedCalculator: null as CalculatorName | null,
+    inputs: {} as Record<string, any>,
+    result: null as CalculatorResult | null,
+    error: null as string | null,
+    recentCalculations: [] as Array<{
+      id: string;
+      calculator: CalculatorName;
+      inputs: Record<string, any>;
+      result: CalculatorResult;
+      timestamp: Date;
+    }>
   });
 
-  // Unit converter state
-  const [selectedConverterCategory, setSelectedConverterCategory] = useState<string>('length');
-  const [fromUnit, setFromUnit] = useState<string>('');
-  const [toUnit, setToUnit] = useState<string>('');
-  const [fromValue, setFromValue] = useState<string>('1');
-  const [toValue, setToValue] = useState<string>('');
-  const [conversionHistory, setConversionHistory] = useState<ConversionHistory[]>([]);
-  const [converterFavorites, setConverterFavorites] = useState<string[]>([]);
+  // Converter state
+  const [converterState, setConverterState] = useState({
+    selectedCategory: 'length',
+    fromValue: '',
+    fromUnit: '',
+    toUnit: '',
+    toValue: '',
+    conversionHistory: [] as ConversionHistory[]
+  });
 
-  // Group calculators by category, excluding specified categories
-  const excludedCategories = ['Statistics & Data Analysis', 'Engineering & Physics'];
-  
-  const calculatorsByCategory = Object.values(CALCULATOR_DEFINITIONS)
-    .filter(calc => !excludedCategories.includes(calc.category))
-    .reduce((acc, calc) => {
-    if (!acc[calc.category]) {
-      acc[calc.category] = [];
-    }
-    acc[calc.category].push(calc);
-    return acc;
-  }, {} as Record<string, typeof CALCULATOR_DEFINITIONS[keyof typeof CALCULATOR_DEFINITIONS][]>);
+  // Cognitive enhancement states
+  const [userContext, setUserContext] = useState({
+    experienceLevel: 'beginner' as 'beginner' | 'intermediate' | 'expert',
+    currentGoal: null as string | null,
+    timeOfDay: 'morning' as 'morning' | 'afternoon' | 'evening'
+  });
 
-  const filteredCalculators = Object.entries(calculatorsByCategory)
-    .filter(([category]) => selectedCalcCategory === 'all' || category === selectedCalcCategory)
-    .filter(([_, calcs]) => {
-      const calcArray = calcs as Array<typeof CALCULATOR_DEFINITIONS[keyof typeof CALCULATOR_DEFINITIONS]>;
-      return calcArray.some(calc => 
-        calc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        calc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        calc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    });
-
-  // Get appropriate icon for calculator category
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'Chemistry & Biochemistry':
-        return BeakerIcon;
-      case 'Biology & Life Sciences':
-        return FlaskIcon;
-      case 'Molecular & Cell Biology':
-        return DnaIcon;
-      case 'Bioinformatics':
-        return MicroscopeIcon;
-      case 'Physics & Engineering':
-        return AtomIcon;
-      case 'Laboratory & Instrumentation':
-        return PipetteIcon;
-      default:
-        return CalculatorIcon;
-    }
-  };
-
-  // Get appropriate color for calculator category
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'Chemistry & Biochemistry':
-        return 'from-blue-600 to-purple-600';
-      case 'Biology & Life Sciences':
-        return 'from-green-600 to-emerald-600';
-      case 'Molecular & Cell Biology':
-        return 'from-pink-600 to-rose-600';
-      case 'Bioinformatics':
-        return 'from-indigo-600 to-blue-600';
-      case 'Physics & Engineering':
-        return 'from-orange-600 to-red-600';
-      case 'Laboratory & Instrumentation':
-        return 'from-purple-600 to-pink-600';
-      default:
-        return 'from-gray-600 to-slate-600';
-    }
-  };
-
-  // Define conversion categories and units
+  // Unit conversion categories
   const conversionCategories: ConversionCategory[] = [
     {
       name: 'length',
       units: [
         { name: 'Meter', symbol: 'm', category: 'length', toBase: (v) => v, fromBase: (v) => v },
-        { name: 'Kilometer', symbol: 'km', category: 'length', toBase: (v) => v * 1000, fromBase: (v) => v / 1000 },
         { name: 'Centimeter', symbol: 'cm', category: 'length', toBase: (v) => v / 100, fromBase: (v) => v * 100 },
         { name: 'Millimeter', symbol: 'mm', category: 'length', toBase: (v) => v / 1000, fromBase: (v) => v * 1000 },
-        { name: 'Mile', symbol: 'mi', category: 'length', toBase: (v) => v * 1609.344, fromBase: (v) => v / 1609.344 },
-        { name: 'Yard', symbol: 'yd', category: 'length', toBase: (v) => v * 0.9144, fromBase: (v) => v / 0.9144 },
+        { name: 'Kilometer', symbol: 'km', category: 'length', toBase: (v) => v * 1000, fromBase: (v) => v / 1000 },
+        { name: 'Inch', symbol: 'in', category: 'length', toBase: (v) => v * 0.0254, fromBase: (v) => v / 0.0254 },
         { name: 'Foot', symbol: 'ft', category: 'length', toBase: (v) => v * 0.3048, fromBase: (v) => v / 0.3048 },
-        { name: 'Inch', symbol: 'in', category: 'length', toBase: (v) => v * 0.0254, fromBase: (v) => v * 0.0254 },
+        { name: 'Yard', symbol: 'yd', category: 'length', toBase: (v) => v * 0.9144, fromBase: (v) => v / 0.9144 },
+        { name: 'Mile', symbol: 'mi', category: 'length', toBase: (v) => v * 1609.344, fromBase: (v) => v / 1609.344 },
         { name: 'Micrometer', symbol: 'μm', category: 'length', toBase: (v) => v / 1000000, fromBase: (v) => v * 1000000 },
         { name: 'Nanometer', symbol: 'nm', category: 'length', toBase: (v) => v / 1000000000, fromBase: (v) => v * 1000000000 },
         { name: 'Angstrom', symbol: 'Å', category: 'length', toBase: (v) => v / 10000000000, fromBase: (v) => v * 10000000000 }
@@ -261,43 +197,15 @@ const CalculatorHubPage: React.FC = () => {
 
   // Initialize units when category changes
   useEffect(() => {
-    const category = conversionCategories.find(cat => cat.name === selectedConverterCategory);
+    const category = conversionCategories.find(cat => cat.name === converterState.selectedCategory);
     if (category && category.units.length > 0) {
-      setFromUnit(category.units[0].name);
-      setToUnit(category.units[1]?.name || category.units[0].name);
+      setConverterState(prev => ({
+        ...prev,
+        fromUnit: category.units[0].name,
+        toUnit: category.units[1]?.name || category.units[0].name
+      }));
     }
-  }, [selectedConverterCategory]);
-
-  // Handle unit conversion
-  const handleConversion = () => {
-    if (!fromUnit || !toUnit || !fromValue) return;
-
-    const fromUnitObj = conversionCategories
-      .find(cat => cat.name === selectedConverterCategory)
-      ?.units.find(unit => unit.name === fromUnit);
-    
-    const toUnitObj = conversionCategories
-      .find(cat => cat.name === selectedConverterCategory)
-      ?.units.find(unit => unit.name === toUnit);
-
-    if (fromUnitObj && toUnitObj) {
-      const baseValue = fromUnitObj.toBase(parseFloat(fromValue));
-      const convertedValue = toUnitObj.fromBase(baseValue);
-      setToValue(convertedValue.toFixed(6));
-
-      // Add to history
-      const newHistory: ConversionHistory = {
-        id: Date.now().toString(),
-        fromValue: parseFloat(fromValue),
-        fromUnit,
-        toValue: convertedValue,
-        toUnit,
-        category: selectedConverterCategory,
-        timestamp: new Date()
-      };
-      setConversionHistory(prev => [newHistory, ...prev.slice(0, 9)]);
-    }
-  };
+  }, [converterState.selectedCategory]);
 
   // Handle calculator selection
   const handleCalculatorSelect = (calculatorName: CalculatorName) => {
@@ -319,6 +227,10 @@ const CalculatorHubPage: React.FC = () => {
   };
 
   // Handle calculator calculation
+  // Load mock data on component mount
+  useEffect(() => {
+  }, []);
+
   const handleCalculate = () => {
     if (!calcState.selectedCalculator) return;
 
@@ -352,619 +264,419 @@ const CalculatorHubPage: React.FC = () => {
     }
   };
 
-  // Toggle favorite
-  const toggleFavorite = (id: string) => {
-    setConverterFavorites(prev => 
-      prev.includes(id) 
-        ? prev.filter(fav => fav !== id)
-        : [...prev, id]
-    );
+  // Handle unit conversion
+  const handleConversion = () => {
+    if (!converterState.fromUnit || !converterState.toUnit || !converterState.fromValue) return;
+
+    const fromUnitObj = conversionCategories
+      .find(cat => cat.name === converterState.selectedCategory)
+      ?.units.find(unit => unit.name === converterState.fromUnit);
+    
+    const toUnitObj = conversionCategories
+      .find(cat => cat.name === converterState.selectedCategory)
+      ?.units.find(unit => unit.name === converterState.toUnit);
+
+    if (fromUnitObj && toUnitObj) {
+      const baseValue = fromUnitObj.toBase(parseFloat(converterState.fromValue));
+      const convertedValue = toUnitObj.fromBase(baseValue);
+      
+      setConverterState(prev => ({
+      ...prev,
+        toValue: convertedValue.toFixed(6)
+      }));
+
+      // Add to history
+      const newHistory: ConversionHistory = {
+        id: Date.now().toString(),
+        fromValue: parseFloat(converterState.fromValue),
+        fromUnit: converterState.fromUnit,
+        toValue: convertedValue,
+        toUnit: converterState.toUnit,
+        category: converterState.selectedCategory,
+        timestamp: new Date()
+      };
+      setConverterState(prev => ({
+        ...prev,
+        conversionHistory: [newHistory, ...prev.conversionHistory.slice(0, 9)]
+      }));
+    }
   };
 
-    return (
+  return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Enhanced Header */}
-        <div className="text-center mb-8 sm:mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-2xl sm:rounded-3xl shadow-xl mb-4 sm:mb-6 transform hover:scale-105 transition-transform duration-200">
-            <CalculatorIcon className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+        
+      {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-2xl shadow-xl mb-4">
+            <CalculatorIcon className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-3 sm:mb-4">
-            🧮 Calculators
-        </h1>
-          <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto mb-4 sm:mb-6 px-4">
-            Advanced scientific calculators and unit conversion tools for research, laboratory work, and academic studies
-          </p>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+            Scientific Calculators
+          </h1>
+        <p className="text-gray-600 max-w-2xl mx-auto">
+            Professional-grade calculators for research, laboratory work, and academic studies
+        </p>
+                </div>
+
+        {/* Main Interface */}
+        <div className="max-w-6xl mx-auto">
           
-          {/* Quick Stats */}
-          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 mb-6 sm:mb-8">
-            <div className="text-center">
-              <div className="text-2xl sm:text-3xl font-bold text-blue-600">{Object.keys(CALCULATOR_DEFINITIONS).length}+</div>
-              <div className="text-xs sm:text-sm text-gray-500">Scientific Calculators</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl sm:text-3xl font-bold text-purple-600">20+</div>
-              <div className="text-xs sm:text-sm text-gray-500">Unit Conversions</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl sm:text-3xl font-bold text-indigo-600">∞</div>
-              <div className="text-xs sm:text-sm text-gray-500">Calculations</div>
-            </div>
-                </div>
-
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto px-4">
-            <div className="relative">
-              <SearchIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
-              <input
-            type="text"
-                placeholder="Search calculators (e.g., molarity, dilution, pH, statistics)..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-6 py-3 sm:py-4 text-base sm:text-lg border-2 border-gray-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 shadow-lg"
-          />
-                    </div>
-          </div>
-        </div>
-
-        {/* Enhanced Tab Navigation */}
-        <div className="flex justify-center mb-6 sm:mb-8">
-          <div className="bg-white rounded-xl sm:rounded-2xl p-1 sm:p-2 shadow-xl border border-gray-100 w-full max-w-md sm:max-w-none">
-            <div className="flex flex-col sm:flex-row">
-              <button
-                onClick={() => setActiveTab('calculators')}
-                className={`flex-1 px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-medium transition-all duration-200 text-sm sm:text-base ${
-                  activeTab === 'calculators'
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg transform scale-105'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <CalculatorIcon className="w-4 h-4 sm:w-5 sm:h-5 inline mr-2" />
-                <span className="hidden sm:inline">Basic Calculators</span>
-                <span className="sm:hidden">Calculators</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('converter')}
-                className={`flex-1 px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-medium transition-all duration-200 text-sm sm:text-base ${
-                  activeTab === 'converter'
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg transform scale-105'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <SettingsIcon className="w-4 h-4 sm:w-5 sm:h-5 inline mr-2" />
-                <span className="hidden sm:inline">Unit Converter</span>
-                <span className="sm:hidden">Converter</span>
-              </button>
+          {/* Tab Navigation */}
+          <div className="flex justify-center mb-8">
+            <div className="bg-white rounded-xl p-1 shadow-lg border border-gray-200">
+              <div className="flex">
+                <button
+                  onClick={() => setActiveTab('calculators')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                    activeTab === 'calculators'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <CalculatorIcon className="w-4 h-4" />
+                    Calculators
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab('converters')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                    activeTab === 'converters'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <RefreshIcon className="w-4 h-4" />
+                    Unit Converters
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
-                    </div>
 
-        {/* Basic Calculators Tab */}
-        {activeTab === 'calculators' && (
-          <div className="space-y-8">
-            {/* Category Selection */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-              <button
-                onClick={() => setSelectedCalcCategory('all')}
-                className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl transition-all duration-200 ${
-                  selectedCalcCategory === 'all'
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg scale-105'
-                    : 'bg-white hover:shadow-lg hover:-translate-y-1 border border-gray-100'
-                }`}
-              >
-                <div className="text-center">
-                  <CalculatorIcon className={`w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 ${
-                    selectedCalcCategory === 'all' ? 'text-white' : 'text-gray-600'
-                  }`} />
-                  <p className={`text-xs sm:text-sm font-medium ${
-                    selectedCalcCategory === 'all' ? 'text-white' : 'text-gray-700'
-                  }`}>
-                    All Categories
-                  </p>
-                </div>
-              </button>
-              
-              {Array.from(new Set(Object.values(CALCULATOR_DEFINITIONS).map(calc => calc.category)))
-                .filter(category => !excludedCategories.includes(category))
-                .map((category) => {
-                  const CategoryIcon = getCategoryIcon(category);
-                  const categoryColor = getCategoryColor(category);
-                  return (
-                    <button
-                      key={category}
-                      onClick={() => setSelectedCalcCategory(category)}
-                      className={`p-4 rounded-2xl transition-all duration-200 ${
-                        selectedCalcCategory === category
-                          ? `bg-gradient-to-r ${categoryColor} text-white shadow-lg scale-105`
-                          : 'bg-white hover:shadow-lg hover:-translate-y-1 border border-gray-100'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <CategoryIcon className={`w-8 h-8 mx-auto mb-2 ${
-                          selectedCalcCategory === category ? 'text-white' : 'text-gray-600'
-                        }`} />
-                        <p className={`text-sm font-medium capitalize ${
-                          selectedCalcCategory === category ? 'text-white' : 'text-gray-700'
-                        }`}>
-                    {category}
-                        </p>
+          {/* Calculators Tab */}
+          {activeTab === 'calculators' && (
+            <div className="space-y-8">
+
+              {/* Calculator Selection */}
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Calculator</label>
+                    <div className="relative">
+                      <select
+                        value={calcState.selectedCalculator || ''}
+                        onChange={(e) => handleCalculatorSelect(e.target.value as CalculatorName)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+                      >
+                        <option value="">Choose a calculator...</option>
+                        {Object.entries(CALCULATOR_DEFINITIONS)
+                          .filter(([name, calc]) => {
+                            const matchesSearch = calc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                 calc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                 calc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+                            
+                            const matchesCategory = selectedCalcCategory === 'all' || calc.category === selectedCalcCategory;
+                            
+                            return matchesSearch && matchesCategory;
+                          })
+                          .map(([name, calc]) => (
+                            <option key={name} value={name}>
+                              {calc.name} ({calc.category})
+                            </option>
+                          ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
                       </div>
-                    </button>
-                  );
-                })}
-            </div>
-
-            {/* Calculator Interface */}
-            <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                                {/* Enhanced Calculator Selection Interface */}
-                        <div className="space-y-8">
-                          {/* Quick Calculator Picker */}
-                          <div className="bg-gradient-to-r from-gray-50 to-blue-50/50 rounded-2xl p-6 border border-gray-200">
-                            <div className="flex items-center gap-3 mb-4">
-                              <div className="p-2 bg-blue-100 rounded-lg">
-                                <LightbulbIcon className="w-5 h-5 text-blue-600" />
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-gray-900">Quick Access</h4>
-                                <p className="text-sm text-gray-600">Popular calculators for instant use</p>
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                              {Object.entries(CALCULATOR_DEFINITIONS)
-                                .filter(([name, calc]) => {
-                                  const matchesSearch = calc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                                       calc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                                       calc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-                                  
-                                  const matchesCategory = selectedCalcCategory === 'all' || calc.category === selectedCalcCategory;
-                                  
-                                  return matchesSearch && matchesCategory;
-                                })
-                                .slice(0, 8) // Show only first 8 for quick access
-                                .map(([name, calc]) => (
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      {['all', 'basic', 'chemistry', 'biology', 'physics', 'statistics'].map((category) => (
                       <button
-                                    key={name}
-                                    onClick={() => handleCalculatorSelect(name as CalculatorName)}
-                                    className={`group p-3 rounded-xl text-left transition-all duration-200 ${
-                                      calcState.selectedCalculator === name
-                                        ? 'bg-blue-600 text-white shadow-lg'
-                                        : 'bg-white hover:bg-blue-50 hover:shadow-md border border-gray-200 hover:border-blue-300'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <CalculatorIcon className={`w-4 h-4 ${
-                                        calcState.selectedCalculator === name
-                                          ? 'text-white'
-                                          : 'text-gray-500 group-hover:text-blue-600'
-                                      }`} />
-                                      <div className={`w-1.5 h-1.5 rounded-full ${
-                                        calcState.selectedCalculator === name
-                                          ? 'bg-blue-200'
-                                          : 'bg-gray-300 group-hover:bg-blue-400'
-                                      }`}></div>
-                                    </div>
-                                    <div className={`text-sm font-medium line-clamp-2 ${
-                                      calcState.selectedCalculator === name
-                                        ? 'text-white'
-                                        : 'text-gray-900 group-hover:text-blue-900'
-                                    }`}>
-                                      {calc.name}
-                                </div>
+                          key={category}
+                          onClick={() => setSelectedCalcCategory(category)}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            selectedCalcCategory === category
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {category === 'all' ? 'All' : category.charAt(0).toUpperCase() + category.slice(1)}
                       </button>
                             ))}
                         </div>
+                    <div className="relative">
+                      <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
                     </div>
-
-                          {/* Selected Calculator Details */}
-                          {calcState.selectedCalculator && (
-                            <div className="relative overflow-hidden bg-white border-2 border-blue-200 rounded-2xl">
-                              {/* Background Pattern */}
-                              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-indigo-50"></div>
-                              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-100/50 to-transparent rounded-bl-full"></div>
-                              
-                              <div className="relative p-6">
-                                <div className="flex items-start gap-4 mb-6">
-                                  <div className="p-3 bg-blue-100 rounded-xl">
-                                    <CalculatorIcon className="w-6 h-6 text-blue-600" />
-                                  </div>
-                                  <div className="flex-1">
-                                    <h4 className="text-xl font-bold text-gray-900 mb-2">
-                                      {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].name}
-                                    </h4>
-                                    <p className="text-gray-700 leading-relaxed">
-                                      {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].description}
-                                    </p>
-                                  </div>
-                                  <div className="px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-medium">
-                                    Selected
                 </div>
                 </div>
-                
-                                <div className="space-y-4">
-                                  <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-                                      Formula
-                                    </h5>
-                                    <p className="font-mono text-sm bg-white border border-gray-200 px-3 py-2 rounded-lg text-gray-800">
-                                      {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].formula}
-                  </p>
-                    </div>
-                                  
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-3 bg-blue-50 rounded-lg">
-                                      <div className="text-xs font-medium text-blue-600 uppercase tracking-wider mb-1">Category</div>
-                                      <div className="text-sm font-semibold text-blue-900">
-                                        {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].category}
-                                      </div>
                  </div>
-                                    <div className="p-3 bg-indigo-50 rounded-lg">
-                                      <div className="text-xs font-medium text-indigo-600 uppercase tracking-wider mb-1">Type</div>
-                                      <div className="text-sm font-semibold text-indigo-900">
-                                        {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].subCategory}
-                    </div>
-                    </div>
+
+              {/* Quick Access */}
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <StarIcon className="w-5 h-5 text-yellow-500" />
+                  <h3 className="text-lg font-semibold text-gray-900">Quick Access</h3>
                 </div>
-                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['molarity', 'dilution', 'ph', 'concentration', 'molecular_weight', 'buffer'].map((calcName) => {
+                    const calc = CALCULATOR_DEFINITIONS[calcName as CalculatorName];
+                    if (!calc) return null;
+                    return (
+                      <button
+                        key={calcName}
+                        onClick={() => handleCalculatorSelect(calcName as CalculatorName)}
+                        className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        {calc.name}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-                          )}
 
-                          {/* Calculator Grid Display */}
-                          <div>
-                            {/* Minimal Header */}
-                            <div className="mb-6">
-                              <div className="flex items-center justify-between">
-                                <h3 className="text-xl font-semibold text-gray-900">
-                                  All Calculators 
-                                  <span className="text-gray-500 font-normal text-base ml-2">
-                                    ({Object.entries(CALCULATOR_DEFINITIONS).filter(([name, calc]) => {
-                                      const matchesSearch = calc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                                           calc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                                           calc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-                                      
-                                      const matchesCategory = selectedCalcCategory === 'all' || calc.category === selectedCalcCategory;
-                                      
-                                      return matchesSearch && matchesCategory;
-                                    }).length})
-                                  </span>
-                                </h3>
-                              </div>
-                            </div>
-                            
-                            {/* Clean Calculator Grid */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                              {Object.entries(CALCULATOR_DEFINITIONS)
-                                .filter(([name, calc]) => {
-                                  const matchesSearch = calc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                                       calc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                                       calc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-                                  
-                                  const matchesCategory = selectedCalcCategory === 'all' || calc.category === selectedCalcCategory;
-                                  
-                                  return matchesSearch && matchesCategory;
-                                })
-                                .map(([name, calc]) => (
-                                  <div
-                                    key={name}
-                                    className={`group relative bg-white rounded-xl border transition-all duration-200 cursor-pointer ${
-                                      calcState.selectedCalculator === name
-                                        ? 'border-blue-500 shadow-md'
-                                        : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
-                                    }`}
-                                    onClick={() => handleCalculatorSelect(name as CalculatorName)}
-                                  >
-                                    <div className="p-4">
-                                      {/* Header Row */}
-                                      <div className="flex items-start justify-between mb-3">
-                                        <div className="flex-1 min-w-0">
-                                          <h4 className={`font-semibold text-base leading-tight line-clamp-1 ${
-                                            calcState.selectedCalculator === name
-                                              ? 'text-blue-900'
-                                              : 'text-gray-900 group-hover:text-blue-800'
-                                          }`}>
-                                            {calc.name}
-                                          </h4>
-                                        </div>
-                                        {calcState.selectedCalculator === name && (
-                                          <div className="ml-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                                            <div className="w-2 h-2 bg-white rounded-full"></div>
-                                          </div>
-                                        )}
-                                      </div>
-                                      
-                                      {/* Description */}
-                                      <p className="text-gray-600 text-sm leading-relaxed line-clamp-2 mb-3">
-                                        {calc.description}
-                                      </p>
-                                      
-                                      {/* Footer */}
-                                      <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-500 font-medium">
-                                          {calc.category.split(' & ')[0]}
-                                        </span>
-                                        <span className={`px-2 py-1 rounded-full font-medium ${
-                                          calcState.selectedCalculator === name
-                                            ? 'bg-blue-100 text-blue-700'
-                                            : 'bg-gray-100 text-gray-600 group-hover:bg-blue-50 group-hover:text-blue-600'
-                                        }`}>
-                                          {calc.tags[0] || calc.subCategory}
-                                        </span>
-                                      </div>
-                                    </div>
+              {/* Selected Calculator */}
+              {calcState.selectedCalculator && (
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-blue-600 rounded-lg">
+                      <CalculatorIcon className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].name}
+                      </h3>
+                      <p className="text-gray-600">
+                        {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].description}
+                      </p>
+                    </div>
+                </div>
+
+                  {/* Formula */}
+                  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <h4 className="font-semibold text-gray-900 mb-2">Formula:</h4>
+                    <p className="font-mono text-sm bg-white border border-gray-200 px-3 py-2 rounded text-gray-800">
+                      {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].formula}
+                    </p>
+              </div>
+
+              {/* Input Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    {Object.entries(CALCULATOR_INPUTS[calcState.selectedCalculator]).map(([field, input]) => (
+                      <div key={field} className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        {input.label}
+                        {input.required && <span className="text-red-500 ml-1">*</span>}
+                      </label>
+                        <input
+                          type={input.type === 'number' ? 'number' : 'text'}
+                          value={calcState.inputs[field] || ''}
+                          onChange={(e) => handleInputChange(field, e.target.value)}
+                          placeholder={input.placeholder}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required={input.required}
+                        />
+                      {input.helpText && (
+                        <p className="text-xs text-gray-500">{input.helpText}</p>
+                      )}
                 </div>
                   ))}
-                            </div>
-                            
-                            {/* Empty State */}
-                            {Object.entries(CALCULATOR_DEFINITIONS).filter(([name, calc]) => {
-                              const matchesSearch = calc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                                   calc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                                   calc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-                              
-                              const matchesCategory = selectedCalcCategory === 'all' || calc.category === selectedCalcCategory;
-                              
-                              return matchesSearch && matchesCategory;
-                            }).length === 0 && (
-                              <div className="text-center py-12">
-                                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                                  <SearchIcon className="w-6 h-6 text-gray-400" />
-                                </div>
-                                <h3 className="text-base font-semibold text-gray-900 mb-1">No calculators found</h3>
-                                <p className="text-gray-600 text-sm">
-                                  Try adjusting your search or category filter.
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                {/* Calculator Inputs */}
-                {calcState.selectedCalculator && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Input Values</label>
-                    <div className="space-y-4">
-                      {CALCULATOR_INPUTS[calcState.selectedCalculator]?.map((input) => (
-                        <div key={input.name}>
-                          <label className="block text-sm text-gray-600 mb-1">{input.label}</label>
-                          <input
-                            type="number"
-                            value={calcState.inputs[input.name] || ''}
-                            onChange={(e) => handleInputChange(input.name, parseFloat(e.target.value) || '')}
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                            placeholder={`Enter ${input.label.toLowerCase()}`}
-                            step={input.step || 'any'}
-                          />
-                          <div className="text-xs text-gray-500 mt-1">Unit: {input.unit}</div>
-                        </div>
-                      ))}
                 </div>
 
+              {/* Calculate Button */}
+              <div className="flex justify-center mb-6">
                     <button
                   onClick={handleCalculate}
-                      className="w-full mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-8 rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                      className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl"
                 >
                   Calculate
                     </button>
-                  </div>
-                )}
               </div>
 
               {/* Results */}
-              {calcState.result && (
-                <div className="mt-8 p-6 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-2xl">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Calculation Result</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-gray-900 mb-2">
-                        {calcState.result.value}
-                      </div>
-                      <div className="text-xl text-gray-600">
-                        {calcState.result.unit}
+                  {calcState.result && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                        <h4 className="font-semibold text-green-900">Result:</h4>
                 </div>
-                    </div>
-                    <div className="space-y-3">
+                      <div className="text-2xl font-bold text-green-800">
+                        {calcState.result.value} {calcState.result.unit}
+                </div>
                       {calcState.result.explanation && (
-                        <div className="p-3 bg-white rounded-lg">
-                          <div className="text-sm font-medium text-gray-700">Explanation</div>
-                          <div className="text-sm text-gray-600">{calcState.result.explanation}</div>
-                        </div>
+                        <p className="text-sm text-green-700 mt-2">{calcState.result.explanation}</p>
                       )}
-                      {calcState.result.warnings && calcState.result.warnings.length > 0 && (
-                        <div className="p-3 bg-yellow-50 rounded-lg">
-                          <div className="text-sm font-medium text-yellow-800">Warnings</div>
-                          <div className="text-sm text-yellow-700">{calcState.result.warnings.join(', ')}</div>
-                        </div>
-                      )}
-                      {calcState.result.suggestions && calcState.result.suggestions.length > 0 && (
-                        <div className="p-3 bg-blue-50 rounded-lg">
-                          <div className="text-sm font-medium text-blue-800">Suggestions</div>
-                          <div className="text-sm text-blue-700">{calcState.result.suggestions.join(', ')}</div>
-                    </div>
-                      )}
-                    </div>
-                  </div>
                 </div>
                     )}
 
-              {/* Error Display */}
-              {calcState.error && (
-                <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-                  <div className="text-red-800">
-                    <strong>Error:</strong> {calcState.error}
-                  </div>
+                  {/* Error Display */}
+                  {calcState.error && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />
+                        <h4 className="font-semibold text-red-900">Error:</h4>
                 </div>
+                      <p className="text-red-700">{calcState.error}</p>
+                    </div>
                     )}
+                </div>
+              )}
             </div>
+              )}
 
-            {/* Recent Calculations */}
-            {calcState.recentCalculations.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Calculations</h3>
-                <div className="space-y-3">
-                  {calcState.recentCalculations.slice(0, 5).map((calc) => (
-                    <div
-                      key={calc.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
+          {/* Converters Tab */}
+          {activeTab === 'converters' && (
+            <div className="space-y-8">
+              
+              {/* Category Selection */}
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Conversion Type</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {conversionCategories.map((category) => (
+                    <button
+                      key={category.name}
+                      onClick={() => setConverterState(prev => ({ ...prev, selectedCategory: category.name }))}
+                      className={`p-4 rounded-xl text-center transition-all duration-200 ${
+                        converterState.selectedCategory === category.name
+                          ? 'bg-blue-600 text-white shadow-lg'
+                          : 'bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700'
+                      }`}
                     >
-                      <div className="flex items-center space-x-4">
-                        <span className="text-lg font-medium text-gray-900">
-                          {calc.calculator}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {calc.result.value} {calc.result.unit}
-                        </span>
-                      </div>
-                      <span className="text-sm text-gray-500">
-                        {new Date(calc.timestamp).toLocaleTimeString()}
-                      </span>
+                      <div className="flex flex-col items-center gap-2">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          converterState.selectedCategory === category.name
+                            ? 'bg-white/20'
+                            : 'bg-blue-100'
+                        }`}>
+                          <category.icon className={`w-4 h-4 ${
+                            converterState.selectedCategory === category.name ? 'text-white' : 'text-blue-600'
+                          }`} />
+                        </div>
+                        <div className="text-sm font-medium capitalize">
+                          {category.name}
+                        </div>
                     </div>
+                    </button>
                   ))}
                 </div>
-              </div>
-            )}
-            </div>
-              )}
-
-        {/* Unit Converter Tab */}
-        {activeTab === 'converter' && (
-          <div className="space-y-8">
-            {/* Category Selection */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {conversionCategories.map((category) => (
-                <button
-                  key={category.name}
-                  onClick={() => setSelectedConverterCategory(category.name)}
-                  className={`p-4 rounded-2xl transition-all duration-200 ${
-                    selectedConverterCategory === category.name
-                      ? 'bg-gradient-to-r ' + category.color + ' text-white shadow-lg scale-105'
-                      : 'bg-white hover:shadow-lg hover:-translate-y-1 border border-gray-100'
-                  }`}
-                >
-                  <div className="text-center">
-                    <category.icon className={`w-8 h-8 mx-auto mb-2 ${
-                      selectedConverterCategory === category.name ? 'text-white' : 'text-gray-600'
-                    }`} />
-                    <p className={`text-sm font-medium capitalize ${
-                      selectedConverterCategory === category.name ? 'text-white' : 'text-gray-700'
-                    }`}>
-                      {category.name}
-                    </p>
-                  </div>
-                </button>
-              ))}
-                    </div>
-
-            {/* Converter Interface */}
-            <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-end">
-                {/* From Unit */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">From</label>
-                  <select
-                    value={fromUnit}
-                    onChange={(e) => setFromUnit(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  >
-                    {conversionCategories
-                      .find(cat => cat.name === selectedConverterCategory)
-                      ?.units.map((unit) => (
-                        <option key={unit.name} value={unit.name}>
-                          {unit.name} ({unit.symbol})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                {/* Value Input */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Value</label>
-                  <input
-                    type="number"
-                    value={fromValue}
-                    onChange={(e) => setFromValue(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="Enter value"
-                  />
                             </div>
 
-                {/* To Unit */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
-                  <select
-                    value={toUnit}
-                    onChange={(e) => setToUnit(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              {/* Conversion Interface */}
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-6">
+                  {conversionCategories.find(cat => cat.name === converterState.selectedCategory)?.name.charAt(0).toUpperCase()}
+                  {conversionCategories.find(cat => cat.name === converterState.selectedCategory)?.name.slice(1)} Conversion
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">From</label>
+                      <div className="space-y-2">
+                        <input
+                          type="number"
+                          value={converterState.fromValue}
+                          onChange={(e) => setConverterState(prev => ({ ...prev, fromValue: e.target.value }))}
+                          placeholder="Enter value"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <select
+                          value={converterState.fromUnit}
+                          onChange={(e) => setConverterState(prev => ({ ...prev, fromUnit: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          {conversionCategories
+                            .find(cat => cat.name === converterState.selectedCategory)
+                            ?.units.map(unit => (
+                              <option key={unit.name} value={unit.name}>
+                                {unit.name} ({unit.symbol})
+                              </option>
+                            ))}
+                        </select>
+                             </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
+                  <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={converterState.toValue}
+                          readOnly
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                        />
+                        <select
+                          value={converterState.toUnit}
+                          onChange={(e) => setConverterState(prev => ({ ...prev, toUnit: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          {conversionCategories
+                            .find(cat => cat.name === converterState.selectedCategory)
+                            ?.units.map(unit => (
+                              <option key={unit.name} value={unit.name}>
+                                {unit.name} ({unit.symbol})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-center mt-6">
+                  <button
+                    onClick={handleConversion}
+                    className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl"
                   >
-                    {conversionCategories
-                      .find(cat => cat.name === selectedConverterCategory)
-                      ?.units.map((unit) => (
-                        <option key={unit.name} value={unit.name}>
-                          {unit.name} ({unit.symbol})
-                        </option>
-                      ))}
-                  </select>
+                    Convert
+                  </button>
                 </div>
               </div>
 
-              {/* Convert Button */}
-              <div className="text-center mt-6">
-                <button
-                  onClick={handleConversion}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-8 rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-                >
-                  Convert
-                </button>
-              </div>
-
-              {/* Result */}
-              {toValue && (
-                <div className="mt-8 text-center">
-                  <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-2xl p-8">
-                    <div className="text-4xl font-bold text-gray-900 mb-2">
-                      {toValue}
-                    </div>
-                    <div className="text-xl text-gray-600">
-                      {toUnit}
-                    </div>
-                             </div>
-                    </div>
-              )}
-            </div>
-
-            {/* Conversion History */}
-            {conversionHistory.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Conversions</h3>
-                <div className="space-y-3">
-                  {conversionHistory.slice(0, 5).map((conversion) => (
-                    <div
-                      key={conversion.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <span className="text-lg font-medium text-gray-900">
-                          {conversion.fromValue} {conversion.fromUnit}
-                        </span>
-                        <ArrowRightIcon className="w-5 h-5 text-gray-400" />
-                        <span className="text-lg font-medium text-gray-900">
-                          {conversion.toValue.toFixed(4)} {conversion.toUnit}
-                        </span>
-                      </div>
-                      <span className="text-sm text-gray-500 capitalize">
-                        {conversion.category}
-                      </span>
+              {/* Conversion History */}
+              {converterState.conversionHistory.length > 0 && (
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <HistoryIcon className="w-5 h-5 text-gray-600" />
+                    <h3 className="text-lg font-semibold text-gray-900">Recent Conversions</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {converterState.conversionHistory.slice(0, 5).map((conversion) => (
+                      <div key={conversion.id} className="p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-900">
+                            {conversion.fromValue} {conversion.fromUnit} = {conversion.toValue} {conversion.toUnit}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {conversion.timestamp.toLocaleTimeString()}
+                          </span>
+                        </div>
                       </div>
                                 ))}
                             </div>
                         </div>
                     )}
-          </div>
+            </div>
           )}
-                                        </div>
         </div>
+      </div>
+    </div>
     );
-};
-
-export default CalculatorHubPage;
+  };
+  
+  export default CalculatorHubPage;

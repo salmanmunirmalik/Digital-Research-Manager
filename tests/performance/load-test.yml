@@ -1,0 +1,146 @@
+config:
+  target: 'http://localhost:5001'
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up"
+    - duration: 120
+      arrivalRate: 10
+      name: "Ramp up load"
+    - duration: 300
+      arrivalRate: 20
+      name: "Sustained load"
+    - duration: 60
+      arrivalRate: 5
+      name: "Ramp down"
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+  plugins:
+    metrics-by-endpoint: {}
+
+scenarios:
+  - name: "Authentication Flow"
+    weight: 30
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - get:
+          url: "/api/auth/profile"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - post:
+          url: "/api/auth/logout"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  - name: "Dashboard Operations"
+    weight: 25
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - get:
+          url: "/api/dashboard/stats"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - get:
+          url: "/api/tasks"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - get:
+          url: "/api/calendar"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  - name: "Protocol Management"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - get:
+          url: "/api/protocols"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - post:
+          url: "/api/protocols"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            title: "Load Test Protocol"
+            description: "Protocol created during load testing"
+            content: "Test content for load testing"
+      - get:
+          url: "/api/protocols"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  - name: "Inventory Operations"
+    weight: 15
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - get:
+          url: "/api/inventory"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - post:
+          url: "/api/inventory"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            name: "Load Test Item"
+            description: "Item created during load testing"
+            category: "Test"
+            quantity: 10
+            unit: "pieces"
+
+  - name: "Calculator Operations"
+    weight: 10
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - post:
+          url: "/api/calculators/molarity"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            moles: 2
+            volume: 1
+      - post:
+          url: "/api/calculators/dilution"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            c1: 1
+            v1: 100
+            c2: 0.1
