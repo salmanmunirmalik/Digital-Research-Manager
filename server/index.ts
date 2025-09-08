@@ -3529,6 +3529,76 @@ import crossEntityIntegrationRoutes from './routes/crossEntityIntegration';
 
 app.use('/api/cross-entity', crossEntityIntegrationRoutes);
 
+// Cross-Entity Analytics Endpoint
+app.get('/api/cross-entity/analytics/workflow', authenticateToken, async (req, res) => {
+  try {
+    const { labId, timeRange } = req.query;
+    const userId = (req as any).user.id;
+
+    // Calculate workflow analytics
+    const analytics = await Promise.all([
+      // Total notebook entries
+      pool.query(`
+        SELECT COUNT(*) as count 
+        FROM lab_notebook_entries 
+        WHERE lab_id = $1
+        ${timeRange ? `AND created_at >= NOW() - INTERVAL '${timeRange} days'` : ''}
+      `, [labId]),
+      
+      // Total protocols
+      pool.query(`
+        SELECT COUNT(*) as count 
+        FROM protocols 
+        WHERE lab_id = $1
+        ${timeRange ? `AND created_at >= NOW() - INTERVAL '${timeRange} days'` : ''}
+      `, [labId]),
+      
+      // Total results
+      pool.query(`
+        SELECT COUNT(*) as count 
+        FROM results 
+        WHERE lab_id = $1
+        ${timeRange ? `AND created_at >= NOW() - INTERVAL '${timeRange} days'` : ''}
+      `, [labId]),
+      
+      // Total bookings
+      pool.query(`
+        SELECT COUNT(*) as count 
+        FROM instrument_bookings 
+        WHERE lab_id = $1
+        ${timeRange ? `AND created_at >= NOW() - INTERVAL '${timeRange} days'` : ''}
+      `, [labId]),
+      
+      // Total relationships (mock - would need actual relationship table)
+      pool.query(`
+        SELECT COUNT(*) as count 
+        FROM lab_notebook_entries 
+        WHERE lab_id = $1 AND related_protocols IS NOT NULL
+        ${timeRange ? `AND created_at >= NOW() - INTERVAL '${timeRange} days'` : ''}
+      `, [labId])
+    ]);
+
+    const workflowAnalytics = {
+      totalNotebookEntries: parseInt(analytics[0].rows[0].count),
+      totalProtocols: parseInt(analytics[1].rows[0].count),
+      totalResults: parseInt(analytics[2].rows[0].count),
+      totalBookings: parseInt(analytics[3].rows[0].count),
+      totalRelationships: parseInt(analytics[4].rows[0].count),
+      syncStatusCounts: {
+        'synced': parseInt(analytics[0].rows[0].count),
+        'pending': 0,
+        'failed': 0,
+        'conflict': 0
+      }
+    };
+
+    res.json(workflowAnalytics);
+  } catch (error) {
+    console.error('Error fetching workflow analytics:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Start server
 const startServer = async () => {
   try {
