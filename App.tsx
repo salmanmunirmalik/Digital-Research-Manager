@@ -312,11 +312,11 @@ const AppContent: React.FC = () => {
         } 
       />
       
-      {/* Inventory - Researcher level and above */}
+      {/* Inventory - All authenticated users can view, researchers+ can manage */}
       <Route 
         path="/inventory" 
         element={
-          <ProtectedRoute allowedRoles={['admin', 'principal_researcher', 'researcher']}>
+          <ProtectedRoute>
             <DemoLayout><InventoryPage /></DemoLayout>
           </ProtectedRoute>
         } 

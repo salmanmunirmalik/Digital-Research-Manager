@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { getRolePermissions } from '../utils/roleAccess';
 import { 
   PlusIcon, 
   SearchIcon, 
@@ -48,6 +49,10 @@ const InventoryPage: React.FC = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  // Get user permissions
+  const userPermissions = user ? getRolePermissions(user.role) : null;
+  const canManageInventory = userPermissions?.canManageInventory || false;
   
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -316,9 +321,7 @@ const InventoryPage: React.FC = () => {
   };
 
   const canEditItem = (item: InventoryItem) => {
-    if (user?.role === 'admin') return true;
-    // Lab PI can edit
-    return false; // TODO: Implement lab PI check
+    return canManageInventory;
   };
 
   const addArrayItem = (field: 'tags') => {
@@ -360,14 +363,22 @@ const InventoryPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
           <p className="text-gray-600">Track lab supplies, materials, and stock levels</p>
+          {!canManageInventory && (
+            <div className="mt-2 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full inline-block">
+              <EyeIcon className="w-4 h-4 inline mr-1" />
+              View-only access
+            </div>
+          )}
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 flex items-center space-x-2"
-        >
-          <PlusIcon className="w-5 h-5" />
-          <span>Add Item</span>
-        </button>
+        {canManageInventory && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 flex items-center space-x-2"
+          >
+            <PlusIcon className="w-5 h-5" />
+            <span>Add Item</span>
+          </button>
+        )}
       </div>
 
       {error && (

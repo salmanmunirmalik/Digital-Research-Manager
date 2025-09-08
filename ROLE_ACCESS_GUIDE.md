@@ -16,7 +16,7 @@
 ## 📋 **Detailed Role Permissions**
 
 ### **Student Role** (`student`)
-- ✅ **View Access**: All protocols, lab notebook, data results, calculators
+- ✅ **View Access**: All protocols, lab notebook, data results, calculators, inventory
 - ✅ **Basic Operations**: View instruments, access research tools
 - ✅ **Lab Management**: Access lab management features
 - ❌ **Restricted**: Cannot create/edit protocols or manage inventory
@@ -24,6 +24,7 @@
 **Available Features:**
 - Dashboard overview
 - View protocols and lab notebook entries
+- View inventory (read-only access)
 - Access calculators and research tools
 - View data results and presentations
 - Access help forum and conferences
@@ -89,6 +90,7 @@
 - `/dashboard` - Main dashboard
 - `/lab-notebook` - Lab notebook entries
 - `/protocols` - Protocol management
+- `/inventory` - Inventory management (view-only for students)
 - `/instruments` - Instrument management
 - `/data-results` - Data and results
 - `/presentations` - Automated presentations
@@ -103,7 +105,7 @@
 - `/bioinformatics-tools` - Bioinformatics tools
 
 #### **Researcher+ Access**
-- `/inventory` - Inventory management
+- `/inventory` - Full inventory management (create, edit, delete)
 
 #### **Student+ Access** (All authenticated users)
 - `/lab-management` - Lab administration
