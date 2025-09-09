@@ -914,7 +914,7 @@ const MolecularBiologyPage: React.FC = () => {
         {/* Action Buttons */}
         {(pcrResults || cellResults || proteinResults || cloningResults) && (
           <div className="mt-8 flex justify-center space-x-4">
-            <Button onClick={clearResults} variant="outline">
+            <Button onClick={clearResults} variant="secondary">
               <RefreshCwIcon className="w-4 h-4 mr-2" />
               Clear Results
             </Button>
@@ -963,7 +963,7 @@ const MolecularBiologyPage: React.FC = () => {
                   <BeakerIcon className="w-8 h-8 text-orange-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Protein Analysis</h3>
-                <p className="text-gray-600">Determine protein concentration and optimize gel conditions</p>
+                <p className="text-gray-600">Determine protein concentration, molarity, and gel electrophoresis conditions</p>
               </div>
             </div>
           </div>

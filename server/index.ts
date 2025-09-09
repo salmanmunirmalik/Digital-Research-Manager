@@ -3281,7 +3281,7 @@ app.get('/api/research/activities', authenticateToken, async (req, res) => {
     }
 
     query += ` ORDER BY ra.created_at DESC LIMIT $${paramCount + 1}`;
-    queryParams.push(parseInt(limit as string));
+    queryParams.push(limit as string);
 
     const result = await pool.query(query, queryParams);
     res.json({ activities: result.rows });

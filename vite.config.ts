@@ -60,40 +60,8 @@ export default defineConfig(({ mode }) => {
             main: path.resolve(__dirname, 'index.html')
           },
           output: {
-            // Manual chunk splitting for better caching
-            manualChunks: {
-              // Vendor chunks
-              'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-              'ui-vendor': ['@heroicons/react'],
-              'utils-vendor': ['uuid', 'bcryptjs'],
-              
-              // Feature chunks
-              'dashboard': [
-                './pages/DashboardPage.tsx',
-                './components/SideNav.tsx'
-              ],
-              'auth': [
-                './pages/LoginPage.tsx',
-                './pages/RegisterPage.tsx',
-                './contexts/AuthContext.tsx'
-              ],
-              'protocols': [
-                './pages/ProtocolsPage.tsx'
-              ],
-              'inventory': [
-                './pages/InventoryPage.tsx'
-              ],
-              'calculators': [
-                './pages/CalculatorHubPage.tsx',
-                './services/calculators.ts'
-              ]
-            },
-            
             // Optimize chunk file names for better caching
-            chunkFileNames: (chunkInfo) => {
-              const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
-              return `js/[name]-[hash].js`;
-            },
+            chunkFileNames: 'js/[name]-[hash].js',
             entryFileNames: 'js/[name]-[hash].js',
             assetFileNames: (assetInfo) => {
               const info = assetInfo.name.split('.');

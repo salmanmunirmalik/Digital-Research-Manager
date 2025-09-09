@@ -465,7 +465,7 @@ const LabNotebookPage: React.FC = () => {
               </Button>
               <Button
                 onClick={() => setShowNewEntryModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-slate-800 hover:bg-slate-700 text-white"
               >
                 <PlusIcon className="h-4 w-4 mr-2" />
                 New Entry
@@ -481,7 +481,7 @@ const LabNotebookPage: React.FC = () => {
               onClick={() => setActiveView('overview')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeView === 'overview'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-yellow-500 text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -492,7 +492,7 @@ const LabNotebookPage: React.FC = () => {
               onClick={() => setActiveView('entries')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeView === 'entries'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-slate-800 text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -503,7 +503,7 @@ const LabNotebookPage: React.FC = () => {
               onClick={() => setActiveView('tools')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeView === 'tools'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-yellow-500 text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -876,7 +876,7 @@ const LabNotebookPage: React.FC = () => {
                     </Button>
                     <Button
                       onClick={handleCreateEntry}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      className="bg-slate-800 hover:bg-slate-700 text-white"
                     >
                       <SaveIcon className="h-4 w-4 mr-2" />
                       Create Entry

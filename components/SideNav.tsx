@@ -31,9 +31,13 @@ import {
 } from './icons';
 import { getUserDisplayName, getRoleDisplayName, getRolePermissions } from '../utils/roleAccess';
 
-const SideNav: React.FC = () => {
+interface SideNavProps {
+  onMobileLinkClick?: () => void;
+}
+
+const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
   const { user, isAuthenticated } = useAuth();
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['Dashboard']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['Research Workflow']));
   const [showUserProfile, setShowUserProfile] = useState(false);
 
   // Get user permissions
@@ -52,25 +56,17 @@ const SideNav: React.FC = () => {
   const getNavItems = () => {
     const baseItems = [];
 
-    // Dashboard - Static item (always visible)
-    baseItems.push({
-      title: 'Dashboard',
-      items: [
-        { name: 'Dashboard', to: '/dashboard', icon: HomeIcon, description: 'Personal dashboard and overview' },
-      ],
-      isStatic: true
-    });
-
-    // Research Workflow - Core research activities
+    // Research Workflow - Core research activities (now the primary section)
     baseItems.push({
       title: 'Research Workflow',
       items: [
-        { name: 'Lab Notebook', to: '/lab-notebook', icon: BookOpenIcon, description: 'Digital lab notebook and experiment tracking' },
+        { name: 'Lab Notebook', to: '/lab-notebook', icon: BookOpenIcon, description: 'Experiment workspace and detailed documentation' },
         { name: 'Protocols', to: '/protocols', icon: BeakerIcon, description: 'Research protocols and methods database' },
         { name: 'Data & Results', to: '/data-results', icon: ChartBarIcon, description: 'Research data and analysis' },
         { name: 'Research Assistant', to: '/research-assistant', icon: LightbulbIcon, description: 'AI-powered research helper' },
         { name: 'Automated Presentations', to: '/presentations', icon: PresentationChartLineIcon, description: 'Generate presentations from research data' }
-      ]
+      ],
+      isStatic: true
     });
 
     // Lab Management - Lab operations and resources
@@ -136,6 +132,7 @@ const SideNav: React.FC = () => {
                   <NavLink
                     key={itemIndex}
                     to={item.to}
+                    onClick={onMobileLinkClick}
                     className={({ isActive }) =>
                       `group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                         isActive
@@ -192,6 +189,7 @@ const SideNav: React.FC = () => {
                       <NavLink
                         key={itemIndex}
                         to={item.to}
+                        onClick={onMobileLinkClick}
                         className={({ isActive }) =>
                           `group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                             isActive

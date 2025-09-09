@@ -35,7 +35,8 @@ import {
   GlobeIcon,
   LockIcon,
   PlayIcon,
-  XMarkIcon
+  XMarkIcon,
+  SparklesIcon
 } from '../components/icons';
 import { 
   CALCULATOR_DEFINITIONS, 
@@ -227,8 +228,23 @@ const CalculatorHubPage: React.FC = () => {
   };
 
   // Handle calculator calculation
-  // Load mock data on component mount
+  // Load mock data on component mount and handle URL parameters
   useEffect(() => {
+    // Check for calculator parameter in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const calculatorParam = urlParams.get('calculator');
+    
+    if (calculatorParam && CALCULATOR_DEFINITIONS[calculatorParam as CalculatorName]) {
+      setCalcState(prev => ({
+        ...prev,
+        selectedCalculator: calculatorParam as CalculatorName,
+        inputs: {},
+        result: null,
+        error: null
+      }));
+      // Switch to calculators tab when a calculator is pre-selected
+      setActiveTab('calculators');
+    }
   }, []);
 
   const handleCalculate = () => {
@@ -302,7 +318,7 @@ const CalculatorHubPage: React.FC = () => {
     }
   };
 
-  return (
+    return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
@@ -313,7 +329,7 @@ const CalculatorHubPage: React.FC = () => {
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
             Scientific Calculators
-          </h1>
+        </h1>
         <p className="text-gray-600 max-w-2xl mx-auto">
             Professional-grade calculators for research, laboratory work, and academic studies
         </p>
@@ -378,7 +394,8 @@ const CalculatorHubPage: React.FC = () => {
                                                  calc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                                  calc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
                             
-                            const matchesCategory = selectedCalcCategory === 'all' || calc.category === selectedCalcCategory;
+                            const matchesCategory = selectedCalcCategory === 'all' || 
+                                                   calc.category === selectedCalcCategory;
                             
                             return matchesSearch && matchesCategory;
                           })
@@ -439,7 +456,7 @@ const CalculatorHubPage: React.FC = () => {
                       <button
                         key={calcName}
                         onClick={() => handleCalculatorSelect(calcName as CalculatorName)}
-                        className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 rounded-lg text-sm font-medium transition-colors"
+                        className="px-4 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 hover:text-yellow-800 rounded-lg text-sm font-medium transition-colors"
                       >
                         {calc.name}
                       </button>
@@ -455,15 +472,17 @@ const CalculatorHubPage: React.FC = () => {
                     <div className="p-2 bg-blue-600 rounded-lg">
                       <CalculatorIcon className="w-5 h-5 text-white" />
                     </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">
-                        {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].name}
-                      </h3>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-xl font-bold text-gray-900">
+                          {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].name}
+                        </h3>
+                      </div>
                       <p className="text-gray-600">
                         {CALCULATOR_DEFINITIONS[calcState.selectedCalculator].description}
                       </p>
                     </div>
-                </div>
+                  </div>
 
                   {/* Formula */}
                   <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -500,7 +519,7 @@ const CalculatorHubPage: React.FC = () => {
               <div className="flex justify-center mb-6">
                     <button
                   onClick={handleCalculate}
-                      className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl"
+                      className="px-8 py-3 bg-slate-800 text-white font-semibold rounded-lg hover:bg-slate-700 transition-colors shadow-lg hover:shadow-xl"
                 >
                   Calculate
                     </button>
@@ -508,19 +527,70 @@ const CalculatorHubPage: React.FC = () => {
 
               {/* Results */}
                   {calcState.result && (
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <CheckCircleIcon className="w-5 h-5 text-green-600" />
-                        <h4 className="font-semibold text-green-900">Result:</h4>
+                    <div className="space-y-4">
+                      {/* Main Result */}
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                          <h4 className="font-semibold text-green-900">Result:</h4>
                 </div>
-                      <div className="text-2xl font-bold text-green-800">
-                        {calcState.result.value} {calcState.result.unit}
+                        <div className="text-2xl font-bold text-green-800">
+                          {calcState.result.value} {calcState.result.unit}
                 </div>
-                      {calcState.result.explanation && (
-                        <p className="text-sm text-green-700 mt-2">{calcState.result.explanation}</p>
+                        {calcState.result.explanation && (
+                          <p className="text-sm text-green-700 mt-2">{calcState.result.explanation}</p>
+                        )}
+                        {calcState.result.confidence && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className="text-xs text-gray-600">Confidence:</span>
+                            <div className="flex-1 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                                style={{ width: `${calcState.result.confidence * 100}%` }}
+                              ></div>
+                </div>
+                            <span className="text-xs text-gray-600">{(calcState.result.confidence * 100).toFixed(0)}%</span>
+                    </div>
                       )}
+                    </div>
+                    
+                      {/* Warnings */}
+                      {calcState.result.warnings && calcState.result.warnings.length > 0 && (
+                        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <div className="flex items-center gap-2 mb-2">
+                            <ExclamationTriangleIcon className="w-5 h-5 text-yellow-600" />
+                            <h4 className="font-semibold text-yellow-900">Warnings:</h4>
+                </div>
+                          <ul className="space-y-1">
+                            {calcState.result.warnings.map((warning, index) => (
+                              <li key={index} className="text-sm text-yellow-700 flex items-start gap-2">
+                                <span className="text-yellow-600 mt-0.5">•</span>
+                                {warning}
+                              </li>
+                          ))}
+                        </ul>
                 </div>
                     )}
+
+                      {/* Suggestions */}
+                      {calcState.result.suggestions && calcState.result.suggestions.length > 0 && (
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center gap-2 mb-2">
+                            <LightbulbIcon className="w-5 h-5 text-blue-600" />
+                            <h4 className="font-semibold text-blue-900">Suggestions:</h4>
+                          </div>
+                          <ul className="space-y-1">
+                            {calcState.result.suggestions.map((suggestion, index) => (
+                              <li key={index} className="text-sm text-blue-700 flex items-start gap-2">
+                                <span className="text-blue-600 mt-0.5">💡</span>
+                                {suggestion}
+                              </li>
+                          ))}
+                        </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Error Display */}
                   {calcState.error && (
@@ -641,7 +711,7 @@ const CalculatorHubPage: React.FC = () => {
                 <div className="flex justify-center mt-6">
                   <button
                     onClick={handleConversion}
-                    className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl"
+                    className="px-8 py-3 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600 transition-colors shadow-lg hover:shadow-xl"
                   >
                     Convert
                   </button>
@@ -673,10 +743,10 @@ const CalculatorHubPage: React.FC = () => {
                     )}
             </div>
           )}
+                                        </div>
+                                    </div>
         </div>
-      </div>
-    </div>
     );
-  };
-  
-  export default CalculatorHubPage;
+};
+
+export default CalculatorHubPage;

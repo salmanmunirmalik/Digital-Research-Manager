@@ -1318,14 +1318,14 @@ const ProtocolsPage: React.FC = () => {
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setShowTemplateModal(true)}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 flex items-center space-x-2"
+            className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2"
           >
             <PlusIcon className="w-4 h-4" />
             <span>Create Template</span>
           </button>
           <button
             onClick={() => setShowCollaborationPanel(!showCollaborationPanel)}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 flex items-center space-x-2"
+            className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2"
           >
             <UserIcon className="w-4 h-4" />
             <span>Collaboration</span>
@@ -1337,7 +1337,7 @@ const ProtocolsPage: React.FC = () => {
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center space-x-2"
+            className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2"
           >
             <PlusIcon className="w-5 h-5" />
             <span>Create Protocol</span>
@@ -1817,7 +1817,7 @@ const ProtocolsPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                  className="flex-1 bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700"
                 >
                   Create Protocol
                 </button>
@@ -1996,7 +1996,7 @@ const ProtocolsPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                  className="flex-1 bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700"
                 >
                   Update Protocol
                 </button>
@@ -2050,7 +2050,7 @@ const ProtocolsPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                  className="flex-1 bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600"
                 >
                   Share Protocol
                 </button>

@@ -101,7 +101,7 @@ const SettingsPage: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Please log in to access settings</h2>
           <button
             onClick={() => navigate('/login')}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="bg-slate-800 text-white px-6 py-2 rounded-lg hover:bg-slate-700 transition-colors"
           >
             Go to Login
           </button>
@@ -322,7 +322,7 @@ const SettingsPage: React.FC = () => {
                 <p className="text-sm text-gray-600 mb-4">Download a copy of your data</p>
                 <button
                   onClick={handleExportData}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors"
                 >
                   Export Data
                 </button>
@@ -346,7 +346,7 @@ const SettingsPage: React.FC = () => {
             <button
               onClick={handleSaveSettings}
               disabled={loading}
-              className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+              className="bg-slate-800 text-white px-6 py-2 rounded-lg hover:bg-slate-700 transition-colors disabled:opacity-50"
             >
               {loading ? 'Saving...' : 'Save Settings'}
             </button>
