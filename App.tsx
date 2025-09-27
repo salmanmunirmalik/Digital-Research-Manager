@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import SideNav from './components/SideNav';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -46,44 +46,44 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="flex items-center justify-between h-16 px-6">
           {/* Logo and Brand */}
-          <div className="flex items-center space-x-3">
+          <Link to="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
             <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">DR</span>
             </div>
             <div>
               <h1 className="text-lg font-semibold text-gray-900">Digital Research Manager</h1>
             </div>
-          </div>
+          </Link>
 
           {/* Collaboration Navigation */}
           <div className="flex items-center space-x-6 bg-blue-50 px-4 py-2 rounded-lg">
-            <a 
-              href="/collaboration-networking" 
+            <Link 
+              to="/collaboration-networking" 
               className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
               Networking
-            </a>
-            <a 
-              href="/events-opportunities" 
+            </Link>
+            <Link 
+              to="/events-opportunities" 
               className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               Events & Opportunities
-            </a>
-            <a 
-              href="/help-forum" 
+            </Link>
+            <Link 
+              to="/help-forum" 
               className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               Help Forum
-            </a>
+            </Link>
           </div>
 
           {/* User Profile */}
