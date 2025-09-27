@@ -75,7 +75,7 @@ export default defineConfig(({ mode }) => {
         },
         
         // Bundle size optimization
-        chunkSizeWarningLimit: 1000,
+        chunkSizeWarningLimit: 2000,
         
         // Source map configuration
         sourcemap: !isProduction
