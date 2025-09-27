@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import ProfessionalProtocolForm from '../components/ProfessionalProtocolForm';
 import { 
   PlusIcon, 
   SearchIcon, 
@@ -14,7 +15,8 @@ import {
   TagIcon,
   UserIcon,
   BuildingOfficeIcon,
-  XMarkIcon
+  XMarkIcon,
+  PlayIcon
 } from '../components/icons';
 import { Lab } from '../types';
 
@@ -38,6 +40,7 @@ interface Protocol {
   share_count: number;
   created_at: string;
   updated_at: string;
+  youtube_video_url?: string;
 }
 
 interface ProtocolSharing {
@@ -52,35 +55,12 @@ interface ProtocolSharing {
   username: string | null;
 }
 
-interface ProtocolTemplate {
+interface ProtocolSharing {
   id: string;
-  name: string;
-  description: string;
-  category: string;
-  difficulty_level: string;
-  estimated_duration: number;
-  materials_template: string[];
-  content_template: string;
-  safety_notes_template: string;
-  tags: string[];
-  created_by: string;
-  created_at: string;
-  usage_count: number;
-  rating: number;
-  is_public: boolean;
-  lab_name: string;
-}
-
-interface CollaborativeSession {
-  id: string;
-  protocol_id: string;
-  user_id: string;
-  user_name: string;
-  lab_name: string;
-  is_active: boolean;
-  last_seen: string;
-  current_section: string;
-  cursor_position: number;
+  protocolId: string;
+  userId: string;
+  permission: 'read' | 'write' | 'admin';
+  sharedAt: string;
 }
 
 interface ProtocolComment {
@@ -90,7 +70,7 @@ interface ProtocolComment {
   user_name: string;
   content: string;
   section: string;
-  line_number?: number;
+  line_number: number;
   created_at: string;
   is_resolved: boolean;
   replies: ProtocolComment[];
@@ -98,6 +78,19 @@ interface ProtocolComment {
 
 const ProtocolsPage: React.FC = () => {
   const { user: authUser, token } = useAuth();
+  
+  // Helper function to convert YouTube URL to embed URL
+  const getYouTubeEmbedUrl = (url: string): string => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    
+    if (match && match[2].length === 11) {
+      return `https://www.youtube.com/embed/${match[2]}`;
+    }
+    
+    // Fallback for invalid URLs
+    return 'https://www.youtube.com/embed/dQw4w9WgXcQ';
+  };
   
   // Fallback user for demo purposes if auth context is not working
   const user = authUser || { 
@@ -112,32 +105,6 @@ const ProtocolsPage: React.FC = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-
-  // Template and collaboration states
-  const [templates, setTemplates] = useState<ProtocolTemplate[]>([]);
-  const [collaborativeSessions, setCollaborativeSessions] = useState<CollaborativeSession[]>([]);
-  const [protocolComments, setProtocolComments] = useState<ProtocolComment[]>([]);
-  const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [showCollaborationPanel, setShowCollaborationPanel] = useState(false);
-  const [showCommentModal, setShowCommentModal] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<ProtocolTemplate | null>(null);
-  const [templateForm, setTemplateForm] = useState({
-    name: '',
-    description: '',
-    category: '',
-    difficulty_level: 'beginner',
-    estimated_duration: 1,
-    materials_template: [''],
-    content_template: '',
-    safety_notes_template: '',
-    tags: [''],
-    is_public: false
-  });
-  const [commentForm, setCommentForm] = useState({
-    content: '',
-    section: 'general',
-    line_number: 0
-  });
 
   // Comprehensive mock protocols data
   const mockProtocols: Protocol[] = [
@@ -175,7 +142,8 @@ const ProtocolsPage: React.FC = () => {
       institution: 'University Research Center',
       share_count: 45,
       created_at: '2024-01-15T10:00:00Z',
-      updated_at: '2024-01-15T10:00:00Z'
+      updated_at: '2024-01-15T10:00:00Z',
+      youtube_video_url: 'https://www.youtube.com/watch?v=2aVnN4RePyI'
     },
     {
       id: '2',
@@ -214,7 +182,8 @@ const ProtocolsPage: React.FC = () => {
       institution: 'University Research Center',
       share_count: 32,
       created_at: '2024-01-10T14:30:00Z',
-      updated_at: '2024-01-10T14:30:00Z'
+      updated_at: '2024-01-10T14:30:00Z',
+      youtube_video_url: 'https://www.youtube.com/watch?v=9bZkp7q19f0'
     },
     {
       id: '3',
@@ -253,7 +222,8 @@ const ProtocolsPage: React.FC = () => {
       institution: 'University Research Center',
       share_count: 28,
       created_at: '2024-01-08T09:15:00Z',
-      updated_at: '2024-01-08T09:15:00Z'
+      updated_at: '2024-01-08T09:15:00Z',
+      youtube_video_url: 'https://www.youtube.com/watch?v=9bZkp7q19f0'
     },
     {
       id: '4',
@@ -292,7 +262,8 @@ const ProtocolsPage: React.FC = () => {
       institution: 'University Research Center',
       share_count: 41,
       created_at: '2024-01-12T16:45:00Z',
-      updated_at: '2024-01-12T16:45:00Z'
+      updated_at: '2024-01-12T16:45:00Z',
+      youtube_video_url: 'https://www.youtube.com/watch?v=3JZ_D3ELwOQ'
     },
     {
       id: '5',
@@ -331,7 +302,8 @@ const ProtocolsPage: React.FC = () => {
       institution: 'University Research Center',
       share_count: 35,
       created_at: '2024-01-06T11:20:00Z',
-      updated_at: '2024-01-06T11:20:00Z'
+      updated_at: '2024-01-06T11:20:00Z',
+      youtube_video_url: 'https://www.youtube.com/watch?v=YQHsXMglC9A'
     },
     {
       id: '6',
@@ -370,7 +342,8 @@ const ProtocolsPage: React.FC = () => {
       institution: 'University Research Center',
       share_count: 38,
       created_at: '2024-01-14T13:10:00Z',
-      updated_at: '2024-01-14T13:10:00Z'
+      updated_at: '2024-01-14T13:10:00Z',
+      youtube_video_url: 'https://www.youtube.com/watch?v=5MgBikgcWnY'
     },
     {
       id: '7',
@@ -409,7 +382,8 @@ const ProtocolsPage: React.FC = () => {
       institution: 'University Research Center',
       share_count: 29,
       created_at: '2024-01-11T15:30:00Z',
-      updated_at: '2024-01-11T15:30:00Z'
+      updated_at: '2024-01-11T15:30:00Z',
+      youtube_video_url: 'https://www.youtube.com/watch?v=9bZkp7q19f0'
     },
     {
       id: '8',
@@ -448,7 +422,8 @@ const ProtocolsPage: React.FC = () => {
       institution: 'University Research Center',
       share_count: 33,
       created_at: '2024-01-09T10:45:00Z',
-      updated_at: '2024-01-09T10:45:00Z'
+      updated_at: '2024-01-09T10:45:00Z',
+      youtube_video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
     },
     {
       id: '9',
@@ -487,7 +462,8 @@ const ProtocolsPage: React.FC = () => {
       institution: 'University Research Center',
       share_count: 26,
       created_at: '2024-01-13T12:00:00Z',
-      updated_at: '2024-01-13T12:00:00Z'
+      updated_at: '2024-01-13T12:00:00Z',
+      youtube_video_url: 'https://www.youtube.com/watch?v=jNQXAC9IVRw'
     },
     {
       id: '10',
@@ -609,10 +585,12 @@ const ProtocolsPage: React.FC = () => {
   ];
   
   // Modal states
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showProfessionalForm, setShowProfessionalForm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
   const [selectedProtocol, setSelectedProtocol] = useState<Protocol | null>(null);
   const [selectedProtocolDetails, setSelectedProtocolDetails] = useState<{ protocol: Protocol; sharing: ProtocolSharing[] } | null>(null);
 
@@ -652,6 +630,14 @@ const ProtocolsPage: React.FC = () => {
     permission_level: 'read'
   });
 
+  // Comment states
+  const [protocolComments, setProtocolComments] = useState<ProtocolComment[]>([]);
+  const [commentForm, setCommentForm] = useState({
+    content: '',
+    section: 'general',
+    line_number: 0
+  });
+
   useEffect(() => {
     // Use mock data instead of API calls
     setProtocols(mockProtocols);
@@ -664,11 +650,6 @@ const ProtocolsPage: React.FC = () => {
       { id: 'lab-6', name: 'Analytical Chemistry Lab', institution: 'University Research Center', department: 'Chemistry', principal_researcher_id: 'user-6', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z', is_active: true }
     ]);
     setCategories(['Molecular Biology', 'Protein Analysis', 'Cell Culture', 'Microscopy', 'Flow Cytometry', 'Immunoassays', 'Proteomics', 'Genomics', 'Cell Biology', 'Analytical Chemistry']);
-    
-    // Load template and collaboration data
-    loadTemplates();
-    loadCollaborativeSessions();
-    loadProtocolComments();
     
     setIsLoading(false);
     
@@ -846,37 +827,41 @@ const ProtocolsPage: React.FC = () => {
     }
   };
 
-  const handleCreateProtocol = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateProtocol = async (protocolData: any) => {
     try {
-      const response = await fetch('http://localhost:5001/api/protocols', {
+      // Convert ProfessionalProtocolForm data to the format expected by the API
+      const apiData = {
+        title: protocolData.title,
+        description: protocolData.description,
+        category: protocolData.category,
+        difficulty_level: protocolData.difficulty_level,
+        estimated_duration: Math.ceil(protocolData.estimated_duration_minutes / 60), // Convert minutes to hours
+        materials: protocolData.reagents?.map((r: any) => r.name).filter(Boolean) || [],
+        content: protocolData.procedure_steps?.map((step: any) => 
+          `Step ${step.step}: ${step.description}${step.temperature ? ` (${step.temperature})` : ''}${step.critical ? ' [CRITICAL]' : ''}`
+        ).join('\n\n') || '',
+        safety_notes: [
+          ...(protocolData.biosafety_requirements || []),
+          ...(protocolData.chemical_hazards || []),
+          ...(protocolData.biological_hazards || []),
+          ...(protocolData.ppe_required || [])
+        ].join(', '),
+        tags: protocolData.tags || [],
+        lab_id: protocolData.lab_id || '',
+        privacy_level: protocolData.privacy_level || 'lab'
+      };
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/protocols`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...protocolForm,
-          materials: protocolForm.materials.filter(m => m.trim()),
-          tags: protocolForm.tags.filter(t => t.trim())
-        })
+        body: JSON.stringify(apiData)
       });
 
       if (response.ok) {
-        setShowCreateModal(false);
-        setProtocolForm({
-          title: '',
-          description: '',
-          category: '',
-          difficulty_level: 'beginner',
-          estimated_duration: 1,
-          materials: [''],
-          content: '',
-          safety_notes: '',
-          tags: [''],
-          lab_id: '',
-          privacy_level: 'lab'
-        });
+        setShowProfessionalForm(false);
         fetchProtocols();
       } else {
         const errorData = await response.json();
@@ -1317,26 +1302,7 @@ const ProtocolsPage: React.FC = () => {
         </div>
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => setShowTemplateModal(true)}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2"
-          >
-            <PlusIcon className="w-4 h-4" />
-            <span>Create Template</span>
-          </button>
-          <button
-            onClick={() => setShowCollaborationPanel(!showCollaborationPanel)}
-            className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2"
-          >
-            <UserIcon className="w-4 h-4" />
-            <span>Collaboration</span>
-            {collaborativeSessions.filter(s => s.is_active).length > 0 && (
-              <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {collaborativeSessions.filter(s => s.is_active).length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => setShowProfessionalForm(true)}
             className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2"
           >
             <PlusIcon className="w-5 h-5" />
@@ -1345,118 +1311,11 @@ const ProtocolsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Collaboration Panel */}
-      {showCollaborationPanel && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Active Collaborations</h2>
-          <div className="space-y-4">
-            {collaborativeSessions.filter(session => session.is_active).map((session) => (
-              <div key={session.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <UserIcon className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{session.user_name}</p>
-                    <p className="text-sm text-gray-600">{session.lab_name}</p>
-                    <p className="text-xs text-gray-500">
-                      Editing {session.current_section} • Position {session.cursor_position}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-gray-500">Active</span>
-                </div>
-              </div>
-            ))}
-            {collaborativeSessions.filter(session => session.is_active).length === 0 && (
-              <p className="text-gray-500 text-center py-4">No active collaborations</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Protocol Templates */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-gray-900">Protocol Templates</h2>
-          <button
-            onClick={() => setShowTemplateModal(true)}
-            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-          >
-            View All Templates
-          </button>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {templates.slice(0, 3).map((template) => (
-            <div key={template.id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900 mb-1">{template.name}</h3>
-                  <p className="text-sm text-gray-600 mb-2">{template.description}</p>
-                  <div className="flex items-center space-x-2 mb-2">
-                    <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                      {template.category}
-                    </span>
-                    <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
-                      {template.difficulty_level}
-                    </span>
-                  </div>
-                </div>
-                {template.is_public && (
-                  <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                    Public
-                  </span>
-                )}
-              </div>
-              
-              <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                <span>Used {template.usage_count} times</span>
-                <span>★ {template.rating}</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">{template.created_by}</span>
-                <button
-                  onClick={() => useTemplate(template)}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                >
-                  Use Template
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="text-sm text-red-700">{error}</div>
         </div>
       )}
-
-      {/* Protocols Count */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <BookOpenIcon className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-blue-900">Protocol Library</h3>
-              <p className="text-blue-700">
-                {filteredProtocols.length} of {mockProtocols.length} protocols available
-              </p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-blue-900">{mockProtocols.length}</p>
-            <p className="text-sm text-blue-700">Total Protocols</p>
-          </div>
-        </div>
-      </div>
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -1645,186 +1504,12 @@ const ProtocolsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Create Protocol Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Create New Protocol</h2>
-            <form onSubmit={handleCreateProtocol} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-                  <input
-                    type="text"
-                    value={protocolForm.title}
-                    onChange={(e) => setProtocolForm({ ...protocolForm, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <input
-                    type="text"
-                    value={protocolForm.category}
-                    onChange={(e) => setProtocolForm({ ...protocolForm, category: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  value={protocolForm.description}
-                  onChange={(e) => setProtocolForm({ ...protocolForm, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Difficulty Level</label>
-                  <select
-                    value={protocolForm.difficulty_level}
-                    onChange={(e) => setProtocolForm({ ...protocolForm, difficulty_level: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration (hours)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={protocolForm.estimated_duration}
-                    onChange={(e) => setProtocolForm({ ...protocolForm, estimated_duration: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Lab</label>
-                  <select
-                    value={protocolForm.lab_id}
-                    onChange={(e) => setProtocolForm({ ...protocolForm, lab_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  >
-                    <option value="">Select Lab</option>
-                    {labs.map(lab => (
-                      <option key={lab.id} value={lab.id}>{lab.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Content *</label>
-                <textarea
-                  value={protocolForm.content}
-                  onChange={(e) => setProtocolForm({ ...protocolForm, content: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={6}
-                  placeholder="Enter the step-by-step protocol content..."
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Materials</label>
-                {protocolForm.materials.map((material, index) => (
-                  <div key={index} className="flex space-x-2 mb-2">
-                    <input
-                      type="text"
-                      value={material}
-                      onChange={(e) => updateArrayItem('materials', index, e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Material name"
-                    />
-                    {protocolForm.materials.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeArrayItem('materials', index)}
-                        className="px-3 py-2 text-red-600 hover:text-red-700"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => addArrayItem('materials')}
-                  className="text-blue-600 hover:text-blue-700 text-sm"
-                >
-                  + Add Material
-                </button>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Safety Notes</label>
-                <textarea
-                  value={protocolForm.safety_notes}
-                  onChange={(e) => setProtocolForm({ ...protocolForm, safety_notes: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="Important safety considerations..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
-                {protocolForm.tags.map((tag, index) => (
-                  <div key={index} className="flex space-x-2 mb-2">
-                    <input
-                      type="text"
-                      value={tag}
-                      onChange={(e) => updateArrayItem('tags', index, e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Tag name"
-                    />
-                    {protocolForm.tags.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeArrayItem('tags', index)}
-                        className="px-3 py-2 text-red-600 hover:text-red-700"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => addArrayItem('tags')}
-                  className="text-blue-600 hover:text-blue-700 text-sm"
-                >
-                  + Add Tag
-                </button>
-              </div>
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700"
-                >
-                  Create Protocol
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {/* Professional Protocol Form */}
+      {showProfessionalForm && (
+        <ProfessionalProtocolForm
+          onSubmit={handleCreateProtocol}
+          onCancel={() => setShowProfessionalForm(false)}
+        />
       )}
 
       {/* Edit Protocol Modal */}
@@ -2260,6 +1945,15 @@ const ProtocolsPage: React.FC = () => {
                     <div className="bg-white border border-gray-200 rounded-xl p-6">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
                       <div className="space-y-3">
+                        {selectedProtocol.youtube_video_url && (
+                          <button 
+                            onClick={() => setShowVideoModal(true)}
+                            className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-lg hover:from-red-700 hover:to-pink-700 transition-all duration-200"
+                          >
+                            <PlayIcon className="w-4 h-4" />
+                            <span>Watch Protocol Video</span>
+                          </button>
+                        )}
                         <button 
                           onClick={() => openShareModal(selectedProtocol)}
                           className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
@@ -2289,149 +1983,6 @@ const ProtocolsPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Template Modal */}
-      {showTemplateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Protocol Templates</h3>
-                <button
-                  onClick={() => setShowTemplateModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <XMarkIcon className="w-6 h-6" />
-                </button>
-              </div>
-
-              {/* Create New Template Section */}
-              <div className="mb-8 p-4 bg-gray-50 rounded-lg">
-                <h4 className="text-md font-semibold text-gray-900 mb-4">Create New Template</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Template Name</label>
-                    <input
-                      type="text"
-                      value={templateForm.name}
-                      onChange={(e) => setTemplateForm(prev => ({ ...prev, name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter template name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                    <select
-                      value={templateForm.category}
-                      onChange={(e) => setTemplateForm(prev => ({ ...prev, category: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="">Select category</option>
-                      {categories.map(category => (
-                        <option key={category} value={category}>{category}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                    <textarea
-                      value={templateForm.description}
-                      onChange={(e) => setTemplateForm(prev => ({ ...prev, description: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      rows={2}
-                      placeholder="Enter template description"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty Level</label>
-                    <select
-                      value={templateForm.difficulty_level}
-                      onChange={(e) => setTemplateForm(prev => ({ ...prev, difficulty_level: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="beginner">Beginner</option>
-                      <option value="intermediate">Intermediate</option>
-                      <option value="advanced">Advanced</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Duration (hours)</label>
-                    <input
-                      type="number"
-                      value={templateForm.estimated_duration}
-                      onChange={(e) => setTemplateForm(prev => ({ ...prev, estimated_duration: parseInt(e.target.value) || 1 }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      min="1"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={templateForm.is_public}
-                        onChange={(e) => setTemplateForm(prev => ({ ...prev, is_public: e.target.checked }))}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-700">Make this template public</span>
-                    </label>
-                  </div>
-                </div>
-                <div className="flex justify-end mt-4">
-                  <button
-                    onClick={createTemplate}
-                    className="px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                  >
-                    Create Template
-                  </button>
-                </div>
-              </div>
-
-              {/* Existing Templates */}
-              <div className="space-y-4">
-                <h4 className="text-md font-semibold text-gray-900">Available Templates</h4>
-                {templates.map((template) => (
-                  <div key={template.id} className="p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h5 className="font-medium text-gray-900 mb-1">{template.name}</h5>
-                        <p className="text-sm text-gray-600 mb-2">{template.description}</p>
-                        <div className="flex items-center space-x-2 mb-2">
-                          <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                            {template.category}
-                          </span>
-                          <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
-                            {template.difficulty_level}
-                          </span>
-                          {template.is_public && (
-                            <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                              Public
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                      <span>Created by {template.created_by} • Used {template.usage_count} times</span>
-                      <span>★ {template.rating}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">{template.lab_name}</span>
-                      <button
-                        onClick={() => useTemplate(template)}
-                        className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                      >
-                        Use Template
-                      </button>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
@@ -2504,6 +2055,79 @@ const ProtocolsPage: React.FC = () => {
                 >
                   Add Comment
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video Modal */}
+      {showVideoModal && selectedProtocol && selectedProtocol.youtube_video_url && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  <PlayIcon className="h-6 w-6 text-red-600" />
+                  {selectedProtocol.title} - Video Tutorial
+                </h2>
+                <button
+                  onClick={() => setShowVideoModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-gray-600">{selectedProtocol.description}</p>
+              </div>
+
+              <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                <iframe
+                  className="absolute top-0 left-0 w-full h-full rounded-lg"
+                  src={getYouTubeEmbedUrl(selectedProtocol.youtube_video_url)}
+                  title={`${selectedProtocol.title} - Video Tutorial`}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Video Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                  <div>
+                    <span className="font-medium">Protocol:</span> {selectedProtocol.title}
+                  </div>
+                  <div>
+                    <span className="font-medium">Category:</span> {selectedProtocol.category}
+                  </div>
+                  <div>
+                    <span className="font-medium">Difficulty:</span> {selectedProtocol.difficulty_level}
+                  </div>
+                  <div>
+                    <span className="font-medium">Duration:</span> {selectedProtocol.estimated_duration} minutes
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowVideoModal(false)}
+                  className="px-6 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+                <a
+                  href={selectedProtocol.youtube_video_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <PlayIcon className="h-4 w-4" />
+                  Watch on YouTube
+                </a>
               </div>
             </div>
           </div>

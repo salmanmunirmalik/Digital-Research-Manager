@@ -1,0 +1,202 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e8]: DR
+        - heading "Digital Research Manager" [level=1] [ref=e10]
+      - generic [ref=e11]:
+        - link "Networking" [ref=e12] [cursor=pointer]:
+          - /url: /collaboration-networking
+          - img [ref=e13] [cursor=pointer]
+          - text: Networking
+        - link "Events & Opportunities" [ref=e15] [cursor=pointer]:
+          - /url: /events-opportunities
+          - img [ref=e16] [cursor=pointer]
+          - text: Events & Opportunities
+        - link "Help Forum" [ref=e18] [cursor=pointer]:
+          - /url: /help-forum
+          - img [ref=e19] [cursor=pointer]
+          - text: Help Forum
+      - button "JD" [ref=e23] [cursor=pointer]:
+        - generic [ref=e25] [cursor=pointer]: JD
+        - img [ref=e26] [cursor=pointer]
+  - generic [ref=e28]:
+    - complementary [ref=e29]:
+      - generic [ref=e31]:
+        - navigation [ref=e32]:
+          - generic [ref=e33]:
+            - button "Research Workflow" [ref=e34] [cursor=pointer]:
+              - generic [ref=e37] [cursor=pointer]: Research Workflow
+              - img [ref=e38] [cursor=pointer]
+            - generic [ref=e41]:
+              - link "Lab Notebook" [ref=e42] [cursor=pointer]:
+                - /url: /lab-notebook
+                - img [ref=e43] [cursor=pointer]
+                - generic [ref=e46] [cursor=pointer]: Lab Notebook
+              - link "Protocols" [ref=e48] [cursor=pointer]:
+                - /url: /protocols
+                - img [ref=e49] [cursor=pointer]
+                - generic [ref=e53] [cursor=pointer]: Protocols
+              - link "Data & Results" [ref=e55] [cursor=pointer]:
+                - /url: /data-results
+                - img [ref=e56] [cursor=pointer]
+                - generic [ref=e60] [cursor=pointer]: Data & Results
+          - generic [ref=e62]:
+            - button "Lab Management" [ref=e63] [cursor=pointer]:
+              - generic [ref=e66] [cursor=pointer]: Lab Management
+              - img [ref=e67] [cursor=pointer]
+            - generic [ref=e69]:
+              - link "Lab Management" [ref=e70] [cursor=pointer]:
+                - /url: /lab-management
+                - img [ref=e71] [cursor=pointer]
+                - generic [ref=e83] [cursor=pointer]: Lab Management
+              - link "Inventory" [ref=e85] [cursor=pointer]:
+                - /url: /inventory
+                - img [ref=e86] [cursor=pointer]
+                - generic [ref=e93] [cursor=pointer]: Inventory
+              - link "Instruments" [ref=e95] [cursor=pointer]:
+                - /url: /instruments
+                - img [ref=e96] [cursor=pointer]
+                - generic [ref=e107] [cursor=pointer]: Instruments
+              - link "Resource Exchange" [ref=e109] [cursor=pointer]:
+                - /url: /resource-exchange
+                - img [ref=e110] [cursor=pointer]
+                - generic [ref=e115] [cursor=pointer]: Resource Exchange
+          - generic [ref=e117]:
+            - button "Tools & Calculators" [ref=e118] [cursor=pointer]:
+              - generic [ref=e121] [cursor=pointer]: Tools & Calculators
+              - img [ref=e122] [cursor=pointer]
+            - generic [ref=e124]:
+              - link "Calculator Hub" [ref=e125] [cursor=pointer]:
+                - /url: /calculator-hub
+                - img [ref=e126] [cursor=pointer]
+                - generic [ref=e135] [cursor=pointer]: Calculator Hub
+              - link "Research Assistant" [ref=e137] [cursor=pointer]:
+                - /url: /research-assistant
+                - img [ref=e138] [cursor=pointer]
+                - generic [ref=e142] [cursor=pointer]: Research Assistant
+              - link "Automated Presentations" [ref=e144] [cursor=pointer]:
+                - /url: /presentations
+                - img [ref=e145] [cursor=pointer]
+                - generic [ref=e151] [cursor=pointer]: Automated Presentations
+              - link "Bioinformatics Tools" [ref=e153] [cursor=pointer]:
+                - /url: /bioinformatics-tools
+                - img [ref=e154] [cursor=pointer]
+                - generic [ref=e167] [cursor=pointer]: Bioinformatics Tools
+              - link "Molecular Biology" [ref=e169] [cursor=pointer]:
+                - /url: /molecular-biology
+                - img [ref=e170] [cursor=pointer]
+                - generic [ref=e179] [cursor=pointer]: Molecular Biology
+          - generic [ref=e181]:
+            - button "System" [ref=e182] [cursor=pointer]:
+              - generic [ref=e185] [cursor=pointer]: System
+              - img [ref=e186] [cursor=pointer]
+            - generic [ref=e188]:
+              - link "Profile" [ref=e189] [cursor=pointer]:
+                - /url: /profile
+                - img [ref=e190] [cursor=pointer]
+                - generic [ref=e193] [cursor=pointer]: Profile
+              - link "Settings" [ref=e195] [cursor=pointer]:
+                - /url: /settings
+                - img [ref=e196] [cursor=pointer]
+                - generic [ref=e199] [cursor=pointer]: Settings
+        - generic [ref=e202]:
+          - generic [ref=e203]:
+            - generic [ref=e204]: System Status
+            - generic [ref=e207]: Online
+          - generic [ref=e208]:
+            - generic [ref=e209]: Version
+            - generic [ref=e210]: v2.0
+          - button "Need Help?" [ref=e211] [cursor=pointer]:
+            - img [ref=e212] [cursor=pointer]
+            - text: Need Help?
+    - main [ref=e214]:
+      - generic [ref=e217]:
+        - generic [ref=e219]:
+          - generic [ref=e220]:
+            - heading "Lab Notebook" [level=1] [ref=e221]:
+              - img [ref=e222]
+              - text: Lab Notebook
+            - paragraph [ref=e225]: Your digital research companion
+          - generic [ref=e226]:
+            - button "Quick Note" [ref=e227] [cursor=pointer]:
+              - img [ref=e228] [cursor=pointer]
+              - text: Quick Note
+            - button "New Entry" [ref=e231] [cursor=pointer]:
+              - img [ref=e232] [cursor=pointer]
+              - text: New Entry
+        - generic [ref=e236]:
+          - button "Overview" [ref=e237] [cursor=pointer]:
+            - img [ref=e238] [cursor=pointer]
+            - text: Overview
+          - button "Entries" [ref=e241] [cursor=pointer]:
+            - img [ref=e242] [cursor=pointer]
+            - text: Entries
+          - button "Tools" [ref=e248] [cursor=pointer]:
+            - img [ref=e249] [cursor=pointer]
+            - text: Tools
+        - generic [ref=e260]:
+          - generic [ref=e261]:
+            - heading "Quick Notes" [level=3] [ref=e263]:
+              - img [ref=e264]
+              - text: Quick Notes
+            - generic [ref=e268]:
+              - generic [ref=e269]:
+                - paragraph [ref=e270]: Order more MTT reagent for next week
+                - paragraph [ref=e271]: 1/15/2024
+              - generic [ref=e272]:
+                - paragraph [ref=e273]: Check centrifuge calibration
+                - paragraph [ref=e274]: 1/15/2024
+              - generic [ref=e275]:
+                - paragraph [ref=e276]: Schedule lab meeting for Friday
+                - paragraph [ref=e277]: 1/15/2024
+          - generic [ref=e278]:
+            - heading "Recent Activity" [level=3] [ref=e280]:
+              - img [ref=e281]
+              - text: Recent Activity
+            - generic [ref=e285]:
+              - generic [ref=e286]:
+                - img [ref=e287]
+                - generic [ref=e291]:
+                  - paragraph [ref=e292]: Created new experiment entry
+                  - paragraph [ref=e293]: Dr. Smith • 1/15/2024
+              - generic [ref=e294]:
+                - img [ref=e295]
+                - generic [ref=e298]:
+                  - paragraph [ref=e299]: Completed protein purification protocol
+                  - paragraph [ref=e300]: Dr. Smith • 1/15/2024
+              - generic [ref=e301]:
+                - img [ref=e302]
+                - generic [ref=e307]:
+                  - paragraph [ref=e308]: Added Dr. Johnson as collaborator
+                  - paragraph [ref=e309]: Dr. Smith • 1/15/2024
+          - generic [ref=e310]:
+            - heading "Smart Suggestions" [level=3] [ref=e312]:
+              - img [ref=e313]
+              - text: Smart Suggestions
+            - generic [ref=e318]:
+              - generic [ref=e319]:
+                - generic [ref=e320]:
+                  - generic [ref=e321]:
+                    - heading "Optimize Protein Purification" [level=4] [ref=e322]
+                    - paragraph [ref=e323]: Consider using gradient elution for better separation
+                  - generic [ref=e324]: high
+                - generic [ref=e329]: 85%
+              - generic [ref=e330]:
+                - generic [ref=e331]:
+                  - generic [ref=e332]:
+                    - heading "Equipment Maintenance Due" [level=4] [ref=e333]
+                    - paragraph [ref=e334]: Centrifuge calibration is due next week
+                  - generic [ref=e335]: medium
+                - generic [ref=e340]: 95%
+              - generic [ref=e341]:
+                - generic [ref=e342]:
+                  - generic [ref=e343]:
+                    - heading "Potential Collaboration" [level=4] [ref=e344]
+                    - paragraph [ref=e345]: Dr. Johnson has similar research interests
+                  - generic [ref=e346]: low
+                - generic [ref=e351]: 75%
+```

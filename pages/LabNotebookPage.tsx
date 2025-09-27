@@ -1,16 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
+import ExperimentForm from '../components/ExperimentForm';
+import IdeaForm from '../components/IdeaForm';
+import InventoryForm from '../components/InventoryForm';
+import SampleManagementForm from '../components/SampleManagementForm';
+import EquipmentBookingForm from '../components/EquipmentBookingForm';
+import ResultsForm from '../components/ResultsForm';
+import MeetingForm from '../components/MeetingForm';
+import ProblemForm from '../components/ProblemForm';
 import { 
   BookOpenIcon,
   PlusIcon, 
   SearchIcon, 
   FilterIcon, 
-  CalendarIcon,
   UserIcon,
   TagIcon,
   EyeIcon,
@@ -35,6 +42,8 @@ import {
   BellIcon,
   SparklesIcon,
   BrainIcon,
+  CubeIcon,
+  WrenchScrewdriverIcon,
   TargetIcon,
   UserGroupIcon,
   AcademicCapIcon,
@@ -42,7 +51,6 @@ import {
   DocumentIcon,
   PresentationChartLineIcon,
   HomeIcon,
-  CogIcon,
   BuildingOfficeIcon,
   PencilIcon,
   ChatBubbleLeftRightIcon,
@@ -114,6 +122,7 @@ interface SmartSuggestion {
 
 const LabNotebookPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [entries, setEntries] = useState<LabNotebookEntry[]>([]);
   const [quickNotes, setQuickNotes] = useState<QuickNote[]>([]);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
@@ -125,8 +134,21 @@ const LabNotebookPage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('created_at');
   const [showNewEntryModal, setShowNewEntryModal] = useState(false);
+  const [showEntryTypeModal, setShowEntryTypeModal] = useState(false);
   const [showQuickNoteModal, setShowQuickNoteModal] = useState(false);
-  const [activeView, setActiveView] = useState<'entries' | 'overview' | 'tools'>('overview');
+  
+  // Form states for different entry types
+  const [showExperimentForm, setShowExperimentForm] = useState(false);
+  const [showIdeaForm, setShowIdeaForm] = useState(false);
+  const [showInventoryForm, setShowInventoryForm] = useState(false);
+  const [showSampleManagementForm, setShowSampleManagementForm] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<LabNotebookEntry | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showEquipmentBookingForm, setShowEquipmentBookingForm] = useState(false);
+  const [showResultsForm, setShowResultsForm] = useState(false);
+  const [showMeetingForm, setShowMeetingForm] = useState(false);
+  const [showProblemForm, setShowProblemForm] = useState(false);
   
   // Simplified entry form
   const [entryForm, setEntryForm] = useState({
@@ -160,157 +182,442 @@ const LabNotebookPage: React.FC = () => {
     color: 'yellow' as const
   });
 
-  // Load mock data
-  useEffect(() => {
-    // Mock lab notebook entries
+  // Entry type options
+  const entryTypes = [
+    { 
+      id: 'experiment', 
+      name: 'Experiment', 
+      description: 'Plan and track experimental procedures',
+      icon: BeakerIcon,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100'
+    },
+    { 
+      id: 'idea', 
+      name: 'Idea', 
+      description: 'Capture research ideas and concepts',
+      icon: LightbulbIcon,
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-100'
+    },
+    { 
+      id: 'inventory', 
+      name: 'Inventory', 
+      description: 'Add or update inventory items',
+      icon: CubeIcon,
+      color: 'text-green-600',
+      bgColor: 'bg-green-100'
+    },
+    { 
+      id: 'sample_management', 
+      name: 'Sample Management', 
+      description: 'Manage and track research samples',
+      icon: ClipboardListIcon,
+      color: 'text-teal-600',
+      bgColor: 'bg-teal-100'
+    },
+    { 
+      id: 'equipment_booking', 
+      name: 'Book Equipment', 
+      description: 'Reserve laboratory equipment',
+      icon: WrenchScrewdriverIcon,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-100'
+    },
+    { 
+      id: 'results', 
+      name: 'Add Results', 
+      description: 'Record experimental results and analysis',
+      icon: ChartBarIcon,
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-100'
+    },
+    { 
+      id: 'meeting', 
+      name: 'Meeting', 
+      description: 'Document meeting notes and decisions',
+      icon: UsersIcon,
+      color: 'text-pink-600',
+      bgColor: 'bg-pink-100'
+    },
+    { 
+      id: 'problem', 
+      name: 'Problem', 
+      description: 'Report issues and track resolutions',
+      icon: ExclamationTriangleIcon,
+      color: 'text-red-600',
+      bgColor: 'bg-red-100'
+    }
+  ];
+
+  // Handlers for different entry types
+  const handleEntryTypeSelect = (type: string) => {
+    setShowEntryTypeModal(false);
+    switch (type) {
+      case 'experiment':
+        setShowExperimentForm(true);
+        break;
+      case 'idea':
+        setShowIdeaForm(true);
+        break;
+      case 'inventory':
+        setShowInventoryForm(true);
+        break;
+      case 'sample_management':
+        setShowSampleManagementForm(true);
+        break;
+      case 'equipment_booking':
+        setShowEquipmentBookingForm(true);
+        break;
+      case 'results':
+        setShowResultsForm(true);
+        break;
+      case 'meeting':
+        setShowMeetingForm(true);
+        break;
+      case 'problem':
+        setShowProblemForm(true);
+        break;
+      default:
+        setShowNewEntryModal(true);
+    }
+  };
+
+  const fetchEntries = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      console.log('🔍 Fetching lab entries, token:', token ? 'exists' : 'missing');
+      if (!token) {
+        console.log('No auth token found, using mock data');
+        // Use mock data if no token
     const mockEntries: LabNotebookEntry[] = [
       {
         id: '1',
-        title: 'Protein Purification Protocol',
-        content: 'Developed a new protocol for purifying recombinant proteins using affinity chromatography.',
-        entry_type: 'protocol',
+            title: 'Sample Experiment',
+            content: 'This is a sample experiment entry.',
+            entry_type: 'experiment',
         status: 'completed',
-        priority: 'high',
-        objectives: 'Purify recombinant GFP protein',
-        methodology: 'Ni-NTA affinity chromatography',
-        results: '95% purity achieved',
-        conclusions: 'Protocol is effective and reproducible',
-        next_steps: 'Scale up for production',
+            priority: 'medium',
+            objectives: 'Test the system',
+            methodology: 'Basic testing',
+            results: 'System working',
+            conclusions: 'All good',
+            next_steps: 'Continue testing',
         lab_id: 'lab1',
         lab_name: 'Main Lab',
-        creator_name: 'Dr. Smith',
-        created_at: '2024-01-15T10:00:00Z',
-        updated_at: '2024-01-15T10:00:00Z',
-        tags: ['protein', 'purification', 'chromatography'],
+            creator_name: 'Test User',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            tags: ['test', 'sample'],
         privacy_level: 'lab',
-        estimated_duration: 4,
-        actual_duration: 3.5,
-        cost: 150,
-        equipment_used: ['centrifuge', 'chromatography column'],
-        materials_used: ['Ni-NTA resin', 'buffer solutions'],
-        safety_notes: 'Wear gloves when handling chemicals',
-        references: ['Nature Methods 2023'],
-        collaborators: ['Dr. Johnson']
-      },
-      {
-        id: '2',
-        title: 'Cell Viability Assay',
-        content: 'Testing the effect of new compound on cancer cell viability.',
+            estimated_duration: 60,
+            actual_duration: 45,
+            cost: 0,
+            equipment_used: [],
+            materials_used: [],
+            safety_notes: '',
+            references: [],
+            collaborators: []
+          }
+        ];
+        setEntries(mockEntries);
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks?lab_id=lab1`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      console.log('📝 Lab entries API response status:', response.status);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📝 Lab entries data received:', data);
+        setEntries(data.entries || data || []);
+      } else {
+        console.log('API request failed, using mock data');
+        // Use mock data if API fails
+        const mockEntries: LabNotebookEntry[] = [
+          {
+            id: '1',
+            title: 'Sample Experiment',
+            content: 'This is a sample experiment entry.',
         entry_type: 'experiment',
-        status: 'in_progress',
+            status: 'completed',
         priority: 'medium',
-        objectives: 'Determine IC50 of compound X',
-        methodology: 'MTT assay',
-        results: 'Preliminary data shows 60% viability at 10μM',
-        conclusions: 'Compound shows promising activity',
-        next_steps: 'Complete dose-response curve',
+            objectives: 'Test the system',
+            methodology: 'Basic testing',
+            results: 'System working',
+            conclusions: 'All good',
+            next_steps: 'Continue testing',
         lab_id: 'lab1',
         lab_name: 'Main Lab',
-        creator_name: 'Dr. Smith',
-        created_at: '2024-01-14T14:30:00Z',
-        updated_at: '2024-01-14T14:30:00Z',
-        tags: ['cell', 'viability', 'cancer'],
+            creator_name: 'Test User',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            tags: ['test', 'sample'],
         privacy_level: 'lab',
-        estimated_duration: 2,
-        actual_duration: 1.5,
-        cost: 75,
-        equipment_used: ['plate reader', 'incubator'],
-        materials_used: ['MTT reagent', 'cell culture media'],
-        safety_notes: 'Work in biosafety cabinet',
-        references: ['Cancer Research 2023'],
+            estimated_duration: 60,
+            actual_duration: 45,
+            cost: 0,
+            equipment_used: [],
+            materials_used: [],
+            safety_notes: '',
+            references: [],
         collaborators: []
       }
     ];
+        setEntries(mockEntries);
+      }
+    } catch (error) {
+      console.error('Error fetching entries:', error);
+      // Use mock data on error
+      const mockEntries: LabNotebookEntry[] = [
+      {
+        id: '1',
+          title: 'Sample Experiment',
+          content: 'This is a sample experiment entry.',
+          entry_type: 'experiment',
+          status: 'completed',
+          priority: 'medium',
+          objectives: 'Test the system',
+          methodology: 'Basic testing',
+          results: 'System working',
+          conclusions: 'All good',
+          next_steps: 'Continue testing',
+          lab_id: 'lab1',
+          lab_name: 'Main Lab',
+          creator_name: 'Test User',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          tags: ['test', 'sample'],
+          privacy_level: 'lab',
+          estimated_duration: 60,
+          actual_duration: 45,
+          cost: 0,
+          equipment_used: [],
+          materials_used: [],
+          safety_notes: '',
+          references: [],
+          collaborators: []
+        }
+      ];
+      setEntries(mockEntries);
+    }
+  };
 
-    // Mock quick notes
+  // Fetch quick notes from API
+  const fetchQuickNotes = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      console.log('🔍 Fetching quick notes, token:', token ? 'exists' : 'missing');
+      if (!token) {
+        console.log('No auth token found, using mock data for quick notes');
+        // Use mock data if no token
     const mockQuickNotes: QuickNote[] = [
       {
         id: '1',
-        content: 'Order more MTT reagent for next week',
+            content: 'Remember to check the incubator temperature',
         color: 'yellow',
-        created_at: '2024-01-15T09:00:00Z'
+            created_at: new Date().toISOString()
       },
       {
         id: '2',
-        content: 'Check centrifuge calibration',
+            content: 'Order more pipette tips for next week',
         color: 'blue',
-        created_at: '2024-01-15T08:30:00Z'
-      },
-      {
-        id: '3',
-        content: 'Schedule lab meeting for Friday',
-        color: 'green',
-        created_at: '2024-01-15T08:00:00Z'
+            created_at: new Date(Date.now() - 86400000).toISOString()
+          }
+        ];
+        setQuickNotes(mockQuickNotes);
+        return;
       }
-    ];
 
-    // Mock recent activity
-    const mockRecentActivity: RecentActivity[] = [
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/quick-notes`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      console.log('📝 Quick notes API response status:', response.status);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📝 Quick notes data received:', data);
+        setQuickNotes(data || []);
+      } else {
+        console.log('API request failed, using mock data for quick notes');
+        // Use mock data if API fails
+        const mockQuickNotes: QuickNote[] = [
       {
         id: '1',
-        type: 'entry_created',
-        description: 'Created new experiment entry',
-        user_name: 'Dr. Smith',
-        timestamp: '2024-01-15T10:00:00Z',
-        icon: BeakerIcon,
-        color: 'text-blue-600'
+            content: 'Remember to check the incubator temperature',
+            color: 'yellow',
+            created_at: new Date().toISOString()
       },
       {
         id: '2',
-        type: 'experiment_completed',
-        description: 'Completed protein purification protocol',
-        user_name: 'Dr. Smith',
-        timestamp: '2024-01-15T09:30:00Z',
-        icon: CheckCircleIcon,
-        color: 'text-green-600'
-      },
-      {
-        id: '3',
-        type: 'collaboration_added',
-        description: 'Added Dr. Johnson as collaborator',
-        user_name: 'Dr. Smith',
-        timestamp: '2024-01-15T09:00:00Z',
-        icon: UsersIcon,
-        color: 'text-purple-600'
+            content: 'Order more pipette tips for next week',
+            color: 'blue',
+            created_at: new Date(Date.now() - 86400000).toISOString()
+          }
+        ];
+        setQuickNotes(mockQuickNotes);
       }
-    ];
-
-    // Mock smart suggestions
-    const mockSmartSuggestions: SmartSuggestion[] = [
+    } catch (error) {
+      console.error('Error fetching quick notes:', error);
+      // Use mock data on error
+      const mockQuickNotes: QuickNote[] = [
       {
         id: '1',
-        type: 'protocol',
-        title: 'Optimize Protein Purification',
-        description: 'Consider using gradient elution for better separation',
-        confidence: 85,
-        priority: 'high'
+          content: 'Remember to check the incubator temperature',
+          color: 'yellow',
+          created_at: new Date().toISOString()
       },
       {
         id: '2',
-        type: 'equipment',
-        title: 'Equipment Maintenance Due',
-        description: 'Centrifuge calibration is due next week',
-        confidence: 95,
-        priority: 'medium'
-      },
-      {
-        id: '3',
-        type: 'collaboration',
-        title: 'Potential Collaboration',
-        description: 'Dr. Johnson has similar research interests',
-        confidence: 75,
-        priority: 'low'
-      }
-    ];
-
-    setEntries(mockEntries);
+          content: 'Order more pipette tips for next week',
+          color: 'blue',
+          created_at: new Date(Date.now() - 86400000).toISOString()
+        }
+      ];
     setQuickNotes(mockQuickNotes);
-    setRecentActivity(mockRecentActivity);
-    setSmartSuggestions(mockSmartSuggestions);
+    }
+  };
+
+  const handleFormSubmit = async (data: any, type: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+      
+      // Convert form data to lab notebook entry format
+      const entryData = {
+        title: data.title,
+        content: data.description || data.content || '',
+        entry_type: type,
+        status: 'completed',
+        priority: 'medium',
+        objectives: data.objectives || '',
+        methodology: data.methodology || '',
+        results: data.results || data.conclusions || '',
+        conclusions: data.conclusions || '',
+        next_steps: data.next_steps || '',
+        lab_id: data.lab_id || 'lab1',
+        lab_name: 'Main Lab',
+        creator_name: user?.username || 'Unknown',
+        tags: data.tags || [],
+        privacy_level: data.privacy_level || 'lab',
+        estimated_duration: data.estimated_duration || 0,
+        actual_duration: 0,
+        cost: data.cost || 0,
+        equipment_used: data.equipment || [],
+        materials_used: data.materials || [],
+        safety_notes: data.safety_notes || '',
+        references: data.references || [],
+        collaborators: data.collaborators || []
+      };
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(entryData)
+      });
+
+      if (response.ok) {
+        // Close the form
+        switch (type) {
+          case 'experiment':
+            setShowExperimentForm(false);
+            break;
+          case 'idea':
+            setShowIdeaForm(false);
+            break;
+          case 'inventory':
+            setShowInventoryForm(false);
+            break;
+          case 'equipment_booking':
+            setShowEquipmentBookingForm(false);
+            break;
+          case 'results':
+            setShowResultsForm(false);
+            break;
+          case 'meeting':
+            setShowMeetingForm(false);
+            break;
+          case 'problem':
+            setShowProblemForm(false);
+            break;
+        }
+        // Refresh entries
+        fetchEntries();
+      } else {
+        console.error('Failed to create entry');
+      }
+    } catch (error) {
+      console.error('Error creating entry:', error);
+    }
+  };
+
+  // Load data
+  useEffect(() => {
+    fetchEntries();
+    fetchQuickNotes();
   }, []);
+
+  // Handle view entry
+  const handleViewEntry = (entry: LabNotebookEntry) => {
+    setSelectedEntry(entry);
+    setShowViewModal(true);
+  };
+
+  // Handle edit entry
+  const handleEditEntry = (entry: LabNotebookEntry) => {
+    setSelectedEntry(entry);
+    setShowEditModal(true);
+  };
+
+  // Handle delete entry
+  const handleDeleteEntry = async (entryId: string) => {
+    if (window.confirm('Are you sure you want to delete this entry?')) {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          console.error('No auth token found');
+          return;
+        }
+
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks/${entryId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          setEntries(prev => prev.filter(entry => entry.id !== entryId));
+        } else {
+          console.error('Failed to delete entry');
+          // Fallback to local state if API fails
+          setEntries(prev => prev.filter(entry => entry.id !== entryId));
+        }
+      } catch (error) {
+        console.error('Error deleting entry:', error);
+        // Fallback to local state if API fails
+        setEntries(prev => prev.filter(entry => entry.id !== entryId));
+      }
+    }
+  };
 
   // Filtered and sorted entries
   const filteredEntries = useMemo(() => {
+    if (!Array.isArray(entries)) {
+      return [];
+    }
     let filtered = entries.filter(entry => {
       const matchesSearch = entry.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            entry.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -399,16 +706,16 @@ const LabNotebookPage: React.FC = () => {
         collaborators: entryForm.collaborators
       };
       setEntries(prev => [newEntry, ...prev]);
-      setEntryForm({
-        title: '',
-        content: '',
+        setEntryForm({
+          title: '',
+          content: '',
         entry_type: 'experiment',
         status: 'planning',
         priority: 'medium',
         objectives: '',
         methodology: '',
-        results: '',
-        conclusions: '',
+          results: '',
+          conclusions: '',
         next_steps: '',
         lab_id: 'lab1',
         lab_name: 'Main Lab',
@@ -428,8 +735,38 @@ const LabNotebookPage: React.FC = () => {
     }
   };
 
-  const handleCreateQuickNote = () => {
+  const handleCreateQuickNote = async () => {
     if (quickNoteForm.content.trim()) {
+      try {
+        const token = localStorage.getItem('authToken');
+        console.log('📝 Creating quick note, token:', token ? 'exists' : 'missing');
+        if (!token) {
+          console.error('No auth token found');
+          return;
+        }
+
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/quick-notes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            content: quickNoteForm.content.trim(),
+            color: quickNoteForm.color
+          })
+        });
+
+        console.log('📝 Create quick note response status:', response.status);
+        if (response.ok) {
+          const newNote = await response.json();
+          console.log('📝 Quick note created successfully:', newNote);
+          setQuickNotes(prev => [newNote, ...prev]);
+          setQuickNoteForm({ content: '', color: 'yellow' });
+          setShowQuickNoteModal(false);
+        } else {
+          console.error('Failed to create quick note');
+          // Fallback to local state if API fails
       const newNote: QuickNote = {
         id: Date.now().toString(),
         content: quickNoteForm.content,
@@ -439,22 +776,36 @@ const LabNotebookPage: React.FC = () => {
       setQuickNotes(prev => [newNote, ...prev]);
       setQuickNoteForm({ content: '', color: 'yellow' });
       setShowQuickNoteModal(false);
+        }
+      } catch (error) {
+        console.error('Error creating quick note:', error);
+        // Fallback to local state if API fails
+        const newNote: QuickNote = {
+          id: Date.now().toString(),
+          content: quickNoteForm.content,
+          color: quickNoteForm.color,
+          created_at: new Date().toISOString()
+        };
+        setQuickNotes(prev => [newNote, ...prev]);
+        setQuickNoteForm({ content: '', color: 'yellow' });
+        setShowQuickNoteModal(false);
+      }
     }
   };
 
-  return (
+    return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+      {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
+      <div className="flex items-center justify-between">
+        <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
                 <BookOpenIcon className="h-8 w-8 text-blue-600" />
                 Lab Notebook
               </h1>
               <p className="text-gray-600 mt-2">Your digital research companion</p>
-            </div>
+        </div>
             <div className="flex gap-3">
               <Button
                 onClick={() => setShowQuickNoteModal(true)}
@@ -463,59 +814,13 @@ const LabNotebookPage: React.FC = () => {
                 <PencilIcon className="h-4 w-4 mr-2" />
                 Quick Note
               </Button>
-              <Button
-                onClick={() => setShowNewEntryModal(true)}
-                className="bg-slate-800 hover:bg-slate-700 text-white"
-              >
-                <PlusIcon className="h-4 w-4 mr-2" />
-                New Entry
-              </Button>
-            </div>
           </div>
-        </div>
-
-        {/* View Toggle */}
-        <div className="mb-6">
-          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
-            <button
-              onClick={() => setActiveView('overview')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeView === 'overview'
-                  ? 'bg-yellow-500 text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <HomeIcon className="h-4 w-4 mr-2 inline" />
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveView('entries')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeView === 'entries'
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <DocumentTextIcon className="h-4 w-4 mr-2 inline" />
-              Entries
-            </button>
-            <button
-              onClick={() => setActiveView('tools')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeView === 'tools'
-                  ? 'bg-yellow-500 text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <CogIcon className="h-4 w-4 mr-2 inline" />
-              Tools
-            </button>
           </div>
-        </div>
+          </div>
 
-        {/* Overview View */}
-        {activeView === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* Quick Notes, Recent Activity, and Smart Suggestions */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* Quick Notes */}
             <Card>
               <CardHeader>
@@ -540,9 +845,9 @@ const LabNotebookPage: React.FC = () => {
                       <p className="text-xs text-gray-500 mt-1">
                         {new Date(note.created_at).toLocaleDateString()}
                       </p>
-                    </div>
+              </div>
                   ))}
-                </div>
+              </div>
               </CardContent>
             </Card>
 
@@ -566,11 +871,11 @@ const LabNotebookPage: React.FC = () => {
                           <p className="text-xs text-gray-500">
                             {activity.user_name} • {new Date(activity.timestamp).toLocaleDateString()}
                           </p>
-                        </div>
-                      </div>
+              </div>
+              </div>
                     );
                   })}
-                </div>
+            </div>
               </CardContent>
             </Card>
 
@@ -590,11 +895,11 @@ const LabNotebookPage: React.FC = () => {
                         <div className="flex-1">
                           <h4 className="text-sm font-medium text-gray-900">{suggestion.title}</h4>
                           <p className="text-xs text-gray-600 mt-1">{suggestion.description}</p>
-                        </div>
+              </div>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSuggestionPriorityColor(suggestion.priority)}`}>
                           {suggestion.priority}
-                        </span>
-                      </div>
+              </span>
+            </div>
                       <div className="mt-2">
                         <div className="flex items-center gap-2">
                           <div className="flex-1 bg-gray-200 rounded-full h-2">
@@ -606,17 +911,50 @@ const LabNotebookPage: React.FC = () => {
                           <span className="text-xs text-gray-500">{suggestion.confidence}%</span>
                         </div>
                       </div>
+          </div>
+        ))}
+      </div>
+              </CardContent>
+            </Card>
+        </div>
+
+        {/* Entry Type Selection Section */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <SparklesIcon className="h-5 w-5 text-blue-600" />
+              Quick Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {entryTypes.map((type) => {
+                const IconComponent = type.icon;
+                return (
+                  <div
+                    key={type.id}
+                    onClick={() => handleEntryTypeSelect(type.id)}
+                    className={`p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-md transition-all duration-200 ${type.bgColor} group`}
+                  >
+                    <div className="flex items-center mb-2">
+                      <IconComponent className={`w-6 h-6 ${type.color} mr-2 group-hover:scale-110 transition-transform`} />
+                      <h3 className="text-sm font-semibold text-gray-900">{type.name}</h3>
                     </div>
-                  ))}
+                    <p className="text-xs text-gray-600">{type.description}</p>
+                  </div>
+                );
+              })}
                 </div>
               </CardContent>
             </Card>
-          </div>
-        )}
 
-        {/* Entries View */}
-        {activeView === 'entries' && (
+        {/* Lab Notebook Entries */}
           <div className="space-y-6">
+          {/* Header */}
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Lab Notebook Entries</h2>
+          </div>
+
             {/* Search and Filters */}
             <Card>
               <CardContent className="pt-6">
@@ -627,8 +965,8 @@ const LabNotebookPage: React.FC = () => {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full"
-                    />
-                  </div>
+                  />
+                </div>
                   <Select
                     value={filterType}
                     onChange={(e) => setFilterType(e.target.value)}
@@ -688,8 +1026,8 @@ const LabNotebookPage: React.FC = () => {
                             <ClockIcon className="h-4 w-4" />
                             {new Date(entry.created_at).toLocaleDateString()}
                           </span>
-                        </div>
-                        
+              </div>
+
                         {/* Workflow Integration Actions */}
                         <div className="mt-4 pt-4 border-t border-gray-100">
                           <div className="flex items-center gap-2 text-sm">
@@ -698,11 +1036,11 @@ const LabNotebookPage: React.FC = () => {
                               <BeakerIcon className="h-4 w-4" />
                               Protocols
                             </Link>
-                            <Link to="/inventory" className="flex items-center gap-1 text-green-600 hover:text-green-800">
+                            <Link to="/lab-management" className="flex items-center gap-1 text-green-600 hover:text-green-800">
                               <ClipboardListIcon className="h-4 w-4" />
                               Inventory
                             </Link>
-                            <Link to="/instruments" className="flex items-center gap-1 text-purple-600 hover:text-purple-800">
+                            <Link to="/lab-management" className="flex items-center gap-1 text-purple-600 hover:text-purple-800">
                               <CalendarDaysIcon className="h-4 w-4" />
                               Book Equipment
                             </Link>
@@ -710,17 +1048,33 @@ const LabNotebookPage: React.FC = () => {
                               <ChartBarIcon className="h-4 w-4" />
                               Add Results
                             </Link>
-                          </div>
-                        </div>
-                      </div>
+                </div>
+                </div>
+              </div>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleViewEntry(entry)}
+                          title="View Entry"
+                        >
                           <EyeIcon className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleEditEntry(entry)}
+                          title="Edit Entry"
+                        >
                           <EditIcon className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteEntry(entry.id)}
+                          title="Delete Entry"
+                        >
                           <TrashIcon className="h-4 w-4" />
                         </Button>
                       </div>
@@ -730,72 +1084,102 @@ const LabNotebookPage: React.FC = () => {
               ))}
             </div>
           </div>
-        )}
 
-        {/* Tools View */}
-        {activeView === 'tools' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <BeakerIcon className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Experiment Tracker</h3>
-                  <p className="text-gray-600 text-sm">Track your experiments and their progress</p>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Entry Type Selection Modal */}
+        {showEntryTypeModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Choose Entry Type</h2>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowEntryTypeModal(false)}
+                  >
+                    <XMarkIcon className="h-4 w-4" />
+                  </Button>
+              </div>
 
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <ChartBarIcon className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Data Analysis</h3>
-                  <p className="text-gray-600 text-sm">Analyze your research data</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <UsersIcon className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Collaboration</h3>
-                  <p className="text-gray-600 text-sm">Manage team collaborations</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <CalendarIcon className="h-12 w-12 text-orange-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Schedule</h3>
-                  <p className="text-gray-600 text-sm">Manage your research schedule</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <DocumentTextIcon className="h-12 w-12 text-indigo-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Protocols</h3>
-                  <p className="text-gray-600 text-sm">Access and manage protocols</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <BellIcon className="h-12 w-12 text-red-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Notifications</h3>
-                  <p className="text-gray-600 text-sm">Stay updated with alerts</p>
-                </div>
-              </CardContent>
-            </Card>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {entryTypes.map((type) => {
+                    const IconComponent = type.icon;
+                    return (
+                      <div
+                        key={type.id}
+                        onClick={() => handleEntryTypeSelect(type.id)}
+                        className={`p-6 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-md transition-all duration-200 ${type.bgColor}`}
+                      >
+                        <div className="flex items-center mb-3">
+                          <IconComponent className={`w-8 h-8 ${type.color} mr-3`} />
+                          <h3 className="text-lg font-semibold text-gray-900">{type.name}</h3>
+              </div>
+                        <p className="text-sm text-gray-600">{type.description}</p>
+                  </div>
+                    );
+                  })}
+              </div>
+              </div>
           </div>
+        </div>
+      )}
+
+        {/* Form Modals */}
+        {showExperimentForm && (
+          <ExperimentForm
+            onSubmit={(data) => handleFormSubmit(data, 'experiment')}
+            onCancel={() => setShowExperimentForm(false)}
+          />
         )}
+
+        {showIdeaForm && (
+          <IdeaForm
+            onSubmit={(data) => handleFormSubmit(data, 'idea')}
+            onCancel={() => setShowIdeaForm(false)}
+          />
+        )}
+
+        {showInventoryForm && (
+          <InventoryForm
+            onSubmit={(data) => handleFormSubmit(data, 'inventory')}
+            onCancel={() => setShowInventoryForm(false)}
+          />
+        )}
+
+        {showSampleManagementForm && (
+          <SampleManagementForm
+            onSubmit={(data) => handleFormSubmit(data, 'sample_management')}
+            onCancel={() => setShowSampleManagementForm(false)}
+          />
+        )}
+
+        {showEquipmentBookingForm && (
+          <EquipmentBookingForm
+            onSubmit={(data) => handleFormSubmit(data, 'equipment_booking')}
+            onCancel={() => setShowEquipmentBookingForm(false)}
+          />
+        )}
+
+        {showResultsForm && (
+          <ResultsForm
+            onSubmit={(data) => handleFormSubmit(data, 'results')}
+            onCancel={() => setShowResultsForm(false)}
+          />
+        )}
+
+        {showMeetingForm && (
+          <MeetingForm
+            onSubmit={(data) => handleFormSubmit(data, 'meeting')}
+            onCancel={() => setShowMeetingForm(false)}
+          />
+        )}
+
+        {showProblemForm && (
+          <ProblemForm
+            onSubmit={(data) => handleFormSubmit(data, 'problem')}
+            onCancel={() => setShowProblemForm(false)}
+          />
+      )}
 
         {/* New Entry Modal */}
         {showNewEntryModal && (
@@ -814,31 +1198,31 @@ const LabNotebookPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <div>
+                <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
                     <Input
-                      value={entryForm.title}
+                    value={entryForm.title}
                       onChange={(e) => setEntryForm(prev => ({ ...prev, title: e.target.value }))}
                       placeholder="Enter entry title..."
                       className="w-full"
                     />
-                  </div>
+              </div>
 
-                  <div>
+              <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Content</label>
-                    <textarea
-                      value={entryForm.content}
+                <textarea
+                  value={entryForm.content}
                       onChange={(e) => setEntryForm(prev => ({ ...prev, content: e.target.value }))}
                       placeholder="Enter entry content..."
                       className="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
+                />
+              </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
+                <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
                       <Select
-                        value={entryForm.entry_type}
+                    value={entryForm.entry_type}
                         onChange={(e) => setEntryForm(prev => ({ ...prev, entry_type: e.target.value as any }))}
                         className="w-full"
                       >
@@ -849,9 +1233,9 @@ const LabNotebookPage: React.FC = () => {
                         <option value="idea">Idea</option>
                         <option value="meeting">Meeting</option>
                       </Select>
-                    </div>
+              </div>
 
-                    <div>
+              <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
                       <Select
                         value={entryForm.status}
@@ -864,15 +1248,15 @@ const LabNotebookPage: React.FC = () => {
                         <option value="on_hold">On Hold</option>
                         <option value="failed">Failed</option>
                       </Select>
-                    </div>
                   </div>
+              </div>
 
                   <div className="flex justify-end gap-3 pt-4">
                     <Button
                       variant="outline"
                       onClick={() => setShowNewEntryModal(false)}
-                    >
-                      Cancel
+                >
+                  Cancel
                     </Button>
                     <Button
                       onClick={handleCreateEntry}
@@ -881,19 +1265,19 @@ const LabNotebookPage: React.FC = () => {
                       <SaveIcon className="h-4 w-4 mr-2" />
                       Create Entry
                     </Button>
-                  </div>
+              </div>
                 </div>
               </div>
-            </div>
           </div>
-        )}
+        </div>
+      )}
 
         {/* Quick Note Modal */}
         {showQuickNoteModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg max-w-md w-full">
               <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-semibold text-gray-900">Quick Note</h2>
                   <Button
                     variant="outline"
@@ -902,10 +1286,10 @@ const LabNotebookPage: React.FC = () => {
                   >
                     <XMarkIcon className="h-4 w-4" />
                   </Button>
-                </div>
+            </div>
 
                 <div className="space-y-4">
-                  <div>
+                <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Note</label>
                     <textarea
                       value={quickNoteForm.content}
@@ -913,7 +1297,7 @@ const LabNotebookPage: React.FC = () => {
                       placeholder="Enter your quick note..."
                       className="w-full h-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                  </div>
+                </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
@@ -949,12 +1333,268 @@ const LabNotebookPage: React.FC = () => {
                       <SaveIcon className="h-4 w-4 mr-2" />
                       Save Note
                     </Button>
-                  </div>
-                </div>
+                        </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
+
+      {/* View Entry Modal */}
+      {showViewModal && selectedEntry && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-semibold text-gray-900">{selectedEntry.title}</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowViewModal(false)}
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Entry Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Type</label>
+                      <p className="text-sm text-gray-900">{selectedEntry.entry_type}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Status</label>
+                      <p className="text-sm text-gray-900">{selectedEntry.status}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Priority</label>
+                      <p className="text-sm text-gray-900">{selectedEntry.priority}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Created</label>
+                      <p className="text-sm text-gray-900">{new Date(selectedEntry.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedEntry.content && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Content</h3>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedEntry.content}</p>
+                  </div>
+                )}
+
+                {selectedEntry.objectives && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Objectives</h3>
+                    <p className="text-sm text-gray-700">{selectedEntry.objectives}</p>
+                  </div>
+                )}
+
+                {selectedEntry.results && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Results</h3>
+                    <p className="text-sm text-gray-700">{selectedEntry.results}</p>
+                  </div>
+                )}
+
+                {selectedEntry.conclusions && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Conclusions</h3>
+                    <p className="text-sm text-gray-700">{selectedEntry.conclusions}</p>
+                  </div>
+                )}
+
+                {selectedEntry.tags && selectedEntry.tags.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Tags</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedEntry.tags.map((tag, index) => (
+                        <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowViewModal(false)}
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowViewModal(false);
+                    handleEditEntry(selectedEntry);
+                  }}
+                >
+                  Edit Entry
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Entry Modal */}
+      {showEditModal && selectedEntry && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-semibold text-gray-900">Edit Entry</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowEditModal(false)}
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                  <Input
+                    value={selectedEntry.title}
+                    onChange={(e) => setSelectedEntry(prev => prev ? { ...prev, title: e.target.value } : null)}
+                    placeholder="Entry title"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Content</label>
+                  <textarea
+                    value={selectedEntry.content || ''}
+                    onChange={(e) => setSelectedEntry(prev => prev ? { ...prev, content: e.target.value } : null)}
+                    placeholder="Entry content"
+                    className="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <Select
+                      value={selectedEntry.status}
+                      onChange={(e) => setSelectedEntry(prev => prev ? { ...prev, status: e.target.value } : null)}
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="completed">Completed</option>
+                      <option value="archived">Archived</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                    <Select
+                      value={selectedEntry.priority}
+                      onChange={(e) => setSelectedEntry(prev => prev ? { ...prev, priority: e.target.value } : null)}
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Objectives</label>
+                  <textarea
+                    value={selectedEntry.objectives || ''}
+                    onChange={(e) => setSelectedEntry(prev => prev ? { ...prev, objectives: e.target.value } : null)}
+                    placeholder="Entry objectives"
+                    className="w-full h-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Results</label>
+                  <textarea
+                    value={selectedEntry.results || ''}
+                    onChange={(e) => setSelectedEntry(prev => prev ? { ...prev, results: e.target.value } : null)}
+                    placeholder="Entry results"
+                    className="w-full h-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Conclusions</label>
+                  <textarea
+                    value={selectedEntry.conclusions || ''}
+                    onChange={(e) => setSelectedEntry(prev => prev ? { ...prev, conclusions: e.target.value } : null)}
+                    placeholder="Entry conclusions"
+                    className="w-full h-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowEditModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (selectedEntry) {
+                      try {
+                        const token = localStorage.getItem('authToken');
+                        if (!token) {
+                          console.error('No auth token found');
+                          return;
+                        }
+
+                        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks/${selectedEntry.id}`, {
+                          method: 'PUT',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                          },
+                          body: JSON.stringify({
+                            title: selectedEntry.title,
+                            content: selectedEntry.content,
+                            status: selectedEntry.status,
+                            priority: selectedEntry.priority,
+                            objectives: selectedEntry.objectives,
+                            results: selectedEntry.results,
+                            conclusions: selectedEntry.conclusions
+                          })
+                        });
+
+                        if (response.ok) {
+                          const updatedEntry = await response.json();
+                          setEntries(prev => prev.map(entry => entry.id === selectedEntry.id ? updatedEntry : entry));
+                          setShowEditModal(false);
+                        } else {
+                          console.error('Failed to update entry');
+                          // Fallback to local state if API fails
+                          setEntries(prev => prev.map(entry => entry.id === selectedEntry.id ? selectedEntry : entry));
+                          setShowEditModal(false);
+                        }
+                      } catch (error) {
+                        console.error('Error updating entry:', error);
+                        // Fallback to local state if API fails
+                        setEntries(prev => prev.map(entry => entry.id === selectedEntry.id ? selectedEntry : entry));
+                        setShowEditModal(false);
+                      }
+                    }
+                  }}
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

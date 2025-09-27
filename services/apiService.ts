@@ -425,3 +425,20 @@ export const getCurrentUser = () => {
     role: 'Principal Investigator'
   };
 };
+
+// Export all APIs as a single service
+export const apiService = {
+  auth: authAPI,
+  protocols: protocolsAPI,
+  notebook: notebookAPI,
+  inventory: inventoryAPI,
+  instruments: instrumentsAPI,
+  exchange: exchangeAPI,
+  sharedInstruments: sharedInstrumentsAPI,
+  instrumentBookings: instrumentBookingsAPI,
+  data: dataAPI,
+  team: teamAPI,
+  calculators: calculatorsAPI,
+  isAuthenticated,
+  getCurrentUser
+};

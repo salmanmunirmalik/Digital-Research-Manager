@@ -105,10 +105,7 @@ export const ROUTE_ACCESS = {
   '/lab-management': { minRole: 'student' }, // Everyone can access lab management now
   '/lab-notebook': { minRole: 'student' },
   '/protocols': { minRole: 'student' },
-  '/inventory': { minRole: 'researcher' },
-  '/instruments': { minRole: 'student' },
   '/data-results': { minRole: 'student' },
-  '/resource-exchange': { minRole: 'student' },
   '/presentations': { minRole: 'student' },
   '/data-sharing': { minRole: 'student' },
   '/help-forum': { minRole: 'student' },

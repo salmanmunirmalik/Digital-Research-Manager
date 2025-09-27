@@ -1,0 +1,38 @@
+config:
+  target: 'http://localhost:5173'
+  phases:
+    - duration: 600
+      arrivalRate: 2
+  defaults:
+    headers:
+      'Content-Type': 'application/json'
+
+scenarios:
+  - name: "Endurance Test - Long Running"
+    weight: 100
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "researcher@researchlab.com"
+            password: "researcher123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - loop:
+          - get:
+              url: "/lab-notebook"
+              headers:
+                Authorization: "Bearer {{ authToken }}"
+          - think: 5
+          - get:
+              url: "/professional-protocols"
+              headers:
+                Authorization: "Bearer {{ authToken }}"
+          - think: 5
+          - get:
+              url: "/experiment-tracker"
+              headers:
+                Authorization: "Bearer {{ authToken }}"
+          - think: 5
+        count: 20

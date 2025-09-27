@@ -6,6 +6,150 @@ export type UserStatus = 'active' | 'inactive' | 'suspended' | 'pending_verifica
 export type PrivacyLevel = 'personal' | 'lab' | 'global';
 export type DataType = 'protocol' | 'experiment' | 'inventory' | 'instrument' | 'result' | 'note' | 'attachment';
 
+// Additional missing types
+export interface ResultEntry {
+  id: string;
+  title: string;
+  description: string;
+  data: any;
+  type: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Presentation {
+  id: string;
+  title: string;
+  description: string;
+  slides: PresentationSlide[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PresentationTemplate {
+  id: string;
+  name: string;
+  description: string;
+  slides: PresentationSlide[];
+  category: string;
+}
+
+export interface PresentationSlide {
+  id: string;
+  title: string;
+  content: SlideContent;
+  layout: SlideLayout;
+  order: number;
+}
+
+export interface SlideLayout {
+  id: string;
+  name: string;
+  template: string;
+}
+
+export interface SlideContent {
+  type: 'text' | 'image' | 'chart' | 'table';
+  data: any;
+}
+
+export interface ChartData {
+  labels: string[];
+  datasets: Array<{
+    label: string;
+    data: number[];
+    backgroundColor?: string;
+    borderColor?: string;
+  }>;
+}
+
+export interface TableData {
+  headers: string[];
+  rows: string[][];
+}
+
+export interface ConferenceEvent {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  location: string;
+  url?: string;
+}
+
+export interface ResearchInterest {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface SharedData {
+  id: string;
+  title: string;
+  description: string;
+  data: any;
+  privacy_level: PrivacyLevel;
+  created_at: string;
+}
+
+export interface DataRequest {
+  id: string;
+  title: string;
+  description: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+}
+
+export interface HelpRequest {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  status: 'open' | 'resolved' | 'closed';
+  created_at: string;
+}
+
+export interface HelpResponse {
+  id: string;
+  request_id: string;
+  content: string;
+  author_id: string;
+  created_at: string;
+}
+
+export interface HelpCategory {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface HelpSolution {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  tags: string[];
+}
+
+export interface HelpAttachment {
+  id: string;
+  filename: string;
+  url: string;
+  size: number;
+}
+
+export interface PrimerPair {
+  forward: string;
+  reverse: string;
+  product_size: number;
+}
+
+export interface RestrictionResult {
+  enzyme: string;
+  cuts: number;
+  fragments: number[];
+}
+
 // Calculator Types
 export type CalculatorName = string;
 

@@ -5,8 +5,12 @@ import jwt from 'jsonwebtoken';
 import pool from '../database/config';
 import { User, UserRole, UserStatus } from '../types';
 
+// Export pool and authenticateToken for use in other modules
+export { pool };
+export { authenticateToken };
+
 const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5002;
 
 // Extend Express Request interface to include user
 declare global {
@@ -334,19 +338,39 @@ app.post('/api/labs', authenticateToken, async (req, res) => {
     // Demo mode - bypass permission checks
     // req.user is provided by the bypass middleware
 
-    const { name, description, institution, department, contact_email, contact_phone, address } = req.body;
+    const { name, description, institution, department, contact_email, contact_phone, address, website_url, research_areas, lab_type, established_year, principal_investigator } = req.body;
 
     // Validation
     if (!name || !institution || !department) {
       return res.status(400).json({ error: 'Lab name, institution, and department are required' });
     }
 
+    // Validate university email if provided
+    if (contact_email) {
+      const UniversityEmailValidator = require('./services/universityEmailValidator').default;
+      const emailValidation = UniversityEmailValidator.validateUniversityEmail(contact_email);
+      
+      if (!emailValidation.isValid) {
+        return res.status(400).json({ 
+          error: 'Please provide a valid university email address',
+          details: 'Only users with verified university email addresses can create labs'
+        });
+      }
+      
+      // Log email validation for audit
+      console.log('📧 Email validation:', {
+        email: contact_email,
+        institution: emailValidation.institution,
+        verified: emailValidation.verified
+      });
+    }
+
     // Create lab with demo user ID
     const result = await pool.query(`
-      INSERT INTO labs (name, description, institution, department, principal_researcher_id, contact_email, contact_phone, address)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO labs (name, description, institution, department, principal_researcher_id, contact_email, contact_phone, address, website_url)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
-    `, [name, description, institution, department, req.user.id, contact_email, contact_phone, address]);
+    `, [name, description, institution, department, req.user.id, contact_email, contact_phone, address, website_url]);
 
     const lab = result.rows[0];
 
@@ -356,7 +380,13 @@ app.post('/api/labs', authenticateToken, async (req, res) => {
       VALUES ($1, $2, $3, $4)
     `, [lab.id, req.user.id, 'principal_researcher', '{}']);
 
-    console.log('🏢 Lab created:', { labId: lab.id, name: lab.name, creator: req.user.username });
+    console.log('🏢 Lab created:', { 
+      labId: lab.id, 
+      name: lab.name, 
+      creator: req.user.username,
+      institution: institution,
+      email: contact_email
+    });
 
     res.status(201).json({
       message: 'Lab created successfully',
@@ -659,6 +689,20 @@ app.post('/api/protocols', authenticateToken, async (req, res) => {
     ]);
 
     const protocol = result.rows[0];
+
+    // Track activity for reference system
+    try {
+      await ActivityTracker.trackProtocolCreation(req.user.id, {
+        id: protocol.id,
+        title: title,
+        steps: content ? content.split('\n').filter((line: string) => line.trim()) : [],
+        materials: materials || [],
+        complexity: difficulty_level
+      });
+    } catch (activityError) {
+      console.error('Error tracking protocol activity:', activityError);
+      // Don't fail the main request if activity tracking fails
+    }
 
     // Create initial sharing record with the lab
     try {
@@ -1467,6 +1511,95 @@ app.get('/api/lab-notebooks/statistics', authenticateToken, async (req, res) => 
 
   } catch (error) {
     console.error('💥 Get statistics error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Quick Notes Management Routes
+app.post('/api/quick-notes', authenticateToken, async (req, res) => {
+  try {
+    const { content, color = 'yellow' } = req.body;
+    console.log('📝 Creating quick note for user:', req.user.id, 'content:', content);
+    
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ error: 'Content is required' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO quick_notes (user_id, content, color)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `, [req.user.id, content.trim(), color]);
+
+    console.log('✅ Quick note created:', result.rows[0]);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('💥 Create quick note error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/quick-notes', authenticateToken, async (req, res) => {
+  try {
+    console.log('🔍 Fetching quick notes for user:', req.user.id);
+    const result = await pool.query(`
+      SELECT * FROM quick_notes 
+      WHERE user_id = $1 
+      ORDER BY created_at DESC
+    `, [req.user.id]);
+
+    console.log('📝 Found quick notes:', result.rows.length);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('💥 Get quick notes error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/quick-notes/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content, color } = req.body;
+
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ error: 'Content is required' });
+    }
+
+    const result = await pool.query(`
+      UPDATE quick_notes 
+      SET content = $1, color = $2, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3 AND user_id = $4
+      RETURNING *
+    `, [content.trim(), color, id, req.user.id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Quick note not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('💥 Update quick note error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/quick-notes/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(`
+      DELETE FROM quick_notes 
+      WHERE id = $1 AND user_id = $2
+      RETURNING *
+    `, [id, req.user.id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Quick note not found' });
+    }
+
+    res.json({ message: 'Quick note deleted successfully' });
+  } catch (error) {
+    console.error('💥 Delete quick note error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -2674,6 +2807,20 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
 
     const result = await pool.query(query, values);
     
+    // Track activity for reference system
+    try {
+      await ActivityTracker.trackLabNotebookEntry(userId, {
+        id: result.rows[0].id,
+        title: title,
+        content: content,
+        tags: tags || [],
+        attachments: [] // Could be enhanced to track actual attachments
+      });
+    } catch (activityError) {
+      console.error('Error tracking lab notebook activity:', activityError);
+      // Don't fail the main request if activity tracking fails
+    }
+    
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Error creating lab notebook entry:', error);
@@ -2859,8 +3006,8 @@ app.get('/api/data/results', authenticateToken, async (req, res) => {
 
     let query = `
       SELECT r.*, u.username, u.first_name, u.last_name, l.name as lab_name
-      FROM results r
-      JOIN users u ON r.author_id = u.id
+      FROM research_data r
+      JOIN users u ON r.user_id = u.id
       JOIN labs l ON r.lab_id = l.id
       WHERE r.lab_id = $1
     `;
@@ -2870,7 +3017,7 @@ app.get('/api/data/results', authenticateToken, async (req, res) => {
 
     if (data_type) {
       paramCount++;
-      query += ` AND r.data_type = $${paramCount}`;
+      query += ` AND r.type = $${paramCount}`;
       queryParams.push(data_type);
     }
 
@@ -2916,8 +3063,8 @@ app.get('/api/data/results/:id', authenticateToken, async (req, res) => {
 
     const result = await pool.query(`
       SELECT r.*, u.username, u.first_name, u.last_name, l.name as lab_name
-      FROM results r
-      JOIN users u ON r.author_id = u.id
+      FROM research_data r
+      JOIN users u ON r.user_id = u.id
       JOIN labs l ON r.lab_id = l.id
       WHERE r.id = $1
     `, [id]);
@@ -2939,36 +3086,38 @@ app.post('/api/data/results', authenticateToken, async (req, res) => {
     const {
       title,
       summary,
-      data_type,
-      data_format,
-      data_content,
+      type,
+      category,
+      description,
+      methodology,
+      results,
+      conclusions,
       tags,
       privacy_level,
       lab_id,
-      project_id,
-      source,
-      notebook_entry_id
+      files,
+      metadata
     } = req.body;
 
     const userId = (req as any).user.id;
 
     // Validate required fields
-    if (!title || !summary || !data_type || !data_format || !data_content || !lab_id) {
+    if (!title || !type || !category || !lab_id) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     const result = await pool.query(`
-      INSERT INTO results (
-        title, summary, author_id, lab_id, project_id, data_type, 
-        data_format, data_content, tags, privacy_level, source, notebook_entry_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      INSERT INTO research_data (
+        title, type, category, summary, description, methodology, results, conclusions,
+        tags, privacy_level, lab_id, user_id, files, metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `, [
-      title, summary, userId, lab_id, project_id, data_type,
-      data_format, data_content, tags || [], privacy_level || 'lab', source || 'manual', notebook_entry_id
+      title, type, category, summary, description, methodology, results, conclusions,
+      tags || [], privacy_level || 'lab', lab_id, userId, files || {}, metadata || {}
     ]);
 
-    res.status(201).json({ result: result.rows[0] });
+    res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Error creating result:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -2982,18 +3131,23 @@ app.put('/api/data/results/:id', authenticateToken, async (req, res) => {
     const {
       title,
       summary,
-      data_type,
-      data_format,
-      data_content,
+      type,
+      category,
+      description,
+      methodology,
+      results,
+      conclusions,
       tags,
-      privacy_level
+      privacy_level,
+      files,
+      metadata
     } = req.body;
 
     const userId = (req as any).user.id;
 
     // Check if user owns the result or has permission
     const ownershipCheck = await pool.query(`
-      SELECT author_id, lab_id FROM results WHERE id = $1
+      SELECT user_id, lab_id FROM research_data WHERE id = $1
     `, [id]);
 
     if (ownershipCheck.rows.length === 0) {
@@ -3001,7 +3155,7 @@ app.put('/api/data/results/:id', authenticateToken, async (req, res) => {
     }
 
     const result = ownershipCheck.rows[0];
-    if (result.author_id !== userId) {
+    if (result.user_id !== userId) {
       // Check if user is lab member with edit permissions
       const labMemberCheck = await pool.query(`
         SELECT role FROM lab_members WHERE lab_id = $1 AND user_id = $2
@@ -3013,18 +3167,23 @@ app.put('/api/data/results/:id', authenticateToken, async (req, res) => {
     }
 
     const updateResult = await pool.query(`
-      UPDATE results SET
+      UPDATE research_data SET
         title = COALESCE($1, title),
         summary = COALESCE($2, summary),
-        data_type = COALESCE($3, data_type),
-        data_format = COALESCE($4, data_format),
-        data_content = JSONB_SET(data_content, '{updated_at}', to_jsonb(CURRENT_TIMESTAMP)),
-        tags = COALESCE($5, tags),
-        privacy_level = COALESCE($6, privacy_level),
+        type = COALESCE($3, type),
+        category = COALESCE($4, category),
+        description = COALESCE($5, description),
+        methodology = COALESCE($6, methodology),
+        results = COALESCE($7, results),
+        conclusions = COALESCE($8, conclusions),
+        tags = COALESCE($9, tags),
+        privacy_level = COALESCE($10, privacy_level),
+        files = COALESCE($11, files),
+        metadata = COALESCE($12, metadata),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $7
+      WHERE id = $13
       RETURNING *
-    `, [title, summary, data_type, data_format, tags, privacy_level, id]);
+    `, [title, summary, type, category, description, methodology, results, conclusions, tags, privacy_level, files, metadata, id]);
 
     res.json({ result: updateResult.rows[0] });
   } catch (error) {
@@ -3041,7 +3200,7 @@ app.delete('/api/data/results/:id', authenticateToken, async (req, res) => {
 
     // Check ownership
     const ownershipCheck = await pool.query(`
-      SELECT author_id, lab_id FROM results WHERE id = $1
+      SELECT user_id, lab_id FROM research_data WHERE id = $1
     `, [id]);
 
     if (ownershipCheck.rows.length === 0) {
@@ -3049,7 +3208,7 @@ app.delete('/api/data/results/:id', authenticateToken, async (req, res) => {
     }
 
     const result = ownershipCheck.rows[0];
-    if (result.author_id !== userId) {
+    if (result.user_id !== userId) {
       // Check if user is lab member with delete permissions
       const labMemberCheck = await pool.query(`
         SELECT role FROM lab_members WHERE lab_id = $1 AND user_id = $2
@@ -3060,7 +3219,7 @@ app.delete('/api/data/results/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    await pool.query('DELETE FROM results WHERE id = $1', [id]);
+    await pool.query('DELETE FROM research_data WHERE id = $1', [id]);
     res.json({ message: 'Result deleted successfully' });
   } catch (error) {
     console.error('Error deleting result:', error);
@@ -3526,8 +3685,402 @@ app.get('/api/researcher-portfolio/exchange/opportunities', async (req, res) => 
 
 // Import cross-entity integration routes
 import crossEntityIntegrationRoutes from './routes/crossEntityIntegration';
+import unifiedCollaborationRoutes from './routes/unifiedCollaboration';
+import experimentTrackerRoutes from './routes/experimentTracker';
+import professionalProtocolsRoutes from './routes/professionalProtocols';
+import { ActivityTracker } from './services/activityTracker';
 
 app.use('/api/cross-entity', crossEntityIntegrationRoutes);
+app.use('/api/collaboration', unifiedCollaborationRoutes);
+app.use('/api/experiments', experimentTrackerRoutes);
+app.use('/api/professional-protocols', professionalProtocolsRoutes);
+
+// ==============================================
+// INSTRUMENT MANAGEMENT API
+// ==============================================
+
+// Instrument Maintenance API
+app.post('/api/instruments/:id/maintenance', authenticateToken, async (req, res) => {
+  try {
+    const { id: instrumentId } = req.params;
+    const { 
+      type, 
+      title, 
+      description, 
+      scheduled_date, 
+      priority, 
+      assigned_to, 
+      estimated_duration, 
+      cost, 
+      parts_used, 
+      notes, 
+      checklist 
+    } = req.body;
+
+    if (!type || !title || !scheduled_date) {
+      return res.status(400).json({ error: 'Type, title, and scheduled date are required' });
+    }
+
+    // Check if instrument exists
+    const instrument = await pool.query(`
+      SELECT * FROM instruments WHERE id = $1
+    `, [instrumentId]);
+
+    if (instrument.rows.length === 0) {
+      return res.status(404).json({ error: 'Instrument not found' });
+    }
+
+    // Create maintenance record
+    const result = await pool.query(`
+      INSERT INTO instrument_maintenance (
+        instrument_id, type, title, description, scheduled_date, priority,
+        assigned_to, estimated_duration, cost, parts_used, notes, checklist,
+        status, created_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'scheduled', $13)
+      RETURNING *
+    `, [
+      instrumentId, type, title, description, scheduled_date, priority,
+      assigned_to, estimated_duration || 60, cost || 0, parts_used || [], 
+      notes, checklist || [], req.user.id
+    ]);
+
+    res.status(201).json({ maintenance: result.rows[0] });
+  } catch (error) {
+    console.error('Error creating maintenance record:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/instruments/:id/maintenance', authenticateToken, async (req, res) => {
+  try {
+    const { id: instrumentId } = req.params;
+    
+    const result = await pool.query(`
+      SELECT m.*, u.first_name, u.last_name as assigned_to_name
+      FROM instrument_maintenance m
+      LEFT JOIN users u ON m.assigned_to = u.id
+      WHERE m.instrument_id = $1
+      ORDER BY m.scheduled_date DESC
+    `, [instrumentId]);
+
+    res.json({ maintenance: result.rows });
+  } catch (error) {
+    console.error('Error fetching maintenance records:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Instrument Roster API
+app.post('/api/instruments/:id/roster', authenticateToken, async (req, res) => {
+  try {
+    const { id: instrumentId } = req.params;
+    const { 
+      user_id, 
+      role, 
+      training_level, 
+      certification_date, 
+      certification_expiry, 
+      notes 
+    } = req.body;
+
+    if (!user_id || !role) {
+      return res.status(400).json({ error: 'User ID and role are required' });
+    }
+
+    // Check if instrument exists
+    const instrument = await pool.query(`
+      SELECT * FROM instruments WHERE id = $1
+    `, [instrumentId]);
+
+    if (instrument.rows.length === 0) {
+      return res.status(404).json({ error: 'Instrument not found' });
+    }
+
+    // Create roster entry
+    const result = await pool.query(`
+      INSERT INTO instrument_rosters (
+        instrument_id, user_id, role, training_level, certification_date,
+        certification_expiry, notes, status, created_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending_approval', $8)
+      RETURNING *
+    `, [
+      instrumentId, user_id, role, training_level, certification_date,
+      certification_expiry, notes, req.user.id
+    ]);
+
+    res.status(201).json({ roster: result.rows[0] });
+  } catch (error) {
+    console.error('Error adding to roster:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/instruments/:id/roster', authenticateToken, async (req, res) => {
+  try {
+    const { id: instrumentId } = req.params;
+    
+    const result = await pool.query(`
+      SELECT r.*, u.first_name, u.last_name, u.email
+      FROM instrument_rosters r
+      JOIN users u ON r.user_id = u.id
+      WHERE r.instrument_id = $1
+      ORDER BY r.created_at DESC
+    `, [instrumentId]);
+
+    res.json({ roster: result.rows });
+  } catch (error) {
+    console.error('Error fetching roster:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Instrument Usage API
+app.post('/api/instruments/:id/usage', authenticateToken, async (req, res) => {
+  try {
+    const { id: instrumentId } = req.params;
+    const { 
+      start_time, 
+      end_time, 
+      purpose, 
+      samples_processed, 
+      notes 
+    } = req.body;
+
+    if (!start_time || !end_time || !purpose) {
+      return res.status(400).json({ error: 'Start time, end time, and purpose are required' });
+    }
+
+    // Create usage record
+    const result = await pool.query(`
+      INSERT INTO instrument_usage (
+        instrument_id, user_id, start_time, end_time, purpose,
+        samples_processed, notes
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `, [
+      instrumentId, req.user.id, start_time, end_time, purpose,
+      samples_processed || 0, notes
+    ]);
+
+    res.status(201).json({ usage: result.rows[0] });
+  } catch (error) {
+    console.error('Error recording usage:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/instruments/:id/usage', authenticateToken, async (req, res) => {
+  try {
+    const { id: instrumentId } = req.params;
+    const { start_date, end_date } = req.query;
+    
+    let query = `
+      SELECT u.*, usr.first_name, usr.last_name
+      FROM instrument_usage u
+      JOIN users usr ON u.user_id = usr.id
+      WHERE u.instrument_id = $1
+    `;
+    
+    const params = [instrumentId];
+    if (start_date) {
+      query += ` AND u.start_time >= $2`;
+      params.push(start_date as string);
+    }
+    if (end_date) {
+      query += ` AND u.end_time <= $${params.length + 1}`;
+      params.push(end_date as string);
+    }
+    
+    query += ` ORDER BY u.start_time DESC`;
+    
+    const result = await pool.query(query, params);
+    res.json({ usage: result.rows });
+  } catch (error) {
+    console.error('Error fetching usage records:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ==============================================
+// LAB MANAGEMENT QUICK ACTIONS API
+// ==============================================
+
+// Meetings API
+app.post('/api/meetings', authenticateToken, async (req, res) => {
+  try {
+    const { title, description, date, time, duration, attendees, location, agenda, lab_id } = req.body;
+
+    if (!title || !date || !time) {
+      return res.status(400).json({ error: 'Title, date, and time are required' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO meetings (title, description, scheduled_date, scheduled_time, duration_minutes, 
+                           attendees, location, agenda, lab_id, created_by, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'scheduled')
+      RETURNING *
+    `, [title, description, date, time, duration || 60, attendees || [], location, agenda, lab_id || 'demo-lab-id', req.user.id]);
+
+    res.status(201).json({ meeting: result.rows[0] });
+  } catch (error) {
+    console.error('Error creating meeting:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/meetings', authenticateToken, async (req, res) => {
+  try {
+    const { lab_id } = req.query;
+    
+    let query = `
+      SELECT m.*, u.first_name, u.last_name as creator_name
+      FROM meetings m
+      JOIN users u ON m.created_by = u.id
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    if (lab_id) {
+      query += ` AND m.lab_id = $1`;
+      params.push(lab_id);
+    }
+    
+    query += ` ORDER BY m.scheduled_date DESC, m.scheduled_time DESC`;
+    
+    const result = await pool.query(query, params);
+    res.json({ meetings: result.rows });
+  } catch (error) {
+    console.error('Error fetching meetings:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Issues API
+app.post('/api/issues', authenticateToken, async (req, res) => {
+  try {
+    const { title, description, priority, category, assigned_to, status, attachments, lab_id } = req.body;
+
+    if (!title || !description) {
+      return res.status(400).json({ error: 'Title and description are required' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO issues (title, description, priority, category, assigned_to, status, 
+                         attachments, lab_id, created_by, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+      RETURNING *
+    `, [title, description, priority || 'medium', category, assigned_to, status || 'open', 
+        attachments || [], lab_id || 'demo-lab-id', req.user.id]);
+
+    res.status(201).json({ issue: result.rows[0] });
+  } catch (error) {
+    console.error('Error creating issue:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/issues', authenticateToken, async (req, res) => {
+  try {
+    const { lab_id, status, priority } = req.query;
+    
+    let query = `
+      SELECT i.*, u.first_name, u.last_name as creator_name,
+             a.first_name as assignee_first_name, a.last_name as assignee_last_name
+      FROM issues i
+      JOIN users u ON i.created_by = u.id
+      LEFT JOIN users a ON i.assigned_to = a.id
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    let paramCount = 0;
+    
+    if (lab_id) {
+      paramCount++;
+      query += ` AND i.lab_id = $${paramCount}`;
+      params.push(lab_id);
+    }
+    
+    if (status) {
+      paramCount++;
+      query += ` AND i.status = $${paramCount}`;
+      params.push(status);
+    }
+    
+    if (priority) {
+      paramCount++;
+      query += ` AND i.priority = $${paramCount}`;
+      params.push(priority);
+    }
+    
+    query += ` ORDER BY i.created_at DESC`;
+    
+    const result = await pool.query(query, params);
+    res.json({ issues: result.rows });
+  } catch (error) {
+    console.error('Error fetching issues:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Achievements API
+app.post('/api/achievements', authenticateToken, async (req, res) => {
+  try {
+    const { title, description, category, impact_level, tags, lab_id } = req.body;
+
+    if (!title || !description) {
+      return res.status(400).json({ error: 'Title and description are required' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO achievements (title, description, category, impact_level, tags, 
+                               lab_id, created_by, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      RETURNING *
+    `, [title, description, category, impact_level || 'medium', tags || [], 
+        lab_id || 'demo-lab-id', req.user.id]);
+
+    res.status(201).json({ achievement: result.rows[0] });
+  } catch (error) {
+    console.error('Error creating achievement:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/achievements', authenticateToken, async (req, res) => {
+  try {
+    const { lab_id, category } = req.query;
+    
+    let query = `
+      SELECT a.*, u.first_name, u.last_name as creator_name
+      FROM achievements a
+      JOIN users u ON a.created_by = u.id
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    if (lab_id) {
+      query += ` AND a.lab_id = $1`;
+      params.push(lab_id);
+    }
+    
+    if (category) {
+      query += ` AND a.category = $2`;
+      params.push(category);
+    }
+    
+    query += ` ORDER BY a.created_at DESC`;
+    
+    const result = await pool.query(query, params);
+    res.json({ achievements: result.rows });
+  } catch (error) {
+    console.error('Error fetching achievements:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // Cross-Entity Analytics Endpoint
 app.get('/api/cross-entity/analytics/workflow', authenticateToken, async (req, res) => {
@@ -3609,17 +4162,14 @@ const startServer = async () => {
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
-      console.log('📱 Frontend URL: http://localhost:5173');
-      console.log('🔧 API URL: http://localhost:5001/api');
+      console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+      console.log(`🔧 API URL: http://localhost:${PORT}/api`);
       console.log('🗄️  Database: PostgreSQL');
 
       // Add researcher portfolio test route
       app.get('/api/researcher-portfolio/test', (req, res) => {
         res.json({ message: 'Researcher portfolio API is working!' });
       });
-      console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
-      console.log(`🔧 API URL: http://localhost:${PORT}/api`);
-      console.log(`🗄️  Database: PostgreSQL`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

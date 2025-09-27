@@ -56,27 +56,21 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
   const getNavItems = () => {
     const baseItems = [];
 
-    // Research Workflow - Core research activities (now the primary section)
+    // Research Workflow - Core research activities
     baseItems.push({
       title: 'Research Workflow',
       items: [
         { name: 'Lab Notebook', to: '/lab-notebook', icon: BookOpenIcon, description: 'Experiment workspace and detailed documentation' },
         { name: 'Protocols', to: '/protocols', icon: BeakerIcon, description: 'Research protocols and methods database' },
-        { name: 'Data & Results', to: '/data-results', icon: ChartBarIcon, description: 'Research data and analysis' },
-        { name: 'Research Assistant', to: '/research-assistant', icon: LightbulbIcon, description: 'AI-powered research helper' },
-        { name: 'Automated Presentations', to: '/presentations', icon: PresentationChartLineIcon, description: 'Generate presentations from research data' }
-      ],
-      isStatic: true
+        { name: 'Data & Results', to: '/data-results', icon: ChartBarIcon, description: 'Research data and analysis' }
+      ]
     });
 
     // Lab Management - Lab operations and resources
     baseItems.push({
       title: 'Lab Management',
       items: [
-        { name: 'Lab Management', to: '/lab-management', icon: BuildingOfficeIcon, description: 'Manage lab resources and operations' },
-        { name: 'Inventory', to: '/inventory', icon: ClipboardListIcon, description: 'Track reagents, supplies, and equipment' },
-        { name: 'Instruments', to: '/instruments', icon: CogIcon, description: 'Schedule and manage lab equipment' },
-        { name: 'Resource Exchange', to: '/resource-exchange', icon: UsersIcon, description: 'Share supplies and instruments across labs' }
+        { name: 'Lab Management', to: '/lab-management', icon: BuildingOfficeIcon, description: 'Manage lab resources and operations' }
       ]
     });
 
@@ -85,21 +79,8 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
       title: 'Tools & Calculators',
       items: [
         { name: 'Calculator Hub', to: '/calculator-hub', icon: CalculatorIcon, description: 'Scientific calculators and unit conversion' },
-        { name: 'Bioinformatics Tools', to: '/bioinformatics-tools', icon: BrainCircuitIcon, description: 'Bioinformatics analysis tools' },
-        { name: 'Molecular Biology', to: '/molecular-biology', icon: DnaIcon, description: 'Molecular biology tools and resources' }
-      ]
-    });
-
-    // Collaboration - Community and sharing features
-    baseItems.push({
-      title: 'Collaboration',
-      items: [
-        { name: 'Researcher Portfolio', to: '/researcher-portfolio', icon: UserIcon, description: 'AI-powered researcher portfolio and publication management' },
-        { name: 'Co-Supervisor Discovery', to: '/co-supervisor-discovery', icon: UsersIcon, description: 'Find co-supervisors and research exchange opportunities' },
-        { name: 'Data Sharing', to: '/data-sharing', icon: DatabaseIcon, description: 'Global data sharing platform' },
-        { name: 'Help Forum', to: '/help-forum', icon: QuestionMarkCircleIcon, description: 'Community help and support' },
-        { name: 'Conferences', to: '/conferences', icon: NewspaperIcon, description: 'Upcoming events and workshops' },
-        { name: 'Reference Library', to: '/reference-library', icon: BookOpenIcon, description: 'Research references and literature' }
+        { name: 'Research Assistant', to: '/research-assistant', icon: LightbulbIcon, description: 'AI-powered research help and literature search' },
+        { name: 'Automated Presentations', to: '/presentations', icon: PresentationChartLineIcon, description: 'AI-generated research presentations' }
       ]
     });
 

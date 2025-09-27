@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -10,8 +9,6 @@ import { getUserDisplayName, getRoleDisplayName } from './utils/roleAccess';
 import LabNotebookPage from './pages/LabNotebookPage';
 import LabManagementPage from './pages/LabManagementPage';
 import ProtocolsPage from './pages/ProtocolsPage';
-import InventoryPage from './pages/InventoryPage';
-import InstrumentsPage from './pages/InstrumentsPage';
 import DataResultsPage from './pages/DataResultsPage';
 import AutomatedPresentationsPage from './pages/AutomatedPresentationsPage';
 import GlobalDataSharingPage from './pages/GlobalDataSharingPage';
@@ -19,15 +16,18 @@ import HelpForumPage from './pages/HelpForumPage';
 import ConferenceNewsPage from './pages/ConferenceNewsPage';
 import CalculatorHubPage from './pages/CalculatorHubPage';
 import ReferenceLibraryPage from './pages/ReferenceLibraryPage';
-import ResourceExchangePage from './pages/ResourceExchangePage';
-import ResearcherPortfolioPage from './pages/ResearcherPortfolioPage';
-import CoSupervisorDiscoveryPage from './pages/CoSupervisorDiscoveryPage';
+import SimplifiedResearcherPortfolioPage from './pages/SimplifiedResearcherPortfolioPage';
+import MyPortfolioPage from './pages/MyPortfolioPage';
+import CollaborationNetworkingPage from './pages/CollaborationNetworkingPage';
+import EventsOpportunitiesPage from './pages/EventsOpportunitiesPage';
+import ExperimentTrackerPage from './pages/ExperimentTrackerPage';
+import ProfessionalProtocolsPage from './pages/ProfessionalProtocolsPage';
 
 import ResearchAssistantPage from './pages/ResearchAssistantPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
-import ProfilePage from './pages/ProfilePage';
+import UnifiedProfilePage from './pages/UnifiedProfilePage';
 import SettingsPage from './pages/SettingsPage';
 
 import BioinformaticsToolsPage from './pages/BioinformaticsToolsPage';
@@ -35,15 +35,14 @@ import MolecularBiologyPage from './pages/MolecularBiologyPage';
 import DataAnalyticsPage from './pages/DataAnalyticsPage';
 import LandingPage from './pages/LandingPage';
 
-// Demo Layout Component (temporary for demo)
+// Demo Layout Component with clean header navigation
 const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [showUserMenu, setShowUserMenu] = React.useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Clean Professional Header */}
+      {/* Clean Header with Collaboration Navigation */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="flex items-center justify-between h-16 px-6">
           {/* Logo and Brand */}
@@ -56,39 +55,39 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="hidden lg:flex flex-1 max-w-xl mx-8">
-            <div className="relative w-full">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Search experiments, protocols, data..."
-                className="block w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
-              />
-            </div>
+          {/* Collaboration Navigation */}
+          <div className="flex items-center space-x-6 bg-blue-50 px-4 py-2 rounded-lg">
+            <a 
+              href="/collaboration-networking" 
+              className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Networking
+            </a>
+            <a 
+              href="/events-opportunities" 
+              className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Events & Opportunities
+            </a>
+            <a 
+              href="/help-forum" 
+              className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Help Forum
+            </a>
           </div>
 
           {/* User Profile */}
           <div className="flex items-center space-x-4">
-            {/* Quick Actions */}
-            <div className="hidden md:flex items-center space-x-2">
-              <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Notifications">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M9 11h.01M9 8h.01M15 14h.01M15 11h.01M15 8h.01M15 5h.01M12 5h.01M12 2h.01" />
-                </svg>
-              </button>
-              <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Help">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </button>
-            </div>
-
-            {/* User Profile Button */}
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
@@ -113,7 +112,6 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               {/* User Dropdown Menu */}
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                  {/* User Info */}
                   <div className="px-4 py-3 border-b border-gray-100">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center">
@@ -121,29 +119,26 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                           {user?.first_name?.[0]}{user?.last_name?.[0]}
                         </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{getUserDisplayName(user)}</p>
-                        <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 mt-1">
-                          {getRoleDisplayName(user?.role || 'student')}
-                        </span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {getUserDisplayName(user)}
+                        </p>
+                        <p className="text-xs text-gray-500">{getRoleDisplayName(user?.role || 'student')}</p>
                       </div>
                     </div>
                   </div>
-
-                  {/* Menu Items */}
                   <div className="py-2">
                     <button 
                       onClick={() => {
                         setShowUserMenu(false);
-                        window.location.href = '/profile';
+                        window.location.href = '/my-portfolio';
                       }}
                       className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <svg className="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
-                      View Profile
+                      My Portfolio
                     </button>
                     <button 
                       onClick={() => {
@@ -159,11 +154,7 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       Settings
                     </button>
                   </div>
-
-                  {/* Divider */}
                   <div className="border-t border-gray-100"></div>
-
-                  {/* Logout */}
                   <div className="py-2">
                     <button
                       onClick={async () => {
@@ -189,16 +180,16 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </header>
 
-      {/* Facebook-like Layout Container */}
+      {/* Layout Container */}
       <div className="flex">
-        {/* Left Sidebar - Always visible at all screen sizes */}
+        {/* Left Sidebar */}
         <aside className="w-64 bg-white border-r border-gray-200 min-h-screen flex-shrink-0">
           <div className="h-full overflow-y-auto">
             <SideNav />
           </div>
         </aside>
 
-        {/* Main Content Area - Takes remaining space */}
+        {/* Main Content Area */}
         <main className="flex-1 bg-gray-50 min-h-screen">
           <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
             {children}
@@ -217,58 +208,19 @@ const AppContent: React.FC = () => {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/unauthorized" element={<UnauthorizedPage />} />
+      
+      {/* Redirects */}
+      <Route path="/home" element={<Navigate to="/lab-notebook" replace />} />
+      <Route path="/dashboard" element={<Navigate to="/lab-notebook" replace />} />
+      <Route path="/tasks/new" element={<Navigate to="/lab-notebook" replace />} />
+      <Route path="/team" element={<Navigate to="/lab-notebook" replace />} />
       
       {/* Protected routes */}
       <Route 
-        path="/home" 
+        path="/lab-notebook" 
         element={
           <ProtectedRoute>
-            <Navigate to="/lab-notebook" replace />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/dashboard" 
-        element={
-          <ProtectedRoute>
-            <Navigate to="/lab-notebook" replace />
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* Enhanced Cross-Entity Integration Routes */}
-          <Route
-            path="/researcher-portfolio"
-            element={
-              <ProtectedRoute>
-                <DemoLayout><ResearcherPortfolioPage /></DemoLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/co-supervisor-discovery"
-            element={
-              <ProtectedRoute>
-                <DemoLayout><CoSupervisorDiscoveryPage /></DemoLayout>
-              </ProtectedRoute>
-            }
-          />
-      
-      {/* Profile and Settings */}
-      <Route 
-        path="/profile" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><ProfilePage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/settings" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><SettingsPage /></DemoLayout>
+            <DemoLayout><LabNotebookPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
@@ -283,12 +235,23 @@ const AppContent: React.FC = () => {
         } 
       />
       
-      {/* Lab Notebook - All authenticated users */}
+      
+      {/* Experiment Tracker - All authenticated users */}
       <Route 
-        path="/lab-notebook" 
+        path="/experiment-tracker" 
         element={
           <ProtectedRoute>
-            <DemoLayout><LabNotebookPage /></DemoLayout>
+            <DemoLayout><ExperimentTrackerPage /></DemoLayout>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Professional Protocols - All authenticated users */}
+      <Route 
+        path="/professional-protocols" 
+        element={
+          <ProtectedRoute>
+            <DemoLayout><ProfessionalProtocolsPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
@@ -303,25 +266,6 @@ const AppContent: React.FC = () => {
         } 
       />
       
-      {/* Inventory - All authenticated users can view, researchers+ can manage */}
-      <Route 
-        path="/inventory" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><InventoryPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* Instruments - All authenticated users */}
-      <Route 
-        path="/instruments" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><InstrumentsPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
       
       {/* Data Results - All authenticated users */}
       <Route 
@@ -343,15 +287,6 @@ const AppContent: React.FC = () => {
         } 
       />
 
-      {/* Resource Exchange - All authenticated users */}
-      <Route 
-        path="/resource-exchange" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><ResourceExchangePage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
       <Route 
         path="/data-sharing" 
         element={
@@ -365,14 +300,6 @@ const AppContent: React.FC = () => {
         element={
           <ProtectedRoute>
             <DemoLayout><HelpForumPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/conferences" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><ConferenceNewsPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
@@ -435,49 +362,52 @@ const AppContent: React.FC = () => {
         } 
       />
 
-      {/* Quick Action Routes - All authenticated users */}
+      {/* Collaboration Routes */}
       <Route 
-        path="/protocols/new" 
+        path="/collaboration-networking" 
         element={
           <ProtectedRoute>
-            <DemoLayout><ProtocolsPage /></DemoLayout>
+            <DemoLayout><CollaborationNetworkingPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
       <Route 
-        path="/instruments/book" 
+        path="/events-opportunities" 
         element={
           <ProtectedRoute>
-            <DemoLayout><InstrumentsPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/tasks/new" 
-        element={
-          <ProtectedRoute>
-            <Navigate to="/lab-notebook" replace />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/team" 
-        element={
-          <ProtectedRoute>
-            <Navigate to="/lab-notebook" replace />
+            <DemoLayout><EventsOpportunitiesPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
 
-      {/* Catch all route - redirect to login if not authenticated */}
+      {/* Profile and Settings Routes */}
       <Route 
-        path="*" 
+        path="/profile" 
         element={
-          <ProtectedRoute fallbackPath="/login">
-            <Navigate to="/lab-notebook" replace />
+          <ProtectedRoute>
+            <DemoLayout><UnifiedProfilePage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
+      <Route 
+        path="/my-portfolio" 
+        element={
+          <ProtectedRoute>
+            <DemoLayout><MyPortfolioPage /></DemoLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/settings" 
+        element={
+          <ProtectedRoute>
+            <DemoLayout><SettingsPage /></DemoLayout>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Catch-all route */}
+      <Route path="*" element={<Navigate to="/lab-notebook" replace />} />
     </Routes>
   );
 };

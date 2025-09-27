@@ -4,8 +4,8 @@ services:
     name: digital-research-manager-api
     env: node
     plan: free
-    buildCommand: npm install && npm run build:backend
-    startCommand: npm start
+    buildCommand: pnpm install && pnpm run build:backend
+    startCommand: pnpm start
     envVars:
       - key: NODE_ENV
         value: production
@@ -23,7 +23,7 @@ services:
     name: digital-research-manager-frontend
     env: static
     plan: free
-    buildCommand: npm install && npm run build:frontend
+    buildCommand: pnpm install && pnpm run build:frontend
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL

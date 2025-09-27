@@ -1,0 +1,51 @@
+config:
+  target: 'http://localhost:5173'
+  phases:
+    - duration: 300
+      arrivalRate: 1
+  defaults:
+    headers:
+      'Content-Type': 'application/json'
+
+scenarios:
+  - name: "Stress Test - High Load"
+    weight: 50
+    flow:
+      - loop:
+          - get:
+              url: "/"
+          - think: 0.1
+          - get:
+              url: "/login"
+          - think: 0.1
+          - post:
+              url: "/api/auth/login"
+              json:
+                email: "researcher@researchlab.com"
+                password: "researcher123"
+          - think: 0.1
+        count: 100
+
+  - name: "Stress Test - API Endpoints"
+    weight: 50
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "researcher@researchlab.com"
+            password: "researcher123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - loop:
+          - get:
+              url: "/api/lab-notebooks"
+              headers:
+                Authorization: "Bearer {{ authToken }}"
+          - think: 0.05
+          - get:
+              url: "/api/professional-protocols"
+              headers:
+                Authorization: "Bearer {{ authToken }}"
+          - think: 0.05
+        count: 50

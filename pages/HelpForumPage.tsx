@@ -79,105 +79,10 @@ const HelpForumPage: React.FC = () => {
     labName: ''
   });
 
-  // Mock data for demonstration
+  // Initialize with empty data
   useEffect(() => {
-    const mockRequests: HelpRequest[] = [
-      {
-        id: '1',
-        title: 'PCR amplification not working - need help troubleshooting',
-        description: 'I\'ve been trying to amplify a 500bp fragment but getting no bands. I\'ve checked the primer design and annealing temperatures. Any suggestions?',
-        category: 'Protocol Issues',
-        urgency: 'High',
-        status: 'Open',
-        authorId: 'user1',
-        authorName: 'Dr. Sarah Chen',
-        labId: 'lab1',
-        visibility: 'Lab',
-        tags: ['PCR', 'DNA amplification', 'troubleshooting'],
-        attachments: [],
-        createdAt: new Date('2024-08-10'),
-        updatedAt: new Date('2024-08-10'),
-        responses: [
-          {
-            id: 'resp1',
-            requestId: '1',
-            authorId: 'user2',
-            authorName: 'Prof. Michael Rodriguez',
-            content: 'Have you checked the MgCl2 concentration? Sometimes the buffer concentration can affect amplification efficiency.',
-            isSolution: false,
-            upvotes: 3,
-            createdAt: new Date('2024-08-11'),
-            attachments: []
-          },
-          {
-            id: 'resp2',
-            requestId: '1',
-            authorId: 'user3',
-            authorName: 'Dr. Emily Watson',
-            content: 'I had the same issue last month. Try increasing the annealing temperature by 2-3°C and check if your template DNA is intact.',
-            isSolution: true,
-            upvotes: 7,
-            createdAt: new Date('2024-08-12'),
-            attachments: []
-          }
-        ],
-        upvotes: 5,
-        views: 23
-      },
-      {
-        id: '2',
-        title: 'Microscope calibration problem',
-        description: 'Our confocal microscope seems to be out of calibration. The images are blurry and the scale bars are incorrect.',
-        category: 'Equipment Problems',
-        urgency: 'Medium',
-        status: 'In Progress',
-        authorId: 'user4',
-        authorName: 'Dr. James Wilson',
-        labId: 'lab2',
-        visibility: 'Lab',
-        tags: ['microscopy', 'calibration', 'confocal'],
-        attachments: [],
-        createdAt: new Date('2024-08-08'),
-        updatedAt: new Date('2024-08-09'),
-        responses: [
-          {
-            id: 'resp3',
-            requestId: '2',
-            authorId: 'user5',
-            authorName: 'Lab Manager Lisa Park',
-            content: 'I\'ve contacted the service technician. They should be here tomorrow to recalibrate the system.',
-            isSolution: false,
-            upvotes: 2,
-            createdAt: new Date('2024-08-09'),
-            attachments: []
-          }
-        ],
-        upvotes: 2,
-        views: 15
-      },
-      {
-        id: '3',
-        title: 'Statistical analysis for RNA-seq data',
-        description: 'I need help choosing the right statistical test for my RNA-seq differential expression analysis. I have 3 biological replicates per condition.',
-        category: 'Data Analysis',
-        urgency: 'Medium',
-        status: 'Open',
-        authorId: 'user6',
-        authorName: 'PhD Student Alex Thompson',
-        labId: 'lab3',
-        visibility: 'Global',
-        tags: ['RNA-seq', 'statistics', 'differential expression', 'bioinformatics'],
-        attachments: [],
-        createdAt: new Date('2024-08-07'),
-        updatedAt: new Date('2024-08-07'),
-        responses: [],
-        upvotes: 1,
-        views: 8
-      }
-    ];
-
-    setHelpRequests(mockRequests);
-    setFilteredRequests(mockRequests);
+    setHelpRequests([]);
+    setFilteredRequests([]);
   }, []);
 
   // Filter and sort requests
@@ -278,141 +183,10 @@ const HelpForumPage: React.FC = () => {
 
   // Expert verification and reputation functions
   const loadExpertData = () => {
-    // Mock expert profiles
-    const mockExpertProfiles: ExpertProfile[] = [
-      {
-        id: '1',
-        userId: 'user2',
-        userName: 'Prof. Michael Rodriguez',
-        labName: 'Molecular Biology Lab',
-        institution: 'University Research Center',
-        specialties: ['PCR', 'Molecular Biology', 'DNA Analysis'],
-        verificationStatus: 'verified',
-        reputationScore: 1250,
-        totalAnswers: 45,
-        acceptedAnswers: 38,
-        upvotesReceived: 320,
-        verificationDocuments: ['PhD Certificate', 'Publication List', 'Lab Affiliation'],
-        verifiedAt: new Date('2024-01-15'),
-        verifiedBy: 'admin1'
-      },
-      {
-        id: '2',
-        userId: 'user3',
-        userName: 'Dr. Emily Watson',
-        labName: 'Cell Biology Lab',
-        institution: 'University Research Center',
-        specialties: ['Cell Culture', 'Microscopy', 'Cell Biology'],
-        verificationStatus: 'verified',
-        reputationScore: 980,
-        totalAnswers: 32,
-        acceptedAnswers: 28,
-        upvotesReceived: 245,
-        verificationDocuments: ['PhD Certificate', 'Publication List', 'Lab Affiliation'],
-        verifiedAt: new Date('2024-01-20'),
-        verifiedBy: 'admin1'
-      },
-      {
-        id: '3',
-        userId: 'user5',
-        userName: 'Lab Manager Lisa Park',
-        labName: 'Equipment Management',
-        institution: 'University Research Center',
-        specialties: ['Equipment Maintenance', 'Calibration', 'Troubleshooting'],
-        verificationStatus: 'verified',
-        reputationScore: 750,
-        totalAnswers: 28,
-        acceptedAnswers: 22,
-        upvotesReceived: 180,
-        verificationDocuments: ['Technical Certification', 'Lab Affiliation'],
-        verifiedAt: new Date('2024-02-01'),
-        verifiedBy: 'admin2'
-      },
-      {
-        id: '4',
-        userId: 'user7',
-        userName: 'Dr. Alex Chen',
-        labName: 'Bioinformatics Lab',
-        institution: 'University Research Center',
-        specialties: ['RNA-seq', 'Statistics', 'Bioinformatics'],
-        verificationStatus: 'pending',
-        reputationScore: 450,
-        totalAnswers: 15,
-        acceptedAnswers: 12,
-        upvotesReceived: 95,
-        verificationDocuments: ['PhD Certificate', 'Publication List']
-      }
-    ];
-
-    // Mock reputation transactions
-    const mockReputationTransactions: ReputationTransaction[] = [
-      {
-        id: '1',
-        userId: 'user2',
-        type: 'solution_accepted',
-        points: 50,
-        description: 'Solution accepted for PCR troubleshooting',
-        relatedId: 'resp2',
-        createdAt: new Date('2024-08-12')
-      },
-      {
-        id: '2',
-        userId: 'user2',
-        type: 'answer_upvote',
-        points: 10,
-        description: 'Answer upvoted for molecular biology question',
-        relatedId: 'resp1',
-        createdAt: new Date('2024-08-11')
-      },
-      {
-        id: '3',
-        userId: 'user3',
-        type: 'solution_accepted',
-        points: 50,
-        description: 'Solution accepted for cell culture issue',
-        relatedId: 'resp4',
-        createdAt: new Date('2024-08-10')
-      },
-      {
-        id: '4',
-        userId: 'user2',
-        type: 'expert_verification',
-        points: 200,
-        description: 'Expert verification approved',
-        relatedId: 'verify1',
-        createdAt: new Date('2024-01-15')
-      }
-    ];
-
-    // Mock verification requests
-    const mockVerificationRequests: ExpertVerificationRequest[] = [
-      {
-        id: '1',
-        userId: 'user8',
-        userName: 'Dr. Sarah Kim',
-        labName: 'Immunology Lab',
-        institution: 'University Research Center',
-        specialties: ['Immunology', 'Flow Cytometry', 'Antibody Analysis'],
-        documents: ['PhD Certificate', 'Publication List', 'Lab Affiliation'],
-        status: 'pending',
-        submittedAt: new Date('2024-08-15')
-      },
-      {
-        id: '2',
-        userId: 'user9',
-        userName: 'Dr. James Wilson',
-        labName: 'Analytical Chemistry Lab',
-        institution: 'University Research Center',
-        specialties: ['Analytical Chemistry', 'Mass Spectrometry', 'Chromatography'],
-        documents: ['PhD Certificate', 'Publication List'],
-        status: 'pending',
-        submittedAt: new Date('2024-08-14')
-      }
-    ];
-
-    setExpertProfiles(mockExpertProfiles);
-    setReputationTransactions(mockReputationTransactions);
-    setVerificationRequests(mockVerificationRequests);
+    // No mock data - start with empty arrays
+    setExpertProfiles([]);
+    setReputationTransactions([]);
+    setVerificationRequests([]);
   };
 
   const submitVerificationRequest = () => {
@@ -596,13 +370,13 @@ const HelpForumPage: React.FC = () => {
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => setShowVerificationModal(true)}
-                className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 flex items-center space-x-2"
+                className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2"
               >
                 <span>Apply for Expert Verification</span>
               </button>
               <button
                 onClick={() => setShowExpertPanel(!showExpertPanel)}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 flex items-center space-x-2"
+                className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2"
               >
                 <span>View Experts</span>
                 <span className="bg-white text-purple-600 text-xs rounded-full w-5 h-5 flex items-center justify-center">

@@ -14,7 +14,7 @@ BEGIN
 END $$;
 
 -- Apply the research dashboard schema
-\i database/research_dashboard_schema.sql
+-- Note: Schema should be applied separately
 
 -- Insert sample data for testing
 INSERT INTO research_deadlines (title, description, deadline_type, deadline_date, priority, lab_id, created_by) VALUES

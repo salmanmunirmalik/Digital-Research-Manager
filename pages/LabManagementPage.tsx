@@ -15,14 +15,46 @@ import {
   ClipboardPasteIcon,
   PackageIcon,
   FlaskConicalIcon,
-  XMarkIcon
+  XMarkIcon,
+  ClockIcon,
+  WrenchScrewdriverIcon,
+  ExclamationTriangleIcon,
+  CheckCircleIcon,
+  EyeIcon,
+  BookOpenIcon,
+  UserGroupIcon,
+  CalendarDaysIcon,
+  BellIcon,
+  ChartPieIcon,
+  ArrowPathIcon,
+  StarIcon,
+  TagIcon,
+  MapPinIcon,
+  CurrencyDollarIcon,
+  DocumentTextIcon,
+  PhotoIcon,
+  Cog6ToothIcon,
+  ShieldExclamationIcon,
+  HeartIcon,
+  BoltIcon,
+  FireIcon,
+  SunIcon,
+  MoonIcon,
+  CloudIcon,
+  CloudRainIcon,
+  SnowflakeIcon,
+  WindIcon,
+  CloudLightningIcon,
+  CloudSnowIcon
 } from '../components/icons';
+import LabCreationWizard from '../components/LabCreationWizard';
+import ProfessionalProtocolForm from '../components/ProfessionalProtocolForm';
 
 interface LabMember {
   id: string;
   name: string;
   role: string;
-  email: string;
+    email: string;
   status: string;
   joinedDate: string;
 }
@@ -35,6 +67,11 @@ interface LabProject {
   progress: number;
   startDate: string;
   endDate: string;
+  teamMembers?: string[];
+  leadResearcher?: string;
+  budget?: number;
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  tags?: string[];
 }
 
 interface InventoryItem {
@@ -78,6 +115,153 @@ interface InventoryAlert {
   acknowledged: boolean;
 }
 
+// Instrument Management Interfaces
+interface Instrument {
+  id: string;
+  name: string;
+  model: string;
+  manufacturer: string;
+  category: string;
+  location: string;
+  status: 'available' | 'in_use' | 'maintenance' | 'out_of_order' | 'reserved';
+  description: string;
+  specifications: string;
+  purchaseDate: string;
+  warrantyExpiry: string;
+  purchasePrice: number;
+  currentValue: number;
+  maintenanceInterval: number; // in days
+  lastMaintenance: string;
+  nextMaintenance: string;
+  usageHours: number;
+  totalBookings: number;
+  averageRating: number;
+  trainingRequired: boolean;
+  safetyNotes: string;
+  operatingInstructions: string;
+  troubleshootingGuide: string;
+  accessories: string[];
+  consumables: string[];
+  images: string[];
+  qrCode: string;
+  barcode: string;
+  tags: string[];
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface InstrumentBooking {
+  id: string;
+  instrumentId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  purpose: string;
+  startTime: string;
+  endTime: string;
+  duration: number; // in minutes
+  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  trainingCompleted: boolean;
+  specialRequirements: string;
+  notes: string;
+  actualStartTime?: string;
+  actualEndTime?: string;
+  actualDuration?: number;
+  feedback?: string;
+  rating?: number;
+  issues?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface MaintenanceRecord {
+  id: string;
+  instrumentId: string;
+  type: 'routine' | 'repair' | 'calibration' | 'cleaning' | 'inspection' | 'upgrade';
+  title: string;
+  description: string;
+  scheduledDate: string;
+  completedDate?: string;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overdue';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  assignedTo: string;
+  assignedToName: string;
+  estimatedDuration: number; // in minutes
+  actualDuration?: number;
+  cost: number;
+  partsUsed: string[];
+  notes: string;
+  beforeImages: string[];
+  afterImages: string[];
+  checklist: MaintenanceChecklistItem[];
+  nextMaintenanceDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface MaintenanceChecklistItem {
+  id: string;
+  task: string;
+  completed: boolean;
+  notes?: string;
+  completedBy?: string;
+  completedAt?: string;
+}
+
+interface InstrumentRoster {
+  id: string;
+  instrumentId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  role: 'operator' | 'supervisor' | 'maintenance_tech' | 'trainer' | 'admin';
+  permissions: string[];
+  trainingLevel: 'basic' | 'intermediate' | 'advanced' | 'expert';
+  certificationDate: string;
+  certificationExpiry: string;
+  lastTraining: string;
+  nextTraining?: string;
+  status: 'active' | 'inactive' | 'suspended' | 'pending_approval';
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface InstrumentUsage {
+  id: string;
+  instrumentId: string;
+  userId: string;
+  userName: string;
+  sessionStart: string;
+  sessionEnd: string;
+  duration: number;
+  purpose: string;
+  efficiency: number; // percentage
+  issues: string[];
+  notes: string;
+  dataGenerated: number; // MB
+  samplesProcessed: number;
+  createdAt: string;
+}
+
+interface InstrumentAlert {
+  id: string;
+  instrumentId: string;
+  type: 'maintenance_due' | 'overdue_maintenance' | 'usage_limit' | 'error' | 'warning' | 'info';
+  title: string;
+  message: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  timestamp: string;
+  acknowledged: boolean;
+  acknowledgedBy?: string;
+  acknowledgedAt?: string;
+  resolved: boolean;
+  resolvedBy?: string;
+  resolvedAt?: string;
+}
+
 const LabManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   
@@ -85,11 +269,69 @@ const LabManagementPage: React.FC = () => {
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showCreateLabModal, setShowCreateLabModal] = useState(false);
+  const [showMeetingModal, setShowMeetingModal] = useState(false);
+  const [showIssueModal, setShowIssueModal] = useState(false);
+  const [showAchievementModal, setShowAchievementModal] = useState(false);
+  const [showProtocolModal, setShowProtocolModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
-  
+
   // Form states
   const [members, setMembers] = useState<LabMember[]>([]);
   const [projects, setProjects] = useState<LabProject[]>([]);
+  
+  // Member form state
+  const [memberForm, setMemberForm] = useState({
+    name: '',
+    email: '',
+    role: '',
+    status: 'Active'
+  });
+  
+  // Project form state
+  const [projectForm, setProjectForm] = useState({
+    name: '',
+    description: '',
+    startDate: '',
+    endDate: '',
+    leadResearcher: '',
+    budget: 0,
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
+    teamMembers: [] as string[],
+    tags: [] as string[]
+  });
+  
+  // Quick action form states
+  const [meetingForm, setMeetingForm] = useState({
+    title: '',
+    description: '',
+    date: '',
+    time: '',
+    duration: 60,
+    attendees: [] as string[],
+    location: '',
+    agenda: ''
+  });
+  
+  const [issueForm, setIssueForm] = useState({
+    title: '',
+    description: '',
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
+    category: '',
+    assignedTo: '',
+    status: 'open' as 'open' | 'in_progress' | 'resolved' | 'closed',
+    attachments: [] as string[]
+  });
+  
+  const [achievementForm, setAchievementForm] = useState({
+    title: '',
+    description: '',
+    category: 'publication' as 'publication' | 'award' | 'milestone' | 'breakthrough' | 'other',
+    date: '',
+    teamMembers: [] as string[],
+    impact: '',
+    tags: [] as string[]
+  });
   
   // Inventory states
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
@@ -126,6 +368,91 @@ const LabManagementPage: React.FC = () => {
     location: '',
     search: ''
   });
+
+  // Instrument Management States
+  const [instruments, setInstruments] = useState<Instrument[]>([]);
+  const [instrumentBookings, setInstrumentBookings] = useState<InstrumentBooking[]>([]);
+  const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
+  const [instrumentRosters, setInstrumentRosters] = useState<InstrumentRoster[]>([]);
+  const [instrumentUsage, setInstrumentUsage] = useState<InstrumentUsage[]>([]);
+  const [instrumentAlerts, setInstrumentAlerts] = useState<InstrumentAlert[]>([]);
+  
+  // Instrument Modal States
+  const [showInstrumentModal, setShowInstrumentModal] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
+  const [showRosterModal, setShowRosterModal] = useState(false);
+  const [showInstrumentDetailsModal, setShowInstrumentDetailsModal] = useState(false);
+  const [selectedInstrument, setSelectedInstrument] = useState<Instrument | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<InstrumentBooking | null>(null);
+  const [selectedMaintenance, setSelectedMaintenance] = useState<MaintenanceRecord | null>(null);
+  
+  // Instrument Form States
+  const [instrumentForm, setInstrumentForm] = useState({
+    name: '',
+    model: '',
+    manufacturer: '',
+    category: '',
+    location: '',
+    description: '',
+    specifications: '',
+    purchaseDate: '',
+    warrantyExpiry: '',
+    purchasePrice: 0,
+    currentValue: 0,
+    maintenanceInterval: 30,
+    trainingRequired: false,
+    safetyNotes: '',
+    operatingInstructions: '',
+    troubleshootingGuide: '',
+    accessories: [''],
+    consumables: [''],
+    tags: ['']
+  });
+
+  const [bookingForm, setBookingForm] = useState({
+    instrumentId: '',
+    purpose: '',
+    startTime: '',
+    endTime: '',
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
+    specialRequirements: '',
+    notes: ''
+  });
+
+  const [maintenanceForm, setMaintenanceForm] = useState({
+    instrumentId: '',
+    type: 'routine' as 'routine' | 'repair' | 'calibration' | 'cleaning' | 'inspection' | 'upgrade',
+    title: '',
+    description: '',
+    scheduledDate: '',
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
+    assignedTo: '',
+    estimatedDuration: 60,
+    cost: 0,
+    partsUsed: [''],
+    notes: '',
+    checklist: [{ id: '', task: '', completed: false }]
+  });
+
+  const [rosterForm, setRosterForm] = useState({
+    instrumentId: '',
+    userId: '',
+    role: 'operator' as 'operator' | 'supervisor' | 'maintenance_tech' | 'trainer' | 'admin',
+    trainingLevel: 'basic' as 'basic' | 'intermediate' | 'advanced' | 'expert',
+    certificationDate: '',
+    certificationExpiry: '',
+    notes: ''
+  });
+
+  // Instrument Filters
+  const [instrumentFilters, setInstrumentFilters] = useState({
+    category: '',
+    status: '',
+    location: '',
+    search: '',
+    view: 'grid' as 'grid' | 'list' | 'calendar'
+  });
   
   // Action handlers
   const handleAddMember = () => {
@@ -136,16 +463,241 @@ const LabManagementPage: React.FC = () => {
     setShowNewProjectModal(true);
   };
   
+  const handleCreateLab = () => {
+    setShowCreateLabModal(true);
+  };
+  
   const handleEditItem = (item: any) => {
     setSelectedItem(item);
     setShowEditModal(true);
   };
   
-  const handleDeleteItem = (id: string, type: 'member' | 'project') => {
+  const handleDeleteItem = async (id: string, type: 'member' | 'project') => {
     if (type === 'member') {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/labs/demo-lab-id/members/${id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            console.log('Member removed successfully');
+          } else {
+            console.error('Failed to remove member');
+          }
+        }
+        // Update local state regardless of API result
       setMembers(prev => prev.filter(m => m.id !== id));
-    } else {
+      } catch (error) {
+        console.error('Error removing member:', error);
+        setMembers(prev => prev.filter(m => m.id !== id));
+      }
+      } else {
       setProjects(prev => prev.filter(p => p.id !== id));
+    }
+  };
+  
+  const addMember = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      const newMember: LabMember = {
+        id: Date.now().toString(),
+        name: memberForm.name,
+        email: memberForm.email,
+        role: memberForm.role,
+        status: memberForm.status,
+        joinedDate: new Date().toISOString()
+      };
+
+      if (!token) {
+        console.log('No auth token, using mock data');
+        // Mock implementation
+        setMembers(prev => [...prev, newMember]);
+        setShowAddMemberModal(false);
+        setMemberForm({
+          name: '',
+          email: '',
+          role: '',
+          status: 'Active'
+        });
+        return;
+      }
+
+      // Try to add member via API
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/labs/demo-lab-id/members`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          email: memberForm.email,
+          role: memberForm.role.toLowerCase().replace(' ', '_')
+        })
+      });
+
+      if (response.ok) {
+        console.log('Member added successfully');
+        setMembers(prev => [...prev, newMember]);
+        setShowAddMemberModal(false);
+        setMemberForm({
+          name: '',
+          email: '',
+          role: '',
+          status: 'Active'
+        });
+      } else {
+        console.error('Failed to add member');
+        // Fallback to mock data
+        setMembers(prev => [...prev, newMember]);
+        setShowAddMemberModal(false);
+        setMemberForm({
+          name: '',
+          email: '',
+          role: '',
+          status: 'Active'
+        });
+      }
+    } catch (error) {
+      console.error('Error adding member:', error);
+      // Fallback to mock data
+      const newMember: LabMember = {
+        id: Date.now().toString(),
+        name: memberForm.name,
+        email: memberForm.email,
+        role: memberForm.role,
+        status: memberForm.status,
+        joinedDate: new Date().toISOString()
+      };
+      setMembers(prev => [...prev, newMember]);
+      setShowAddMemberModal(false);
+      setMemberForm({
+        name: '',
+        email: '',
+        role: '',
+        status: 'Active'
+      });
+    }
+  };
+
+  const addProject = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      const newProject: LabProject = {
+        id: Date.now().toString(),
+        name: projectForm.name,
+        description: projectForm.description,
+        status: 'Planning',
+        progress: 0,
+        startDate: projectForm.startDate,
+        endDate: projectForm.endDate,
+        teamMembers: projectForm.teamMembers,
+        leadResearcher: projectForm.leadResearcher,
+        budget: projectForm.budget,
+        priority: projectForm.priority,
+        tags: projectForm.tags
+      };
+
+      if (!token) {
+        console.log('No auth token, using mock data');
+        // Mock implementation
+        setProjects(prev => [...prev, newProject]);
+        setShowNewProjectModal(false);
+        setProjectForm({
+          name: '',
+          description: '',
+          startDate: '',
+          endDate: '',
+          leadResearcher: '',
+          budget: 0,
+          priority: 'medium',
+          teamMembers: [],
+          tags: []
+        });
+        return;
+      }
+
+      // Try to add project via API
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/research/projects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...projectForm,
+          lab_id: 'demo-lab-id'
+        })
+      });
+
+      if (response.ok) {
+        console.log('Project created successfully');
+        setProjects(prev => [...prev, newProject]);
+        setShowNewProjectModal(false);
+        setProjectForm({
+          name: '',
+          description: '',
+          startDate: '',
+          endDate: '',
+          leadResearcher: '',
+          budget: 0,
+          priority: 'medium',
+          teamMembers: [],
+          tags: []
+        });
+      } else {
+        console.error('Failed to create project');
+        // Fallback to mock data
+        setProjects(prev => [...prev, newProject]);
+        setShowNewProjectModal(false);
+        setProjectForm({
+          name: '',
+          description: '',
+          startDate: '',
+          endDate: '',
+          leadResearcher: '',
+          budget: 0,
+          priority: 'medium',
+          teamMembers: [],
+          tags: []
+        });
+      }
+    } catch (error) {
+      console.error('Error creating project:', error);
+      // Fallback to mock data
+      const newProject: LabProject = {
+        id: Date.now().toString(),
+        name: projectForm.name,
+        description: projectForm.description,
+        status: 'Planning',
+        progress: 0,
+        startDate: projectForm.startDate,
+        endDate: projectForm.endDate,
+        teamMembers: projectForm.teamMembers,
+        leadResearcher: projectForm.leadResearcher,
+        budget: projectForm.budget,
+        priority: projectForm.priority,
+        tags: projectForm.tags
+      };
+      setProjects(prev => [...prev, newProject]);
+      setShowNewProjectModal(false);
+      setProjectForm({
+        name: '',
+        description: '',
+        startDate: '',
+        endDate: '',
+        leadResearcher: '',
+        budget: 0,
+        priority: 'medium',
+        teamMembers: [],
+        tags: []
+      });
     }
   };
   
@@ -153,13 +705,16 @@ const LabManagementPage: React.FC = () => {
     // Simulate save operation
     console.log('Saving changes...');
     setShowEditModal(false);
-    setShowAddMemberModal(false);
-    setShowNewProjectModal(false);
   };
 
   // Inventory management functions
-  const loadInventoryData = () => {
-    // Mock inventory data
+  const loadInventoryData = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        console.log('No auth token, using mock data');
+        // Mock implementation
     const mockInventoryItems: InventoryItem[] = [
       {
         id: '1',
@@ -304,9 +859,604 @@ const LabManagementPage: React.FC = () => {
     setInventoryItems(mockInventoryItems);
     setInventoryTransactions(mockTransactions);
     setInventoryAlerts(mockAlerts);
+        return;
+      }
+
+      // Try to load inventory data via API
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/inventory`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.items) {
+          const formattedItems: InventoryItem[] = data.items.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            category: item.category,
+            supplier: item.supplier || 'Unknown',
+            catalogNumber: item.catalog_number || '',
+            quantity: item.quantity || 0,
+            unit: item.unit || 'pcs',
+            location: item.location || 'Unknown',
+            expiryDate: item.expiry_date || '',
+            cost: item.cost_per_unit || 0,
+            notes: item.notes || '',
+            barcode: item.barcode || '',
+            minQuantity: item.min_quantity || 0,
+            maxQuantity: item.max_quantity || 0,
+            reorderPoint: item.min_quantity || 0,
+            status: item.quantity <= 0 ? 'out_of_stock' : 
+                    item.quantity <= (item.min_quantity || 0) ? 'low_stock' : 'in_stock',
+            lastUpdated: item.updated_at || new Date().toISOString()
+          }));
+          setInventoryItems(formattedItems);
+        } else {
+          // Fallback to mock data
+          const mockInventoryItems: InventoryItem[] = [
+            {
+              id: '1',
+              name: 'Taq Polymerase',
+              category: 'Enzymes',
+              supplier: 'Thermo Fisher',
+              catalogNumber: 'EP0402',
+              quantity: 15,
+              unit: 'ml',
+              location: 'Freezer A-1',
+              expiryDate: '2024-12-31',
+              cost: 250.00,
+              status: 'in_stock',
+              lastUpdated: '2024-01-15',
+              notes: 'High fidelity polymerase',
+              barcode: '1234567890123',
+              minQuantity: 5,
+              maxQuantity: 50,
+              reorderPoint: 10
+            },
+            {
+              id: '2',
+              name: 'Cell Culture Medium',
+              category: 'Media',
+              supplier: 'Gibco',
+              catalogNumber: '11965-092',
+              quantity: 2,
+              unit: 'L',
+              location: 'Fridge B-2',
+              expiryDate: '2024-06-15',
+              cost: 180.00,
+              status: 'low_stock',
+              lastUpdated: '2024-01-10',
+              notes: 'DMEM with high glucose',
+              barcode: '1234567890124',
+              minQuantity: 5,
+              maxQuantity: 20,
+              reorderPoint: 8
+            },
+            {
+              id: '3',
+              name: 'Antibody Anti-GAPDH',
+              category: 'Antibodies',
+              supplier: 'Abcam',
+              catalogNumber: 'ab8245',
+              quantity: 0,
+              unit: 'μl',
+              location: 'Freezer C-3',
+              expiryDate: '2024-03-20',
+              cost: 320.00,
+              status: 'out_of_stock',
+              lastUpdated: '2024-01-05',
+              notes: 'Mouse monoclonal',
+              barcode: '1234567890125',
+              minQuantity: 1,
+              maxQuantity: 10,
+              reorderPoint: 2
+            },
+            {
+              id: '4',
+              name: 'PCR Tubes',
+              category: 'Consumables',
+              supplier: 'Eppendorf',
+              catalogNumber: '0030123456',
+              quantity: 500,
+              unit: 'pcs',
+              location: 'Room 101',
+              cost: 45.00,
+              status: 'in_stock',
+              lastUpdated: '2024-01-20',
+              notes: '0.2ml clear tubes',
+              barcode: '1234567890126',
+              minQuantity: 100,
+              maxQuantity: 1000,
+              reorderPoint: 200
+            }
+          ];
+          setInventoryItems(mockInventoryItems);
+        }
+        
+        // Load transactions
+        const transactionsResponse = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/inventory/transactions`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (transactionsResponse.ok) {
+          const transactionsData = await transactionsResponse.json();
+          if (transactionsData.transactions) {
+            const formattedTransactions: InventoryTransaction[] = transactionsData.transactions.map((transaction: any) => ({
+              id: transaction.id,
+              itemId: transaction.item_id,
+              type: transaction.type,
+              quantity: transaction.quantity,
+              reason: transaction.reason || '',
+              performedBy: transaction.performed_by || 'Unknown',
+              timestamp: transaction.created_at || new Date().toISOString(),
+              notes: transaction.notes || ''
+            }));
+            setInventoryTransactions(formattedTransactions);
+          } else {
+            // Fallback to mock data
+            const mockTransactions: InventoryTransaction[] = [
+              {
+                id: '1',
+                itemId: '1',
+                type: 'out',
+                quantity: 2,
+                reason: 'PCR experiment',
+                performedBy: 'Dr. Sarah Johnson',
+                timestamp: '2024-01-20T10:30:00Z',
+                notes: 'Used for gene expression analysis'
+              },
+              {
+                id: '2',
+                itemId: '2',
+                type: 'in',
+                quantity: 5,
+                reason: 'New shipment',
+                performedBy: 'Alex Thompson',
+                timestamp: '2024-01-18T14:15:00Z',
+                notes: 'Received from supplier'
+              },
+              {
+                id: '3',
+                itemId: '3',
+                type: 'out',
+                quantity: 1,
+                reason: 'Western blot',
+                performedBy: 'Emily Rodriguez',
+                timestamp: '2024-01-15T09:45:00Z',
+                notes: 'Used for protein detection'
+              }
+            ];
+            setInventoryTransactions(mockTransactions);
+          }
+        } else {
+          // Fallback to mock data
+          const mockTransactions: InventoryTransaction[] = [
+            {
+              id: '1',
+              itemId: '1',
+              type: 'out',
+              quantity: 2,
+              reason: 'PCR experiment',
+              performedBy: 'Dr. Sarah Johnson',
+              timestamp: '2024-01-20T10:30:00Z',
+              notes: 'Used for gene expression analysis'
+            },
+            {
+              id: '2',
+              itemId: '2',
+              type: 'in',
+              quantity: 5,
+              reason: 'New shipment',
+              performedBy: 'Alex Thompson',
+              timestamp: '2024-01-18T14:15:00Z',
+              notes: 'Received from supplier'
+            },
+            {
+              id: '3',
+              itemId: '3',
+              type: 'out',
+              quantity: 1,
+              reason: 'Western blot',
+              performedBy: 'Emily Rodriguez',
+              timestamp: '2024-01-15T09:45:00Z',
+              notes: 'Used for protein detection'
+            }
+          ];
+          setInventoryTransactions(mockTransactions);
+        }
+        
+        // Load alerts
+        const alertsResponse = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/inventory/alerts`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (alertsResponse.ok) {
+          const alertsData = await alertsResponse.json();
+          if (alertsData.alerts) {
+            const formattedAlerts: InventoryAlert[] = alertsData.alerts.map((alert: any) => ({
+              id: alert.id,
+              itemId: alert.item_id,
+              type: alert.type,
+              message: alert.message,
+              severity: alert.severity,
+              timestamp: alert.created_at || new Date().toISOString(),
+              acknowledged: alert.acknowledged || false
+            }));
+            setInventoryAlerts(formattedAlerts);
+          } else {
+            // Fallback to mock data
+            const mockAlerts: InventoryAlert[] = [
+              {
+                id: '1',
+                itemId: '2',
+                type: 'low_stock',
+                message: 'Cell Culture Medium is running low (2L remaining)',
+                severity: 'medium',
+                timestamp: '2024-01-20T08:00:00Z',
+                acknowledged: false
+              },
+              {
+                id: '2',
+                itemId: '3',
+                type: 'out_of_stock',
+                message: 'Antibody Anti-GAPDH is out of stock',
+                severity: 'high',
+                timestamp: '2024-01-15T10:00:00Z',
+                acknowledged: false
+              },
+              {
+                id: '3',
+                itemId: '2',
+                type: 'expiring_soon',
+                message: 'Cell Culture Medium expires in 5 months',
+                severity: 'low',
+                timestamp: '2024-01-20T08:00:00Z',
+                acknowledged: true
+              }
+            ];
+            setInventoryAlerts(mockAlerts);
+          }
+        } else {
+          // Fallback to mock data
+          const mockAlerts: InventoryAlert[] = [
+            {
+              id: '1',
+              itemId: '2',
+              type: 'low_stock',
+              message: 'Cell Culture Medium is running low (2L remaining)',
+              severity: 'medium',
+              timestamp: '2024-01-20T08:00:00Z',
+              acknowledged: false
+            },
+            {
+              id: '2',
+              itemId: '3',
+              type: 'out_of_stock',
+              message: 'Antibody Anti-GAPDH is out of stock',
+              severity: 'high',
+              timestamp: '2024-01-15T10:00:00Z',
+              acknowledged: false
+            },
+            {
+              id: '3',
+              itemId: '2',
+              type: 'expiring_soon',
+              message: 'Cell Culture Medium expires in 5 months',
+              severity: 'low',
+              timestamp: '2024-01-20T08:00:00Z',
+              acknowledged: true
+            }
+          ];
+          setInventoryAlerts(mockAlerts);
+        }
+      } else {
+        console.error('Failed to load inventory data');
+        // Fallback to mock data
+        const mockInventoryItems: InventoryItem[] = [
+          {
+            id: '1',
+            name: 'Taq Polymerase',
+            category: 'Enzymes',
+            supplier: 'Thermo Fisher',
+            catalogNumber: 'EP0402',
+            quantity: 15,
+            unit: 'ml',
+            location: 'Freezer A-1',
+            expiryDate: '2024-12-31',
+            cost: 250.00,
+            status: 'in_stock',
+            lastUpdated: '2024-01-15',
+            notes: 'High fidelity polymerase',
+            barcode: '1234567890123',
+            minQuantity: 5,
+            maxQuantity: 50,
+            reorderPoint: 10
+          },
+          {
+            id: '2',
+            name: 'Cell Culture Medium',
+            category: 'Media',
+            supplier: 'Gibco',
+            catalogNumber: '11965-092',
+            quantity: 2,
+            unit: 'L',
+            location: 'Fridge B-2',
+            expiryDate: '2024-06-15',
+            cost: 180.00,
+            status: 'low_stock',
+            lastUpdated: '2024-01-10',
+            notes: 'DMEM with high glucose',
+            barcode: '1234567890124',
+            minQuantity: 5,
+            maxQuantity: 20,
+            reorderPoint: 8
+          },
+          {
+            id: '3',
+            name: 'Antibody Anti-GAPDH',
+            category: 'Antibodies',
+            supplier: 'Abcam',
+            catalogNumber: 'ab8245',
+            quantity: 0,
+            unit: 'μl',
+            location: 'Freezer C-3',
+            expiryDate: '2024-03-20',
+            cost: 320.00,
+            status: 'out_of_stock',
+            lastUpdated: '2024-01-05',
+            notes: 'Mouse monoclonal',
+            barcode: '1234567890125',
+            minQuantity: 1,
+            maxQuantity: 10,
+            reorderPoint: 2
+          },
+          {
+            id: '4',
+            name: 'PCR Tubes',
+            category: 'Consumables',
+            supplier: 'Eppendorf',
+            catalogNumber: '0030123456',
+            quantity: 500,
+            unit: 'pcs',
+            location: 'Room 101',
+            cost: 45.00,
+            status: 'in_stock',
+            lastUpdated: '2024-01-20',
+            notes: '0.2ml clear tubes',
+            barcode: '1234567890126',
+            minQuantity: 100,
+            maxQuantity: 1000,
+            reorderPoint: 200
+          }
+        ];
+
+        const mockTransactions: InventoryTransaction[] = [
+          {
+            id: '1',
+            itemId: '1',
+            type: 'out',
+            quantity: 2,
+            reason: 'PCR experiment',
+            performedBy: 'Dr. Sarah Johnson',
+            timestamp: '2024-01-20T10:30:00Z',
+            notes: 'Used for gene expression analysis'
+          },
+          {
+            id: '2',
+            itemId: '2',
+            type: 'in',
+            quantity: 5,
+            reason: 'New shipment',
+            performedBy: 'Alex Thompson',
+            timestamp: '2024-01-18T14:15:00Z',
+            notes: 'Received from supplier'
+          },
+          {
+            id: '3',
+            itemId: '3',
+            type: 'out',
+            quantity: 1,
+            reason: 'Western blot',
+            performedBy: 'Emily Rodriguez',
+            timestamp: '2024-01-15T09:45:00Z',
+            notes: 'Used for protein detection'
+          }
+        ];
+
+        const mockAlerts: InventoryAlert[] = [
+          {
+            id: '1',
+            itemId: '2',
+            type: 'low_stock',
+            message: 'Cell Culture Medium is running low (2L remaining)',
+            severity: 'medium',
+            timestamp: '2024-01-20T08:00:00Z',
+            acknowledged: false
+          },
+          {
+            id: '2',
+            itemId: '3',
+            type: 'out_of_stock',
+            message: 'Antibody Anti-GAPDH is out of stock',
+            severity: 'high',
+            timestamp: '2024-01-15T10:00:00Z',
+            acknowledged: false
+          },
+          {
+            id: '3',
+            itemId: '2',
+            type: 'expiring_soon',
+            message: 'Cell Culture Medium expires in 5 months',
+            severity: 'low',
+            timestamp: '2024-01-20T08:00:00Z',
+            acknowledged: true
+          }
+        ];
+
+        setInventoryItems(mockInventoryItems);
+        setInventoryTransactions(mockTransactions);
+        setInventoryAlerts(mockAlerts);
+      }
+    } catch (error) {
+      console.error('Error loading inventory data:', error);
+      // Fallback to mock data
+      const mockInventoryItems: InventoryItem[] = [
+        {
+          id: '1',
+          name: 'Taq Polymerase',
+          category: 'Enzymes',
+          supplier: 'Thermo Fisher',
+          catalogNumber: 'EP0402',
+          quantity: 15,
+          unit: 'ml',
+          location: 'Freezer A-1',
+          expiryDate: '2024-12-31',
+          cost: 250.00,
+          status: 'in_stock',
+          lastUpdated: '2024-01-15',
+          notes: 'High fidelity polymerase',
+          barcode: '1234567890123',
+          minQuantity: 5,
+          maxQuantity: 50,
+          reorderPoint: 10
+        },
+        {
+          id: '2',
+          name: 'Cell Culture Medium',
+          category: 'Media',
+          supplier: 'Gibco',
+          catalogNumber: '11965-092',
+          quantity: 2,
+          unit: 'L',
+          location: 'Fridge B-2',
+          expiryDate: '2024-06-15',
+          cost: 180.00,
+          status: 'low_stock',
+          lastUpdated: '2024-01-10',
+          notes: 'DMEM with high glucose',
+          barcode: '1234567890124',
+          minQuantity: 5,
+          maxQuantity: 20,
+          reorderPoint: 8
+        },
+        {
+          id: '3',
+          name: 'Antibody Anti-GAPDH',
+          category: 'Antibodies',
+          supplier: 'Abcam',
+          catalogNumber: 'ab8245',
+          quantity: 0,
+          unit: 'μl',
+          location: 'Freezer C-3',
+          expiryDate: '2024-03-20',
+          cost: 320.00,
+          status: 'out_of_stock',
+          lastUpdated: '2024-01-05',
+          notes: 'Mouse monoclonal',
+          barcode: '1234567890125',
+          minQuantity: 1,
+          maxQuantity: 10,
+          reorderPoint: 2
+        },
+        {
+          id: '4',
+          name: 'PCR Tubes',
+          category: 'Consumables',
+          supplier: 'Eppendorf',
+          catalogNumber: '0030123456',
+          quantity: 500,
+          unit: 'pcs',
+          location: 'Room 101',
+          cost: 45.00,
+          status: 'in_stock',
+          lastUpdated: '2024-01-20',
+          notes: '0.2ml clear tubes',
+          barcode: '1234567890126',
+          minQuantity: 100,
+          maxQuantity: 1000,
+          reorderPoint: 200
+        }
+      ];
+
+      const mockTransactions: InventoryTransaction[] = [
+        {
+          id: '1',
+          itemId: '1',
+          type: 'out',
+          quantity: 2,
+          reason: 'PCR experiment',
+          performedBy: 'Dr. Sarah Johnson',
+          timestamp: '2024-01-20T10:30:00Z',
+          notes: 'Used for gene expression analysis'
+        },
+        {
+          id: '2',
+          itemId: '2',
+          type: 'in',
+          quantity: 5,
+          reason: 'New shipment',
+          performedBy: 'Alex Thompson',
+          timestamp: '2024-01-18T14:15:00Z',
+          notes: 'Received from supplier'
+        },
+        {
+          id: '3',
+          itemId: '3',
+          type: 'out',
+          quantity: 1,
+          reason: 'Western blot',
+          performedBy: 'Emily Rodriguez',
+          timestamp: '2024-01-15T09:45:00Z',
+          notes: 'Used for protein detection'
+        }
+      ];
+
+      const mockAlerts: InventoryAlert[] = [
+        {
+          id: '1',
+          itemId: '2',
+          type: 'low_stock',
+          message: 'Cell Culture Medium is running low (2L remaining)',
+          severity: 'medium',
+          timestamp: '2024-01-20T08:00:00Z',
+          acknowledged: false
+        },
+        {
+          id: '2',
+          itemId: '3',
+          type: 'out_of_stock',
+          message: 'Antibody Anti-GAPDH is out of stock',
+          severity: 'high',
+          timestamp: '2024-01-15T10:00:00Z',
+          acknowledged: false
+        },
+        {
+          id: '3',
+          itemId: '2',
+          type: 'expiring_soon',
+          message: 'Cell Culture Medium expires in 5 months',
+          severity: 'low',
+          timestamp: '2024-01-20T08:00:00Z',
+          acknowledged: true
+        }
+      ];
+
+      setInventoryItems(mockInventoryItems);
+      setInventoryTransactions(mockTransactions);
+      setInventoryAlerts(mockAlerts);
+    }
   };
 
-  const addInventoryItem = () => {
+  const addInventoryItem = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
     const newItem: InventoryItem = {
       id: Date.now().toString(),
       ...inventoryForm,
@@ -314,10 +1464,13 @@ const LabManagementPage: React.FC = () => {
       lastUpdated: new Date().toISOString()
     };
     
+      if (!token) {
+        console.log('No auth token, using mock data');
+        // Mock implementation
     setInventoryItems(prev => [...prev, newItem]);
     setShowInventoryModal(false);
     setInventoryForm({
-      name: '',
+          name: '',
       category: '',
       supplier: '',
       catalogNumber: '',
@@ -332,10 +1485,111 @@ const LabManagementPage: React.FC = () => {
       maxQuantity: 0,
       reorderPoint: 0
     });
+        return;
+      }
+
+      // Try to add inventory item via API
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/inventory`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: inventoryForm.name,
+          description: inventoryForm.notes,
+          category: inventoryForm.category,
+          quantity: inventoryForm.quantity,
+          unit: inventoryForm.unit,
+          min_quantity: inventoryForm.minQuantity,
+          location: inventoryForm.location,
+          lab_id: 'demo-lab-id',
+          supplier: inventoryForm.supplier,
+          supplier_contact: '',
+          expiry_date: inventoryForm.expiryDate,
+          cost_per_unit: inventoryForm.cost,
+          storage_conditions: '',
+          notes: inventoryForm.notes
+        })
+      });
+
+      if (response.ok) {
+        console.log('Inventory item created successfully');
+        setInventoryItems(prev => [...prev, newItem]);
+        setShowInventoryModal(false);
+        setInventoryForm({
+          name: '',
+          category: '',
+          supplier: '',
+          catalogNumber: '',
+          quantity: 0,
+          unit: 'pcs',
+          location: '',
+          expiryDate: '',
+          cost: 0,
+          notes: '',
+          barcode: '',
+          minQuantity: 0,
+          maxQuantity: 0,
+          reorderPoint: 0
+        });
+      } else {
+        console.error('Failed to create inventory item');
+        // Fallback to mock data
+        setInventoryItems(prev => [...prev, newItem]);
+        setShowInventoryModal(false);
+        setInventoryForm({
+          name: '',
+          category: '',
+          supplier: '',
+          catalogNumber: '',
+          quantity: 0,
+          unit: 'pcs',
+          location: '',
+          expiryDate: '',
+          cost: 0,
+          notes: '',
+          barcode: '',
+          minQuantity: 0,
+          maxQuantity: 0,
+          reorderPoint: 0
+        });
+      }
+    } catch (error) {
+      console.error('Error creating inventory item:', error);
+      // Fallback to mock data
+      const newItem: InventoryItem = {
+        id: Date.now().toString(),
+        ...inventoryForm,
+        status: 'in_stock',
+        lastUpdated: new Date().toISOString()
+      };
+      setInventoryItems(prev => [...prev, newItem]);
+      setShowInventoryModal(false);
+      setInventoryForm({
+        name: '',
+        category: '',
+        supplier: '',
+        catalogNumber: '',
+        quantity: 0,
+        unit: 'pcs',
+        location: '',
+        expiryDate: '',
+        cost: 0,
+        notes: '',
+        barcode: '',
+        minQuantity: 0,
+        maxQuantity: 0,
+        reorderPoint: 0
+      });
+    }
   };
 
-  const processInventoryTransaction = () => {
+  const processInventoryTransaction = async () => {
     if (!selectedInventoryItem) return;
+
+    try {
+      const token = localStorage.getItem('authToken');
 
     const transaction: InventoryTransaction = {
       id: Date.now().toString(),
@@ -349,8 +1603,7 @@ const LabManagementPage: React.FC = () => {
     };
 
     // Update inventory quantity
-    setInventoryItems(prev => 
-      prev.map(item => {
+      const updatedItems = inventoryItems.map(item => {
         if (item.id === selectedInventoryItem.id) {
           let newQuantity = item.quantity;
           if (transactionForm.type === 'in') {
@@ -377,9 +1630,43 @@ const LabManagementPage: React.FC = () => {
           };
         }
         return item;
-      })
-    );
+      });
 
+      if (!token) {
+        console.log('No auth token, using mock data');
+        // Mock implementation
+        setInventoryItems(updatedItems);
+        setInventoryTransactions(prev => [transaction, ...prev]);
+        setShowTransactionModal(false);
+        setTransactionForm({
+          type: 'out',
+          quantity: 0,
+          reason: '',
+          notes: ''
+        });
+        setSelectedInventoryItem(null);
+        return;
+      }
+
+      // Try to process transaction via API
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/inventory/${selectedInventoryItem.id}/transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          type: transactionForm.type,
+          quantity: transactionForm.quantity,
+          reason: transactionForm.reason,
+          notes: transactionForm.notes,
+          lab_id: 'demo-lab-id'
+        })
+      });
+
+      if (response.ok) {
+        console.log('Inventory transaction processed successfully');
+        setInventoryItems(updatedItems);
     setInventoryTransactions(prev => [transaction, ...prev]);
     setShowTransactionModal(false);
     setTransactionForm({
@@ -389,14 +1676,128 @@ const LabManagementPage: React.FC = () => {
       notes: ''
     });
     setSelectedInventoryItem(null);
+      } else {
+        console.error('Failed to process inventory transaction');
+        // Fallback to mock data
+        setInventoryItems(updatedItems);
+        setInventoryTransactions(prev => [transaction, ...prev]);
+        setShowTransactionModal(false);
+        setTransactionForm({
+          type: 'out',
+          quantity: 0,
+          reason: '',
+          notes: ''
+        });
+        setSelectedInventoryItem(null);
+      }
+    } catch (error) {
+      console.error('Error processing inventory transaction:', error);
+      // Fallback to mock data
+      const transaction: InventoryTransaction = {
+        id: Date.now().toString(),
+        itemId: selectedInventoryItem.id,
+        type: transactionForm.type,
+        quantity: transactionForm.quantity,
+        reason: transactionForm.reason,
+        performedBy: 'Current User',
+        timestamp: new Date().toISOString(),
+        notes: transactionForm.notes
+      };
+
+      const updatedItems = inventoryItems.map(item => {
+        if (item.id === selectedInventoryItem.id) {
+          let newQuantity = item.quantity;
+          if (transactionForm.type === 'in') {
+            newQuantity += transactionForm.quantity;
+          } else if (transactionForm.type === 'out') {
+            newQuantity -= transactionForm.quantity;
+          } else if (transactionForm.type === 'adjustment') {
+            newQuantity = transactionForm.quantity;
+          }
+
+          // Update status based on quantity
+          let newStatus = 'in_stock';
+          if (newQuantity <= 0) {
+            newStatus = 'out_of_stock';
+          } else if (newQuantity <= item.reorderPoint) {
+            newStatus = 'low_stock';
+          }
+
+          return {
+            ...item,
+            quantity: newQuantity,
+            status: newStatus as any,
+            lastUpdated: new Date().toISOString()
+          };
+        }
+        return item;
+      });
+
+      setInventoryItems(updatedItems);
+      setInventoryTransactions(prev => [transaction, ...prev]);
+      setShowTransactionModal(false);
+      setTransactionForm({
+        type: 'out',
+        quantity: 0,
+        reason: '',
+        notes: ''
+      });
+      setSelectedInventoryItem(null);
+    }
   };
 
-  const acknowledgeAlert = (alertId: string) => {
+  const acknowledgeAlert = async (alertId: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        console.log('No auth token, using mock data');
+        // Mock implementation
     setInventoryAlerts(prev =>
       prev.map(alert =>
         alert.id === alertId ? { ...alert, acknowledged: true } : alert
       )
     );
+        return;
+      }
+
+      // Try to acknowledge alert via API
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/inventory/alerts/${alertId}/acknowledge`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          lab_id: 'demo-lab-id'
+        })
+      });
+
+      if (response.ok) {
+        console.log('Alert acknowledged successfully');
+        setInventoryAlerts(prev =>
+          prev.map(alert =>
+            alert.id === alertId ? { ...alert, acknowledged: true } : alert
+          )
+        );
+      } else {
+        console.error('Failed to acknowledge alert');
+        // Fallback to mock data
+        setInventoryAlerts(prev =>
+          prev.map(alert =>
+            alert.id === alertId ? { ...alert, acknowledged: true } : alert
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error acknowledging alert:', error);
+      // Fallback to mock data
+      setInventoryAlerts(prev =>
+        prev.map(alert =>
+          alert.id === alertId ? { ...alert, acknowledged: true } : alert
+        )
+      );
+    }
   };
 
   const getInventoryStatusColor = (status: string) => {
@@ -428,12 +1829,1208 @@ const LabManagementPage: React.FC = () => {
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
+
+  // Quick Action Functions
+  const scheduleMeeting = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        console.log('No auth token, using mock data');
+        // Mock implementation
+        console.log('Meeting scheduled:', meetingForm);
+        setShowMeetingModal(false);
+        setMeetingForm({
+          title: '',
+          description: '',
+          date: '',
+          time: '',
+          duration: 60,
+          attendees: [],
+          location: '',
+          agenda: ''
+        });
+        return;
+      }
+
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/meetings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...meetingForm,
+          lab_id: 'demo-lab-id' // This should come from context
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Meeting scheduled successfully:', result);
+        setShowMeetingModal(false);
+        setMeetingForm({
+          title: '',
+          description: '',
+          date: '',
+          time: '',
+          duration: 60,
+          attendees: [],
+          location: '',
+          agenda: ''
+        });
+        // Optionally refresh meetings list
+        // loadMeetings();
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to schedule meeting:', errorData);
+        // Fallback to mock data
+        console.log('Using mock data for meeting');
+        setShowMeetingModal(false);
+        setMeetingForm({
+          title: '',
+          description: '',
+          date: '',
+          time: '',
+          duration: 60,
+          attendees: [],
+          location: '',
+          agenda: ''
+        });
+      }
+    } catch (error) {
+      console.error('Error scheduling meeting:', error);
+      // Fallback to mock data
+      setShowMeetingModal(false);
+      setMeetingForm({
+        title: '',
+        description: '',
+        date: '',
+        time: '',
+        duration: 60,
+        attendees: [],
+        location: '',
+        agenda: ''
+      });
+    }
+  };
+
+  const reportIssue = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        console.log('No auth token, using mock data');
+        // Mock implementation
+        console.log('Issue reported:', issueForm);
+        setShowIssueModal(false);
+        setIssueForm({
+          title: '',
+          description: '',
+          priority: 'medium',
+          category: '',
+          assignedTo: '',
+          status: 'open',
+          attachments: []
+        });
+        return;
+      }
+
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/issues`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...issueForm,
+          assigned_to: issueForm.assignedTo, // Map field name
+          lab_id: 'demo-lab-id' // This should come from context
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Issue reported successfully:', result);
+        setShowIssueModal(false);
+        setIssueForm({
+          title: '',
+          description: '',
+          priority: 'medium',
+          category: '',
+          assignedTo: '',
+          status: 'open',
+          attachments: []
+        });
+        // Optionally refresh issues list
+        // loadIssues();
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to report issue:', errorData);
+        // Fallback to mock data
+        console.log('Using mock data for issue');
+        setShowIssueModal(false);
+        setIssueForm({
+          title: '',
+          description: '',
+          priority: 'medium',
+          category: '',
+          assignedTo: '',
+          status: 'open',
+          attachments: []
+        });
+      }
+    } catch (error) {
+      console.error('Error reporting issue:', error);
+      // Fallback to mock data
+      setShowIssueModal(false);
+      setIssueForm({
+        title: '',
+        description: '',
+        priority: 'medium',
+        category: '',
+        assignedTo: '',
+        status: 'open',
+        attachments: []
+      });
+    }
+  };
+
+  const shareAchievement = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        console.log('No auth token, using mock data');
+        // Mock implementation
+        console.log('Achievement shared:', achievementForm);
+        setShowAchievementModal(false);
+        setAchievementForm({
+          title: '',
+          description: '',
+          category: 'publication',
+          date: '',
+          teamMembers: [],
+          impact: '',
+          tags: []
+        });
+        return;
+      }
+
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/achievements`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: achievementForm.title,
+          description: achievementForm.description,
+          category: achievementForm.category,
+          impact_level: achievementForm.impact || 'medium',
+          tags: achievementForm.tags,
+          lab_id: 'demo-lab-id' // This should come from context
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Achievement shared successfully:', result);
+        setShowAchievementModal(false);
+        setAchievementForm({
+          title: '',
+          description: '',
+          category: 'publication',
+          date: '',
+          teamMembers: [],
+          impact: '',
+          tags: []
+        });
+        // Optionally refresh achievements list
+        // loadAchievements();
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to share achievement:', errorData);
+        // Fallback to mock data
+        console.log('Using mock data for achievement');
+        setShowAchievementModal(false);
+        setAchievementForm({
+          title: '',
+          description: '',
+          category: 'publication',
+          date: '',
+          teamMembers: [],
+          impact: '',
+          tags: []
+        });
+      }
+    } catch (error) {
+      console.error('Error sharing achievement:', error);
+      // Fallback to mock data
+      setShowAchievementModal(false);
+      setAchievementForm({
+        title: '',
+        description: '',
+        category: 'publication',
+        date: '',
+        teamMembers: [],
+        impact: '',
+        tags: []
+      });
+    }
+  };
+
+  // Instrument Management Functions
+  const loadInstrumentData = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        console.log('No auth token, using mock data');
+        // Mock instrument data
+    const mockInstruments: Instrument[] = [
+      {
+        id: '1',
+        name: 'PCR Thermal Cycler',
+        model: 'C1000 Touch',
+        manufacturer: 'Bio-Rad',
+        category: 'Molecular Biology',
+        location: 'Room 201 - Molecular Lab',
+        status: 'available',
+        description: 'High-performance thermal cycler for PCR applications with touch screen interface',
+        specifications: 'Temperature range: 4°C to 99°C, Heating rate: 2.5°C/sec, Cooling rate: 2.0°C/sec, Capacity: 96 wells',
+        purchaseDate: '2023-01-15',
+        warrantyExpiry: '2026-01-15',
+        purchasePrice: 25000,
+        currentValue: 20000,
+        maintenanceInterval: 90,
+        lastMaintenance: '2024-01-15',
+        nextMaintenance: '2024-04-15',
+        usageHours: 1250,
+        totalBookings: 156,
+        averageRating: 4.7,
+        trainingRequired: true,
+        safetyNotes: 'Ensure proper ventilation. Do not exceed temperature limits. Clean wells after each use.',
+        operatingInstructions: '1. Load samples 2. Select program 3. Start cycle 4. Monitor progress 5. Retrieve samples',
+        troubleshootingGuide: 'Common issues: Temperature errors, Lid not closing, Block not heating',
+        accessories: ['96-well block', 'Heated lid', 'Software license'],
+        consumables: ['PCR tubes', 'Sealing film', 'Cleaning solution'],
+        images: ['pcr1.jpg', 'pcr2.jpg'],
+        qrCode: 'QR001',
+        barcode: '1234567890123',
+        tags: ['PCR', 'Molecular Biology', 'High-throughput'],
+        createdBy: 'Dr. Sarah Johnson',
+        createdAt: '2023-01-15T10:00:00Z',
+        updatedAt: '2024-01-20T15:30:00Z'
+      },
+      {
+        id: '2',
+        name: 'High-Speed Centrifuge',
+        model: '5810R',
+        manufacturer: 'Eppendorf',
+        category: 'Sample Processing',
+        location: 'Room 201 - Sample Prep',
+        status: 'in_use',
+        description: 'Refrigerated high-speed centrifuge with rotor capacity up to 4x750ml',
+        specifications: 'Max speed: 15,000 rpm, Max RCF: 20,238 x g, Temperature range: -20°C to +40°C',
+        purchaseDate: '2022-06-10',
+        warrantyExpiry: '2025-06-10',
+        purchasePrice: 18000,
+        currentValue: 15000,
+        maintenanceInterval: 60,
+        lastMaintenance: '2024-01-10',
+        nextMaintenance: '2024-03-10',
+        usageHours: 2100,
+        totalBookings: 89,
+        averageRating: 4.5,
+        trainingRequired: true,
+        safetyNotes: 'Balance tubes properly. Check rotor integrity. Use appropriate tubes for speed.',
+        operatingInstructions: '1. Balance samples 2. Select rotor 3. Set parameters 4. Start centrifugation 5. Wait for completion',
+        troubleshootingGuide: 'Common issues: Imbalance errors, Temperature fluctuations, Vibration',
+        accessories: ['Fixed angle rotor', 'Swinging bucket rotor', 'Microplate rotor'],
+        consumables: ['Centrifuge tubes', 'Rotor maintenance kit'],
+        images: ['centrifuge1.jpg'],
+        qrCode: 'QR002',
+        barcode: '1234567890124',
+        tags: ['Centrifugation', 'Sample Prep', 'Refrigerated'],
+        createdBy: 'Dr. Michael Chen',
+        createdAt: '2022-06-10T09:00:00Z',
+        updatedAt: '2024-01-15T11:20:00Z'
+      },
+      {
+        id: '3',
+        name: 'Fluorescence Microscope',
+        model: 'Eclipse Ti2',
+        manufacturer: 'Nikon',
+        category: 'Imaging',
+        location: 'Room 203 - Imaging Lab',
+        status: 'maintenance',
+        description: 'Advanced inverted fluorescence microscope with motorized stage and camera system',
+        specifications: 'Objective range: 4x to 100x, Fluorescence channels: DAPI, FITC, TRITC, Cy5, Camera: 4MP CMOS',
+        purchaseDate: '2023-03-20',
+        warrantyExpiry: '2026-03-20',
+        purchasePrice: 45000,
+        currentValue: 40000,
+        maintenanceInterval: 120,
+        lastMaintenance: '2024-01-05',
+        nextMaintenance: '2024-05-05',
+        usageHours: 890,
+        totalBookings: 67,
+        averageRating: 4.8,
+        trainingRequired: true,
+        safetyNotes: 'Avoid direct laser exposure. Use appropriate filters. Clean objectives carefully.',
+        operatingInstructions: '1. Turn on system 2. Select objective 3. Load sample 4. Focus image 5. Capture data',
+        troubleshootingGuide: 'Common issues: Focus problems, Fluorescence intensity, Camera errors',
+        accessories: ['Motorized stage', 'Camera system', 'Fluorescence filters'],
+        consumables: ['Immersion oil', 'Cleaning solution', 'Cover slips'],
+        images: ['microscope1.jpg', 'microscope2.jpg'],
+        qrCode: 'QR003',
+        barcode: '1234567890125',
+        tags: ['Microscopy', 'Fluorescence', 'Imaging'],
+        createdBy: 'Dr. Emily Rodriguez',
+        createdAt: '2023-03-20T14:00:00Z',
+        updatedAt: '2024-01-18T16:45:00Z'
+      }
+    ];
+
+    const mockBookings: InstrumentBooking[] = [
+      {
+        id: '1',
+        instrumentId: '1',
+        userId: 'user-2',
+        userName: 'Dr. Michael Chen',
+        userEmail: 'michael.chen@lab.com',
+        purpose: 'Gene expression analysis',
+        startTime: '2024-01-22T09:00:00Z',
+        endTime: '2024-01-22T11:00:00Z',
+        duration: 120,
+        status: 'confirmed',
+        priority: 'high',
+        trainingCompleted: true,
+        specialRequirements: 'Need 96-well block',
+        notes: 'Urgent experiment for publication',
+        createdAt: '2024-01-20T10:00:00Z',
+        updatedAt: '2024-01-20T10:00:00Z'
+      },
+      {
+        id: '2',
+        instrumentId: '2',
+        userId: 'user-3',
+        userName: 'Emily Rodriguez',
+        userEmail: 'emily.rodriguez@lab.com',
+        purpose: 'Protein precipitation',
+        startTime: '2024-01-22T14:00:00Z',
+        endTime: '2024-01-22T15:30:00Z',
+        duration: 90,
+        status: 'in_progress',
+        priority: 'medium',
+        trainingCompleted: true,
+        specialRequirements: '',
+        notes: 'Routine sample processing',
+        actualStartTime: '2024-01-22T14:05:00Z',
+        createdAt: '2024-01-21T15:00:00Z',
+        updatedAt: '2024-01-22T14:05:00Z'
+      }
+    ];
+
+    const mockMaintenance: MaintenanceRecord[] = [
+      {
+        id: '1',
+        instrumentId: '3',
+        type: 'routine',
+        title: 'Monthly Cleaning and Calibration',
+        description: 'Routine maintenance including cleaning, calibration, and performance check',
+        scheduledDate: '2024-01-25T09:00:00Z',
+        status: 'scheduled',
+        priority: 'medium',
+        assignedTo: 'user-4',
+        assignedToName: 'Alex Thompson',
+        estimatedDuration: 120,
+        cost: 0,
+        partsUsed: ['Cleaning solution', 'Calibration standards'],
+        notes: 'Standard monthly maintenance',
+        beforeImages: [],
+        afterImages: [],
+        checklist: [
+          { id: '1', task: 'Clean objectives', completed: false },
+          { id: '2', task: 'Calibrate fluorescence channels', completed: false },
+          { id: '3', task: 'Check motorized stage', completed: false },
+          { id: '4', task: 'Update software', completed: false }
+        ],
+        createdAt: '2024-01-20T08:00:00Z',
+        updatedAt: '2024-01-20T08:00:00Z'
+      }
+    ];
+
+    const mockRosters: InstrumentRoster[] = [
+      {
+        id: '1',
+        instrumentId: '1',
+        userId: 'user-2',
+        userName: 'Dr. Michael Chen',
+        userEmail: 'michael.chen@lab.com',
+        role: 'supervisor',
+        permissions: ['book', 'operate', 'maintain', 'train'],
+        trainingLevel: 'expert',
+        certificationDate: '2023-02-01',
+        certificationExpiry: '2025-02-01',
+        lastTraining: '2023-12-15',
+        nextTraining: '2024-12-15',
+        status: 'active',
+        notes: 'Primary operator and trainer',
+        createdAt: '2023-02-01T10:00:00Z',
+        updatedAt: '2023-12-15T14:00:00Z'
+      }
+    ];
+
+    const mockAlerts: InstrumentAlert[] = [
+      {
+        id: '1',
+        instrumentId: '3',
+        type: 'maintenance_due',
+        title: 'Maintenance Due',
+        message: 'Fluorescence Microscope maintenance is due in 5 days',
+        severity: 'medium',
+        timestamp: '2024-01-20T08:00:00Z',
+        acknowledged: false,
+        resolved: false
+      }
+    ];
+
+    setInstruments(mockInstruments);
+    setInstrumentBookings(mockBookings);
+    setMaintenanceRecords(mockMaintenance);
+    setInstrumentRosters(mockRosters);
+        setInstrumentAlerts(mockAlerts);
+        return;
+      }
+
+      // Try to load instruments from API
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/instruments`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.instruments) {
+          const formattedInstruments: Instrument[] = data.instruments.map((instrument: any) => ({
+            id: instrument.id,
+            name: instrument.name,
+            model: instrument.model || '',
+            manufacturer: instrument.manufacturer || '',
+            category: instrument.category,
+            location: instrument.location || '',
+            status: instrument.status || 'available',
+            description: instrument.description || '',
+            specifications: instrument.specifications || '',
+            purchaseDate: instrument.purchase_date || '',
+            warrantyExpiry: instrument.warranty_expiry || '',
+            purchasePrice: instrument.purchase_price || 0,
+            currentValue: instrument.current_value || 0,
+            maintenanceInterval: instrument.maintenance_interval || 90,
+            lastMaintenance: instrument.last_maintenance || '',
+            nextMaintenance: instrument.next_maintenance || '',
+            usageHours: instrument.usage_hours || 0,
+            totalBookings: instrument.total_bookings || 0,
+            averageRating: instrument.average_rating || 0,
+            trainingRequired: instrument.training_required || false,
+            safetyNotes: instrument.safety_notes || '',
+            operatingInstructions: instrument.operating_instructions || '',
+            troubleshootingGuide: instrument.troubleshooting_guide || '',
+            accessories: instrument.accessories || [],
+            consumables: instrument.consumables || [],
+            images: instrument.images || [],
+            qrCode: instrument.qr_code || '',
+            barcode: instrument.barcode || '',
+            tags: instrument.tags || [],
+            createdBy: instrument.created_by || '',
+            createdAt: instrument.created_at || new Date().toISOString(),
+            updatedAt: instrument.updated_at || new Date().toISOString()
+          }));
+          setInstruments(formattedInstruments);
+        } else {
+          // Use mock data if no instruments returned
+          const mockInstruments: Instrument[] = [
+            {
+              id: '1',
+              name: 'PCR Thermal Cycler',
+              model: 'C1000 Touch',
+              manufacturer: 'Bio-Rad',
+              category: 'Molecular Biology',
+              location: 'Room 201 - Molecular Lab',
+              status: 'available',
+              description: 'High-performance thermal cycler for PCR applications with touch screen interface',
+              specifications: 'Temperature range: 4°C to 99°C, Heating rate: 2.5°C/sec, Cooling rate: 2.0°C/sec, Capacity: 96 wells',
+              purchaseDate: '2023-01-15',
+              warrantyExpiry: '2026-01-15',
+              purchasePrice: 25000,
+              currentValue: 20000,
+              maintenanceInterval: 90,
+              lastMaintenance: '2024-01-15',
+              nextMaintenance: '2024-04-15',
+              usageHours: 1250,
+              totalBookings: 156,
+              averageRating: 4.7,
+              trainingRequired: true,
+              safetyNotes: 'Ensure proper ventilation. Do not exceed temperature limits. Clean wells after each use.',
+              operatingInstructions: '1. Load samples 2. Select program 3. Start cycle 4. Monitor progress 5. Retrieve samples',
+              troubleshootingGuide: 'Common issues: Temperature errors, Lid not closing, Block not heating',
+              accessories: ['96-well block', 'Heated lid', 'Software license'],
+              consumables: ['PCR tubes', 'Sealing film', 'Cleaning solution'],
+              images: ['pcr1.jpg', 'pcr2.jpg'],
+              qrCode: 'QR001',
+              barcode: '1234567890123',
+              tags: ['PCR', 'Molecular Biology', 'High-throughput'],
+              createdBy: 'Dr. Sarah Johnson',
+              createdAt: '2023-01-15T10:00:00Z',
+              updatedAt: '2024-01-20T15:30:00Z'
+            }
+          ];
+          setInstruments(mockInstruments);
+        }
+      } else {
+        console.error('Failed to load instruments');
+        // Use mock data on failure
+        const mockInstruments: Instrument[] = [
+          {
+            id: '1',
+            name: 'PCR Thermal Cycler',
+            model: 'C1000 Touch',
+            manufacturer: 'Bio-Rad',
+            category: 'Molecular Biology',
+            location: 'Room 201 - Molecular Lab',
+            status: 'available',
+            description: 'High-performance thermal cycler for PCR applications with touch screen interface',
+            specifications: 'Temperature range: 4°C to 99°C, Heating rate: 2.5°C/sec, Cooling rate: 2.0°C/sec, Capacity: 96 wells',
+            purchaseDate: '2023-01-15',
+            warrantyExpiry: '2026-01-15',
+            purchasePrice: 25000,
+            currentValue: 20000,
+            maintenanceInterval: 90,
+            lastMaintenance: '2024-01-15',
+            nextMaintenance: '2024-04-15',
+            usageHours: 1250,
+            totalBookings: 156,
+            averageRating: 4.7,
+            trainingRequired: true,
+            safetyNotes: 'Ensure proper ventilation. Do not exceed temperature limits. Clean wells after each use.',
+            operatingInstructions: '1. Load samples 2. Select program 3. Start cycle 4. Monitor progress 5. Retrieve samples',
+            troubleshootingGuide: 'Common issues: Temperature errors, Lid not closing, Block not heating',
+            accessories: ['96-well block', 'Heated lid', 'Software license'],
+            consumables: ['PCR tubes', 'Sealing film', 'Cleaning solution'],
+            images: ['pcr1.jpg', 'pcr2.jpg'],
+            qrCode: 'QR001',
+            barcode: '1234567890123',
+            tags: ['PCR', 'Molecular Biology', 'High-throughput'],
+            createdBy: 'Dr. Sarah Johnson',
+            createdAt: '2023-01-15T10:00:00Z',
+            updatedAt: '2024-01-20T15:30:00Z'
+          }
+        ];
+        setInstruments(mockInstruments);
+      }
+    } catch (error) {
+      console.error('Error loading instrument data:', error);
+      // Use mock data on error
+      const mockInstruments: Instrument[] = [
+        {
+          id: '1',
+          name: 'PCR Thermal Cycler',
+          model: 'C1000 Touch',
+          manufacturer: 'Bio-Rad',
+          category: 'Molecular Biology',
+          location: 'Room 201 - Molecular Lab',
+          status: 'available',
+          description: 'High-performance thermal cycler for PCR applications with touch screen interface',
+          specifications: 'Temperature range: 4°C to 99°C, Heating rate: 2.5°C/sec, Cooling rate: 2.0°C/sec, Capacity: 96 wells',
+          purchaseDate: '2023-01-15',
+          warrantyExpiry: '2026-01-15',
+          purchasePrice: 25000,
+          currentValue: 20000,
+          maintenanceInterval: 90,
+          lastMaintenance: '2024-01-15',
+          nextMaintenance: '2024-04-15',
+          usageHours: 1250,
+          totalBookings: 156,
+          averageRating: 4.7,
+          trainingRequired: true,
+          safetyNotes: 'Ensure proper ventilation. Do not exceed temperature limits. Clean wells after each use.',
+          operatingInstructions: '1. Load samples 2. Select program 3. Start cycle 4. Monitor progress 5. Retrieve samples',
+          troubleshootingGuide: 'Common issues: Temperature errors, Lid not closing, Block not heating',
+          accessories: ['96-well block', 'Heated lid', 'Software license'],
+          consumables: ['PCR tubes', 'Sealing film', 'Cleaning solution'],
+          images: ['pcr1.jpg', 'pcr2.jpg'],
+          qrCode: 'QR001',
+          barcode: '1234567890123',
+          tags: ['PCR', 'Molecular Biology', 'High-throughput'],
+          createdBy: 'Dr. Sarah Johnson',
+          createdAt: '2023-01-15T10:00:00Z',
+          updatedAt: '2024-01-20T15:30:00Z'
+        }
+      ];
+      setInstruments(mockInstruments);
+    }
+  };
+
+  const addInstrument = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      const newInstrument: Instrument = {
+        id: Date.now().toString(),
+        ...instrumentForm,
+        status: 'available',
+        usageHours: 0,
+        totalBookings: 0,
+        averageRating: 0,
+        images: [],
+        qrCode: `QR${Date.now()}`,
+        barcode: Date.now().toString(),
+        lastMaintenance: new Date().toISOString(),
+        nextMaintenance: new Date(Date.now() + instrumentForm.maintenanceInterval * 24 * 60 * 60 * 1000).toISOString(),
+        createdBy: 'Current User',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      if (!token) {
+        console.log('No auth token, using mock data');
+        setInstruments(prev => [...prev, newInstrument]);
+        setShowInstrumentModal(false);
+        return;
+      }
+
+      // Try to add instrument via API
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/instruments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: instrumentForm.name,
+          description: instrumentForm.description,
+          category: instrumentForm.category,
+          model: instrumentForm.model,
+          manufacturer: instrumentForm.manufacturer,
+          location: instrumentForm.location,
+          purchase_date: instrumentForm.purchaseDate,
+          warranty_expiry: instrumentForm.warrantyExpiry,
+          lab_id: 'demo-lab-id'
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Instrument created successfully:', result);
+        setInstruments(prev => [...prev, newInstrument]);
+        setShowInstrumentModal(false);
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to create instrument:', errorData);
+        // Fallback to mock data
+        setInstruments(prev => [...prev, newInstrument]);
+        setShowInstrumentModal(false);
+      }
+    } catch (error) {
+      console.error('Error creating instrument:', error);
+      // Fallback to mock data
+      const newInstrument: Instrument = {
+        id: Date.now().toString(),
+        ...instrumentForm,
+        status: 'available',
+        usageHours: 0,
+        totalBookings: 0,
+        averageRating: 0,
+        images: [],
+        qrCode: `QR${Date.now()}`,
+        barcode: Date.now().toString(),
+        lastMaintenance: new Date().toISOString(),
+        nextMaintenance: new Date(Date.now() + instrumentForm.maintenanceInterval * 24 * 60 * 60 * 1000).toISOString(),
+        createdBy: 'Current User',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setInstruments(prev => [...prev, newInstrument]);
+      setShowInstrumentModal(false);
+    }
+    setInstrumentForm({
+      name: '',
+      model: '',
+      manufacturer: '',
+      category: '',
+      location: '',
+      description: '',
+      specifications: '',
+      purchaseDate: '',
+      warrantyExpiry: '',
+      purchasePrice: 0,
+      currentValue: 0,
+      maintenanceInterval: 30,
+      trainingRequired: false,
+      safetyNotes: '',
+      operatingInstructions: '',
+      troubleshootingGuide: '',
+      accessories: [''],
+      consumables: [''],
+      tags: ['']
+    });
+  };
+
+  const createBooking = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      const newBooking: InstrumentBooking = {
+        id: Date.now().toString(),
+        ...bookingForm,
+        userId: 'current-user',
+        userName: 'Current User',
+        userEmail: 'user@lab.com',
+        status: 'pending',
+        trainingCompleted: false,
+        duration: Math.floor((new Date(bookingForm.endTime).getTime() - new Date(bookingForm.startTime).getTime()) / (1000 * 60)),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      if (!token) {
+        console.log('No auth token, using mock data');
+        setInstrumentBookings(prev => [...prev, newBooking]);
+        setShowBookingModal(false);
+        setBookingForm({
+          instrumentId: '',
+          purpose: '',
+          startTime: '',
+          endTime: '',
+          priority: 'medium',
+          specialRequirements: '',
+          notes: ''
+        });
+        return;
+      }
+
+      // Try to create booking via API
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/instruments/${bookingForm.instrumentId}/bookings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          start_time: bookingForm.startTime,
+          end_time: bookingForm.endTime,
+          purpose: bookingForm.purpose,
+          notes: bookingForm.notes
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Booking created successfully:', result);
+        setInstrumentBookings(prev => [...prev, newBooking]);
+        setShowBookingModal(false);
+        setBookingForm({
+          instrumentId: '',
+          purpose: '',
+          startTime: '',
+          endTime: '',
+          priority: 'medium',
+          specialRequirements: '',
+          notes: ''
+        });
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to create booking:', errorData);
+        // Fallback to mock data
+        setInstrumentBookings(prev => [...prev, newBooking]);
+        setShowBookingModal(false);
+        setBookingForm({
+          instrumentId: '',
+          purpose: '',
+          startTime: '',
+          endTime: '',
+          priority: 'medium',
+          specialRequirements: '',
+          notes: ''
+        });
+      }
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      // Fallback to mock data
+      const newBooking: InstrumentBooking = {
+        id: Date.now().toString(),
+        ...bookingForm,
+        userId: 'current-user',
+        userName: 'Current User',
+        userEmail: 'user@lab.com',
+        status: 'pending',
+        trainingCompleted: false,
+        duration: Math.floor((new Date(bookingForm.endTime).getTime() - new Date(bookingForm.startTime).getTime()) / (1000 * 60)),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setInstrumentBookings(prev => [...prev, newBooking]);
+      setShowBookingModal(false);
+      setBookingForm({
+        instrumentId: '',
+        purpose: '',
+        startTime: '',
+        endTime: '',
+        priority: 'medium',
+        specialRequirements: '',
+        notes: ''
+      });
+    }
+  };
+
+  const scheduleMaintenance = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      const newMaintenance: MaintenanceRecord = {
+        id: Date.now().toString(),
+        ...maintenanceForm,
+        assignedTo: 'current-user',
+        assignedToName: 'Current User',
+        status: 'scheduled',
+        cost: 0,
+        partsUsed: maintenanceForm.partsUsed.filter(p => p.trim() !== ''),
+        beforeImages: [],
+        afterImages: [],
+        checklist: maintenanceForm.checklist.filter(c => c.task.trim() !== ''),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      if (!token) {
+        console.log('No auth token, using mock data');
+        setMaintenanceRecords(prev => [...prev, newMaintenance]);
+        setShowMaintenanceModal(false);
+        setMaintenanceForm({
+          instrumentId: '',
+          type: 'routine',
+          title: '',
+          description: '',
+          scheduledDate: '',
+          priority: 'medium',
+          assignedTo: '',
+          estimatedDuration: 60,
+          cost: 0,
+          partsUsed: [''],
+          notes: '',
+          checklist: [{ id: '', task: '', completed: false }]
+        });
+        return;
+      }
+
+      // Try to schedule maintenance via API
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/instruments/${maintenanceForm.instrumentId}/maintenance`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          type: maintenanceForm.type,
+          title: maintenanceForm.title,
+          description: maintenanceForm.description,
+          scheduled_date: maintenanceForm.scheduledDate,
+          priority: maintenanceForm.priority,
+          assigned_to: maintenanceForm.assignedTo,
+          estimated_duration: maintenanceForm.estimatedDuration,
+          cost: maintenanceForm.cost,
+          parts_used: maintenanceForm.partsUsed.filter(p => p.trim() !== ''),
+          notes: maintenanceForm.notes,
+          checklist: maintenanceForm.checklist.filter(c => c.task.trim() !== '')
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Maintenance scheduled successfully:', result);
+        setMaintenanceRecords(prev => [...prev, newMaintenance]);
+        setShowMaintenanceModal(false);
+        setMaintenanceForm({
+          instrumentId: '',
+          type: 'routine',
+          title: '',
+          description: '',
+          scheduledDate: '',
+          priority: 'medium',
+          assignedTo: '',
+          estimatedDuration: 60,
+          cost: 0,
+          partsUsed: [''],
+          notes: '',
+          checklist: [{ id: '', task: '', completed: false }]
+        });
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to schedule maintenance:', errorData);
+        // Fallback to mock data
+        setMaintenanceRecords(prev => [...prev, newMaintenance]);
+        setShowMaintenanceModal(false);
+        setMaintenanceForm({
+          instrumentId: '',
+          type: 'routine',
+          title: '',
+          description: '',
+          scheduledDate: '',
+          priority: 'medium',
+          assignedTo: '',
+          estimatedDuration: 60,
+          cost: 0,
+          partsUsed: [''],
+          notes: '',
+          checklist: [{ id: '', task: '', completed: false }]
+        });
+      }
+    } catch (error) {
+      console.error('Error scheduling maintenance:', error);
+      // Fallback to mock data
+      const newMaintenance: MaintenanceRecord = {
+        id: Date.now().toString(),
+        ...maintenanceForm,
+        assignedTo: 'current-user',
+        assignedToName: 'Current User',
+        status: 'scheduled',
+        cost: 0,
+        partsUsed: maintenanceForm.partsUsed.filter(p => p.trim() !== ''),
+        beforeImages: [],
+        afterImages: [],
+        checklist: maintenanceForm.checklist.filter(c => c.task.trim() !== ''),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setMaintenanceRecords(prev => [...prev, newMaintenance]);
+      setShowMaintenanceModal(false);
+      setMaintenanceForm({
+        instrumentId: '',
+        type: 'routine',
+        title: '',
+        description: '',
+        scheduledDate: '',
+        priority: 'medium',
+        assignedTo: '',
+        estimatedDuration: 60,
+        cost: 0,
+        partsUsed: [''],
+        notes: '',
+        checklist: [{ id: '', task: '', completed: false }]
+      });
+    }
+  };
+
+  const addToRoster = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      const newRoster: InstrumentRoster = {
+        id: Date.now().toString(),
+        ...rosterForm,
+        userName: 'Current User',
+        userEmail: 'user@lab.com',
+        permissions: ['operate'],
+        lastTraining: new Date().toISOString(),
+        status: 'pending_approval',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      if (!token) {
+        console.log('No auth token, using mock data');
+        setInstrumentRosters(prev => [...prev, newRoster]);
+        setShowRosterModal(false);
+        setRosterForm({
+          instrumentId: '',
+          userId: '',
+          role: 'operator',
+          trainingLevel: 'basic',
+          certificationDate: '',
+          certificationExpiry: '',
+          notes: ''
+        });
+        return;
+      }
+
+      // Try to add to roster via API
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/instruments/${rosterForm.instrumentId}/roster`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          user_id: rosterForm.userId,
+          role: rosterForm.role,
+          training_level: rosterForm.trainingLevel,
+          certification_date: rosterForm.certificationDate,
+          certification_expiry: rosterForm.certificationExpiry,
+          notes: rosterForm.notes
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Added to roster successfully:', result);
+        setInstrumentRosters(prev => [...prev, newRoster]);
+        setShowRosterModal(false);
+        setRosterForm({
+          instrumentId: '',
+          userId: '',
+          role: 'operator',
+          trainingLevel: 'basic',
+          certificationDate: '',
+          certificationExpiry: '',
+          notes: ''
+        });
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to add to roster:', errorData);
+        // Fallback to mock data
+        setInstrumentRosters(prev => [...prev, newRoster]);
+        setShowRosterModal(false);
+        setRosterForm({
+          instrumentId: '',
+          userId: '',
+          role: 'operator',
+          trainingLevel: 'basic',
+          certificationDate: '',
+          certificationExpiry: '',
+          notes: ''
+        });
+      }
+    } catch (error) {
+      console.error('Error adding to roster:', error);
+      // Fallback to mock data
+      const newRoster: InstrumentRoster = {
+        id: Date.now().toString(),
+        ...rosterForm,
+        userName: 'Current User',
+        userEmail: 'user@lab.com',
+        permissions: ['operate'],
+        lastTraining: new Date().toISOString(),
+        status: 'pending_approval',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setInstrumentRosters(prev => [...prev, newRoster]);
+      setShowRosterModal(false);
+      setRosterForm({
+        instrumentId: '',
+        userId: '',
+        role: 'operator',
+        trainingLevel: 'basic',
+        certificationDate: '',
+        certificationExpiry: '',
+        notes: ''
+      });
+    }
+  };
+
+  const getInstrumentStatusColor = (status: string) => {
+    switch (status) {
+      case 'available':
+        return 'bg-green-100 text-green-800';
+      case 'in_use':
+        return 'bg-blue-100 text-blue-800';
+      case 'maintenance':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'out_of_order':
+        return 'bg-red-100 text-red-800';
+      case 'reserved':
+        return 'bg-purple-100 text-purple-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getBookingStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'confirmed':
+        return 'bg-green-100 text-green-800';
+      case 'in_progress':
+        return 'bg-blue-100 text-blue-800';
+      case 'completed':
+        return 'bg-gray-100 text-gray-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      case 'no_show':
+        return 'bg-orange-100 text-orange-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getMaintenanceStatusColor = (status: string) => {
+    switch (status) {
+      case 'scheduled':
+        return 'bg-blue-100 text-blue-800';
+      case 'in_progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      case 'overdue':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+  
+  // Load members from backend
+  const loadMembers = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.log('No auth token, using mock data');
+        setMembers(mockMembers);
+        return;
+      }
+
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api'}/labs/demo-lab-id`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.members) {
+          const formattedMembers: LabMember[] = data.members.map((member: any) => ({
+            id: member.user_id,
+            name: `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.username || 'Unknown',
+            email: member.email || '',
+            role: member.role || 'Member',
+            status: 'Active',
+            joinedDate: member.joined_at || new Date().toISOString()
+          }));
+          setMembers(formattedMembers);
+        } else {
+          setMembers(mockMembers);
+        }
+      } else {
+        console.error('Failed to load members');
+        setMembers(mockMembers);
+      }
+    } catch (error) {
+      console.error('Error loading members:', error);
+      setMembers(mockMembers);
+    }
+  };
   
   // Initialize with mock data
   React.useEffect(() => {
-    setMembers(mockMembers);
+    loadMembers();
     setProjects(mockProjects);
     loadInventoryData();
+    loadInstrumentData();
   }, []);
   
   // Mock data for demo
@@ -480,7 +3077,12 @@ const LabManagementPage: React.FC = () => {
       status: 'In Progress',
       progress: 75,
       startDate: '2023-06-01',
-      endDate: '2024-12-31'
+      endDate: '2024-12-31',
+      teamMembers: ['1', '2', '3'],
+      leadResearcher: 'Dr. Sarah Johnson',
+      budget: 250000,
+      priority: 'high',
+      tags: ['CRISPR', 'Gene Editing', 'Mammalian Cells']
     },
     {
       id: '2',
@@ -489,7 +3091,12 @@ const LabManagementPage: React.FC = () => {
       status: 'Planning',
       progress: 25,
       startDate: '2024-03-01',
-      endDate: '2025-06-30'
+      endDate: '2025-06-30',
+      teamMembers: ['2', '4'],
+      leadResearcher: 'Dr. Michael Chen',
+      budget: 180000,
+      priority: 'medium',
+      tags: ['Protein Structure', 'X-ray Crystallography']
     },
     {
       id: '3',
@@ -498,7 +3105,12 @@ const LabManagementPage: React.FC = () => {
       status: 'Active',
       progress: 60,
       startDate: '2023-09-01',
-      endDate: '2024-08-31'
+      endDate: '2024-08-31',
+      teamMembers: ['1', '3', '4', '5'],
+      leadResearcher: 'Dr. Sarah Johnson',
+      budget: 500000,
+      priority: 'critical',
+      tags: ['Drug Discovery', 'High-throughput Screening']
     }
   ];
 
@@ -531,6 +3143,21 @@ const LabManagementPage: React.FC = () => {
     }
   };
 
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical':
+        return 'bg-red-100 text-red-800';
+      case 'high':
+        return 'bg-orange-100 text-orange-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'low':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -540,6 +3167,13 @@ const LabManagementPage: React.FC = () => {
           <p className="text-gray-600">Manage your research lab, team members, and projects</p>
         </div>
         <div className="flex items-center space-x-3">
+          <button
+            onClick={handleCreateLab}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all shadow-sm"
+          >
+            <BuildingOfficeIcon className="w-4 h-4 mr-2" />
+            Create Lab
+          </button>
           <button 
             onClick={handleAddMember}
             className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm"
@@ -679,7 +3313,10 @@ const LabManagementPage: React.FC = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <button className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg hover:from-blue-100 hover:to-indigo-100 transition-all text-left">
+              <button 
+                onClick={() => setShowMeetingModal(true)}
+                className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg hover:from-blue-100 hover:to-indigo-100 transition-all text-left"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                     <UsersIcon className="w-5 h-5 text-blue-600" />
@@ -691,7 +3328,10 @@ const LabManagementPage: React.FC = () => {
                 </div>
               </button>
               
-              <button className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg hover:from-green-100 hover:to-emerald-100 transition-all text-left">
+              <button 
+                onClick={() => setShowIssueModal(true)}
+                className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg hover:from-green-100 hover:to-emerald-100 transition-all text-left"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                     <BeakerIcon className="w-5 h-5 text-green-600" />
@@ -703,7 +3343,10 @@ const LabManagementPage: React.FC = () => {
                 </div>
               </button>
               
-              <button className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg hover:from-purple-100 hover:to-indigo-100 transition-all text-left">
+              <button 
+                onClick={() => setShowAchievementModal(true)}
+                className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg hover:from-purple-100 hover:to-indigo-100 transition-all text-left"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
                     <ChartBarIcon className="w-5 h-5 text-purple-600" />
@@ -715,7 +3358,10 @@ const LabManagementPage: React.FC = () => {
                 </div>
               </button>
 
-              <button className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg hover:from-blue-100 hover:to-cyan-100 transition-all text-left">
+              <button 
+                onClick={() => setShowProtocolModal(true)}
+                className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg hover:from-blue-100 hover:to-cyan-100 transition-all text-left"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                     <ClipboardPasteIcon className="w-5 h-5 text-blue-600" />
@@ -727,7 +3373,10 @@ const LabManagementPage: React.FC = () => {
                 </div>
               </button>
 
-              <button className="p-4 bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-lg hover:from-green-100 hover:to-teal-100 transition-all text-left">
+              <button 
+                onClick={() => setActiveTab('inventory')}
+                className="p-4 bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-lg hover:from-green-100 hover:to-teal-100 transition-all text-left"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                     <PackageIcon className="w-5 h-5 text-green-600" />
@@ -739,7 +3388,10 @@ const LabManagementPage: React.FC = () => {
                 </div>
               </button>
 
-              <button className="p-4 bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 rounded-lg hover:from-pink-100 hover:to-rose-100 transition-all text-left">
+              <button 
+                onClick={() => setActiveTab('instruments')}
+                className="p-4 bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 rounded-lg hover:from-pink-100 hover:to-rose-100 transition-all text-left"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center">
                     <FlaskConicalIcon className="w-5 h-5 text-pink-600" />
@@ -758,9 +3410,20 @@ const LabManagementPage: React.FC = () => {
       {activeTab === 'members' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
             <h2 className="text-lg font-semibold text-gray-900">Team Members</h2>
             <p className="text-gray-600">Manage your research team and their roles</p>
-          </div>
+              </div>
+              <button
+                onClick={handleAddMember}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <UserPlusIcon className="w-4 h-4 mr-2" />
+                Add Member
+              </button>
+            </div>
+              </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -803,20 +3466,20 @@ const LabManagementPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
-                        <button 
+                  <button
                           onClick={() => handleEditItem(member)}
                           className="text-blue-600 hover:text-blue-900"
                           title="Edit member"
-                        >
-                          <PencilIcon className="w-4 h-4" />
-                        </button>
+                  >
+                    <PencilIcon className="w-4 h-4" />
+                  </button>
                         <button 
                           onClick={() => handleDeleteItem(member.id, 'member')}
                           className="text-red-600 hover:text-red-900"
                           title="Delete member"
                         >
                           <TrashIcon className="w-4 h-4" />
-                        </button>
+                  </button>
                       </div>
                     </td>
                   </tr>
@@ -824,16 +3487,41 @@ const LabManagementPage: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+                </div>
+              )}
 
       {activeTab === 'projects' && (
         <div className="space-y-6">
+          {/* Projects Header */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Research Projects</h2>
+                <p className="text-gray-600">Manage your lab's research projects and team assignments</p>
+              </div>
+              <button
+                onClick={handleNewProject}
+                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <PlusIcon className="w-4 h-4 mr-2" />
+                Add Project
+              </button>
+            </div>
+          </div>
+
+          {/* Projects List */}
           {mockProjects.map((project) => (
             <div key={project.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{project.name}</h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
+                    {project.priority && (
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(project.priority)}`}>
+                        {project.priority.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-gray-600 mb-4">{project.description}</p>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -848,21 +3536,68 @@ const LabManagementPage: React.FC = () => {
                       <p className="text-sm text-gray-900">{project.progress}%</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Start Date</p>
-                      <p className="text-sm text-gray-900">{new Date(project.startDate).toLocaleDateString()}</p>
+                      <p className="text-sm font-medium text-gray-500">Lead Researcher</p>
+                      <p className="text-sm text-gray-900">{project.leadResearcher || 'Not assigned'}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">End Date</p>
-                      <p className="text-sm text-gray-900">{new Date(project.endDate).toLocaleDateString()}</p>
+                      <p className="text-sm font-medium text-gray-500">Budget</p>
+                      <p className="text-sm text-gray-900">${project.budget?.toLocaleString() || 'Not set'}</p>
                     </div>
-                  </div>
-                  
+            </div>
+
+                  {/* Team Members */}
+                  {project.teamMembers && project.teamMembers.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-sm font-medium text-gray-500 mb-2">Team Members</p>
+                      <div className="flex flex-wrap gap-2">
+                        {project.teamMembers.map((memberId) => {
+                          const member = members.find(m => m.id === memberId);
+                          return member ? (
+                            <div key={memberId} className="flex items-center space-x-2 bg-gray-100 rounded-lg px-3 py-1">
+                              <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
+                                <span className="text-white font-medium text-xs">
+                                  {member.name.split(' ').map(n => n[0]).join('')}
+                                </span>
+                              </div>
+                              <span className="text-sm text-gray-700">{member.name}</span>
+                            </div>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tags */}
+                  {project.tags && project.tags.length > 0 && (
+                    <div className="mb-4">
+                      <div className="flex flex-wrap gap-2">
+                        {project.tags.map((tag, index) => (
+                          <span key={index} className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Progress Bar */}
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
                     <div 
                       className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${project.progress}%` }}
                     ></div>
+                  </div>
+
+                  {/* Dates */}
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-500">Start Date</p>
+                      <p className="text-gray-900">{new Date(project.startDate).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">End Date</p>
+                      <p className="text-gray-900">{new Date(project.endDate).toLocaleDateString()}</p>
+                    </div>
                   </div>
                 </div>
                 
@@ -881,7 +3616,7 @@ const LabManagementPage: React.FC = () => {
                   >
                     <TrashIcon className="w-4 h-4" />
                   </button>
-                </div>
+              </div>
               </div>
             </div>
           ))}
@@ -1021,7 +3756,10 @@ const LabManagementPage: React.FC = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-gray-900">Research Protocols</h2>
-              <button className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm">
+              <button 
+                onClick={() => setShowProtocolModal(true)}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm"
+              >
                 <PlusIcon className="w-4 h-4 mr-2" />
                 New Protocol
               </button>
@@ -1102,16 +3840,16 @@ const LabManagementPage: React.FC = () => {
                           {new Date(alert.timestamp).toLocaleDateString()}
                         </p>
                       </div>
-                      <button
+              <button
                         onClick={() => acknowledgeAlert(alert.id)}
                         className="ml-4 px-3 py-1 text-sm bg-white bg-opacity-50 hover:bg-opacity-75 rounded-md transition-colors"
                       >
                         Acknowledge
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
             </div>
           )}
 
@@ -1177,13 +3915,13 @@ const LabManagementPage: React.FC = () => {
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-gray-900">Inventory Management</h2>
               <div className="flex items-center space-x-3">
-                <button
+              <button
                   onClick={() => setShowInventoryModal(true)}
                   className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-sm"
-                >
+              >
                   <PlusIcon className="w-4 h-4 mr-2" />
                   Add Item
-                </button>
+              </button>
               </div>
             </div>
 
@@ -1202,7 +3940,7 @@ const LabManagementPage: React.FC = () => {
                   <option value="Antibodies">Antibodies</option>
                   <option value="Consumables">Consumables</option>
                 </select>
-              </div>
+                </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
@@ -1232,8 +3970,8 @@ const LabManagementPage: React.FC = () => {
                   <option value="Freezer C-3">Freezer C-3</option>
                   <option value="Room 101">Room 101</option>
                 </select>
-              </div>
-              
+            </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
                 <input
@@ -1289,7 +4027,7 @@ const LabManagementPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.cost.toFixed(2)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
+                  <button
                           onClick={() => {
                             setSelectedInventoryItem(item);
                             setShowTransactionModal(true);
@@ -1297,7 +4035,7 @@ const LabManagementPage: React.FC = () => {
                           className="text-blue-600 hover:text-blue-900 mr-3"
                         >
                           Transaction
-                        </button>
+                  </button>
                         <button
                           onClick={() => handleEditItem(item)}
                           className="text-green-600 hover:text-green-900"
@@ -1310,12 +4048,12 @@ const LabManagementPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          </div>
+              </div>
 
           {/* Recent Transactions */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Transactions</h2>
-            <div className="space-y-3">
+              <div className="space-y-3">
               {inventoryTransactions.slice(0, 5).map((transaction) => {
                 const item = inventoryItems.find(i => i.id === transaction.itemId);
                 return (
@@ -1330,7 +4068,7 @@ const LabManagementPage: React.FC = () => {
                           {transaction.type === 'in' ? '+' : '-'}
                         </span>
                       </div>
-                      <div>
+                    <div>
                         <p className="text-sm font-medium text-gray-900">
                           {transaction.type === 'in' ? 'Added' : 'Used'} {transaction.quantity} {item?.unit} of {item?.name}
                         </p>
@@ -1341,116 +4079,506 @@ const LabManagementPage: React.FC = () => {
                     </div>
                     <span className="text-xs text-gray-500">
                       {new Date(transaction.timestamp).toLocaleDateString()}
-                    </span>
-                  </div>
+                        </span>
+                      </div>
                 );
               })}
-            </div>
+                    </div>
           </div>
         </div>
       )}
 
       {activeTab === 'instruments' && (
         <div className="space-y-6">
+          {/* Instrument Alerts */}
+          {instrumentAlerts.filter(alert => !alert.acknowledged).length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Instrument Alerts</h2>
+              <div className="space-y-3">
+                {instrumentAlerts.filter(alert => !alert.acknowledged).map((alert) => {
+                  const instrument = instruments.find(i => i.id === alert.instrumentId);
+                  return (
+                    <div
+                      key={alert.id}
+                      className={`p-4 rounded-lg border ${getAlertSeverityColor(alert.severity)}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium">{alert.title}</p>
+                          <p className="text-sm opacity-75">{alert.message}</p>
+                          <p className="text-xs opacity-75 mt-1">
+                            Instrument: {instrument?.name} • {new Date(alert.timestamp).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setInstrumentAlerts(prev =>
+                              prev.map(a => a.id === alert.id ? { ...a, acknowledged: true } : a)
+                            );
+                          }}
+                          className="ml-4 px-3 py-1 text-sm bg-white bg-opacity-50 hover:bg-opacity-75 rounded-md transition-colors"
+                        >
+                          Acknowledge
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Instrument Overview Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <FlaskConicalIcon className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Instruments</p>
+                  <p className="text-2xl font-bold text-gray-900">{instruments.length}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <CheckCircleIcon className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Available</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {instruments.filter(i => i.status === 'available').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <WrenchScrewdriverIcon className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Maintenance Due</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {maintenanceRecords.filter(m => m.status === 'scheduled' || m.status === 'overdue').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <CalendarIcon className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Active Bookings</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {instrumentBookings.filter(b => b.status === 'confirmed' || b.status === 'in_progress').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Instrument Management Header */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900">Lab Instruments</h2>
-              <button className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-sm">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Instrument Management</h2>
+                <p className="text-gray-600">Book, maintain, and manage lab instruments</p>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setShowInstrumentModal(true)}
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-sm"
+                >
                 <PlusIcon className="w-4 h-4 mr-2" />
                 Add Instrument
               </button>
-            </div>
+                <button
+                  onClick={() => setShowBookingModal(true)}
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm"
+                >
+                  <CalendarIcon className="w-4 h-4 mr-2" />
+                  Book Instrument
+                </button>
+                <button
+                  onClick={() => setShowMaintenanceModal(true)}
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg hover:from-yellow-700 hover:to-orange-700 transition-all shadow-sm"
+                >
+                  <WrenchScrewdriverIcon className="w-4 h-4 mr-2" />
+                  Schedule Maintenance
+              </button>
+              </div>
+                  </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <FlaskConicalIcon className="w-5 h-5 text-blue-600" />
-                  </div>
+            {/* Instrument Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select
+                  value={instrumentFilters.category}
+                  onChange={(e) => setInstrumentFilters(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Categories</option>
+                  <option value="Molecular Biology">Molecular Biology</option>
+                  <option value="Sample Processing">Sample Processing</option>
+                  <option value="Imaging">Imaging</option>
+                  <option value="Analytical">Analytical</option>
+                  <option value="Cell Culture">Cell Culture</option>
+                </select>
+              </div>
+              
                   <div>
-                    <h3 className="font-medium text-gray-900">PCR Machine</h3>
-                    <p className="text-sm text-gray-600">Thermal Cycler</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={instrumentFilters.status}
+                  onChange={(e) => setInstrumentFilters(prev => ({ ...prev, status: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Status</option>
+                  <option value="available">Available</option>
+                  <option value="in_use">In Use</option>
+                  <option value="maintenance">Maintenance</option>
+                  <option value="out_of_order">Out of Order</option>
+                  <option value="reserved">Reserved</option>
+                </select>
                   </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <select
+                  value={instrumentFilters.location}
+                  onChange={(e) => setInstrumentFilters(prev => ({ ...prev, location: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Locations</option>
+                  <option value="Room 201">Room 201</option>
+                  <option value="Room 203">Room 203</option>
+                  <option value="Room 205">Room 205</option>
+                </select>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Model:</span>
-                    <span className="font-medium">Bio-Rad C1000</span>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                <input
+                  type="text"
+                  value={instrumentFilters.search}
+                  onChange={(e) => setInstrumentFilters(prev => ({ ...prev, search: e.target.value }))}
+                  placeholder="Search instruments..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Location:</span>
-                    <span className="font-medium">Room 201</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Status:</span>
-                    <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Available</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Next Maintenance:</span>
-                    <span className="font-medium">2024-06-15</span>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">View</label>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setInstrumentFilters(prev => ({ ...prev, view: 'grid' }))}
+                    className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                      instrumentFilters.view === 'grid' 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Grid
+                  </button>
+                  <button
+                    onClick={() => setInstrumentFilters(prev => ({ ...prev, view: 'list' }))}
+                    className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                      instrumentFilters.view === 'list' 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    List
+                  </button>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <FlaskConicalIcon className="w-5 h-5 text-green-600" />
+            {/* Instruments Grid/List View */}
+            {instrumentFilters.view === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {instruments
+                  .filter(instrument => {
+                    if (instrumentFilters.category && instrument.category !== instrumentFilters.category) return false;
+                    if (instrumentFilters.status && instrument.status !== instrumentFilters.status) return false;
+                    if (instrumentFilters.location && !instrument.location.includes(instrumentFilters.location)) return false;
+                    if (instrumentFilters.search && !instrument.name.toLowerCase().includes(instrumentFilters.search.toLowerCase())) return false;
+                    return true;
+                  })
+                  .map((instrument) => (
+                    <div key={instrument.id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                            <FlaskConicalIcon className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900">Centrifuge</h3>
-                    <p className="text-sm text-gray-600">High-Speed</p>
+                            <h3 className="font-semibold text-gray-900">{instrument.name}</h3>
+                            <p className="text-sm text-gray-600">{instrument.model} - {instrument.manufacturer}</p>
                   </div>
                 </div>
-                <div className="space-y-2">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getInstrumentStatusColor(instrument.status)}`}>
+                          {instrument.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Model:</span>
-                    <span className="font-medium">Eppendorf 5810R</span>
+                          <span className="text-gray-600">Category:</span>
+                          <span className="font-medium">{instrument.category}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Location:</span>
-                    <span className="font-medium">Room 201</span>
+                          <span className="font-medium">{instrument.location}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Status:</span>
-                    <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Available</span>
+                          <span className="text-gray-600">Usage Hours:</span>
+                          <span className="font-medium">{instrument.usageHours.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Total Bookings:</span>
+                          <span className="font-medium">{instrument.totalBookings}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Rating:</span>
+                          <div className="flex items-center">
+                            <StarIcon className="w-4 h-4 text-yellow-400 mr-1" />
+                            <span className="font-medium">{instrument.averageRating.toFixed(1)}</span>
+                          </div>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Next Maintenance:</span>
-                    <span className="font-medium">2024-08-20</span>
+                          <span className="font-medium">{new Date(instrument.nextMaintenance).toLocaleDateString()}</span>
                   </div>
                 </div>
+
+                      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => {
+                              setSelectedInstrument(instrument);
+                              setShowInstrumentDetailsModal(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          >
+                            <EyeIcon className="w-4 h-4 inline mr-1" />
+                            View Details
+                          </button>
+                          <button
+                            onClick={() => {
+                              setBookingForm(prev => ({ ...prev, instrumentId: instrument.id }));
+                              setShowBookingModal(true);
+                            }}
+                            className="text-green-600 hover:text-green-800 text-sm font-medium"
+                          >
+                            <CalendarIcon className="w-4 h-4 inline mr-1" />
+                            Book
+                          </button>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          {instrument.trainingRequired && (
+                            <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
+                              Training Required
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Instrument</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Next Maintenance</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {instruments
+                      .filter(instrument => {
+                        if (instrumentFilters.category && instrument.category !== instrumentFilters.category) return false;
+                        if (instrumentFilters.status && instrument.status !== instrumentFilters.status) return false;
+                        if (instrumentFilters.location && !instrument.location.includes(instrumentFilters.location)) return false;
+                        if (instrumentFilters.search && !instrument.name.toLowerCase().includes(instrumentFilters.search.toLowerCase())) return false;
+                        return true;
+                      })
+                      .map((instrument) => (
+                        <tr key={instrument.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                                <FlaskConicalIcon className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">{instrument.name}</div>
+                                <div className="text-sm text-gray-500">{instrument.model} - {instrument.manufacturer}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{instrument.category}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{instrument.location}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getInstrumentStatusColor(instrument.status)}`}>
+                              {instrument.status.replace('_', ' ').toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {instrument.usageHours.toLocaleString()}h ({instrument.totalBookings} bookings)
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {new Date(instrument.nextMaintenance).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedInstrument(instrument);
+                                  setShowInstrumentDetailsModal(true);
+                                }}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="View Details"
+                              >
+                                <EyeIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setBookingForm(prev => ({ ...prev, instrumentId: instrument.id }));
+                                  setShowBookingModal(true);
+                                }}
+                                className="text-green-600 hover:text-green-900"
+                                title="Book Instrument"
+                              >
+                                <CalendarIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setMaintenanceForm(prev => ({ ...prev, instrumentId: instrument.id }));
+                                  setShowMaintenanceModal(true);
+                                }}
+                                className="text-yellow-600 hover:text-yellow-900"
+                                title="Schedule Maintenance"
+                              >
+                                <WrenchScrewdriverIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
               </div>
 
-              <div className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <FlaskConicalIcon className="w-5 h-5 text-yellow-600" />
+          {/* Recent Bookings */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Recent Bookings</h2>
+              <button
+                onClick={() => setShowBookingModal(true)}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              >
+                View All Bookings
+              </button>
+            </div>
+            <div className="space-y-3">
+              {instrumentBookings.slice(0, 5).map((booking) => {
+                const instrument = instruments.find(i => i.id === booking.instrumentId);
+                return (
+                  <div key={booking.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <CalendarIcon className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900">Microscope</h3>
-                    <p className="text-sm text-gray-600">Fluorescence</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {booking.userName} - {instrument?.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {booking.purpose} • {new Date(booking.startTime).toLocaleDateString()} {new Date(booking.startTime).toLocaleTimeString()}
+                        </p>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Model:</span>
-                    <span className="font-medium">Nikon Eclipse Ti2</span>
+                    <div className="flex items-center space-x-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getBookingStatusColor(booking.status)}`}>
+                        {booking.status.replace('_', ' ').toUpperCase()}
+                      </span>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        booking.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                        booking.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                        booking.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {booking.priority.toUpperCase()}
+                      </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Location:</span>
-                    <span className="font-medium">Room 203</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Status:</span>
-                    <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">In Use</span>
+                );
+              })}
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Next Maintenance:</span>
-                    <span className="font-medium">2024-07-10</span>
                   </div>
+
+          {/* Upcoming Maintenance */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Upcoming Maintenance</h2>
+              <button
+                onClick={() => setShowMaintenanceModal(true)}
+                className="text-yellow-600 hover:text-yellow-800 text-sm font-medium"
+              >
+                Schedule Maintenance
+              </button>
                 </div>
+            <div className="space-y-3">
+              {maintenanceRecords.slice(0, 5).map((maintenance) => {
+                const instrument = instruments.find(i => i.id === maintenance.instrumentId);
+                return (
+                  <div key={maintenance.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <WrenchScrewdriverIcon className="w-5 h-5 text-yellow-600" />
               </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {maintenance.title} - {instrument?.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {maintenance.assignedToName} • {new Date(maintenance.scheduledDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getMaintenanceStatusColor(maintenance.status)}`}>
+                        {maintenance.status.replace('_', ' ').toUpperCase()}
+                      </span>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        maintenance.priority === 'critical' ? 'bg-red-100 text-red-800' :
+                        maintenance.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                        maintenance.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {maintenance.priority.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1480,23 +4608,23 @@ const LabManagementPage: React.FC = () => {
                 />
               </div>
               
-              <div>
+                <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
-                <input
-                  type="text"
+                  <input
+                    type="text"
                   defaultValue="Department of Molecular Biology"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+                  />
+                </div>
               
-              <div>
+                <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Contact Email</label>
-                <input
+                  <input
                   type="email"
                   defaultValue="lab@university.edu"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+                  />
+                </div>
               
               <div className="pt-4">
                 <button 
@@ -1519,8 +4647,8 @@ const LabManagementPage: React.FC = () => {
                   <div className="flex items-center space-x-3 mb-3">
                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                       <ShieldCheckIcon className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
+              </div>
+              <div>
                       <h3 className="font-medium text-blue-900">Access Control</h3>
                       <p className="text-sm text-blue-700">Manage user permissions and roles</p>
                     </div>
@@ -1752,23 +4880,42 @@ const LabManagementPage: React.FC = () => {
                 </button>
               </div>
               <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                 <input
                   type="text"
-                  placeholder="Full Name"
+                    value={memberForm.name}
+                    onChange={(e) => setMemberForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter full name"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                 <input
                   type="email"
-                  placeholder="Email"
+                    value={memberForm.email}
+                    onChange={(e) => setMemberForm(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="Enter email address"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option>Select Role</option>
-                  <option>Principal Investigator</option>
-                  <option>Postdoctoral Researcher</option>
-                  <option>Graduate Student</option>
-                  <option>Research Assistant</option>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                  <select 
+                    value={memberForm.role}
+                    onChange={(e) => setMemberForm(prev => ({ ...prev, role: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Role</option>
+                    <option value="Principal Investigator">Principal Investigator</option>
+                    <option value="Postdoctoral Researcher">Postdoctoral Researcher</option>
+                    <option value="Graduate Student">Graduate Student</option>
+                    <option value="Research Assistant">Research Assistant</option>
+                    <option value="Lab Manager">Lab Manager</option>
+                    <option value="Technician">Technician</option>
                 </select>
+                </div>
               </div>
               <div className="flex justify-end space-x-3 mt-6">
                 <button
@@ -1778,7 +4925,7 @@ const LabManagementPage: React.FC = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={handleSaveChanges}
+                  onClick={addMember}
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
                 >
                   Add Member
@@ -1792,33 +4939,128 @@ const LabManagementPage: React.FC = () => {
       {/* New Project Modal */}
       {showNewProjectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">New Project</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Create New Project</h3>
                 <button
                   onClick={() => setShowNewProjectModal(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
-                  ×
+                  <XMarkIcon className="w-6 h-6" />
                 </button>
               </div>
               <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Project Name</label>
                 <input
                   type="text"
-                  placeholder="Project Name"
+                    value={projectForm.name}
+                    onChange={(e) => setProjectForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter project name"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                 <textarea
-                  placeholder="Description"
+                    value={projectForm.description}
+                    onChange={(e) => setProjectForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Project description"
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
                 <input
                   type="date"
-                  placeholder="Start Date"
+                      value={projectForm.startDate}
+                      onChange={(e) => setProjectForm(prev => ({ ...prev, startDate: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                    <input
+                      type="date"
+                      value={projectForm.endDate}
+                      onChange={(e) => setProjectForm(prev => ({ ...prev, endDate: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Lead Researcher</label>
+                    <select
+                      value={projectForm.leadResearcher}
+                      onChange={(e) => setProjectForm(prev => ({ ...prev, leadResearcher: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select Lead Researcher</option>
+                      {members.map(member => (
+                        <option key={member.id} value={member.name}>{member.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                    <select
+                      value={projectForm.priority}
+                      onChange={(e) => setProjectForm(prev => ({ ...prev, priority: e.target.value as any }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="critical">Critical</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Budget ($)</label>
+                  <input
+                    type="number"
+                    value={projectForm.budget}
+                    onChange={(e) => setProjectForm(prev => ({ ...prev, budget: parseInt(e.target.value) || 0 }))}
+                    placeholder="Enter budget amount"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Team Members</label>
+                  <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                    {members.map(member => (
+                      <label key={member.id} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={projectForm.teamMembers.includes(member.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setProjectForm(prev => ({ ...prev, teamMembers: [...prev.teamMembers, member.id] }));
+                            } else {
+                              setProjectForm(prev => ({ ...prev, teamMembers: prev.teamMembers.filter(id => id !== member.id) }));
+                            }
+                          }}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">{member.name} ({member.role})</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tags (comma-separated)</label>
+                  <input
+                    type="text"
+                    value={projectForm.tags.join(', ')}
+                    onChange={(e) => setProjectForm(prev => ({ ...prev, tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) }))}
+                    placeholder="Enter tags separated by commas"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
               <div className="flex justify-end space-x-3 mt-6">
                 <button
@@ -1828,7 +5070,7 @@ const LabManagementPage: React.FC = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={handleSaveChanges}
+                  onClick={addProject}
                   className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
                 >
                   Create Project
@@ -1855,23 +5097,23 @@ const LabManagementPage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+              <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Item Name</label>
-                  <input
-                    type="text"
+                <input
+                  type="text"
                     value={inventoryForm.name}
                     onChange={(e) => setInventoryForm(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter item name"
-                  />
-                </div>
+                />
+              </div>
 
-                <div>
+              <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                   <select
                     value={inventoryForm.category}
                     onChange={(e) => setInventoryForm(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Select category</option>
                     <option value="Enzymes">Enzymes</option>
@@ -1890,8 +5132,8 @@ const LabManagementPage: React.FC = () => {
                     onChange={(e) => setInventoryForm(prev => ({ ...prev, supplier: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter supplier name"
-                  />
-                </div>
+                />
+              </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Catalog Number</label>
@@ -1951,19 +5193,19 @@ const LabManagementPage: React.FC = () => {
                     onChange={(e) => setInventoryForm(prev => ({ ...prev, expiryDate: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                </div>
+              </div>
 
-                <div>
+              <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Cost ($)</label>
-                  <input
+                <input
                     type="number"
                     step="0.01"
                     value={inventoryForm.cost}
                     onChange={(e) => setInventoryForm(prev => ({ ...prev, cost: parseFloat(e.target.value) || 0 }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter cost per unit"
-                  />
-                </div>
+                />
+              </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Reorder Point</label>
@@ -2090,6 +5332,713 @@ const LabManagementPage: React.FC = () => {
                   Process Transaction
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lab Creation Wizard Modal */}
+      {showCreateLabModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Create New Lab</h2>
+                <button
+                  onClick={() => setShowCreateLabModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <LabCreationWizard
+                onLabCreated={(lab) => {
+                  console.log('Lab created:', lab);
+                  setShowCreateLabModal(false);
+                  // Optionally refresh lab data or show success message
+                }}
+                onCancel={() => setShowCreateLabModal(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Meeting Modal */}
+      {showMeetingModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Schedule Team Meeting</h3>
+                <button
+                  onClick={() => setShowMeetingModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Meeting Title</label>
+                  <input
+                    type="text"
+                    value={meetingForm.title}
+                    onChange={(e) => setMeetingForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Enter meeting title"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <textarea
+                    value={meetingForm.description}
+                    onChange={(e) => setMeetingForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Meeting description"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                    <input
+                      type="date"
+                      value={meetingForm.date}
+                      onChange={(e) => setMeetingForm(prev => ({ ...prev, date: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+                    <input
+                      type="time"
+                      value={meetingForm.time}
+                      onChange={(e) => setMeetingForm(prev => ({ ...prev, time: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                  <input
+                    type="text"
+                    value={meetingForm.location}
+                    onChange={(e) => setMeetingForm(prev => ({ ...prev, location: e.target.value }))}
+                    placeholder="Meeting location or video link"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Agenda</label>
+                  <textarea
+                    value={meetingForm.agenda}
+                    onChange={(e) => setMeetingForm(prev => ({ ...prev, agenda: e.target.value }))}
+                    placeholder="Meeting agenda items"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowMeetingModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={scheduleMeeting}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                >
+                  Schedule Meeting
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Issue Modal */}
+      {showIssueModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Report Experiment Issue</h3>
+                <button
+                  onClick={() => setShowIssueModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Issue Title</label>
+                  <input
+                    type="text"
+                    value={issueForm.title}
+                    onChange={(e) => setIssueForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Brief description of the issue"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <textarea
+                    value={issueForm.description}
+                    onChange={(e) => setIssueForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Detailed description of the issue"
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                    <select
+                      value={issueForm.priority}
+                      onChange={(e) => setIssueForm(prev => ({ ...prev, priority: e.target.value as any }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                    <select
+                      value={issueForm.category}
+                      onChange={(e) => setIssueForm(prev => ({ ...prev, category: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select category</option>
+                      <option value="equipment">Equipment</option>
+                      <option value="protocol">Protocol</option>
+                      <option value="safety">Safety</option>
+                      <option value="data">Data Analysis</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowIssueModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={reportIssue}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
+                >
+                  Report Issue
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Achievement Modal */}
+      {showAchievementModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Share Achievement</h3>
+                <button
+                  onClick={() => setShowAchievementModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Achievement Title</label>
+                  <input
+                    type="text"
+                    value={achievementForm.title}
+                    onChange={(e) => setAchievementForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Enter achievement title"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <textarea
+                    value={achievementForm.description}
+                    onChange={(e) => setAchievementForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Describe the achievement"
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                    <select
+                      value={achievementForm.category}
+                      onChange={(e) => setAchievementForm(prev => ({ ...prev, category: e.target.value as any }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="publication">Publication</option>
+                      <option value="award">Award</option>
+                      <option value="milestone">Milestone</option>
+                      <option value="breakthrough">Breakthrough</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                    <input
+                      type="date"
+                      value={achievementForm.date}
+                      onChange={(e) => setAchievementForm(prev => ({ ...prev, date: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Impact</label>
+                  <textarea
+                    value={achievementForm.impact}
+                    onChange={(e) => setAchievementForm(prev => ({ ...prev, impact: e.target.value }))}
+                    placeholder="Describe the impact of this achievement"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowAchievementModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={shareAchievement}
+                  className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700"
+                >
+                  Share Achievement
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Instrument Modal */}
+      {showInstrumentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[95vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Add New Instrument</h3>
+                <button
+                  onClick={() => setShowInstrumentModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <form onSubmit={(e) => { e.preventDefault(); addInstrument(); }} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Instrument Name *</label>
+                    <input
+                      type="text"
+                      value={instrumentForm.name}
+                      onChange={(e) => setInstrumentForm({...instrumentForm, name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="e.g., PCR Thermal Cycler"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Model</label>
+                    <input
+                      type="text"
+                      value={instrumentForm.model}
+                      onChange={(e) => setInstrumentForm({...instrumentForm, model: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="e.g., C1000 Touch"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Manufacturer</label>
+                    <input
+                      type="text"
+                      value={instrumentForm.manufacturer}
+                      onChange={(e) => setInstrumentForm({...instrumentForm, manufacturer: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="e.g., Bio-Rad"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
+                    <select
+                      value={instrumentForm.category}
+                      onChange={(e) => setInstrumentForm({...instrumentForm, category: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="">Select Category</option>
+                      <option value="Molecular Biology">Molecular Biology</option>
+                      <option value="Cell Biology">Cell Biology</option>
+                      <option value="Analytical">Analytical</option>
+                      <option value="Imaging">Imaging</option>
+                      <option value="General">General</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                    <input
+                      type="text"
+                      value={instrumentForm.location}
+                      onChange={(e) => setInstrumentForm({...instrumentForm, location: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="e.g., Room 201 - Molecular Lab"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Purchase Date</label>
+                    <input
+                      type="date"
+                      value={instrumentForm.purchaseDate}
+                      onChange={(e) => setInstrumentForm({...instrumentForm, purchaseDate: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <textarea
+                    value={instrumentForm.description}
+                    onChange={(e) => setInstrumentForm({...instrumentForm, description: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Brief description of the instrument and its capabilities"
+                  />
+                </div>
+                
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowInstrumentModal(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all"
+                  >
+                    Add Instrument
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Book Instrument Modal */}
+      {showBookingModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[95vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Book Instrument</h3>
+                <button
+                  onClick={() => setShowBookingModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <form onSubmit={(e) => { e.preventDefault(); createBooking(); }} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Instrument *</label>
+                  <select
+                    value={bookingForm.instrumentId}
+                    onChange={(e) => setBookingForm({...bookingForm, instrumentId: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Choose an instrument</option>
+                    {instruments.map((instrument) => (
+                      <option key={instrument.id} value={instrument.id}>
+                        {instrument.name} - {instrument.location}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Purpose *</label>
+                  <input
+                    type="text"
+                    value={bookingForm.purpose}
+                    onChange={(e) => setBookingForm({...bookingForm, purpose: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., PCR amplification for project X"
+                    required
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Time *</label>
+                    <input
+                      type="datetime-local"
+                      value={bookingForm.startTime}
+                      onChange={(e) => setBookingForm({...bookingForm, startTime: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">End Time *</label>
+                    <input
+                      type="datetime-local"
+                      value={bookingForm.endTime}
+                      onChange={(e) => setBookingForm({...bookingForm, endTime: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                  <select
+                    value={bookingForm.priority}
+                    onChange={(e) => setBookingForm({...bookingForm, priority: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                  <textarea
+                    value={bookingForm.notes}
+                    onChange={(e) => setBookingForm({...bookingForm, notes: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Any special requirements or notes"
+                  />
+                </div>
+                
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowBookingModal(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all"
+                  >
+                    Book Instrument
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Maintenance Modal */}
+      {showMaintenanceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[95vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Schedule Maintenance</h3>
+                <button
+                  onClick={() => setShowMaintenanceModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <form onSubmit={(e) => { e.preventDefault(); scheduleMaintenance(); }} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Instrument *</label>
+                  <select
+                    value={maintenanceForm.instrumentId}
+                    onChange={(e) => setMaintenanceForm({...maintenanceForm, instrumentId: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Choose an instrument</option>
+                    {instruments.map((instrument) => (
+                      <option key={instrument.id} value={instrument.id}>
+                        {instrument.name} - {instrument.location}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Maintenance Type *</label>
+                    <select
+                      value={maintenanceForm.type}
+                      onChange={(e) => setMaintenanceForm({...maintenanceForm, type: e.target.value as any})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="routine">Routine</option>
+                      <option value="repair">Repair</option>
+                      <option value="calibration">Calibration</option>
+                      <option value="cleaning">Cleaning</option>
+                      <option value="inspection">Inspection</option>
+                      <option value="upgrade">Upgrade</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                    <select
+                      value={maintenanceForm.priority}
+                      onChange={(e) => setMaintenanceForm({...maintenanceForm, priority: e.target.value as any})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="critical">Critical</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
+                  <input
+                    type="text"
+                    value={maintenanceForm.title}
+                    onChange={(e) => setMaintenanceForm({...maintenanceForm, title: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                    placeholder="e.g., Monthly calibration check"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <textarea
+                    value={maintenanceForm.description}
+                    onChange={(e) => setMaintenanceForm({...maintenanceForm, description: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                    placeholder="Detailed description of the maintenance work"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Scheduled Date *</label>
+                    <input
+                      type="datetime-local"
+                      value={maintenanceForm.scheduledDate}
+                      onChange={(e) => setMaintenanceForm({...maintenanceForm, scheduledDate: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Duration (minutes)</label>
+                    <input
+                      type="number"
+                      value={maintenanceForm.estimatedDuration}
+                      onChange={(e) => setMaintenanceForm({...maintenanceForm, estimatedDuration: parseInt(e.target.value)})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                      min="1"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                  <textarea
+                    value={maintenanceForm.notes}
+                    onChange={(e) => setMaintenanceForm({...maintenanceForm, notes: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                    placeholder="Additional notes or special instructions"
+                  />
+                </div>
+                
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowMaintenanceModal(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg hover:from-yellow-700 hover:to-orange-700 transition-all"
+                  >
+                    Schedule Maintenance
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Protocol Modal */}
+      {showProtocolModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl mx-4 max-h-[95vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Create Professional Protocol</h3>
+                <button
+                  onClick={() => setShowProtocolModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+              <ProfessionalProtocolForm
+                onSubmit={(protocol) => {
+                  console.log('Protocol created:', protocol);
+                  setShowProtocolModal(false);
+                  // Here you could add the protocol to a local state or send to backend
+                }}
+                onCancel={() => setShowProtocolModal(false)}
+              />
             </div>
           </div>
         </div>

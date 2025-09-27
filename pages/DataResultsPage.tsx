@@ -97,8 +97,37 @@ const DataResultsPage: React.FC = () => {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Enhanced mock data with real research examples
-  useEffect(() => {
+  // Fetch data from API
+  const fetchData = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.log('No auth token found, using mock data');
+        loadMockData();
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/data/results?lab_id=lab1`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setData(data.results || data || []);
+      } else {
+        console.log('API request failed, using mock data');
+        loadMockData();
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      loadMockData();
+    }
+  };
+
+  // Load mock data
+  const loadMockData = () => {
     const mockData: ResearchDataEntry[] = [
       {
         id: '1',
@@ -252,7 +281,170 @@ const DataResultsPage: React.FC = () => {
       }
     ];
     setDataEntries(mockData);
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchData();
   }, []);
+
+  // Create new data entry
+  const createDataEntry = async (entryData: any) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/data/results`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: entryData.title,
+          type: entryData.type,
+          category: entryData.category,
+          summary: entryData.summary,
+          description: entryData.description,
+          methodology: entryData.methodology,
+          results: entryData.results,
+          conclusions: entryData.conclusions,
+          tags: entryData.tags || [],
+          privacy_level: entryData.privacy_level || 'lab',
+          lab_id: 'lab1',
+          files: entryData.files || {},
+          metadata: entryData.metadata || {}
+        })
+      });
+
+      if (response.ok) {
+        const newEntry = await response.json();
+        setDataEntries(prev => [newEntry, ...prev]);
+        setShowAddModal(false);
+      } else {
+        console.error('Failed to create data entry');
+        // Fallback to local state if API fails
+        const newEntry: ResearchDataEntry = {
+          id: Date.now().toString(),
+          title: entryData.title,
+          type: entryData.type,
+          category: entryData.category,
+          date: new Date(),
+          status: 'draft',
+          tags: entryData.tags || [],
+          summary: entryData.summary,
+          author: user?.username || 'Current User',
+          lab: 'Current Lab',
+          files: entryData.files || [],
+          metadata: entryData.metadata || {}
+        };
+        setDataEntries(prev => [newEntry, ...prev]);
+        setShowAddModal(false);
+      }
+    } catch (error) {
+      console.error('Error creating data entry:', error);
+      // Fallback to local state if API fails
+      const newEntry: ResearchDataEntry = {
+        id: Date.now().toString(),
+        title: entryData.title,
+        type: entryData.type,
+        category: entryData.category,
+        date: new Date(),
+        status: 'draft',
+        tags: entryData.tags || [],
+        summary: entryData.summary,
+        author: user?.username || 'Current User',
+        lab: 'Current Lab',
+        files: entryData.files || [],
+        metadata: entryData.metadata || {}
+      };
+      setDataEntries(prev => [newEntry, ...prev]);
+      setShowAddModal(false);
+    }
+  };
+
+  // Update data entry
+  const updateDataEntry = async (id: string, entryData: any) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/data/results/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: entryData.title,
+          type: entryData.type,
+          category: entryData.category,
+          summary: entryData.summary,
+          description: entryData.description,
+          methodology: entryData.methodology,
+          results: entryData.results,
+          conclusions: entryData.conclusions,
+          tags: entryData.tags || [],
+          privacy_level: entryData.privacy_level || 'lab',
+          files: entryData.files || {},
+          metadata: entryData.metadata || {}
+        })
+      });
+
+      if (response.ok) {
+        const updatedEntry = await response.json();
+        setDataEntries(prev => prev.map(entry => entry.id === id ? updatedEntry : entry));
+      } else {
+        console.error('Failed to update data entry');
+        // Fallback to local state if API fails
+        setDataEntries(prev => prev.map(entry => 
+          entry.id === id ? { ...entry, ...entryData } : entry
+        ));
+      }
+    } catch (error) {
+      console.error('Error updating data entry:', error);
+      // Fallback to local state if API fails
+      setDataEntries(prev => prev.map(entry => 
+        entry.id === id ? { ...entry, ...entryData } : entry
+      ));
+    }
+  };
+
+  // Delete data entry
+  const deleteDataEntry = async (id: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/data/results/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        setDataEntries(prev => prev.filter(entry => entry.id !== id));
+      } else {
+        console.error('Failed to delete data entry');
+        // Fallback to local state if API fails
+        setDataEntries(prev => prev.filter(entry => entry.id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting data entry:', error);
+      // Fallback to local state if API fails
+      setDataEntries(prev => prev.filter(entry => entry.id !== id));
+    }
+  };
 
   // Filtered and sorted data
   const filteredData = dataEntries
@@ -603,13 +795,22 @@ const DataResultsPage: React.FC = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Research Data</h1>
               <p className="text-gray-600">Manage and analyze your research data in one place</p>
             </div>
-            <Button 
-              onClick={() => setShowAddModal(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <PlusIcon className="w-4 h-4 mr-2" />
-              Add Data
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                onClick={() => setShowAddModal(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <PlusIcon className="w-4 h-4 mr-2" />
+                Add Data
+              </Button>
+              <Button 
+                onClick={() => window.location.href = '/data-sharing'}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <DatabaseIcon className="w-4 h-4 mr-2" />
+                Data Sharing
+              </Button>
+            </div>
           </div>
         </div>
 
