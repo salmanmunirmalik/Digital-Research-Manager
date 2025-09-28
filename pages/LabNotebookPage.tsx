@@ -1033,9 +1033,9 @@ const LabNotebookPage: React.FC = () => {
                             relative aspect-square flex items-center justify-center text-xs font-medium rounded-lg cursor-pointer transition-all duration-300 group
                             ${isCurrentMonth 
                               ? isToday 
-                                ? 'bg-gradient-to-br from-gray-600 to-gray-700 text-white font-bold shadow-lg shadow-gray-500/30 scale-105 ring-2 ring-gray-400' 
+                                ? 'bg-gradient-to-br from-slate-800 to-slate-700 text-white font-bold shadow-lg shadow-slate-500/30 scale-105 ring-2 ring-slate-400' 
                                 : hasEvent 
-                                  ? 'bg-gradient-to-br from-yellow-100 to-yellow-200 text-yellow-900 hover:from-yellow-200 hover:to-yellow-300 hover:shadow-md hover:scale-105 border border-yellow-300/50' 
+                                  ? 'bg-gradient-to-br from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700 hover:shadow-md hover:scale-105 border border-yellow-400/50' 
                                   : isPast
                                     ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 hover:shadow-sm'
                                     : isWeekend
@@ -1061,7 +1061,7 @@ const LabNotebookPage: React.FC = () => {
                           
                               {/* Today's Glow Effect */}
                               {isToday && (
-                                <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-gray-400/20 to-gray-500/20 animate-pulse"></div>
+                                <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-slate-400/20 to-slate-500/20 animate-pulse"></div>
                               )}
                         </div>
                       );
@@ -1072,7 +1072,7 @@ const LabNotebookPage: React.FC = () => {
                       <div className="mt-3 flex items-center justify-between text-xs text-slate-600">
                         <div className="flex items-center space-x-3">
                           <div className="flex items-center space-x-1">
-                            <div className="w-1.5 h-1.5 bg-gray-500 rounded-full"></div>
+                            <div className="w-1.5 h-1.5 bg-slate-800 rounded-full"></div>
                             <span>Today</span>
                           </div>
                           <div className="flex items-center space-x-1">
