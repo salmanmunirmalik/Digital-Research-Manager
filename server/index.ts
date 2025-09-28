@@ -1317,6 +1317,128 @@ app.delete('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Get recent activity for lab notebook
+app.get('/api/lab-notebooks/activity', authenticateToken, async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    
+    // Get recent activities from lab notebook entries
+    const activities = await pool.query(`
+      SELECT 
+        'entry_created' as type,
+        'Created lab notebook entry: ' || title as description,
+        u.username as user_name,
+        created_at as timestamp,
+        'entry' as category
+      FROM lab_notebook_entries e
+      JOIN users u ON e.user_id = u.id
+      WHERE e.lab_id IN (
+        SELECT lab_id FROM lab_members WHERE user_id = $1
+      )
+      ORDER BY created_at DESC
+      LIMIT $2
+    `, [req.user.id, limit]);
+
+    // Format activities for frontend
+    const formattedActivities = activities.rows.map(activity => ({
+      id: `activity_${activity.timestamp}`,
+      type: activity.type,
+      description: activity.description,
+      user_name: activity.user_name,
+      timestamp: activity.timestamp,
+      category: activity.category
+    }));
+
+    res.json({ activities: formattedActivities });
+  } catch (error) {
+    console.error('💥 Get activity error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get smart suggestions for lab notebook
+app.get('/api/lab-notebooks/suggestions', authenticateToken, async (req, res) => {
+  try {
+    const suggestions = [];
+    
+    // Get user's recent entries to generate suggestions
+    const recentEntries = await pool.query(`
+      SELECT title, content, entry_type, tags, equipment_used, materials_used
+      FROM lab_notebook_entries 
+      WHERE user_id = $1 
+      ORDER BY created_at DESC 
+      LIMIT 5
+    `, [req.user.id]);
+
+    // Generate rule-based suggestions
+    for (const entry of recentEntries.rows) {
+      // Protocol suggestions based on content
+      if (entry.content && entry.content.toLowerCase().includes('dna')) {
+        suggestions.push({
+          id: `suggestion_${entry.title}_protocol`,
+          type: 'protocol',
+          title: 'Protocol Recommendation',
+          description: 'Consider using PCR protocol for DNA amplification based on your recent work',
+          confidence: 85,
+          priority: 'medium'
+        });
+      }
+      
+      // Safety suggestions based on materials
+      if (entry.materials_used && entry.materials_used.some((material: string) => 
+        material.toLowerCase().includes('acid') || material.toLowerCase().includes('chemical'))) {
+        suggestions.push({
+          id: `suggestion_${entry.title}_safety`,
+          type: 'safety',
+          title: 'Safety Reminder',
+          description: 'Remember to wear appropriate PPE when handling chemicals',
+          confidence: 95,
+          priority: 'high'
+        });
+      }
+      
+      // Equipment suggestions
+      if (entry.equipment_used && entry.equipment_used.length > 0) {
+        suggestions.push({
+          id: `suggestion_${entry.title}_equipment`,
+          type: 'equipment',
+          title: 'Equipment Optimization',
+          description: 'Consider booking equipment in advance for similar experiments',
+          confidence: 75,
+          priority: 'low'
+        });
+      }
+    }
+
+    // Add general suggestions if no specific ones found
+    if (suggestions.length === 0) {
+      suggestions.push(
+        {
+          id: 'suggestion_general_1',
+          type: 'protocol',
+          title: 'Protocol Recommendation',
+          description: 'Consider documenting your experimental protocols for future reference',
+          confidence: 80,
+          priority: 'medium'
+        },
+        {
+          id: 'suggestion_general_2',
+          type: 'safety',
+          title: 'Safety Reminder',
+          description: 'Always review safety protocols before starting new experiments',
+          confidence: 90,
+          priority: 'high'
+        }
+      );
+    }
+
+    res.json({ suggestions: suggestions.slice(0, 5) });
+  } catch (error) {
+    console.error('💥 Get suggestions error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Share lab notebook entry with individual users
 app.post('/api/lab-notebooks/:id/share', authenticateToken, async (req, res) => {
   try {

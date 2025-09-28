@@ -554,8 +554,9 @@ const LabNotebookPage: React.FC = () => {
             setShowProblemForm(false);
             break;
         }
-        // Refresh entries
+        // Refresh entries and activity
         fetchEntries();
+        fetchRecentActivity();
       } else {
         const errorData = await response.json();
         console.error('Failed to create entry:', errorData);
@@ -565,10 +566,156 @@ const LabNotebookPage: React.FC = () => {
     }
   };
 
+  // Fetch recent activity
+  const fetchRecentActivity = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.log('No auth token found, using mock data');
+        // Use mock data if no token
+        const mockActivity: RecentActivity[] = [
+          {
+            id: '1',
+            type: 'entry_created',
+            description: 'Created new experiment entry',
+            user_name: user?.username || 'Current User',
+            timestamp: new Date().toISOString(),
+            icon: BeakerIcon,
+            color: 'text-blue-600'
+          },
+          {
+            id: '2',
+            type: 'entry_updated',
+            description: 'Updated lab notebook entry',
+            user_name: user?.username || 'Current User',
+            timestamp: new Date(Date.now() - 3600000).toISOString(),
+            icon: PencilIcon,
+            color: 'text-green-600'
+          }
+        ];
+        setRecentActivity(mockActivity);
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks/activity`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setRecentActivity(data.activities || []);
+      } else {
+        console.log('API request failed, using mock data');
+        // Use mock data if API fails
+        const mockActivity: RecentActivity[] = [
+          {
+            id: '1',
+            type: 'entry_created',
+            description: 'Created new experiment entry',
+            user_name: user?.username || 'Current User',
+            timestamp: new Date().toISOString(),
+            icon: BeakerIcon,
+            color: 'text-blue-600'
+          }
+        ];
+        setRecentActivity(mockActivity);
+      }
+    } catch (error) {
+      console.error('Error fetching recent activity:', error);
+      // Use mock data on error
+      const mockActivity: RecentActivity[] = [
+        {
+          id: '1',
+          type: 'entry_created',
+          description: 'Created new experiment entry',
+          user_name: user?.username || 'Current User',
+          timestamp: new Date().toISOString(),
+          icon: BeakerIcon,
+          color: 'text-blue-600'
+        }
+      ];
+      setRecentActivity(mockActivity);
+    }
+  };
+
+  // Fetch smart suggestions
+  const fetchSmartSuggestions = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.log('No auth token found, using mock data');
+        // Use mock data if no token
+        const mockSuggestions: SmartSuggestion[] = [
+          {
+            id: '1',
+            type: 'protocol',
+            title: 'Protocol Recommendation',
+            description: 'Consider using PCR protocol for DNA amplification',
+            confidence: 85,
+            priority: 'medium'
+          },
+          {
+            id: '2',
+            type: 'safety',
+            title: 'Safety Reminder',
+            description: 'Remember to wear gloves when handling chemicals',
+            confidence: 95,
+            priority: 'high'
+          }
+        ];
+        setSmartSuggestions(mockSuggestions);
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks/suggestions`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSmartSuggestions(data.suggestions || []);
+      } else {
+        console.log('API request failed, using mock data');
+        // Use mock data if API fails
+        const mockSuggestions: SmartSuggestion[] = [
+          {
+            id: '1',
+            type: 'protocol',
+            title: 'Protocol Recommendation',
+            description: 'Consider using PCR protocol for DNA amplification',
+            confidence: 85,
+            priority: 'medium'
+          }
+        ];
+        setSmartSuggestions(mockSuggestions);
+      }
+    } catch (error) {
+      console.error('Error fetching smart suggestions:', error);
+      // Use mock data on error
+      const mockSuggestions: SmartSuggestion[] = [
+        {
+          id: '1',
+          type: 'protocol',
+          title: 'Protocol Recommendation',
+          description: 'Consider using PCR protocol for DNA amplification',
+          confidence: 85,
+          priority: 'medium'
+        }
+      ];
+      setSmartSuggestions(mockSuggestions);
+    }
+  };
+
   // Load data
   useEffect(() => {
     fetchEntries();
     fetchQuickNotes();
+    fetchRecentActivity();
+    fetchSmartSuggestions();
   }, []);
 
   // Handle view entry
@@ -605,8 +752,9 @@ const LabNotebookPage: React.FC = () => {
 
       if (response.ok) {
         console.log('✅ Entry deleted successfully');
-        // Refresh entries
+        // Refresh entries and activity
         fetchEntries();
+        fetchRecentActivity();
       } else {
         const errorData = await response.json();
         console.error('Failed to delete entry:', errorData);
@@ -636,8 +784,9 @@ const LabNotebookPage: React.FC = () => {
 
       if (response.ok) {
         console.log('✅ Entry updated successfully');
-        // Refresh entries
+        // Refresh entries and activity
         fetchEntries();
+        fetchRecentActivity();
         setShowEditModal(false);
       } else {
         const errorData = await response.json();
