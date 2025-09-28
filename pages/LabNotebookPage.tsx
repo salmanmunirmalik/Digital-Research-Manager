@@ -977,27 +977,15 @@ const LabNotebookPage: React.FC = () => {
     return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <BookOpenIcon className="h-8 w-8 text-blue-600" />
-                Lab Notebook
-              </h1>
-              <p className="text-gray-600 mt-2">Your digital research companion</p>
-            </div>
-          </div>
-        </div>
 
         {/* Real-Time Smart Calendar */}
         <Card className="mb-4">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CalendarDaysIcon className="h-5 w-5 text-green-600" />
-                Smart Calendar
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Live</span>
+                <BookOpenIcon className="h-5 w-5 text-blue-600" />
+                Lab Notebook
+                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Smart Calendar</span>
               </div>
               <div className="flex items-center gap-2">
                 <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
