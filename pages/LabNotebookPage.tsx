@@ -1102,6 +1102,178 @@ const LabNotebookPage: React.FC = () => {
             </Card>
         </div>
 
+        {/* Real-Time Smart Calendar */}
+        <Card className="mb-4">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CalendarDaysIcon className="h-5 w-5 text-green-600" />
+                Smart Calendar
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Live</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <span className="text-sm font-medium text-gray-700">December 2024</span>
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Interactive Calendar Grid */}
+              <div className="lg:col-span-2">
+                <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 rounded-2xl p-4 shadow-xl border border-blue-100/50 backdrop-blur-sm">
+                  {/* Day Headers */}
+                  <div className="grid grid-cols-7 gap-1 mb-3">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                      <div key={day} className="text-center text-xs font-semibold text-blue-700 py-2 bg-white/80 rounded-lg backdrop-blur-sm shadow-sm border border-blue-100/30">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Calendar Dates */}
+                  <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: 35 }, (_, i) => {
+                      const date = i - 6 + 1;
+                      const isCurrentMonth = date > 0 && date <= 31;
+                      const isToday = date === new Date().getDate();
+                      const hasEvent = [2, 5, 8, 12, 15, 18, 22, 25, 28].includes(date);
+                      const isPast = date < new Date().getDate();
+                      const isWeekend = i % 7 === 0 || i % 7 === 6;
+                      
+                      return (
+                        <div
+                          key={i}
+                          className={`
+                            relative aspect-square flex items-center justify-center text-xs font-medium rounded-lg cursor-pointer transition-all duration-300 group
+                            ${isCurrentMonth 
+                              ? isToday 
+                                ? 'bg-gradient-to-br from-emerald-500 to-green-600 text-white font-bold shadow-lg shadow-emerald-500/30 scale-105 ring-1 ring-emerald-300' 
+                                : hasEvent 
+                                  ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-900 hover:from-blue-200 hover:to-blue-300 hover:shadow-md hover:scale-105 border border-blue-300/50' 
+                                  : isPast
+                                    ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 hover:shadow-sm'
+                                    : isWeekend
+                                      ? 'text-blue-700 hover:bg-white hover:shadow-md hover:scale-105 bg-white/50'
+                                      : 'text-blue-800 hover:bg-white hover:shadow-md hover:scale-105 bg-white/70'
+                              : 'text-slate-300 hover:text-slate-400'
+                            }
+                          `}
+                        >
+                          {isCurrentMonth && (
+                            <span className="relative z-10">{date}</span>
+                          )}
+                          
+                          {/* Event Indicator */}
+                          {hasEvent && isCurrentMonth && (
+                            <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2">
+                              <div className="w-1 h-1 bg-blue-500 rounded-full shadow-sm"></div>
+                            </div>
+                          )}
+                          
+                          {/* Hover Effect */}
+                          <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          
+                          {/* Today's Glow Effect */}
+                          {isToday && (
+                            <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-emerald-400/20 to-green-500/20 animate-pulse"></div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Calendar Footer */}
+                  <div className="mt-3 flex items-center justify-between text-xs text-blue-600">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                        <span>Today</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        <span>Events</span>
+                      </div>
+                    </div>
+                    <div className="text-blue-500">
+                      {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Smart Features Panel */}
+              <div className="space-y-3">
+                {/* Today's Schedule */}
+                <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+                  <h3 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                    Today's Schedule
+                  </h3>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center space-x-2 p-1.5 bg-blue-50 rounded-lg">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-blue-900">Team Standup</p>
+                        <p className="text-xs text-blue-700">9:00 AM - 9:30 AM</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 p-1.5 bg-green-50 rounded-lg">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-green-900">Lab Session</p>
+                        <p className="text-xs text-green-700">2:00 PM - 4:00 PM</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Smart Suggestions */}
+                <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+                  <h3 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <SparklesIcon className="w-3 h-3 text-yellow-500" />
+                    Smart Suggestions
+                  </h3>
+                  <div className="space-y-1.5">
+                    <div className="p-1.5 bg-yellow-50 rounded-lg">
+                      <p className="text-xs font-medium text-yellow-900">Schedule buffer time</p>
+                      <p className="text-xs text-yellow-700">Add 15min before next meeting</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+                  <h3 className="text-xs font-semibold text-gray-900 mb-2">Quick Actions</h3>
+                  <div className="space-y-1.5">
+                    <button className="w-full p-1.5 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-left">
+                      <div className="flex items-center space-x-2">
+                        <UsersIcon className="w-3 h-3 text-blue-600" />
+                        <span className="text-xs font-medium text-blue-900">New Meeting</span>
+                      </div>
+                    </button>
+                    <button className="w-full p-1.5 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-left">
+                      <div className="flex items-center space-x-2">
+                        <BeakerIcon className="w-3 h-3 text-green-600" />
+                        <span className="text-xs font-medium text-green-900">Book Equipment</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Entry Type Selection Section */}
         <Card className="mb-6">
           <CardHeader>
@@ -1131,195 +1303,6 @@ const LabNotebookPage: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
-
-        {/* Real-Time Smart Calendar */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CalendarDaysIcon className="h-5 w-5 text-green-600" />
-                Smart Calendar
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Live</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <span className="text-sm font-medium text-gray-700">December 2024</span>
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Interactive Calendar Grid */}
-              <div className="lg:col-span-2">
-                <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 rounded-2xl p-6 shadow-xl border border-blue-100/50 backdrop-blur-sm">
-                  {/* Day Headers */}
-                  <div className="grid grid-cols-7 gap-2 mb-6">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                      <div key={day} className="text-center text-sm font-semibold text-blue-700 py-3 bg-white/80 rounded-lg backdrop-blur-sm shadow-sm border border-blue-100/30">
-                        {day}
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Calendar Dates */}
-                  <div className="grid grid-cols-7 gap-2">
-                    {Array.from({ length: 35 }, (_, i) => {
-                      const date = i - 6 + 1;
-                      const isCurrentMonth = date > 0 && date <= 31;
-                      const isToday = date === new Date().getDate();
-                      const hasEvent = [2, 5, 8, 12, 15, 18, 22, 25, 28].includes(date);
-                      const isPast = date < new Date().getDate();
-                      const isWeekend = i % 7 === 0 || i % 7 === 6;
-                      
-                      return (
-                        <div
-                          key={i}
-                          className={`
-                            relative aspect-square flex items-center justify-center text-sm font-medium rounded-xl cursor-pointer transition-all duration-300 group
-                            ${isCurrentMonth 
-                              ? isToday 
-                                ? 'bg-gradient-to-br from-emerald-500 to-green-600 text-white font-bold shadow-xl shadow-emerald-500/30 scale-105 ring-2 ring-emerald-300' 
-                                : hasEvent 
-                                  ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-900 hover:from-blue-200 hover:to-blue-300 hover:shadow-lg hover:scale-105 border border-blue-300/50' 
-                                  : isPast
-                                    ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 hover:shadow-md'
-                                    : isWeekend
-                                      ? 'text-blue-700 hover:bg-white hover:shadow-lg hover:scale-105 bg-white/50'
-                                      : 'text-blue-800 hover:bg-white hover:shadow-lg hover:scale-105 bg-white/70'
-                              : 'text-slate-300 hover:text-slate-400'
-                            }
-                          `}
-                        >
-                          {isCurrentMonth && (
-                            <span className="relative z-10">{date}</span>
-                          )}
-                          
-                          {/* Event Indicator */}
-                          {hasEvent && isCurrentMonth && (
-                            <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2">
-                              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full shadow-sm"></div>
-                            </div>
-                          )}
-                          
-                          {/* Hover Effect */}
-                          <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          
-                          {/* Today's Glow Effect */}
-                          {isToday && (
-                            <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-emerald-400/20 to-green-500/20 animate-pulse"></div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  
-                  {/* Calendar Footer */}
-                  <div className="mt-6 flex items-center justify-between text-xs text-blue-600">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                        <span>Today</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <span>Events</span>
-                      </div>
-                    </div>
-                    <div className="text-blue-500">
-                      {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Smart Features Panel */}
-              <div className="space-y-4">
-                {/* Today's Schedule */}
-                <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    Today's Schedule
-                  </h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-3 p-2 bg-blue-50 rounded-lg">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-blue-900">Team Standup</p>
-                        <p className="text-xs text-blue-700">9:00 AM - 9:30 AM</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3 p-2 bg-green-50 rounded-lg">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-green-900">Lab Session</p>
-                        <p className="text-xs text-green-700">2:00 PM - 4:00 PM</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3 p-2 bg-purple-50 rounded-lg">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-purple-900">Equipment Check</p>
-                        <p className="text-xs text-purple-700">5:00 PM - 5:30 PM</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Smart Suggestions */}
-                <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <SparklesIcon className="w-4 h-4 text-yellow-500" />
-                    Smart Suggestions
-                  </h3>
-                  <div className="space-y-2">
-                    <div className="p-2 bg-yellow-50 rounded-lg">
-                      <p className="text-xs font-medium text-yellow-900">Schedule buffer time</p>
-                      <p className="text-xs text-yellow-700">Add 15min before next meeting</p>
-                    </div>
-                    <div className="p-2 bg-orange-50 rounded-lg">
-                      <p className="text-xs font-medium text-orange-900">Equipment maintenance</p>
-                      <p className="text-xs text-orange-700">Due in 3 days</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Quick Actions</h3>
-                  <div className="space-y-2">
-                    <button className="w-full p-2 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-left">
-                      <div className="flex items-center space-x-2">
-                        <UsersIcon className="w-4 h-4 text-blue-600" />
-                        <span className="text-xs font-medium text-blue-900">New Meeting</span>
-                      </div>
-                    </button>
-                    <button className="w-full p-2 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-left">
-                      <div className="flex items-center space-x-2">
-                        <BeakerIcon className="w-4 h-4 text-green-600" />
-                        <span className="text-xs font-medium text-green-900">Book Equipment</span>
-                      </div>
-                    </button>
-                    <button className="w-full p-2 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors text-left">
-                      <div className="flex items-center space-x-2">
-                        <ClockIcon className="w-4 h-4 text-purple-600" />
-                        <span className="text-xs font-medium text-purple-900">Set Reminder</span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Lab Notebook Entries */}
           <div className="space-y-6">
