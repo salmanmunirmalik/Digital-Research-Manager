@@ -1793,6 +1793,116 @@ app.delete('/api/quick-notes/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Calendar Events Management Routes
+app.post('/api/calendar-events', authenticateToken, async (req, res) => {
+  try {
+    const { 
+      title, 
+      description, 
+      event_date, 
+      event_time, 
+      event_type = 'meeting', 
+      priority = 'medium', 
+      color = 'blue',
+      is_all_day = false
+    } = req.body;
+    
+    console.log('📅 Creating calendar event for user:', req.user.id, 'title:', title);
+    
+    if (!title || !event_date) {
+      return res.status(400).json({ error: 'Title and event_date are required' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO calendar_events (user_id, title, description, event_date, event_time, event_type, priority, color, is_all_day)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `, [req.user.id, title, description, event_date, event_time, event_type, priority, color, is_all_day]);
+
+    console.log('✅ Calendar event created:', result.rows[0]);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('💥 Create calendar event error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/calendar-events', authenticateToken, async (req, res) => {
+  try {
+    console.log('🔍 Fetching calendar events for user:', req.user.id);
+    const result = await pool.query(`
+      SELECT * FROM calendar_events 
+      WHERE user_id = $1 
+      ORDER BY event_date ASC, event_time ASC
+    `, [req.user.id]);
+
+    console.log('📅 Found calendar events:', result.rows.length);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('💥 Get calendar events error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/calendar-events/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      title, 
+      description, 
+      event_date, 
+      event_time, 
+      event_type, 
+      priority, 
+      color,
+      is_all_day
+    } = req.body;
+
+    if (!title || !event_date) {
+      return res.status(400).json({ error: 'Title and event_date are required' });
+    }
+
+    const result = await pool.query(`
+      UPDATE calendar_events 
+      SET title = $1, description = $2, event_date = $3, event_time = $4, 
+          event_type = $5, priority = $6, color = $7, is_all_day = $8, 
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $9 AND user_id = $10
+      RETURNING *
+    `, [title, description, event_date, event_time, event_type, priority, color, is_all_day, id, req.user.id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Calendar event not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('💥 Update calendar event error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/calendar-events/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(`
+      DELETE FROM calendar_events 
+      WHERE id = $1 AND user_id = $2
+      RETURNING *
+    `, [id, req.user.id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Calendar event not found' });
+    }
+
+    res.json({ message: 'Calendar event deleted successfully' });
+  } catch (error) {
+    console.error('💥 Delete calendar event error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Inventory Management Routes
 app.post('/api/inventory', authenticateToken, async (req, res) => {
   try {
