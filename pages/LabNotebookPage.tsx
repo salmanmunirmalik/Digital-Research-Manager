@@ -497,23 +497,21 @@ const LabNotebookPage: React.FC = () => {
         title: data.title,
         content: data.description || data.content || '',
         entry_type: type,
-        status: 'completed',
-        priority: 'medium',
+        status: data.status || 'completed',
+        priority: data.priority || 'medium',
         objectives: data.objectives || '',
         methodology: data.methodology || '',
         results: data.results || data.conclusions || '',
         conclusions: data.conclusions || '',
         next_steps: data.next_steps || '',
         lab_id: data.lab_id || 'lab1',
-        lab_name: 'Main Lab',
-        creator_name: user?.username || 'Unknown',
         tags: data.tags || [],
         privacy_level: data.privacy_level || 'lab',
         estimated_duration: data.estimated_duration || 0,
-        actual_duration: 0,
+        actual_duration: data.actual_duration || 0,
         cost: data.cost || 0,
-        equipment_used: data.equipment || [],
-        materials_used: data.materials || [],
+        equipment_used: data.equipment || data.equipment_used || [],
+        materials_used: data.materials || data.materials_used || [],
         safety_notes: data.safety_notes || '',
         references: data.references || [],
         collaborators: data.collaborators || []
@@ -529,6 +527,9 @@ const LabNotebookPage: React.FC = () => {
       });
 
       if (response.ok) {
+        const newEntry = await response.json();
+        console.log('✅ Entry created successfully:', newEntry);
+        
         // Close the form
         switch (type) {
           case 'experiment':
@@ -556,7 +557,8 @@ const LabNotebookPage: React.FC = () => {
         // Refresh entries
         fetchEntries();
       } else {
-        console.error('Failed to create entry');
+        const errorData = await response.json();
+        console.error('Failed to create entry:', errorData);
       }
     } catch (error) {
       console.error('Error creating entry:', error);
@@ -583,33 +585,66 @@ const LabNotebookPage: React.FC = () => {
 
   // Handle delete entry
   const handleDeleteEntry = async (entryId: string) => {
-    if (window.confirm('Are you sure you want to delete this entry?')) {
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-          console.error('No auth token found');
-          return;
-        }
+    if (!confirm('Are you sure you want to delete this entry?')) {
+      return;
+    }
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks/${entryId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.ok) {
-          setEntries(prev => prev.filter(entry => entry.id !== entryId));
-        } else {
-          console.error('Failed to delete entry');
-          // Fallback to local state if API fails
-          setEntries(prev => prev.filter(entry => entry.id !== entryId));
-        }
-      } catch (error) {
-        console.error('Error deleting entry:', error);
-        // Fallback to local state if API fails
-        setEntries(prev => prev.filter(entry => entry.id !== entryId));
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('No auth token found');
+        return;
       }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks/${entryId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        console.log('✅ Entry deleted successfully');
+        // Refresh entries
+        fetchEntries();
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to delete entry:', errorData);
+      }
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+    }
+  };
+
+  // Handle update entry
+  const handleUpdateEntry = async (entryId: string, updatedData: any) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks/${entryId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedData)
+      });
+
+      if (response.ok) {
+        console.log('✅ Entry updated successfully');
+        // Refresh entries
+        fetchEntries();
+        setShowEditModal(false);
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to update entry:', errorData);
+      }
+    } catch (error) {
+      console.error('Error updating entry:', error);
     }
   };
 
@@ -1543,48 +1578,20 @@ const LabNotebookPage: React.FC = () => {
                   Cancel
                 </Button>
                 <Button
-                  onClick={async () => {
+                  onClick={() => {
                     if (selectedEntry) {
-                      try {
-                        const token = localStorage.getItem('authToken');
-                        if (!token) {
-                          console.error('No auth token found');
-                          return;
-                        }
-
-                        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks/${selectedEntry.id}`, {
-                          method: 'PUT',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                          },
-                          body: JSON.stringify({
-                            title: selectedEntry.title,
-                            content: selectedEntry.content,
-                            status: selectedEntry.status,
-                            priority: selectedEntry.priority,
-                            objectives: selectedEntry.objectives,
-                            results: selectedEntry.results,
-                            conclusions: selectedEntry.conclusions
-                          })
-                        });
-
-                        if (response.ok) {
-                          const updatedEntry = await response.json();
-                          setEntries(prev => prev.map(entry => entry.id === selectedEntry.id ? updatedEntry : entry));
-                          setShowEditModal(false);
-                        } else {
-                          console.error('Failed to update entry');
-                          // Fallback to local state if API fails
-                          setEntries(prev => prev.map(entry => entry.id === selectedEntry.id ? selectedEntry : entry));
-                          setShowEditModal(false);
-                        }
-                      } catch (error) {
-                        console.error('Error updating entry:', error);
-                        // Fallback to local state if API fails
-                        setEntries(prev => prev.map(entry => entry.id === selectedEntry.id ? selectedEntry : entry));
-                        setShowEditModal(false);
-                      }
+                      handleUpdateEntry(selectedEntry.id, {
+                        title: selectedEntry.title,
+                        content: selectedEntry.content,
+                        status: selectedEntry.status,
+                        priority: selectedEntry.priority,
+                        objectives: selectedEntry.objectives,
+                        results: selectedEntry.results,
+                        conclusions: selectedEntry.conclusions,
+                        next_steps: selectedEntry.next_steps,
+                        tags: selectedEntry.tags,
+                        privacy_level: selectedEntry.privacy_level
+                      });
                     }
                   }}
                 >

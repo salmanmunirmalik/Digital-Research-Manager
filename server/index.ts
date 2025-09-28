@@ -1058,17 +1058,39 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Access denied to this lab' });
     }
 
-    // Create lab notebook entry - only insert fields that exist in the database
+    // Create lab notebook entry - include all fields from the form
     const result = await pool.query(`
       INSERT INTO lab_notebook_entries (
-        title, content, entry_type, results, conclusions, next_steps,
-        lab_id, project_id, author_id, privacy_level, tags
+        title, content, entry_type, status, priority, objectives, methodology, 
+        results, conclusions, next_steps, lab_id, user_id, privacy_level, 
+        tags, estimated_duration, actual_duration, cost, equipment_used, 
+        materials_used, safety_notes, reference_list, collaborators
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
       RETURNING *
     `, [
-      title, content, entry_type || 'experiment', results || '', conclusions || '', next_steps || '',
-      lab_id, project_id, req.user.id, privacy_level, tags || []
+      title, 
+      content, 
+      entry_type || 'experiment', 
+      req.body.status || 'draft',
+      req.body.priority || 'medium',
+      req.body.objectives || '',
+      req.body.methodology || '',
+      results || '', 
+      conclusions || '', 
+      next_steps || '',
+      lab_id, 
+      req.user.id, 
+      privacy_level, 
+      tags || [],
+      req.body.estimated_duration || 0,
+      req.body.actual_duration || 0,
+      req.body.cost || 0,
+      req.body.equipment_used || [],
+      req.body.materials_used || [],
+      req.body.safety_notes || '',
+      req.body.references || [],
+      req.body.collaborators || []
     ]);
 
     const entry = result.rows[0];
@@ -1094,7 +1116,7 @@ app.get('/api/lab-notebooks', authenticateToken, async (req, res) => {
       SELECT e.*, u.first_name, u.last_name, u.username as creator_name,
              l.name as lab_name, l.institution
       FROM lab_notebook_entries e
-      JOIN users u ON e.author_id = u.id
+      JOIN users u ON e.user_id = u.id
       LEFT JOIN labs l ON e.lab_id = l.id
       WHERE e.lab_id IS NOT NULL
     `;
@@ -1155,7 +1177,7 @@ app.get('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
       SELECT e.*, u.first_name, u.last_name, u.username as creator_name,
              l.name as lab_name, l.institution
       FROM lab_notebook_entries e
-      JOIN users u ON e.author_id = u.id
+      JOIN users u ON e.user_id = u.id
       LEFT JOIN labs l ON e.lab_id = l.id
       WHERE e.id = $1
     `, [id]);
@@ -1192,7 +1214,7 @@ app.put('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { 
-      title, content, entry_type, results, conclusions, 
+      title, content, entry_type, results, conclusions, next_steps,
       tags, privacy_level 
     } = req.body;
 
@@ -1208,7 +1230,7 @@ app.put('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
     const entry = currentEntry.rows[0];
 
     // Check permissions (creator, lab PI, or admin)
-    if (entry.author_id !== req.user.id && req.user.role !== 'admin') {
+    if (entry.user_id !== req.user.id && req.user.role !== 'admin') {
       const labAccess = await pool.query(`
         SELECT role FROM lab_members 
         WHERE lab_id = $1 AND user_id = $2 AND role = 'principal_researcher'
@@ -1219,16 +1241,22 @@ app.put('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    // Update entry
+    // Update entry with all fields
     const result = await pool.query(`
       UPDATE lab_notebook_entries 
-      SET title = $1, content = $2, entry_type = $3, results = $4,
-          conclusions = $5, tags = $6, privacy_level = $7, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $8
+      SET title = $1, content = $2, entry_type = $3, status = $4, priority = $5,
+          objectives = $6, methodology = $7, results = $8, conclusions = $9, 
+          next_steps = $10, tags = $11, privacy_level = $12, estimated_duration = $13,
+          actual_duration = $14, cost = $15, equipment_used = $16, materials_used = $17,
+          safety_notes = $18, reference_list = $19, collaborators = $20, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $21
       RETURNING *
     `, [
-      title, content, entry_type, results, conclusions,
-      tags || [], privacy_level, id
+      title, content, entry_type, req.body.status || 'draft', req.body.priority || 'medium',
+      req.body.objectives || '', req.body.methodology || '', results, conclusions, next_steps,
+      tags || [], privacy_level, req.body.estimated_duration || 0, req.body.actual_duration || 0,
+      req.body.cost || 0, req.body.equipment_used || [], req.body.materials_used || [],
+      req.body.safety_notes || '', req.body.references || [], req.body.collaborators || [], id
     ]);
 
     console.log('📓 Lab notebook entry updated:', { entryId: id, title, updatedBy: req.user.username });
@@ -1244,6 +1272,50 @@ app.put('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Delete lab notebook entry
+app.delete('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get current entry
+    const currentEntry = await pool.query(`
+      SELECT * FROM lab_notebook_entries WHERE id = $1
+    `, [id]);
+
+    if (currentEntry.rows.length === 0) {
+      return res.status(404).json({ error: 'Lab notebook entry not found' });
+    }
+
+    const entry = currentEntry.rows[0];
+
+    // Check permissions (creator, lab PI, or admin)
+    if (entry.user_id !== req.user.id && req.user.role !== 'admin') {
+      const labAccess = await pool.query(`
+        SELECT role FROM lab_members 
+        WHERE lab_id = $1 AND user_id = $2 AND role = 'principal_researcher'
+      `, [entry.lab_id, req.user.id]);
+
+      if (labAccess.rows.length === 0) {
+        return res.status(403).json({ error: 'Insufficient permissions to delete this entry' });
+      }
+    }
+
+    // Delete entry
+    await pool.query(`
+      DELETE FROM lab_notebook_entries WHERE id = $1
+    `, [id]);
+
+    console.log('📓 Lab notebook entry deleted:', { entryId: id, deletedBy: req.user.username });
+
+    res.json({
+      message: 'Lab notebook entry deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('💥 Delete lab notebook error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // Share lab notebook entry with individual users
 app.post('/api/lab-notebooks/:id/share', authenticateToken, async (req, res) => {
@@ -1263,7 +1335,7 @@ app.post('/api/lab-notebooks/:id/share', authenticateToken, async (req, res) => 
     const entry = entryResult.rows[0];
 
     // Check permissions (creator, lab PI, or admin)
-    if (entry.author_id !== req.user.id && req.user.role !== 'admin') {
+    if (entry.user_id !== req.user.id && req.user.role !== 'admin') {
       const labAccess = await pool.query(`
         SELECT role FROM lab_members 
         WHERE lab_id = $1 AND user_id = $2 AND role = 'principal_researcher'
