@@ -120,6 +120,20 @@ interface SmartSuggestion {
   priority: 'low' | 'medium' | 'high';
 }
 
+interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  type: 'meeting' | 'deadline' | 'reminder' | 'experiment' | 'appointment';
+  priority: 'low' | 'medium' | 'high';
+  color: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+}
+
 const LabNotebookPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -146,6 +160,23 @@ const LabNotebookPage: React.FC = () => {
   const [showMeetingForm, setShowMeetingForm] = useState(false);
   const [showProblemForm, setShowProblemForm] = useState(false);
   const [showQuickNoteModal, setShowQuickNoteModal] = useState(false);
+  
+  // Calendar state
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [eventForm, setEventForm] = useState({
+    title: '',
+    description: '',
+    date: '',
+    time: '',
+    type: 'meeting' as const,
+    priority: 'medium' as const,
+    color: 'blue'
+  });
   
   // Simplified entry form
   const [entryForm, setEntryForm] = useState({
@@ -278,6 +309,85 @@ const LabNotebookPage: React.FC = () => {
       default:
         setShowNewEntryModal(true);
     }
+  };
+
+  // Calendar functions
+  const getEventsForDate = (date: string) => {
+    return calendarEvents.filter(event => event.date === date);
+  };
+
+  const handleDateClick = (date: number) => {
+    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+    setSelectedDate(dateStr);
+    setEventForm(prev => ({ ...prev, date: dateStr }));
+    setShowEventForm(true);
+  };
+
+  const handleEventClick = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setShowEventModal(true);
+  };
+
+  const handleCreateEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id) return;
+
+    const newEvent: CalendarEvent = {
+      id: Date.now().toString(),
+      ...eventForm,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      user_id: user.id
+    };
+
+    setCalendarEvents(prev => [...prev, newEvent]);
+    setShowEventForm(false);
+    setEventForm({
+      title: '',
+      description: '',
+      date: '',
+      time: '',
+      type: 'meeting',
+      priority: 'medium',
+      color: 'blue'
+    });
+  };
+
+  const handleUpdateEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEvent) return;
+
+    const updatedEvent = {
+      ...selectedEvent,
+      ...eventForm,
+      updated_at: new Date().toISOString()
+    };
+
+    setCalendarEvents(prev => prev.map(event => 
+      event.id === selectedEvent.id ? updatedEvent : event
+    ));
+    setShowEventModal(false);
+    setSelectedEvent(null);
+  };
+
+  const handleDeleteEvent = (eventId: string) => {
+    if (window.confirm('Are you sure you want to delete this event?')) {
+      setCalendarEvents(prev => prev.filter(event => event.id !== eventId));
+      setShowEventModal(false);
+      setSelectedEvent(null);
+    }
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentDate(prev => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setMonth(prev.getMonth() - 1);
+      } else {
+        newDate.setMonth(prev.getMonth() + 1);
+      }
+      return newDate;
+    });
   };
 
   const fetchEntries = async () => {
@@ -988,13 +1098,21 @@ const LabNotebookPage: React.FC = () => {
                 <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Smart Calendar</span>
               </div>
               <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <button 
+                  onClick={() => navigateMonth('prev')}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
                   <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
-                <span className="text-sm font-medium text-gray-700">December 2024</span>
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <span className="text-sm font-medium text-gray-700">
+                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </span>
+                <button 
+                  onClick={() => navigateMonth('next')}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
                   <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
@@ -1021,16 +1139,19 @@ const LabNotebookPage: React.FC = () => {
                     {Array.from({ length: 35 }, (_, i) => {
                       const date = i - 6 + 1;
                       const isCurrentMonth = date > 0 && date <= 31;
-                      const isToday = date === new Date().getDate();
-                      const hasEvent = [2, 5, 8, 12, 15, 18, 22, 25, 28].includes(date);
-                      const isPast = date < new Date().getDate();
+                      const isToday = date === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear();
+                      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+                      const dayEvents = getEventsForDate(dateStr);
+                      const hasEvent = dayEvents.length > 0;
+                      const isPast = new Date(dateStr) < new Date(new Date().setHours(0, 0, 0, 0));
                       const isWeekend = i % 7 === 0 || i % 7 === 6;
                       
                       return (
                         <div
                           key={i}
+                          onClick={() => isCurrentMonth && handleDateClick(date)}
                           className={`
-                            relative aspect-square flex items-center justify-center text-xs font-medium rounded-lg cursor-pointer transition-all duration-300 group
+                            relative aspect-square flex flex-col items-center justify-center text-xs font-medium rounded-lg cursor-pointer transition-all duration-300 group
                             ${isCurrentMonth 
                               ? isToday 
                                 ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/30 scale-105 ring-2 ring-blue-400' 
@@ -1046,15 +1167,39 @@ const LabNotebookPage: React.FC = () => {
                           `}
                         >
                           {isCurrentMonth && (
-                            <span className="relative z-10">{date}</span>
-                          )}
-                          
-                              {/* Event Indicator */}
-                              {hasEvent && isCurrentMonth && (
-                                <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2">
-                                  <div className="w-1 h-1 bg-blue-500 rounded-full shadow-sm"></div>
+                            <>
+                              <span className="relative z-10">{date}</span>
+                              {/* Event List */}
+                              {dayEvents.length > 0 && (
+                                <div className="absolute bottom-0 left-0 right-0 p-1 space-y-0.5">
+                                  {dayEvents.slice(0, 2).map((event) => (
+                                    <div
+                                      key={event.id}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEventClick(event);
+                                      }}
+                                      className={`text-xs px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80 ${
+                                        event.color === 'blue' ? 'bg-blue-500 text-white' :
+                                        event.color === 'green' ? 'bg-green-500 text-white' :
+                                        event.color === 'red' ? 'bg-red-500 text-white' :
+                                        event.color === 'yellow' ? 'bg-yellow-500 text-black' :
+                                        'bg-blue-500 text-white'
+                                      }`}
+                                      title={event.title}
+                                    >
+                                      {event.title}
+                                    </div>
+                                  ))}
+                                  {dayEvents.length > 2 && (
+                                    <div className="text-xs text-blue-600 font-medium">
+                                      +{dayEvents.length - 2} more
+                                    </div>
+                                  )}
                                 </div>
                               )}
+                            </>
+                          )}
                           
                           {/* Hover Effect */}
                           <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -1823,6 +1968,174 @@ const LabNotebookPage: React.FC = () => {
                 >
                   Save Changes
                 </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Event Form Modal */}
+      {showEventForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Add Event</h2>
+                <button
+                  onClick={() => setShowEventForm(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+              <form onSubmit={handleCreateEvent} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                  <input
+                    type="text"
+                    value={eventForm.title}
+                    onChange={(e) => setEventForm(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Event title"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <textarea
+                    value={eventForm.description}
+                    onChange={(e) => setEventForm(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Event description"
+                    rows={3}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                    <input
+                      type="date"
+                      value={eventForm.date}
+                      onChange={(e) => setEventForm(prev => ({ ...prev, date: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+                    <input
+                      type="time"
+                      value={eventForm.time}
+                      onChange={(e) => setEventForm(prev => ({ ...prev, time: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <select
+                      value={eventForm.type}
+                      onChange={(e) => setEventForm(prev => ({ ...prev, type: e.target.value as any }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="meeting">Meeting</option>
+                      <option value="deadline">Deadline</option>
+                      <option value="reminder">Reminder</option>
+                      <option value="experiment">Experiment</option>
+                      <option value="appointment">Appointment</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                    <select
+                      value={eventForm.color}
+                      onChange={(e) => setEventForm(prev => ({ ...prev, color: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="blue">Blue</option>
+                      <option value="green">Green</option>
+                      <option value="red">Red</option>
+                      <option value="yellow">Yellow</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowEventForm(false)}
+                    className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  >
+                    Add Event
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Event Detail Modal */}
+      {showEventModal && selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Event Details</h2>
+                <button
+                  onClick={() => setShowEventModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-medium text-gray-900">{selectedEvent.title}</h3>
+                  <p className="text-sm text-gray-600">{selectedEvent.description}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-700">Date:</span>
+                    <p className="text-gray-600">{new Date(selectedEvent.date).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Time:</span>
+                    <p className="text-gray-600">{selectedEvent.time || 'All day'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Type:</span>
+                    <p className="text-gray-600 capitalize">{selectedEvent.type}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Priority:</span>
+                    <p className="text-gray-600 capitalize">{selectedEvent.priority}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setEventForm(selectedEvent);
+                      setShowEventModal(false);
+                      setShowEventForm(true);
+                    }}
+                    className="px-4 py-2 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteEvent(selectedEvent.id)}
+                    className="px-4 py-2 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           </div>
