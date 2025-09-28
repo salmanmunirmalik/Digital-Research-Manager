@@ -1006,11 +1006,11 @@ const LabNotebookPage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Interactive Calendar Grid */}
               <div className="lg:col-span-2">
-                <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/40 rounded-2xl p-4 shadow-xl border border-slate-200/60 backdrop-blur-sm">
+                <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40 rounded-2xl p-4 shadow-xl border border-blue-100/50 backdrop-blur-sm">
                   {/* Day Headers */}
                   <div className="grid grid-cols-7 gap-1 mb-3">
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                      <div key={day} className="text-center text-xs font-semibold text-slate-700 py-2 bg-white/90 rounded-lg backdrop-blur-sm shadow-sm border border-slate-200/50">
+                      <div key={day} className="text-center text-xs font-semibold text-blue-700 py-2 bg-white/90 rounded-lg backdrop-blur-sm shadow-sm border border-blue-100/50">
                         {day}
                       </div>
                     ))}
@@ -1033,14 +1033,14 @@ const LabNotebookPage: React.FC = () => {
                             relative aspect-square flex items-center justify-center text-xs font-medium rounded-lg cursor-pointer transition-all duration-300 group
                             ${isCurrentMonth 
                               ? isToday 
-                                ? 'bg-gradient-to-br from-slate-800 to-slate-700 text-white font-bold shadow-lg shadow-slate-500/30 scale-105 ring-2 ring-slate-400' 
+                                ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/30 scale-105 ring-2 ring-blue-400' 
                                 : hasEvent 
-                                  ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 hover:shadow-md hover:scale-105 border border-emerald-400/50' 
+                                  ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-900 hover:from-blue-200 hover:to-blue-300 hover:shadow-md hover:scale-105 border border-blue-300/50' 
                                   : isPast
                                     ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 hover:shadow-sm'
                                     : isWeekend
-                                      ? 'text-slate-600 hover:bg-white hover:shadow-md hover:scale-105 bg-white/60'
-                                      : 'text-slate-700 hover:bg-white hover:shadow-md hover:scale-105 bg-white/80'
+                                      ? 'text-blue-600 hover:bg-white hover:shadow-md hover:scale-105 bg-white/60'
+                                      : 'text-blue-700 hover:bg-white hover:shadow-md hover:scale-105 bg-white/80'
                               : 'text-slate-300 hover:text-slate-400'
                             }
                           `}
@@ -1052,7 +1052,7 @@ const LabNotebookPage: React.FC = () => {
                               {/* Event Indicator */}
                               {hasEvent && isCurrentMonth && (
                                 <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2">
-                                  <div className="w-1 h-1 bg-emerald-500 rounded-full shadow-sm"></div>
+                                  <div className="w-1 h-1 bg-blue-500 rounded-full shadow-sm"></div>
                                 </div>
                               )}
                           
@@ -1061,7 +1061,7 @@ const LabNotebookPage: React.FC = () => {
                           
                               {/* Today's Glow Effect */}
                               {isToday && (
-                                <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-slate-400/20 to-slate-500/20 animate-pulse"></div>
+                                <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-blue-400/20 to-blue-500/20 animate-pulse"></div>
                               )}
                         </div>
                       );
@@ -1069,18 +1069,18 @@ const LabNotebookPage: React.FC = () => {
                   </div>
                   
                       {/* Calendar Footer */}
-                      <div className="mt-3 flex items-center justify-between text-xs text-slate-600">
+                      <div className="mt-3 flex items-center justify-between text-xs text-blue-600">
                         <div className="flex items-center space-x-3">
                           <div className="flex items-center space-x-1">
-                            <div className="w-1.5 h-1.5 bg-slate-800 rounded-full"></div>
+                            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
                             <span>Today</span>
                           </div>
                           <div className="flex items-center space-x-1">
-                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                             <span>Events</span>
                           </div>
                         </div>
-                        <div className="text-slate-500">
+                        <div className="text-blue-500">
                           {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                         </div>
                       </div>
