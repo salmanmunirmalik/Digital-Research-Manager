@@ -145,6 +145,7 @@ const LabNotebookPage: React.FC = () => {
   const [showResultsForm, setShowResultsForm] = useState(false);
   const [showMeetingForm, setShowMeetingForm] = useState(false);
   const [showProblemForm, setShowProblemForm] = useState(false);
+  const [showQuickNoteModal, setShowQuickNoteModal] = useState(false);
   
   // Simplified entry form
   const [entryForm, setEntryForm] = useState({
@@ -1017,11 +1018,11 @@ const LabNotebookPage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Interactive Calendar Grid */}
               <div className="lg:col-span-2">
-                <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 rounded-2xl p-4 shadow-xl border border-blue-100/50 backdrop-blur-sm">
+                <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/40 rounded-2xl p-4 shadow-xl border border-slate-200/60 backdrop-blur-sm">
                   {/* Day Headers */}
                   <div className="grid grid-cols-7 gap-1 mb-3">
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                      <div key={day} className="text-center text-xs font-semibold text-blue-700 py-2 bg-white/80 rounded-lg backdrop-blur-sm shadow-sm border border-blue-100/30">
+                      <div key={day} className="text-center text-xs font-semibold text-slate-700 py-2 bg-white/90 rounded-lg backdrop-blur-sm shadow-sm border border-slate-200/50">
                         {day}
                       </div>
                     ))}
@@ -1044,14 +1045,14 @@ const LabNotebookPage: React.FC = () => {
                             relative aspect-square flex items-center justify-center text-xs font-medium rounded-lg cursor-pointer transition-all duration-300 group
                             ${isCurrentMonth 
                               ? isToday 
-                                ? 'bg-gradient-to-br from-emerald-500 to-green-600 text-white font-bold shadow-lg shadow-emerald-500/30 scale-105 ring-1 ring-emerald-300' 
+                                ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold shadow-lg shadow-indigo-500/30 scale-105 ring-2 ring-indigo-300' 
                                 : hasEvent 
-                                  ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-900 hover:from-blue-200 hover:to-blue-300 hover:shadow-md hover:scale-105 border border-blue-300/50' 
+                                  ? 'bg-gradient-to-br from-amber-100 to-orange-200 text-amber-900 hover:from-amber-200 hover:to-orange-300 hover:shadow-md hover:scale-105 border border-amber-300/50' 
                                   : isPast
                                     ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 hover:shadow-sm'
                                     : isWeekend
-                                      ? 'text-blue-700 hover:bg-white hover:shadow-md hover:scale-105 bg-white/50'
-                                      : 'text-blue-800 hover:bg-white hover:shadow-md hover:scale-105 bg-white/70'
+                                      ? 'text-slate-600 hover:bg-white hover:shadow-md hover:scale-105 bg-white/60'
+                                      : 'text-slate-700 hover:bg-white hover:shadow-md hover:scale-105 bg-white/80'
                               : 'text-slate-300 hover:text-slate-400'
                             }
                           `}
@@ -1060,41 +1061,41 @@ const LabNotebookPage: React.FC = () => {
                             <span className="relative z-10">{date}</span>
                           )}
                           
-                          {/* Event Indicator */}
-                          {hasEvent && isCurrentMonth && (
-                            <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2">
-                              <div className="w-1 h-1 bg-blue-500 rounded-full shadow-sm"></div>
-                            </div>
-                          )}
+                              {/* Event Indicator */}
+                              {hasEvent && isCurrentMonth && (
+                                <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2">
+                                  <div className="w-1 h-1 bg-amber-500 rounded-full shadow-sm"></div>
+                                </div>
+                              )}
                           
                           {/* Hover Effect */}
                           <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                           
-                          {/* Today's Glow Effect */}
-                          {isToday && (
-                            <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-emerald-400/20 to-green-500/20 animate-pulse"></div>
-                          )}
+                              {/* Today's Glow Effect */}
+                              {isToday && (
+                                <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-indigo-400/20 to-purple-500/20 animate-pulse"></div>
+                              )}
                         </div>
                       );
                     })}
                   </div>
                   
-                  {/* Calendar Footer */}
-                  <div className="mt-3 flex items-center justify-between text-xs text-blue-600">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-                        <span>Today</span>
+                      {/* Calendar Footer */}
+                      <div className="mt-3 flex items-center justify-between text-xs text-slate-600">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-1">
+                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
+                            <span>Today</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
+                            <span>Events</span>
+                          </div>
+                        </div>
+                        <div className="text-slate-500">
+                          {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                        <span>Events</span>
-                      </div>
-                    </div>
-                    <div className="text-blue-500">
-                      {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -1185,24 +1186,6 @@ const LabNotebookPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Quick Actions */}
-                <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
-                  <h3 className="text-xs font-semibold text-gray-900 mb-2">Quick Actions</h3>
-                  <div className="space-y-1.5">
-                    <button className="w-full p-1.5 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-left">
-                      <div className="flex items-center space-x-2">
-                        <UsersIcon className="w-3 h-3 text-blue-600" />
-                        <span className="text-xs font-medium text-blue-900">New Meeting</span>
-                      </div>
-                    </button>
-                    <button className="w-full p-1.5 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-left">
-                      <div className="flex items-center space-x-2">
-                        <BeakerIcon className="w-3 h-3 text-green-600" />
-                        <span className="text-xs font-medium text-green-900">Book Equipment</span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
               </div>
             </div>
           </CardContent>
