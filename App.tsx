@@ -14,7 +14,7 @@ import AutomatedPresentationsPage from './pages/AutomatedPresentationsPage';
 import GlobalDataSharingPage from './pages/GlobalDataSharingPage';
 import HelpForumPage from './pages/HelpForumPage';
 import ConferenceNewsPage from './pages/ConferenceNewsPage';
-import CalculatorHubPage from './pages/CalculatorHubPage';
+import ResearchToolsPage from './pages/ResearchToolsPage';
 import ReferenceLibraryPage from './pages/ReferenceLibraryPage';
 import SimplifiedResearcherPortfolioPage from './pages/SimplifiedResearcherPortfolioPage';
 import MyPortfolioPage from './pages/MyPortfolioPage';
@@ -321,7 +321,7 @@ const AppContent: React.FC = () => {
         path="/research-tools" 
         element={
           <ProtectedRoute>
-            <DemoLayout><CalculatorHubPage /></DemoLayout>
+            <DemoLayout><ResearchToolsPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
