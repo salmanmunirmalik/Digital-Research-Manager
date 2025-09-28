@@ -1132,6 +1132,87 @@ const LabNotebookPage: React.FC = () => {
               </CardContent>
             </Card>
 
+        {/* Smart Calendar */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarDaysIcon className="h-5 w-5 text-green-600" />
+              Smart Calendar
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Calendar View */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Events</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3 p-3 bg-white rounded-lg shadow-sm">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">Team Meeting</p>
+                      <p className="text-xs text-gray-500">Today, 2:00 PM</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-white rounded-lg shadow-sm">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">Experiment Review</p>
+                      <p className="text-xs text-gray-500">Tomorrow, 10:00 AM</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-white rounded-lg shadow-sm">
+                    <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">Equipment Maintenance</p>
+                      <p className="text-xs text-gray-500">Friday, 3:00 PM</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Schedule */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Schedule</h3>
+                <div className="space-y-3">
+                  <button className="w-full p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all text-left">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <UsersIcon className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Schedule Meeting</p>
+                        <p className="text-xs text-gray-500">Book a team meeting</p>
+                      </div>
+                    </div>
+                  </button>
+                  <button className="w-full p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all text-left">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <BeakerIcon className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Book Equipment</p>
+                        <p className="text-xs text-gray-500">Reserve lab equipment</p>
+                      </div>
+                    </div>
+                  </button>
+                  <button className="w-full p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all text-left">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <ClockIcon className="w-4 h-4 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Set Reminder</p>
+                        <p className="text-xs text-gray-500">Create a custom reminder</p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Lab Notebook Entries */}
           <div className="space-y-6">
           {/* Header */}
