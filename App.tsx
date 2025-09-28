@@ -318,7 +318,7 @@ const AppContent: React.FC = () => {
       
       {/* Tools & Resources Routes - All authenticated users */}
       <Route 
-        path="/calculator-hub" 
+        path="/research-tools" 
         element={
           <ProtectedRoute>
             <DemoLayout><CalculatorHubPage /></DemoLayout>

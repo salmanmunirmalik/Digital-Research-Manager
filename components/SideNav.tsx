@@ -120,8 +120,8 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
         )
       },
       { 
-        name: 'Calculator Hub', 
-        to: '/calculator-hub', 
+        name: 'Research Tools', 
+        to: '/research-tools', 
         icon: CalculatorIcon, 
         description: 'Scientific calculators and unit conversion',
         color: 'from-indigo-500 to-indigo-600',
