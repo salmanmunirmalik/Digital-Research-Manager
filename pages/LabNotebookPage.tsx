@@ -124,11 +124,12 @@ interface CalendarEvent {
   id: string;
   title: string;
   description: string;
-  date: string;
-  time: string;
-  type: 'meeting' | 'deadline' | 'reminder' | 'experiment' | 'appointment';
+  event_date: string;
+  event_time: string | null;
+  event_type: 'meeting' | 'deadline' | 'reminder' | 'experiment' | 'appointment';
   priority: 'low' | 'medium' | 'high';
   color: string;
+  is_all_day: boolean;
   created_at: string;
   updated_at: string;
   user_id: string;
@@ -313,7 +314,7 @@ const LabNotebookPage: React.FC = () => {
 
   // Calendar functions
   const getEventsForDate = (date: string) => {
-    return calendarEvents.filter(event => event.date === date);
+    return calendarEvents.filter(event => event.event_date === date);
   };
 
   const handleDateClick = (date: number) => {
@@ -332,49 +333,122 @@ const LabNotebookPage: React.FC = () => {
     e.preventDefault();
     if (!user?.id) return;
 
-    const newEvent: CalendarEvent = {
-      id: Date.now().toString(),
-      ...eventForm,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      user_id: user.id
-    };
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
 
-    setCalendarEvents(prev => [...prev, newEvent]);
-    setShowEventForm(false);
-    setEventForm({
-      title: '',
-      description: '',
-      date: '',
-      time: '',
-      type: 'meeting',
-      priority: 'medium',
-      color: 'blue'
-    });
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/calendar-events`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: eventForm.title,
+          description: eventForm.description,
+          event_date: eventForm.date,
+          event_time: eventForm.time || null,
+          event_type: eventForm.type,
+          priority: eventForm.priority,
+          color: eventForm.color,
+          is_all_day: !eventForm.time
+        })
+      });
+
+      if (response.ok) {
+        const newEvent = await response.json();
+        setCalendarEvents(prev => [...prev, newEvent]);
+        setShowEventForm(false);
+        setEventForm({
+          title: '',
+          description: '',
+          date: '',
+          time: '',
+          type: 'meeting',
+          priority: 'medium',
+          color: 'blue'
+        });
+      } else {
+        console.error('Failed to create event');
+      }
+    } catch (error) {
+      console.error('Error creating event:', error);
+    }
   };
 
   const handleUpdateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEvent) return;
 
-    const updatedEvent = {
-      ...selectedEvent,
-      ...eventForm,
-      updated_at: new Date().toISOString()
-    };
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
 
-    setCalendarEvents(prev => prev.map(event => 
-      event.id === selectedEvent.id ? updatedEvent : event
-    ));
-    setShowEventModal(false);
-    setSelectedEvent(null);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/calendar-events/${selectedEvent.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: eventForm.title,
+          description: eventForm.description,
+          event_date: eventForm.date,
+          event_time: eventForm.time || null,
+          event_type: eventForm.type,
+          priority: eventForm.priority,
+          color: eventForm.color,
+          is_all_day: !eventForm.time
+        })
+      });
+
+      if (response.ok) {
+        const updatedEvent = await response.json();
+        setCalendarEvents(prev => prev.map(event => 
+          event.id === selectedEvent.id ? updatedEvent : event
+        ));
+        setShowEventModal(false);
+        setSelectedEvent(null);
+      } else {
+        console.error('Failed to update event');
+      }
+    } catch (error) {
+      console.error('Error updating event:', error);
+    }
   };
 
-  const handleDeleteEvent = (eventId: string) => {
+  const handleDeleteEvent = async (eventId: string) => {
     if (window.confirm('Are you sure you want to delete this event?')) {
-      setCalendarEvents(prev => prev.filter(event => event.id !== eventId));
-      setShowEventModal(false);
-      setSelectedEvent(null);
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          console.error('No auth token found');
+          return;
+        }
+
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/calendar-events/${eventId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          setCalendarEvents(prev => prev.filter(event => event.id !== eventId));
+          setShowEventModal(false);
+          setSelectedEvent(null);
+        } else {
+          console.error('Failed to delete event');
+        }
+      } catch (error) {
+        console.error('Error deleting event:', error);
+      }
     }
   };
 
@@ -388,6 +462,33 @@ const LabNotebookPage: React.FC = () => {
       }
       return newDate;
     });
+  };
+
+  const fetchCalendarEvents = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.log('No auth token found, using mock data');
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/calendar-events`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const events = await response.json();
+        setCalendarEvents(events);
+      } else {
+        console.error('Failed to fetch calendar events');
+      }
+    } catch (error) {
+      console.error('Error fetching calendar events:', error);
+    }
   };
 
   const fetchEntries = async () => {
@@ -820,6 +921,7 @@ const LabNotebookPage: React.FC = () => {
   // Load data
   useEffect(() => {
     fetchEntries();
+    fetchCalendarEvents();
     fetchQuickNotes();
     fetchRecentActivity();
     fetchSmartSuggestions();
@@ -843,31 +945,31 @@ const LabNotebookPage: React.FC = () => {
       return;
     }
 
-    try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        console.error('No auth token found');
-        return;
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks/${entryId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          console.error('No auth token found');
+          return;
         }
-      });
 
-      if (response.ok) {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks/${entryId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
         console.log('✅ Entry deleted successfully');
         // Refresh entries and activity
         fetchEntries();
         fetchRecentActivity();
-      } else {
+        } else {
         const errorData = await response.json();
         console.error('Failed to delete entry:', errorData);
-      }
-    } catch (error) {
-      console.error('Error deleting entry:', error);
+        }
+      } catch (error) {
+        console.error('Error deleting entry:', error);
     }
   };
 
@@ -1096,7 +1198,7 @@ const LabNotebookPage: React.FC = () => {
                 <BookOpenIcon className="h-5 w-5 text-blue-600" />
                 Lab Notebook
                 <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Smart Calendar</span>
-              </div>
+        </div>
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => navigateMonth('prev')}
@@ -1117,7 +1219,7 @@ const LabNotebookPage: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
-              </div>
+          </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -1130,10 +1232,10 @@ const LabNotebookPage: React.FC = () => {
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
                       <div key={day} className="text-center text-xs font-semibold text-blue-700 py-2 bg-white/90 rounded-lg backdrop-blur-sm shadow-sm border border-blue-100/50">
                         {day}
-                      </div>
+          </div>
                     ))}
-                  </div>
-                  
+          </div>
+
                   {/* Calendar Dates */}
                   <div className="grid grid-cols-7 gap-1">
                     {Array.from({ length: 35 }, (_, i) => {
@@ -1189,12 +1291,12 @@ const LabNotebookPage: React.FC = () => {
                                       title={event.title}
                                     >
                                       {event.title}
-                                    </div>
-                                  ))}
+              </div>
+                  ))}
                                   {dayEvents.length > 2 && (
                                     <div className="text-xs text-blue-600 font-medium">
                                       +{dayEvents.length - 2} more
-                                    </div>
+              </div>
                                   )}
                                 </div>
                               )}
@@ -1208,10 +1310,10 @@ const LabNotebookPage: React.FC = () => {
                               {isToday && (
                                 <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-blue-400/20 to-blue-500/20 animate-pulse"></div>
                               )}
-                        </div>
-                      );
-                    })}
-                  </div>
+              </div>
+                    );
+                  })}
+            </div>
                   
                       {/* Calendar Footer */}
                       <div className="mt-3 flex items-center justify-between text-xs text-blue-600">
@@ -1233,7 +1335,7 @@ const LabNotebookPage: React.FC = () => {
               </div>
 
               {/* Smart Features Panel */}
-              <div className="space-y-3">
+                <div className="space-y-3">
                 {/* Today's Schedule */}
                 <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
                   <h3 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-2">
@@ -1243,20 +1345,20 @@ const LabNotebookPage: React.FC = () => {
                   <div className="space-y-1.5">
                     <div className="flex items-center space-x-2 p-1.5 bg-blue-50 rounded-lg">
                       <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                      <div className="flex-1">
+                        <div className="flex-1">
                         <p className="text-xs font-medium text-blue-900">Team Standup</p>
                         <p className="text-xs text-blue-700">9:00 AM - 9:30 AM</p>
-                      </div>
-                    </div>
+              </div>
+            </div>
                     <div className="flex items-center space-x-2 p-1.5 bg-green-50 rounded-lg">
                       <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                       <div className="flex-1">
                         <p className="text-xs font-medium text-green-900">Lab Session</p>
                         <p className="text-xs text-green-700">2:00 PM - 4:00 PM</p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
+          </div>
 
                 {/* Quick Notes */}
                 <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
@@ -1320,9 +1422,9 @@ const LabNotebookPage: React.FC = () => {
                 </div>
 
               </div>
-            </div>
-          </CardContent>
-        </Card>
+      </div>
+              </CardContent>
+            </Card>
 
         {/* Entry Type Selection Section */}
         <Card className="mb-6">
@@ -1952,12 +2054,12 @@ const LabNotebookPage: React.FC = () => {
                   onClick={() => {
                     if (selectedEntry) {
                       handleUpdateEntry(selectedEntry.id, {
-                        title: selectedEntry.title,
-                        content: selectedEntry.content,
-                        status: selectedEntry.status,
-                        priority: selectedEntry.priority,
-                        objectives: selectedEntry.objectives,
-                        results: selectedEntry.results,
+                            title: selectedEntry.title,
+                            content: selectedEntry.content,
+                            status: selectedEntry.status,
+                            priority: selectedEntry.priority,
+                            objectives: selectedEntry.objectives,
+                            results: selectedEntry.results,
                         conclusions: selectedEntry.conclusions,
                         next_steps: selectedEntry.next_steps,
                         tags: selectedEntry.tags,
@@ -2103,15 +2205,15 @@ const LabNotebookPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-medium text-gray-700">Date:</span>
-                    <p className="text-gray-600">{new Date(selectedEvent.date).toLocaleDateString()}</p>
+                    <p className="text-gray-600">{new Date(selectedEvent.event_date).toLocaleDateString()}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-700">Time:</span>
-                    <p className="text-gray-600">{selectedEvent.time || 'All day'}</p>
+                    <p className="text-gray-600">{selectedEvent.event_time || 'All day'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-700">Type:</span>
-                    <p className="text-gray-600 capitalize">{selectedEvent.type}</p>
+                    <p className="text-gray-600 capitalize">{selectedEvent.event_type}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-700">Priority:</span>
@@ -2121,7 +2223,15 @@ const LabNotebookPage: React.FC = () => {
                 <div className="flex justify-end gap-3 pt-4">
                   <button
                     onClick={() => {
-                      setEventForm(selectedEvent);
+                      setEventForm({
+                        title: selectedEvent.title,
+                        description: selectedEvent.description,
+                        date: selectedEvent.event_date,
+                        time: selectedEvent.event_time || '',
+                        type: selectedEvent.event_type,
+                        priority: selectedEvent.priority,
+                        color: selectedEvent.color
+                      });
                       setShowEventModal(false);
                       setShowEventForm(true);
                     }}
