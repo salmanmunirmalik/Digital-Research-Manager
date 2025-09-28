@@ -237,12 +237,12 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
   return (
     <div className="h-full flex flex-col bg-white border-r border-gray-100">
       {/* Modern Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex flex-col items-center space-y-2">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-            <span className="text-white font-bold text-xl">DR</span>
+      <div className="p-3 border-b border-gray-100">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+            <span className="text-white font-bold text-sm">DR</span>
           </div>
-          <div className="text-center">
+          <div>
             <h1 className="text-sm font-bold text-gray-900">Research Manager</h1>
             <p className="text-xs text-gray-500">Digital Lab Platform</p>
           </div>
@@ -250,13 +250,13 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
       </div>
 
       {/* Enhanced Navigation Items */}
-      <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
+      <nav className="flex-1 p-2 space-y-3 overflow-y-auto">
         {navItems.map((section, sectionIndex) => (
           <div key={sectionIndex} className="group">
             {/* Section Header - Modern Design */}
             <button
               onClick={() => toggleSection(section.title)}
-              className="w-full flex items-center justify-between px-2 py-2 text-sm font-semibold text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-all duration-200 group-hover:bg-gray-50"
+              className="w-full flex items-center justify-between px-2 py-1.5 text-sm font-semibold text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-all duration-200 group-hover:bg-gray-50"
             >
               <div className="flex items-center space-x-2">
                 <div className="w-1.5 h-1.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
@@ -280,14 +280,14 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
             <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
               expandedSections.has(section.title) ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
             }`}>
-              <div className="grid grid-cols-2 gap-2 mt-2 ml-4 pl-2 border-l-2 border-gray-100">
+              <div className="space-y-1 mt-1 ml-3 pl-2 border-l-2 border-gray-100">
                 {section.items.map((item, itemIndex) => (
                   <NavLink
                     key={itemIndex}
                     to={item.to}
                     onClick={onMobileLinkClick}
                     className={({ isActive }) =>
-                      `group flex flex-col items-center px-2 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      `group flex items-center px-2 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                         isActive
                           ? `${item.bgColor} ${item.textColor} border border-gray-200 shadow-sm transform scale-105`
                           : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:transform hover:scale-105'
@@ -295,14 +295,14 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
                     }
                     title={item.description}
                   >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-1 transition-all duration-200 ${
+                    <div className={`w-5 h-5 rounded-lg flex items-center justify-center mr-2 transition-all duration-200 ${
                       item.iconBg || 'bg-gray-100'
                     } group-hover:scale-110`}>
-                      {item.iconSvg || <item.icon className={`w-4 h-4 transition-colors duration-200 ${
+                      {item.iconSvg || <item.icon className={`w-3 h-3 transition-colors duration-200 ${
                         item.iconColor || 'text-gray-600'
                       }`} />}
                     </div>
-                    <span className="text-xs font-medium text-center leading-tight">{item.name}</span>
+                    <span className="text-xs font-medium leading-tight">{item.name}</span>
                   </NavLink>
                 ))}
               </div>
@@ -312,8 +312,8 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
       </nav>
 
       {/* Modern Bottom Section */}
-      <div className="p-3 border-t border-gray-100 bg-gradient-to-r from-gray-50 to-blue-50 flex-shrink-0">
-        <div className="space-y-2">
+      <div className="p-2 border-t border-gray-100 bg-gradient-to-r from-gray-50 to-blue-50 flex-shrink-0">
+        <div className="space-y-1">
           {/* System Status */}
           <div className="flex items-center justify-between text-xs">
             <span className="text-gray-600 font-medium">Status</span>
@@ -330,7 +330,7 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
           </div>
           
           {/* Quick Help */}
-          <button className="w-full flex items-center justify-center px-2 py-1.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
+          <button className="w-full flex items-center justify-center px-2 py-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
             <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
