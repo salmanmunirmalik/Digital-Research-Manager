@@ -3197,12 +3197,19 @@ app.get('/api/data/results', authenticateToken, async (req, res) => {
       SELECT r.*, u.username, u.first_name, u.last_name, l.name as lab_name
       FROM research_data r
       JOIN users u ON r.user_id = u.id
-      JOIN labs l ON r.lab_id = l.id
-      WHERE r.lab_id = $1
+      LEFT JOIN labs l ON r.lab_id = l.id
+      WHERE 1=1
     `;
     
-    const queryParams = [lab_id];
-    let paramCount = 1;
+    const queryParams: any[] = [];
+    let paramCount = 0;
+
+    // Filter by lab_id if provided
+    if (lab_id) {
+      paramCount++;
+      query += ` AND r.lab_id = $${paramCount}`;
+      queryParams.push(lab_id);
+    }
 
     if (data_type) {
       paramCount++;
@@ -3291,9 +3298,14 @@ app.post('/api/data/results', authenticateToken, async (req, res) => {
     const userId = (req as any).user.id;
 
     // Validate required fields
-    if (!title || !type || !category || !lab_id) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    // Validation - only title required
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
     }
+
+    // Use default lab_id if not provided
+    const defaultLabId = '550e8400-e29b-41d4-a716-446655440000';
+    const finalLabId = lab_id || defaultLabId;
 
     const result = await pool.query(`
       INSERT INTO research_data (
@@ -3302,8 +3314,8 @@ app.post('/api/data/results', authenticateToken, async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `, [
-      title, type, category, summary, description, methodology, results, conclusions,
-      tags || [], privacy_level || 'lab', lab_id, userId, files || {}, metadata || {}
+      title, type || 'experiment', category || 'other', summary, description, methodology, results, conclusions,
+      tags || [], privacy_level || 'lab', finalLabId, userId, JSON.stringify(files || []), JSON.stringify(metadata || {})
     ]);
 
     res.status(201).json(result.rows[0]);

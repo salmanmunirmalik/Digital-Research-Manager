@@ -107,7 +107,7 @@ const DataResultsPage: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/data/results?lab_id=lab1`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/data/results`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -115,7 +115,7 @@ const DataResultsPage: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setData(data.results || data || []);
+        setDataEntries(data.results || data || []);
       } else {
         console.log('API request failed, using mock data');
         loadMockData();
@@ -314,7 +314,7 @@ const DataResultsPage: React.FC = () => {
           conclusions: entryData.conclusions,
           tags: entryData.tags || [],
           privacy_level: entryData.privacy_level || 'lab',
-          lab_id: 'lab1',
+          lab_id: '550e8400-e29b-41d4-a716-446655440000',
           files: entryData.files || {},
           metadata: entryData.metadata || {}
         })
@@ -533,6 +533,7 @@ const DataResultsPage: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
                 <input
                   type="text"
+                  name="title"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter descriptive title..."
                 />
@@ -540,7 +541,7 @@ const DataResultsPage: React.FC = () => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <select name="category" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                   <option value="molecular_biology">Molecular Biology</option>
                   <option value="cell_biology">Cell Biology</option>
                   <option value="biochemistry">Biochemistry</option>
@@ -553,6 +554,7 @@ const DataResultsPage: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Summary</label>
                 <textarea
+                  name="summary"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   rows={3}
                   placeholder="Brief description of the data..."
@@ -563,6 +565,7 @@ const DataResultsPage: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
                 <input
                   type="text"
+                  name="tags"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter tags separated by commas..."
                 />
@@ -700,10 +703,37 @@ const DataResultsPage: React.FC = () => {
               Cancel
             </Button>
             <Button 
-              onClick={() => {
-                // Handle save logic here
-                setShowAddModal(false);
-                setUploadedFiles([]);
+              onClick={async () => {
+                setIsUploading(true);
+                try {
+                  const formData = new FormData();
+                  const form = document.querySelector('form');
+                  if (form) {
+                    const formElements = form.elements;
+                    const entryData = {
+                      title: (formElements.namedItem('title') as HTMLInputElement)?.value || '',
+                      type: addModalType,
+                      category: (formElements.namedItem('category') as HTMLSelectElement)?.value || 'other',
+                      summary: (formElements.namedItem('summary') as HTMLTextAreaElement)?.value || '',
+                      tags: (formElements.namedItem('tags') as HTMLInputElement)?.value?.split(',').map(t => t.trim()) || [],
+                      files: uploadedFiles.map(file => ({
+                        name: file.name,
+                        type: file.type,
+                        size: file.size,
+                        url: URL.createObjectURL(file),
+                        uploadedAt: new Date()
+                      })),
+                      metadata: {}
+                    };
+                    await createDataEntry(entryData);
+                  }
+                } catch (error) {
+                  console.error('Error saving data:', error);
+                } finally {
+                  setIsUploading(false);
+                  setShowAddModal(false);
+                  setUploadedFiles([]);
+                }
               }}
               disabled={isUploading}
             >
