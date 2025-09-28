@@ -291,7 +291,6 @@ const ProfessionalProtocolForm: React.FC<ProfessionalProtocolFormProps> = ({
             value={formData.title}
             onChange={(e) => handleInputChange('title', e.target.value)}
             placeholder="e.g., Western Blot for Protein Detection"
-            required
           />
         </div>
         <div>
@@ -300,7 +299,6 @@ const ProfessionalProtocolForm: React.FC<ProfessionalProtocolFormProps> = ({
             value={formData.protocol_type}
             onChange={(e) => handleInputChange('protocol_type', e.target.value)}
             options={protocolTypes}
-            required
           />
         </div>
       </div>
@@ -312,7 +310,6 @@ const ProfessionalProtocolForm: React.FC<ProfessionalProtocolFormProps> = ({
             value={formData.category}
             onChange={(e) => handleInputChange('category', e.target.value)}
             options={categories}
-            required
           />
         </div>
         <div>
@@ -402,7 +399,6 @@ const ProfessionalProtocolForm: React.FC<ProfessionalProtocolFormProps> = ({
               { value: 'advanced', label: 'Advanced' },
               { value: 'expert', label: 'Expert' }
             ]}
-            required
           />
         </div>
         <div>
@@ -412,7 +408,6 @@ const ProfessionalProtocolForm: React.FC<ProfessionalProtocolFormProps> = ({
             value={formData.estimated_duration_minutes}
             onChange={(e) => handleInputChange('estimated_duration_minutes', parseInt(e.target.value))}
             min="1"
-            required
           />
         </div>
         <div>
@@ -427,7 +422,6 @@ const ProfessionalProtocolForm: React.FC<ProfessionalProtocolFormProps> = ({
               { value: 'biosafety_level_2', label: 'BSL-2' },
               { value: 'biosafety_level_3', label: 'BSL-3' }
             ]}
-            required
           />
         </div>
       </div>

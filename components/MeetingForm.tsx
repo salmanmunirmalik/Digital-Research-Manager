@@ -211,7 +211,6 @@ const MeetingForm: React.FC<MeetingFormProps> = ({
                     value={formData.title}
                     onChange={(e) => handleInputChange('title', e.target.value)}
                     placeholder="e.g., Weekly Lab Meeting, Project Review"
-                    required
                   />
                 </div>
 
@@ -233,7 +232,6 @@ const MeetingForm: React.FC<MeetingFormProps> = ({
                       value={formData.meeting_type}
                       onChange={(e) => handleInputChange('meeting_type', e.target.value)}
                       options={meetingTypes}
-                      required
                     />
                   </div>
                   <div>
@@ -253,7 +251,6 @@ const MeetingForm: React.FC<MeetingFormProps> = ({
                       type="date"
                       value={formData.date}
                       onChange={(e) => handleInputChange('date', e.target.value)}
-                      required
                     />
                   </div>
                   <div>
@@ -262,7 +259,6 @@ const MeetingForm: React.FC<MeetingFormProps> = ({
                       type="time"
                       value={formData.start_time}
                       onChange={(e) => handleInputChange('start_time', e.target.value)}
-                      required
                     />
                   </div>
                   <div>
@@ -271,7 +267,6 @@ const MeetingForm: React.FC<MeetingFormProps> = ({
                       type="time"
                       value={formData.end_time}
                       onChange={(e) => handleInputChange('end_time', e.target.value)}
-                      required
                     />
                   </div>
                 </div>

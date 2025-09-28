@@ -179,7 +179,6 @@ const ResultsForm: React.FC<ResultsFormProps> = ({
                     value={formData.title}
                     onChange={(e) => handleInputChange('title', e.target.value)}
                     placeholder="Brief, descriptive title for your results"
-                    required
                   />
                 </div>
 
@@ -191,7 +190,6 @@ const ResultsForm: React.FC<ResultsFormProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     rows={4}
                     placeholder="Detailed description of the results..."
-                    required
                   />
                 </div>
 
@@ -202,7 +200,6 @@ const ResultsForm: React.FC<ResultsFormProps> = ({
                       value={formData.result_type}
                       onChange={(e) => handleInputChange('result_type', e.target.value)}
                       options={resultTypes}
-                      required
                     />
                   </div>
                   <div>
@@ -211,7 +208,6 @@ const ResultsForm: React.FC<ResultsFormProps> = ({
                       value={formData.data_source}
                       onChange={(e) => handleInputChange('data_source', e.target.value)}
                       options={dataSources}
-                      required
                     />
                   </div>
                   <div>

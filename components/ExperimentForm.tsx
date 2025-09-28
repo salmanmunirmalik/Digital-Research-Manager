@@ -168,7 +168,6 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
                     value={formData.title}
                     onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                     placeholder="Enter experiment title"
-                    required
                   />
                 </div>
 
@@ -181,7 +180,6 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
                       type="date"
                       value={formData.startDate}
                       onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                      required
                     />
                   </div>
 
@@ -193,7 +191,6 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
                       type="time"
                       value={formData.startTime}
                       onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
-                      required
                     />
                   </div>
                 </div>
@@ -225,7 +222,6 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
                   <Select
                     value={formData.protocolId}
                     onChange={(e) => handleProtocolSelect(e.target.value)}
-                    required
                   >
                     <option value="">Choose a protocol...</option>
                     {protocols.map(protocol => (

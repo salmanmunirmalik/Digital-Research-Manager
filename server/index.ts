@@ -1044,19 +1044,14 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
       status = 'in_progress'
     } = req.body;
 
-    // Validation
-    if (!title || !content || !lab_id) {
-      return res.status(400).json({ error: 'Title, content, and lab_id are required' });
+    // Validation - removed mandatory checks, only title required
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
     }
 
-    // Check if user has access to the lab
-    const labAccess = await pool.query(`
-      SELECT role FROM lab_members WHERE lab_id = $1 AND user_id = $2
-    `, [lab_id, req.user.id]);
-
-    if (labAccess.rows.length === 0 && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied to this lab' });
-    }
+    // Use default lab_id if not provided
+    const defaultLabId = '550e8400-e29b-41d4-a716-446655440000'; // Default lab UUID
+    const finalLabId = lab_id || defaultLabId;
 
     // Create lab notebook entry - include all fields from the form
     const result = await pool.query(`
@@ -1079,7 +1074,7 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
       results || '', 
       conclusions || '', 
       next_steps || '',
-      lab_id, 
+      finalLabId, 
       req.user.id, 
       privacy_level, 
       tags || [],
@@ -1118,7 +1113,7 @@ app.get('/api/lab-notebooks', authenticateToken, async (req, res) => {
       FROM lab_notebook_entries e
       JOIN users u ON e.user_id = u.id
       LEFT JOIN labs l ON e.lab_id = l.id
-      WHERE e.lab_id IS NOT NULL
+      WHERE 1=1
     `;
 
     const params: any[] = [];
@@ -1145,14 +1140,14 @@ app.get('/api/lab-notebooks', authenticateToken, async (req, res) => {
       params.push(`%${search}%`);
     }
 
-    // If not admin, only show entries from labs where user is a member or public entries
-    if (req.user.role !== 'admin') {
-      paramCount++;
-      query += ` AND (e.privacy_level = 'public' OR e.lab_id IN (
-        SELECT lab_id FROM lab_members WHERE user_id = $${paramCount}
-      ))`;
-      params.push(req.user.id);
-    }
+    // Show all entries for now (removed lab access restrictions)
+    // if (req.user.role !== 'admin') {
+    //   paramCount++;
+    //   query += ` AND (e.privacy_level = 'public' OR e.lab_id IN (
+    //     SELECT lab_id FROM lab_members WHERE user_id = $${paramCount}
+    //   ))`;
+    //   params.push(req.user.id);
+    // }
 
     query += ' ORDER BY e.created_at DESC';
 

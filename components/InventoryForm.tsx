@@ -154,7 +154,6 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder="e.g., Sodium Chloride, Pipette Tips"
-                    required
                   />
                 </div>
 
@@ -176,7 +175,6 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                       value={formData.category}
                       onChange={(e) => handleInputChange('category', e.target.value)}
                       options={categories}
-                      required
                     />
                   </div>
                   <div>
@@ -206,7 +204,6 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                       onChange={(e) => handleInputChange('quantity', parseFloat(e.target.value))}
                       min="0"
                       step="0.01"
-                      required
                     />
                   </div>
                   <div>
@@ -215,7 +212,6 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                       value={formData.unit}
                       onChange={(e) => handleInputChange('unit', e.target.value)}
                       options={units}
-                      required
                     />
                   </div>
                   <div>

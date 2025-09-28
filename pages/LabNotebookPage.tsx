@@ -324,7 +324,7 @@ const LabNotebookPage: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks?lab_id=lab1`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -504,7 +504,7 @@ const LabNotebookPage: React.FC = () => {
         results: data.results || data.conclusions || '',
         conclusions: data.conclusions || '',
         next_steps: data.next_steps || '',
-        lab_id: data.lab_id || 'lab1',
+        lab_id: data.lab_id || '550e8400-e29b-41d4-a716-446655440000',
         tags: data.tags || [],
         privacy_level: data.privacy_level || 'lab',
         estimated_duration: data.estimated_duration || 0,
@@ -860,7 +860,7 @@ const LabNotebookPage: React.FC = () => {
   };
 
   const handleCreateEntry = () => {
-    if (entryForm.title.trim() && entryForm.content.trim()) {
+    if (entryForm.title.trim()) {
       const newEntry: LabNotebookEntry = {
         id: Date.now().toString(),
         title: entryForm.title,

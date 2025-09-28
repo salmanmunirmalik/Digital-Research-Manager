@@ -142,7 +142,6 @@ const EquipmentBookingForm: React.FC<EquipmentBookingFormProps> = ({
                       value={formData.equipment_name}
                       onChange={(e) => handleInputChange('equipment_name', e.target.value)}
                       placeholder="e.g., Confocal Microscope, PCR Machine"
-                      required
                     />
                   </div>
                   <div>
@@ -162,7 +161,6 @@ const EquipmentBookingForm: React.FC<EquipmentBookingFormProps> = ({
                       value={formData.booking_type}
                       onChange={(e) => handleInputChange('booking_type', e.target.value)}
                       options={bookingTypes}
-                      required
                     />
                   </div>
                   <div>
@@ -171,7 +169,6 @@ const EquipmentBookingForm: React.FC<EquipmentBookingFormProps> = ({
                       value={formData.urgency}
                       onChange={(e) => handleInputChange('urgency', e.target.value)}
                       options={urgencyLevels}
-                      required
                     />
                   </div>
                 </div>
@@ -194,7 +191,6 @@ const EquipmentBookingForm: React.FC<EquipmentBookingFormProps> = ({
                         handleInputChange('start_date', e.target.value);
                         calculateDuration();
                       }}
-                      required
                     />
                   </div>
                   <div>
@@ -206,7 +202,6 @@ const EquipmentBookingForm: React.FC<EquipmentBookingFormProps> = ({
                         handleInputChange('start_time', e.target.value);
                         calculateDuration();
                       }}
-                      required
                     />
                   </div>
                 </div>
@@ -221,7 +216,6 @@ const EquipmentBookingForm: React.FC<EquipmentBookingFormProps> = ({
                         handleInputChange('end_date', e.target.value);
                         calculateDuration();
                       }}
-                      required
                     />
                   </div>
                   <div>
@@ -233,7 +227,6 @@ const EquipmentBookingForm: React.FC<EquipmentBookingFormProps> = ({
                         handleInputChange('end_time', e.target.value);
                         calculateDuration();
                       }}
-                      required
                     />
                   </div>
                 </div>

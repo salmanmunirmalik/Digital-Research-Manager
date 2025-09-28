@@ -162,7 +162,6 @@ const IdeaForm: React.FC<IdeaFormProps> = ({
                     value={formData.title}
                     onChange={(e) => handleInputChange('title', e.target.value)}
                     placeholder="Brief, descriptive title for your idea"
-                    required
                   />
                 </div>
 
@@ -174,7 +173,6 @@ const IdeaForm: React.FC<IdeaFormProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     rows={4}
                     placeholder="Detailed description of your research idea..."
-                    required
                   />
                 </div>
 
@@ -185,7 +183,6 @@ const IdeaForm: React.FC<IdeaFormProps> = ({
                       value={formData.category}
                       onChange={(e) => handleInputChange('category', e.target.value)}
                       options={categories}
-                      required
                     />
                   </div>
                   <div>

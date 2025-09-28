@@ -165,7 +165,6 @@ const SampleManagementForm: React.FC<SampleManagementFormProps> = ({
                   value={formData.sample_id}
                   onChange={(e) => setFormData(prev => ({ ...prev, sample_id: e.target.value }))}
                   placeholder="e.g., SAMPLE-001"
-                  required
                 />
               </div>
 
@@ -177,7 +176,6 @@ const SampleManagementForm: React.FC<SampleManagementFormProps> = ({
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Enter sample name"
-                  required
                 />
               </div>
             </div>
@@ -204,7 +202,6 @@ const SampleManagementForm: React.FC<SampleManagementFormProps> = ({
                 <Select
                   value={formData.type}
                   onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
-                  required
                 >
                   <option value="">Select sample type...</option>
                   {sampleTypes.map(type => (
@@ -237,7 +234,6 @@ const SampleManagementForm: React.FC<SampleManagementFormProps> = ({
                   type="date"
                   value={formData.collection_date}
                   onChange={(e) => setFormData(prev => ({ ...prev, collection_date: e.target.value }))}
-                  required
                 />
               </div>
 
@@ -249,7 +245,6 @@ const SampleManagementForm: React.FC<SampleManagementFormProps> = ({
                   value={formData.collector}
                   onChange={(e) => setFormData(prev => ({ ...prev, collector: e.target.value }))}
                   placeholder="Collector name"
-                  required
                 />
               </div>
             </div>
@@ -275,7 +270,6 @@ const SampleManagementForm: React.FC<SampleManagementFormProps> = ({
                   value={formData.storage_location}
                   onChange={(e) => setFormData(prev => ({ ...prev, storage_location: e.target.value }))}
                   placeholder="e.g., Freezer A, Shelf 2"
-                  required
                 />
               </div>
 
@@ -303,7 +297,6 @@ const SampleManagementForm: React.FC<SampleManagementFormProps> = ({
                   step="0.01"
                   value={formData.quantity}
                   onChange={(e) => setFormData(prev => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))}
-                  required
                 />
               </div>
 
@@ -314,7 +307,6 @@ const SampleManagementForm: React.FC<SampleManagementFormProps> = ({
                 <Select
                   value={formData.unit}
                   onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
-                  required
                 >
                   {units.map(unit => (
                     <option key={unit.value} value={unit.value}>
@@ -331,7 +323,6 @@ const SampleManagementForm: React.FC<SampleManagementFormProps> = ({
                 <Select
                   value={formData.status}
                   onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
-                  required
                 >
                   {statuses.map(status => (
                     <option key={status.value} value={status.value}>

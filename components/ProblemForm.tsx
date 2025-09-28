@@ -213,7 +213,6 @@ const ProblemForm: React.FC<ProblemFormProps> = ({
                     value={formData.title}
                     onChange={(e) => handleInputChange('title', e.target.value)}
                     placeholder="Brief, descriptive title of the problem"
-                    required
                   />
                 </div>
 
@@ -225,7 +224,6 @@ const ProblemForm: React.FC<ProblemFormProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     rows={4}
                     placeholder="Detailed description of the problem..."
-                    required
                   />
                 </div>
 
@@ -236,7 +234,6 @@ const ProblemForm: React.FC<ProblemFormProps> = ({
                       value={formData.problem_type}
                       onChange={(e) => handleInputChange('problem_type', e.target.value)}
                       options={problemTypes}
-                      required
                     />
                   </div>
                   <div>
@@ -245,7 +242,6 @@ const ProblemForm: React.FC<ProblemFormProps> = ({
                       value={formData.severity}
                       onChange={(e) => handleInputChange('severity', e.target.value)}
                       options={severities}
-                      required
                     />
                   </div>
                 </div>
@@ -257,7 +253,6 @@ const ProblemForm: React.FC<ProblemFormProps> = ({
                       value={formData.status}
                       onChange={(e) => handleInputChange('status', e.target.value)}
                       options={statuses}
-                      required
                     />
                   </div>
                   <div>
@@ -266,7 +261,6 @@ const ProblemForm: React.FC<ProblemFormProps> = ({
                       value={formData.priority}
                       onChange={(e) => handleInputChange('priority', e.target.value)}
                       options={priorities}
-                      required
                     />
                   </div>
                 </div>
@@ -277,7 +271,6 @@ const ProblemForm: React.FC<ProblemFormProps> = ({
                     <Input
                       value={formData.reported_by}
                       onChange={(e) => handleInputChange('reported_by', e.target.value)}
-                      required
                     />
                   </div>
                   <div>
