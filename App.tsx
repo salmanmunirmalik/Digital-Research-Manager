@@ -46,7 +46,7 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       {/* Layout Container - Merged Navigation */}
       <div className="flex">
         {/* Left Sidebar - Enhanced */}
-        <aside className="w-64 bg-white border-r border-gray-100 min-h-screen flex-shrink-0 shadow-sm">
+        <aside className="w-64 bg-white border-r border-gray-100 min-h-screen flex-shrink-0 shadow-sm sticky top-0">
           <div className="h-full overflow-y-auto">
             <SideNav />
           </div>
@@ -55,9 +55,12 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         {/* Main Content Area with Top Navigation */}
         <div className="flex-1 flex flex-col">
           {/* Single Navigation Bar */}
-          <div className="bg-white border-b border-gray-100 px-6 py-3 shadow-sm">
+          <div className="bg-white border-b border-gray-100 px-6 py-3 shadow-sm sticky top-0 z-40">
             <div className="flex items-center justify-between">
-              {/* Navigation Links */}
+              {/* Left spacer */}
+              <div className="flex-1"></div>
+              
+              {/* Navigation Links - Centered */}
               <div className="flex items-center space-x-2">
                 <Link 
                   to="/collaboration-networking" 
@@ -94,8 +97,10 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 </Link>
               </div>
               
-              {/* User Profile */}
-              <div className="flex items-center space-x-4">
+              {/* Right spacer */}
+              <div className="flex-1 flex justify-end">
+                {/* User Profile */}
+                <div className="flex items-center space-x-4">
                 <div className="relative">
                   <button
                     onClick={() => setShowUserMenu(!showUserMenu)}
@@ -190,6 +195,7 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     </div>
                   )}
                 </div>
+              </div>
               </div>
             </div>
           </div>
