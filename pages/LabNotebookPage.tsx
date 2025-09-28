@@ -1160,11 +1160,11 @@ const LabNotebookPage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Interactive Calendar Grid */}
               <div className="lg:col-span-2">
-                <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-2xl p-6 shadow-lg border border-white/20">
+                <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 rounded-2xl p-6 shadow-xl border border-blue-100/50 backdrop-blur-sm">
                   {/* Day Headers */}
                   <div className="grid grid-cols-7 gap-2 mb-6">
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                      <div key={day} className="text-center text-sm font-semibold text-slate-600 py-3 bg-white/60 rounded-lg backdrop-blur-sm">
+                      <div key={day} className="text-center text-sm font-semibold text-blue-700 py-3 bg-white/80 rounded-lg backdrop-blur-sm shadow-sm border border-blue-100/30">
                         {day}
                       </div>
                     ))}
@@ -1193,8 +1193,8 @@ const LabNotebookPage: React.FC = () => {
                                   : isPast
                                     ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 hover:shadow-md'
                                     : isWeekend
-                                      ? 'text-slate-700 hover:bg-white hover:shadow-lg hover:scale-105 bg-white/40'
-                                      : 'text-slate-800 hover:bg-white hover:shadow-lg hover:scale-105 bg-white/60'
+                                      ? 'text-blue-700 hover:bg-white hover:shadow-lg hover:scale-105 bg-white/50'
+                                      : 'text-blue-800 hover:bg-white hover:shadow-lg hover:scale-105 bg-white/70'
                               : 'text-slate-300 hover:text-slate-400'
                             }
                           `}
@@ -1223,7 +1223,7 @@ const LabNotebookPage: React.FC = () => {
                   </div>
                   
                   {/* Calendar Footer */}
-                  <div className="mt-6 flex items-center justify-between text-xs text-slate-500">
+                  <div className="mt-6 flex items-center justify-between text-xs text-blue-600">
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-1">
                         <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
@@ -1234,7 +1234,7 @@ const LabNotebookPage: React.FC = () => {
                         <span>Events</span>
                       </div>
                     </div>
-                    <div className="text-slate-400">
+                    <div className="text-blue-500">
                       {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                     </div>
                   </div>
