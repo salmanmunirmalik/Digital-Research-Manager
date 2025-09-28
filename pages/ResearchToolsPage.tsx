@@ -83,7 +83,7 @@ interface ConversionHistory {
 
 const ResearchToolsPage: React.FC = () => {
   // Core state management
-  const [activeTab, setActiveTab] = useState<'lab-prep' | 'data-analysis' | 'instrumentation' | 'molecular-bio' | 'research-planning'>('lab-prep');
+  const [activeTab, setActiveTab] = useState<'lab-prep' | 'molecular-bio' | 'bioinformatics'>('lab-prep');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCalcCategory, setSelectedCalcCategory] = useState('all');
   
@@ -356,32 +356,6 @@ const ResearchToolsPage: React.FC = () => {
                   </div>
                 </button>
                 <button
-                  onClick={() => setActiveTab('data-analysis')}
-                  className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
-                    activeTab === 'data-analysis'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <BarChartIcon className="w-4 h-4" />
-                    Data Analysis
-                  </div>
-                </button>
-                <button
-                  onClick={() => setActiveTab('instrumentation')}
-                  className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
-                    activeTab === 'instrumentation'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <MicroscopeIcon className="w-4 h-4" />
-                    Instrumentation
-                  </div>
-                </button>
-                <button
                   onClick={() => setActiveTab('molecular-bio')}
                   className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
                     activeTab === 'molecular-bio'
@@ -395,16 +369,16 @@ const ResearchToolsPage: React.FC = () => {
                   </div>
                 </button>
                 <button
-                  onClick={() => setActiveTab('research-planning')}
+                  onClick={() => setActiveTab('bioinformatics')}
                   className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
-                    activeTab === 'research-planning'
+                    activeTab === 'bioinformatics'
                       ? 'bg-blue-600 text-white shadow-md'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <BrainCircuitIcon className="w-4 h-4" />
-                    Research Planning
+                    <CodeIcon className="w-4 h-4" />
+                    Bioinformatics
                   </div>
                 </button>
               </div>
@@ -657,22 +631,22 @@ const ResearchToolsPage: React.FC = () => {
             </div>
               )}
 
-          {/* Data Analysis Tab */}
-          {activeTab === 'data-analysis' && (
+          {/* Molecular Biology Tab */}
+          {activeTab === 'molecular-bio' && (
             <div className="space-y-8">
               
-              {/* Statistical Analysis Tools */}
+              {/* Molecular Biology Tools */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Basic Statistics */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                {/* PCR & Amplification */}
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <BarChartIcon className="w-5 h-5 text-blue-600" />
+                      <DnaIcon className="w-5 h-5 text-blue-600" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">Basic Statistics</h3>
-                </div>
+                    <h3 className="text-lg font-semibold text-gray-900">PCR & Amplification</h3>
+                  </div>
                   <div className="space-y-3">
-                    {['Standard Deviation Calculator', 'T-Test Calculator', 'Correlation Calculator'].map((calcName) => {
+                    {['PCR Master Mix Calculator', 'Primer Design Calculator', 'Annealing Temperature Calculator'].map((calcName) => {
                       const calc = CALCULATOR_DEFINITIONS[calcName as CalculatorName];
                       if (!calc) return null;
                       return (
@@ -687,18 +661,18 @@ const ResearchToolsPage: React.FC = () => {
                       );
                     })}
                   </div>
-                             </div>
+                </div>
 
-                {/* Advanced Statistics */}
+                {/* Protein Analysis */}
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                      <BrainCircuitIcon className="w-5 h-5 text-green-600" />
+                      <BeakerIcon className="w-5 h-5 text-green-600" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">Advanced Statistics</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Protein Analysis</h3>
                   </div>
                   <div className="space-y-3">
-                    {['ANOVA Calculator', 'Regression Calculator', 'Chi-Square Calculator'].map((calcName) => {
+                    {['Protein Concentration Calculator', 'Bradford Assay Calculator', 'Western Blot Calculator'].map((calcName) => {
                       const calc = CALCULATOR_DEFINITIONS[calcName as CalculatorName];
                       if (!calc) return null;
                       return (
@@ -714,17 +688,17 @@ const ResearchToolsPage: React.FC = () => {
                     })}
                   </div>
                 </div>
-                
-                {/* Research Planning */}
+
+                {/* Cell Culture */}
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <LightbulbIcon className="w-5 h-5 text-purple-600" />
+                      <MicroscopeIcon className="w-5 h-5 text-purple-600" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">Research Planning</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Cell Culture</h3>
                   </div>
                   <div className="space-y-3">
-                    {['Statistical Power Calculator', 'Meta-Analysis Calculator', 'Survival Analysis Calculator'].map((calcName) => {
+                    {['Cell Counting Calculator', 'Passage Calculator', 'Viability Calculator'].map((calcName) => {
                       const calc = CALCULATOR_DEFINITIONS[calcName as CalculatorName];
                       if (!calc) return null;
                       return (
@@ -884,35 +858,174 @@ const ResearchToolsPage: React.FC = () => {
             </div>
           )}
 
-          {/* Instrumentation Tab */}
-          {activeTab === 'instrumentation' && (
+          {/* Bioinformatics Tab */}
+          {activeTab === 'bioinformatics' && (
             <div className="space-y-8">
-              <div className="text-center py-12">
-                <MicroscopeIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Instrumentation Tools</h3>
-                <p className="text-gray-600">Coming soon - Advanced instrumentation calculators and analysis tools</p>
-              </div>
-            </div>
-          )}
+              
+              {/* Bioinformatics Tools */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Sequence Analysis */}
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <CodeIcon className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Sequence Analysis</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">DNA Sequence Analyzer</div>
+                      <div className="text-sm text-gray-600">Analyze DNA sequences for composition, motifs, and patterns</div>
+                    </button>
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">Protein Sequence Analyzer</div>
+                      <div className="text-sm text-gray-600">Analyze protein sequences for domains and properties</div>
+                    </button>
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">GC Content Calculator</div>
+                      <div className="text-sm text-gray-600">Calculate GC content and melting temperature</div>
+                    </button>
+                  </div>
+                </div>
 
-          {/* Molecular Biology Tab */}
-          {activeTab === 'molecular-bio' && (
-            <div className="space-y-8">
-              <div className="text-center py-12">
-                <DnaIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Molecular Biology Tools</h3>
-                <p className="text-gray-600">Coming soon - Primer designers, sequence analysis, and molecular biology calculators</p>
-              </div>
-            </div>
-          )}
+                {/* Primer Design */}
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <DnaIcon className="w-5 h-5 text-green-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Primer Design</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-green-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">PCR Primer Designer</div>
+                      <div className="text-sm text-gray-600">Design optimal PCR primers with melting temperature analysis</div>
+                    </button>
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-green-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">qPCR Primer Designer</div>
+                      <div className="text-sm text-gray-600">Design primers for quantitative PCR experiments</div>
+                    </button>
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-green-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">Primer Validation</div>
+                      <div className="text-sm text-gray-600">Validate existing primers for specificity and efficiency</div>
+                    </button>
+                  </div>
+                </div>
 
-          {/* Research Planning Tab */}
-          {activeTab === 'research-planning' && (
-            <div className="space-y-8">
-              <div className="text-center py-12">
-                <BrainCircuitIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Research Planning Tools</h3>
-                <p className="text-gray-600">Coming soon - Experimental design, power analysis, and research planning tools</p>
+                {/* Phylogenetic Analysis */}
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <TreeIcon className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Phylogenetic Analysis</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-purple-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">Multiple Sequence Alignment</div>
+                      <div className="text-sm text-gray-600">Align multiple DNA or protein sequences</div>
+                    </button>
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-purple-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">Distance Matrix Calculator</div>
+                      <div className="text-sm text-gray-600">Calculate evolutionary distances between sequences</div>
+                    </button>
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-purple-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">Phylogenetic Tree Builder</div>
+                      <div className="text-sm text-gray-600">Build phylogenetic trees from sequence data</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Genomic Analysis */}
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                      <BarChartIcon className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Genomic Analysis</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-orange-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">ORF Finder</div>
+                      <div className="text-sm text-gray-600">Find open reading frames in DNA sequences</div>
+                    </button>
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-orange-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">Restriction Site Mapper</div>
+                      <div className="text-sm text-gray-600">Map restriction enzyme cutting sites</div>
+                    </button>
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-orange-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">Codon Usage Analyzer</div>
+                      <div className="text-sm text-gray-600">Analyze codon usage patterns and bias</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Protein Bioinformatics */}
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+                      <BeakerIcon className="w-5 h-5 text-teal-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Protein Bioinformatics</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-teal-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">Protein Structure Predictor</div>
+                      <div className="text-sm text-gray-600">Predict secondary structure from amino acid sequence</div>
+                    </button>
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-teal-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">Domain Finder</div>
+                      <div className="text-sm text-gray-600">Identify functional domains in protein sequences</div>
+                    </button>
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-teal-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">Hydrophobicity Plot</div>
+                      <div className="text-sm text-gray-600">Generate hydrophobicity plots for membrane proteins</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Data Visualization */}
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center">
+                      <ChartBarIcon className="w-5 h-5 text-pink-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Data Visualization</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-pink-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">Sequence Logo Generator</div>
+                      <div className="text-sm text-gray-600">Create sequence logos from multiple alignments</div>
+                    </button>
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-pink-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">Heatmap Generator</div>
+                      <div className="text-sm text-gray-600">Generate heatmaps for expression data</div>
+                    </button>
+                    <button className="w-full text-left p-3 bg-gray-50 hover:bg-pink-50 rounded-lg transition-colors">
+                      <div className="font-medium text-gray-900">Phylogenetic Tree Viewer</div>
+                      <div className="text-sm text-gray-600">Visualize and annotate phylogenetic trees</div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Coming Soon Section */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 text-center">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <CodeIcon className="w-8 h-8 text-blue-600" />
+                  <h3 className="text-xl font-semibold text-gray-900">Advanced Bioinformatics Tools</h3>
+                </div>
+                <p className="text-gray-600 mb-4">
+                  More powerful bioinformatics tools are coming soon, including machine learning-based predictions, 
+                  advanced statistical analysis, and integration with major databases.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {['BLAST Search', 'Genome Assembly', 'Variant Calling', 'Pathway Analysis', 'Network Analysis', 'Machine Learning Predictions'].map((tool) => (
+                    <span key={tool} className="px-3 py-1 bg-white rounded-full text-sm text-gray-600 border border-gray-200">
+                      {tool}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           )}
