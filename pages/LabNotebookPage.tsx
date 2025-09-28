@@ -1160,46 +1160,83 @@ const LabNotebookPage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Interactive Calendar Grid */}
               <div className="lg:col-span-2">
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4">
-                  <div className="grid grid-cols-7 gap-1 mb-4">
+                <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-2xl p-6 shadow-lg border border-white/20">
+                  {/* Day Headers */}
+                  <div className="grid grid-cols-7 gap-2 mb-6">
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                      <div key={day} className="text-center text-xs font-medium text-gray-600 py-2">
+                      <div key={day} className="text-center text-sm font-semibold text-slate-600 py-3 bg-white/60 rounded-lg backdrop-blur-sm">
                         {day}
                       </div>
                     ))}
                   </div>
-                  <div className="grid grid-cols-7 gap-1">
+                  
+                  {/* Calendar Dates */}
+                  <div className="grid grid-cols-7 gap-2">
                     {Array.from({ length: 35 }, (_, i) => {
                       const date = i - 6 + 1;
                       const isCurrentMonth = date > 0 && date <= 31;
                       const isToday = date === new Date().getDate();
                       const hasEvent = [2, 5, 8, 12, 15, 18, 22, 25, 28].includes(date);
                       const isPast = date < new Date().getDate();
+                      const isWeekend = i % 7 === 0 || i % 7 === 6;
                       
                       return (
                         <div
                           key={i}
                           className={`
-                            aspect-square flex items-center justify-center text-sm rounded-lg cursor-pointer transition-all
+                            relative aspect-square flex items-center justify-center text-sm font-medium rounded-xl cursor-pointer transition-all duration-300 group
                             ${isCurrentMonth 
                               ? isToday 
-                                ? 'bg-green-500 text-white font-bold shadow-lg' 
+                                ? 'bg-gradient-to-br from-emerald-500 to-green-600 text-white font-bold shadow-xl shadow-emerald-500/30 scale-105 ring-2 ring-emerald-300' 
                                 : hasEvent 
-                                  ? 'bg-blue-100 text-blue-900 hover:bg-blue-200' 
+                                  ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-900 hover:from-blue-200 hover:to-blue-300 hover:shadow-lg hover:scale-105 border border-blue-300/50' 
                                   : isPast
-                                    ? 'text-gray-400 hover:bg-gray-100'
-                                    : 'text-gray-900 hover:bg-white hover:shadow-sm'
-                              : 'text-gray-300'
+                                    ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 hover:shadow-md'
+                                    : isWeekend
+                                      ? 'text-slate-700 hover:bg-white hover:shadow-lg hover:scale-105 bg-white/40'
+                                      : 'text-slate-800 hover:bg-white hover:shadow-lg hover:scale-105 bg-white/60'
+                              : 'text-slate-300 hover:text-slate-400'
                             }
                           `}
                         >
-                          {isCurrentMonth && date}
+                          {isCurrentMonth && (
+                            <span className="relative z-10">{date}</span>
+                          )}
+                          
+                          {/* Event Indicator */}
                           {hasEvent && isCurrentMonth && (
-                            <div className="absolute w-1 h-1 bg-blue-500 rounded-full -bottom-0.5"></div>
+                            <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2">
+                              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full shadow-sm"></div>
+                            </div>
+                          )}
+                          
+                          {/* Hover Effect */}
+                          <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          
+                          {/* Today's Glow Effect */}
+                          {isToday && (
+                            <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-emerald-400/20 to-green-500/20 animate-pulse"></div>
                           )}
                         </div>
                       );
                     })}
+                  </div>
+                  
+                  {/* Calendar Footer */}
+                  <div className="mt-6 flex items-center justify-between text-xs text-slate-500">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                        <span>Today</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span>Events</span>
+                      </div>
+                    </div>
+                    <div className="text-slate-400">
+                      {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </div>
                   </div>
                 </div>
               </div>
