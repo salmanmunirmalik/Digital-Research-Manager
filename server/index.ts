@@ -1067,7 +1067,7 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
       title, 
       content, 
       entry_type || 'experiment', 
-      req.body.status || 'draft',
+      req.body.status || 'planning',
       req.body.priority || 'medium',
       req.body.objectives || '',
       req.body.methodology || '',
