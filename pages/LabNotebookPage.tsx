@@ -1463,8 +1463,8 @@ const LabNotebookPage: React.FC = () => {
             <h2 className="text-2xl font-bold text-gray-900">Lab Notebook Entries</h2>
           </div>
 
-            {/* Search and Filters */}
-            <Card>
+              {/* Search and Filters */}
+              <Card>
               <CardContent className="pt-6">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="md:col-span-2">
