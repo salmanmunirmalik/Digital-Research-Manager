@@ -93,6 +93,8 @@ const DataResultsPage: React.FC = () => {
   const [dataEntries, setDataEntries] = useState<ResearchDataEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<ResearchDataEntry | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [addModalType, setAddModalType] = useState<'experiment' | 'analysis' | 'image' | 'document' | 'protocol' | 'code'>('experiment');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -452,7 +454,7 @@ const DataResultsPage: React.FC = () => {
       const matchesType = filterType === 'all' || entry.type === filterType;
       const matchesSearch = searchTerm === '' || 
         entry.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entry.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+        (entry.tags || []).some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
       return matchesType && matchesSearch;
     })
     .sort((a, b) => {
@@ -777,9 +779,23 @@ const DataResultsPage: React.FC = () => {
               </div>
               <h3 className="font-semibold text-gray-900 truncate">{entry.title}</h3>
             </div>
-            <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(entry.status)}`}>
-              {entry.status}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(entry.status)}`}>
+                {entry.status}
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm(`Are you sure you want to delete "${entry.title}"?`)) {
+                    deleteDataEntry(entry.id);
+                  }
+                }}
+                className="text-red-500 hover:text-red-700 p-1"
+                title="Delete entry"
+              >
+                <TrashIcon className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           
           <p className="text-sm text-gray-600 mb-3 line-clamp-2">{entry.summary}</p>
@@ -787,23 +803,23 @@ const DataResultsPage: React.FC = () => {
           <div className="flex items-center justify-between text-xs text-gray-500">
             <div className="flex items-center gap-1">
               <ClockIcon className="w-3 h-3" />
-              <span>{entry.date.toLocaleDateString()}</span>
+              <span>{entry.created_at ? new Date(entry.created_at).toLocaleDateString() : 'No date'}</span>
             </div>
             <div className="flex items-center gap-1">
               <UserIcon className="w-3 h-3" />
-              <span>{entry.author}</span>
+              <span>{entry.username || entry.author || 'Unknown'}</span>
             </div>
           </div>
           
           <div className="flex flex-wrap gap-1 mt-3">
-            {entry.tags.slice(0, 3).map((tag, index) => (
+            {(entry.tags || []).slice(0, 3).map((tag, index) => (
               <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                 {tag}
               </span>
             ))}
-            {entry.tags.length > 3 && (
+            {(entry.tags || []).length > 3 && (
               <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                +{entry.tags.length - 3}
+                +{(entry.tags || []).length - 3}
               </span>
             )}
           </div>
@@ -947,11 +963,11 @@ const DataResultsPage: React.FC = () => {
                   <div className="flex items-center gap-4 text-sm text-gray-600">
                     <span className="flex items-center gap-1">
                       <ClockIcon className="w-4 h-4" />
-                      {selectedEntry.date.toLocaleDateString()}
+                      {selectedEntry.created_at ? new Date(selectedEntry.created_at).toLocaleDateString() : 'No date'}
                     </span>
                     <span className="flex items-center gap-1">
                       <UserIcon className="w-4 h-4" />
-                      {selectedEntry.author}
+                      {selectedEntry.username || selectedEntry.author || 'Unknown'}
                     </span>
                     <span className={`px-2 py-1 text-xs rounded-full ${
                       selectedEntry.status === 'published' ? 'bg-green-100 text-green-800' :
@@ -970,7 +986,7 @@ const DataResultsPage: React.FC = () => {
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">Tags</h4>
                     <div className="flex flex-wrap gap-2">
-                      {selectedEntry.tags.map((tag, index) => (
+                      {(selectedEntry.tags || []).map((tag, index) => (
                         <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
                           {tag}
                         </span>
@@ -979,20 +995,238 @@ const DataResultsPage: React.FC = () => {
                   </div>
                   
                   <div className="flex justify-end gap-3 pt-4">
-                    <Button variant="secondary">
+                    <Button 
+                      variant="secondary"
+                      onClick={() => {
+                        // Open edit modal
+                        setShowEditModal(true);
+                        console.log('Edit clicked for entry:', selectedEntry?.id);
+                      }}
+                    >
                       <EditIcon className="w-4 h-4 mr-2" />
                       Edit
                     </Button>
-                    <Button variant="secondary">
+                    <Button 
+                      variant="secondary"
+                      onClick={() => {
+                        console.log('Download clicked for entry:', selectedEntry?.id);
+                        if (selectedEntry?.files && selectedEntry.files.length > 0) {
+                          // Create download links for each file
+                          selectedEntry.files.forEach((file: any) => {
+                            const link = document.createElement('a');
+                            link.href = file.url || '#';
+                            link.download = file.name || 'download';
+                            link.target = '_blank';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          });
+                        } else {
+                          alert('No files available for download');
+                        }
+                      }}
+                    >
                       <DownloadIcon className="w-4 h-4 mr-2" />
                       Download
                     </Button>
-                    <Button>
+                    <Button
+                      onClick={() => {
+                        // Open detailed view modal
+                        setShowViewModal(true);
+                        console.log('View Details clicked for entry:', selectedEntry?.id);
+                      }}
+                    >
                       <EyeIcon className="w-4 h-4 mr-2" />
                       View Details
                     </Button>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Modal */}
+        {showEditModal && selectedEntry && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">Edit Data Entry</h3>
+                <button 
+                  onClick={() => setShowEditModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const updatedData = {
+                  title: formData.get('title') as string,
+                  summary: formData.get('summary') as string,
+                  description: formData.get('description') as string,
+                  tags: (formData.get('tags') as string)?.split(',').map(tag => tag.trim()) || [],
+                };
+                
+                await updateDataEntry(selectedEntry.id, updatedData);
+                setShowEditModal(false);
+                setSelectedEntry(null);
+              }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                    <input
+                      type="text"
+                      name="title"
+                      defaultValue={selectedEntry.title}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Summary</label>
+                    <textarea
+                      name="summary"
+                      defaultValue={selectedEntry.summary}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea
+                      name="description"
+                      defaultValue={selectedEntry.description}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows={5}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Tags (comma-separated)</label>
+                    <input
+                      type="text"
+                      name="tags"
+                      defaultValue={selectedEntry.tags?.join(', ') || ''}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex justify-end gap-3 mt-6">
+                  <Button 
+                    type="button" 
+                    variant="secondary" 
+                    onClick={() => setShowEditModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    Save Changes
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Detailed View Modal */}
+        {showViewModal && selectedEntry && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">Detailed View: {selectedEntry.title}</h3>
+                <button 
+                  onClick={() => setShowViewModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Basic Information</h4>
+                    <div className="space-y-2 text-sm">
+                      <div><span className="font-medium">Type:</span> {selectedEntry.type}</div>
+                      <div><span className="font-medium">Status:</span> {selectedEntry.status}</div>
+                      <div><span className="font-medium">Created:</span> {selectedEntry.created_at ? new Date(selectedEntry.created_at).toLocaleDateString() : 'Unknown'}</div>
+                      <div><span className="font-medium">Author:</span> {selectedEntry.username || selectedEntry.author || 'Unknown'}</div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Summary</h4>
+                    <p className="text-sm text-gray-600">{selectedEntry.summary || 'No summary available'}</p>
+                  </div>
+                </div>
+                
+                {selectedEntry.description && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Description</h4>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{selectedEntry.description}</p>
+                  </div>
+                )}
+                
+                {selectedEntry.tags && selectedEntry.tags.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Tags</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedEntry.tags.map((tag, index) => (
+                        <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {selectedEntry.files && selectedEntry.files.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Files</h4>
+                    <div className="space-y-2">
+                      {selectedEntry.files.map((file: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <FilesIcon className="w-5 h-5 text-gray-400" />
+                            <div>
+                              <div className="font-medium text-sm">{file.name}</div>
+                              <div className="text-xs text-gray-500">{file.size ? `${(file.size / 1024).toFixed(1)} KB` : 'Unknown size'}</div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const link = document.createElement('a');
+                              link.href = file.url || '#';
+                              link.download = file.name || 'download';
+                              link.target = '_blank';
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            }}
+                            className="text-blue-600 hover:text-blue-800 text-sm"
+                          >
+                            Download
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                <Button 
+                  variant="secondary" 
+                  onClick={() => setShowViewModal(false)}
+                >
+                  Close
+                </Button>
               </div>
             </div>
           </div>

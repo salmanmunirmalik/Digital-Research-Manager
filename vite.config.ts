@@ -43,6 +43,9 @@ export default defineConfig(({ mode }) => {
         // Preserve the server directory during build
         emptyOutDir: false,
         
+        // Copy public files to dist
+        copyPublicDir: true,
+        
         // Performance optimizations
         target: 'esnext',
         minify: 'terser',

@@ -1667,7 +1667,7 @@ app.get('/api/lab-notebooks/statistics', authenticateToken, async (req, res) => 
 
     if (user_id) {
       paramCount++;
-      whereClause += ` AND e.author_id = $${paramCount}`;
+      whereClause += ` AND e.user_id = $${paramCount}`;
       params.push(user_id);
     }
 
@@ -2793,7 +2793,7 @@ app.get('/api/lab-notebooks', authenticateToken, async (req, res) => {
         l.name as lab_name,
         l.institution
       FROM lab_notebook_entries e
-      INNER JOIN users u ON e.author_id = u.id
+      INNER JOIN users u ON e.user_id = u.id
       INNER JOIN labs l ON e.lab_id = l.id
       WHERE 1=1
     `;
@@ -2874,7 +2874,7 @@ app.get('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
         l.name as lab_name,
         l.institution
       FROM lab_notebook_entries e
-      INNER JOIN users u ON e.author_id = u.id
+      INNER JOIN users u ON e.user_id = u.id
       INNER JOIN labs l ON e.lab_id = l.id
       WHERE e.id = $1
     `;
@@ -2963,7 +2963,7 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
       INSERT INTO lab_notebook_entries (
         title, content, entry_type, status, priority, objectives, methodology,
         results, conclusions, next_steps, lab_id, project_id, tags, privacy_level,
-        author_id, estimated_duration, cost, equipment_used, materials_used,
+        user_id, estimated_duration, cost, equipment_used, materials_used,
         safety_notes, references, collaborators
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
       RETURNING *
@@ -3025,7 +3025,7 @@ app.put('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
 
     // Check if user can edit this entry
     const checkQuery = `
-      SELECT author_id, privacy_level, lab_id FROM lab_notebook_entries WHERE id = $1
+      SELECT user_id, privacy_level, lab_id FROM lab_notebook_entries WHERE id = $1
     `;
     const checkResult = await pool.query(checkQuery, [id]);
     
@@ -3036,7 +3036,7 @@ app.put('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
     const entry = checkResult.rows[0];
     
     // Only author or lab admin can edit
-    if (entry.author_id !== userId) {
+    if (entry.user_id !== userId) {
       return res.status(403).json({ error: 'Not authorized to edit this entry' });
     }
 
@@ -3118,7 +3118,7 @@ app.delete('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
 
     // Check if user can delete this entry
     const checkQuery = `
-      SELECT author_id, privacy_level, lab_id FROM lab_notebook_entries WHERE id = $1
+      SELECT user_id, privacy_level, lab_id FROM lab_notebook_entries WHERE id = $1
     `;
     const checkResult = await pool.query(checkQuery, [id]);
     
@@ -3129,7 +3129,7 @@ app.delete('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
     const entry = checkResult.rows[0];
     
     // Only author or lab admin can delete
-    if (entry.author_id !== userId) {
+    if (entry.user_id !== userId) {
       return res.status(403).json({ error: 'Not authorized to delete this entry' });
     }
 
