@@ -1035,7 +1035,7 @@ const LabNotebookPage: React.FC = () => {
                               ? isToday 
                                 ? 'bg-gradient-to-br from-slate-800 to-slate-700 text-white font-bold shadow-lg shadow-slate-500/30 scale-105 ring-2 ring-slate-400' 
                                 : hasEvent 
-                                  ? 'bg-gradient-to-br from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700 hover:shadow-md hover:scale-105 border border-yellow-400/50' 
+                                  ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 hover:shadow-md hover:scale-105 border border-emerald-400/50' 
                                   : isPast
                                     ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 hover:shadow-sm'
                                     : isWeekend
@@ -1052,7 +1052,7 @@ const LabNotebookPage: React.FC = () => {
                               {/* Event Indicator */}
                               {hasEvent && isCurrentMonth && (
                                 <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2">
-                                  <div className="w-1 h-1 bg-yellow-500 rounded-full shadow-sm"></div>
+                                  <div className="w-1 h-1 bg-emerald-500 rounded-full shadow-sm"></div>
                                 </div>
                               )}
                           
@@ -1076,7 +1076,7 @@ const LabNotebookPage: React.FC = () => {
                             <span>Today</span>
                           </div>
                           <div className="flex items-center space-x-1">
-                            <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></div>
+                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
                             <span>Events</span>
                           </div>
                         </div>
