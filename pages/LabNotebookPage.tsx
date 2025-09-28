@@ -1132,81 +1132,152 @@ const LabNotebookPage: React.FC = () => {
               </CardContent>
             </Card>
 
-        {/* Smart Calendar */}
+        {/* Real-Time Smart Calendar */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDaysIcon className="h-5 w-5 text-green-600" />
-              Smart Calendar
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CalendarDaysIcon className="h-5 w-5 text-green-600" />
+                Smart Calendar
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Live</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <span className="text-sm font-medium text-gray-700">December 2024</span>
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Calendar View */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Events</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3 p-3 bg-white rounded-lg shadow-sm">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">Team Meeting</p>
-                      <p className="text-xs text-gray-500">Today, 2:00 PM</p>
-                    </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Interactive Calendar Grid */}
+              <div className="lg:col-span-2">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4">
+                  <div className="grid grid-cols-7 gap-1 mb-4">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                      <div key={day} className="text-center text-xs font-medium text-gray-600 py-2">
+                        {day}
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center space-x-3 p-3 bg-white rounded-lg shadow-sm">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">Experiment Review</p>
-                      <p className="text-xs text-gray-500">Tomorrow, 10:00 AM</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3 p-3 bg-white rounded-lg shadow-sm">
-                    <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">Equipment Maintenance</p>
-                      <p className="text-xs text-gray-500">Friday, 3:00 PM</p>
-                    </div>
+                  <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: 35 }, (_, i) => {
+                      const date = i - 6 + 1;
+                      const isCurrentMonth = date > 0 && date <= 31;
+                      const isToday = date === new Date().getDate();
+                      const hasEvent = [2, 5, 8, 12, 15, 18, 22, 25, 28].includes(date);
+                      const isPast = date < new Date().getDate();
+                      
+                      return (
+                        <div
+                          key={i}
+                          className={`
+                            aspect-square flex items-center justify-center text-sm rounded-lg cursor-pointer transition-all
+                            ${isCurrentMonth 
+                              ? isToday 
+                                ? 'bg-green-500 text-white font-bold shadow-lg' 
+                                : hasEvent 
+                                  ? 'bg-blue-100 text-blue-900 hover:bg-blue-200' 
+                                  : isPast
+                                    ? 'text-gray-400 hover:bg-gray-100'
+                                    : 'text-gray-900 hover:bg-white hover:shadow-sm'
+                              : 'text-gray-300'
+                            }
+                          `}
+                        >
+                          {isCurrentMonth && date}
+                          {hasEvent && isCurrentMonth && (
+                            <div className="absolute w-1 h-1 bg-blue-500 rounded-full -bottom-0.5"></div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
 
-              {/* Quick Schedule */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Schedule</h3>
-                <div className="space-y-3">
-                  <button className="w-full p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all text-left">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              {/* Smart Features Panel */}
+              <div className="space-y-4">
+                {/* Today's Schedule */}
+                <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    Today's Schedule
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-3 p-2 bg-blue-50 rounded-lg">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-blue-900">Team Standup</p>
+                        <p className="text-xs text-blue-700">9:00 AM - 9:30 AM</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3 p-2 bg-green-50 rounded-lg">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-green-900">Lab Session</p>
+                        <p className="text-xs text-green-700">2:00 PM - 4:00 PM</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3 p-2 bg-purple-50 rounded-lg">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-purple-900">Equipment Check</p>
+                        <p className="text-xs text-purple-700">5:00 PM - 5:30 PM</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Smart Suggestions */}
+                <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <SparklesIcon className="w-4 h-4 text-yellow-500" />
+                    Smart Suggestions
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="p-2 bg-yellow-50 rounded-lg">
+                      <p className="text-xs font-medium text-yellow-900">Schedule buffer time</p>
+                      <p className="text-xs text-yellow-700">Add 15min before next meeting</p>
+                    </div>
+                    <div className="p-2 bg-orange-50 rounded-lg">
+                      <p className="text-xs font-medium text-orange-900">Equipment maintenance</p>
+                      <p className="text-xs text-orange-700">Due in 3 days</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Quick Actions</h3>
+                  <div className="space-y-2">
+                    <button className="w-full p-2 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-left">
+                      <div className="flex items-center space-x-2">
                         <UsersIcon className="w-4 h-4 text-blue-600" />
+                        <span className="text-xs font-medium text-blue-900">New Meeting</span>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Schedule Meeting</p>
-                        <p className="text-xs text-gray-500">Book a team meeting</p>
-                      </div>
-                    </div>
-                  </button>
-                  <button className="w-full p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all text-left">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    </button>
+                    <button className="w-full p-2 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-left">
+                      <div className="flex items-center space-x-2">
                         <BeakerIcon className="w-4 h-4 text-green-600" />
+                        <span className="text-xs font-medium text-green-900">Book Equipment</span>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Book Equipment</p>
-                        <p className="text-xs text-gray-500">Reserve lab equipment</p>
-                      </div>
-                    </div>
-                  </button>
-                  <button className="w-full p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all text-left">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    </button>
+                    <button className="w-full p-2 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors text-left">
+                      <div className="flex items-center space-x-2">
                         <ClockIcon className="w-4 h-4 text-purple-600" />
+                        <span className="text-xs font-medium text-purple-900">Set Reminder</span>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Set Reminder</p>
-                        <p className="text-xs text-gray-500">Create a custom reminder</p>
-                      </div>
-                    </div>
-                  </button>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
