@@ -124,9 +124,6 @@ const LabNotebookPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [entries, setEntries] = useState<LabNotebookEntry[]>([]);
-  const [quickNotes, setQuickNotes] = useState<QuickNote[]>([]);
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
-  const [smartSuggestions, setSmartSuggestions] = useState<SmartSuggestion[]>([]);
   
   // Simplified state management
   const [searchTerm, setSearchTerm] = useState('');
@@ -135,7 +132,6 @@ const LabNotebookPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('created_at');
   const [showNewEntryModal, setShowNewEntryModal] = useState(false);
   const [showEntryTypeModal, setShowEntryTypeModal] = useState(false);
-  const [showQuickNoteModal, setShowQuickNoteModal] = useState(false);
   
   // Form states for different entry types
   const [showExperimentForm, setShowExperimentForm] = useState(false);
@@ -989,117 +985,6 @@ const LabNotebookPage: React.FC = () => {
                 Lab Notebook
               </h1>
               <p className="text-gray-600 mt-2">Your digital research companion</p>
-        </div>
-            <div className="flex gap-3">
-              <Button
-                onClick={() => setShowQuickNoteModal(true)}
-                className="bg-yellow-500 hover:bg-yellow-600 text-white"
-              >
-                <PencilIcon className="h-4 w-4 mr-2" />
-                Quick Note
-              </Button>
-          </div>
-          </div>
-          </div>
-
-
-        {/* Quick Notes, Recent Activity, and Smart Suggestions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            {/* Quick Notes */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PencilIcon className="h-5 w-5 text-yellow-600" />
-                  Quick Notes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {quickNotes.slice(0, 5).map((note) => (
-                    <div
-                      key={note.id}
-                      className={`p-3 rounded-lg border-l-4 ${
-                        note.color === 'yellow' ? 'bg-yellow-50 border-yellow-400' :
-                        note.color === 'blue' ? 'bg-blue-50 border-blue-400' :
-                        note.color === 'green' ? 'bg-green-50 border-green-400' :
-                        'bg-pink-50 border-pink-400'
-                      }`}
-                    >
-                      <p className="text-sm text-gray-700">{note.content}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(note.created_at).toLocaleDateString()}
-                      </p>
-              </div>
-                  ))}
-              </div>
-              </CardContent>
-            </Card>
-
-            {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ClockIcon className="h-5 w-5 text-blue-600" />
-                  Recent Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {recentActivity.slice(0, 5).map((activity) => {
-                    const IconComponent = activity.icon;
-                    return (
-                      <div key={activity.id} className="flex items-start gap-3">
-                        <IconComponent className={`h-4 w-4 mt-0.5 ${activity.color}`} />
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-700">{activity.description}</p>
-                          <p className="text-xs text-gray-500">
-                            {activity.user_name} • {new Date(activity.timestamp).toLocaleDateString()}
-                          </p>
-              </div>
-              </div>
-                    );
-                  })}
-            </div>
-              </CardContent>
-            </Card>
-
-            {/* Smart Suggestions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <LightbulbIcon className="h-5 w-5 text-purple-600" />
-                  Smart Suggestions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {smartSuggestions.slice(0, 5).map((suggestion) => (
-                    <div key={suggestion.id} className="p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="text-sm font-medium text-gray-900">{suggestion.title}</h4>
-                          <p className="text-xs text-gray-600 mt-1">{suggestion.description}</p>
-              </div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSuggestionPriorityColor(suggestion.priority)}`}>
-                          {suggestion.priority}
-              </span>
-            </div>
-                      <div className="mt-2">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-blue-600 h-2 rounded-full"
-                              style={{ width: `${suggestion.confidence}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-xs text-gray-500">{suggestion.confidence}%</span>
-                        </div>
-                      </div>
-          </div>
-        ))}
-      </div>
-              </CardContent>
-            </Card>
         </div>
 
         {/* Real-Time Smart Calendar */}
