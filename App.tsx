@@ -56,18 +56,7 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="flex-1 flex flex-col">
           {/* Top Navigation Bar with Brand and User */}
           <div className="bg-white border-b border-gray-100 px-6 py-3 shadow-sm">
-            <div className="flex items-center justify-between">
-              {/* Logo and Brand */}
-              <Link to="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-                  <span className="text-white font-bold text-sm">DR</span>
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-gray-900">Digital Research Manager</h1>
-                  <p className="text-xs text-gray-500">Lab Platform</p>
-                </div>
-              </Link>
-              
+            <div className="flex items-center justify-center">
               {/* Navigation Links */}
               <div className="flex items-center space-x-2">
                 <Link 
@@ -104,7 +93,12 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   Help Forum
                 </Link>
               </div>
-              
+            </div>
+          </div>
+
+          {/* User Profile Bar */}
+          <div className="bg-white border-b border-gray-100 px-6 py-2 shadow-sm">
+            <div className="flex items-center justify-end">
               {/* User Profile */}
               <div className="flex items-center space-x-4">
                 <div className="relative">

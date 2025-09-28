@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   HomeIcon, 
@@ -222,9 +222,9 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
       {/* Modern Header */}
       <div className="p-3 border-b border-gray-100">
         <div className="flex flex-col items-center space-y-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 hover:rotate-3 hover:shadow-xl">
+          <Link to="/" className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 hover:rotate-3 hover:shadow-xl">
             <span className="text-white font-bold text-lg">DR</span>
-          </div>
+          </Link>
           <div className="text-center">
             <h1 className="text-sm font-bold text-gray-900 transition-all duration-300 hover:text-blue-600">Research Manager</h1>
             <p className="text-xs text-gray-500 transition-all duration-300 hover:text-gray-700">Digital Lab Platform</p>
