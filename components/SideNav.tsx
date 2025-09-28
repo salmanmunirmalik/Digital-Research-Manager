@@ -207,70 +207,91 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
 
   return (
     <div className="h-full flex flex-col bg-white border-r border-gray-100">
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
       {/* Modern Header */}
       <div className="p-3 border-b border-gray-100">
         <div className="flex flex-col items-center space-y-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 hover:rotate-3 hover:shadow-xl">
             <span className="text-white font-bold text-lg">DR</span>
           </div>
           <div className="text-center">
-            <h1 className="text-sm font-bold text-gray-900">Research Manager</h1>
-            <p className="text-xs text-gray-500">Digital Lab Platform</p>
+            <h1 className="text-sm font-bold text-gray-900 transition-all duration-300 hover:text-blue-600">Research Manager</h1>
+            <p className="text-xs text-gray-500 transition-all duration-300 hover:text-gray-700">Digital Lab Platform</p>
           </div>
         </div>
       </div>
 
       {/* Enhanced Navigation Items */}
       <nav className="flex-1 p-2 overflow-y-auto">
-        <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
           {navItems.map((item, itemIndex) => (
-            <NavLink
-              key={itemIndex}
-              to={item.to}
-              onClick={onMobileLinkClick}
-              className={({ isActive }) =>
-                `group flex flex-col items-center px-2 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  isActive
-                    ? `${item.bgColor} ${item.textColor} border border-gray-200 shadow-sm transform scale-105`
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:transform hover:scale-105'
-                }`
-              }
-              title={item.description}
+                  <NavLink
+                    key={itemIndex}
+                    to={item.to}
+                    onClick={onMobileLinkClick}
+                    className={({ isActive }) =>
+                `group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-md ${
+                        isActive
+                    ? `${item.bgColor} ${item.textColor} border border-gray-200 shadow-lg scale-105`
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      }`
+                    }
+                    title={item.description}
+              style={{
+                animationDelay: `${itemIndex * 50}ms`,
+                animation: 'fadeInUp 0.6s ease-out forwards'
+              }}
             >
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center mb-1 transition-all duration-200 ${
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 transition-all duration-300 ease-in-out ${
                 item.iconBg || 'bg-gray-100'
-              } group-hover:scale-110`}>
-                {item.iconSvg || <item.icon className={`w-4 h-4 transition-colors duration-200 ${
+              } group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-lg`}>
+                {item.iconSvg || <item.icon className={`w-4 h-4 transition-all duration-300 ${
                   item.iconColor || 'text-gray-600'
-                }`} />}
+                } group-hover:scale-110`} />}
               </div>
-              <span className="text-xs font-medium text-center leading-tight">{item.name}</span>
-            </NavLink>
-          ))}
-        </div>
+              <span className="text-sm font-medium leading-tight transition-all duration-300 group-hover:translate-x-1">
+                {item.name}
+                    </span>
+              <div className={`ml-auto w-2 h-2 rounded-full transition-all duration-300 ${
+                item.iconColor ? item.iconColor.replace('text-', 'bg-') : 'bg-gray-300'
+              } group-hover:scale-125 group-hover:opacity-80`}></div>
+                      </NavLink>
+                    ))}
+                  </div>
       </nav>
 
       {/* Modern Bottom Section */}
       <div className="p-2 border-t border-gray-100 bg-gradient-to-r from-gray-50 to-blue-50 flex-shrink-0">
         <div className="space-y-1">
           {/* System Status */}
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-xs transition-all duration-300 hover:bg-white hover:rounded-lg hover:px-2 hover:py-1">
             <span className="text-gray-600 font-medium">Status</span>
             <div className="flex items-center space-x-1">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-green-600 font-medium">Online</span>
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse transition-all duration-300 hover:scale-125"></div>
+              <span className="text-green-600 font-medium transition-all duration-300 hover:text-green-700">Online</span>
             </div>
           </div>
           
           {/* App Info */}
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-xs transition-all duration-300 hover:bg-white hover:rounded-lg hover:px-2 hover:py-1">
             <span className="text-gray-500 truncate">Version</span>
-            <span className="flex-shrink-0 text-blue-600 font-semibold">v2.0</span>
+            <span className="flex-shrink-0 text-blue-600 font-semibold transition-all duration-300 hover:text-blue-700 hover:scale-110">v2.0</span>
           </div>
           
           {/* Quick Help */}
-          <button className="w-full flex items-center justify-center px-2 py-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
-            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button className="w-full flex items-center justify-center px-2 py-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-md">
+            <svg className="w-3 h-3 mr-1 transition-all duration-300 hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             Help
