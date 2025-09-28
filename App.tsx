@@ -54,9 +54,9 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
         {/* Main Content Area with Top Navigation */}
         <div className="flex-1 flex flex-col">
-          {/* Top Navigation Bar with Brand and User */}
+          {/* Single Navigation Bar */}
           <div className="bg-white border-b border-gray-100 px-6 py-3 shadow-sm">
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-between">
               {/* Navigation Links */}
               <div className="flex items-center space-x-2">
                 <Link 
@@ -93,12 +93,7 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   Help Forum
                 </Link>
               </div>
-            </div>
-          </div>
-
-          {/* User Profile Bar */}
-          <div className="bg-white border-b border-gray-100 px-6 py-2 shadow-sm">
-            <div className="flex items-center justify-end">
+              
               {/* User Profile */}
               <div className="flex items-center space-x-4">
                 <div className="relative">
