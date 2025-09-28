@@ -1808,6 +1808,7 @@ app.post('/api/calendar-events', authenticateToken, async (req, res) => {
     } = req.body;
     
     console.log('📅 Creating calendar event for user:', req.user.id, 'title:', title);
+    console.log('📅 Request body:', req.body);
     
     if (!title || !event_date) {
       return res.status(400).json({ error: 'Title and event_date are required' });
@@ -1823,6 +1824,7 @@ app.post('/api/calendar-events', authenticateToken, async (req, res) => {
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('💥 Create calendar event error:', error);
+    console.error('Error details:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1840,6 +1842,7 @@ app.get('/api/calendar-events', authenticateToken, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('💥 Get calendar events error:', error);
+    console.error('Error details:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
