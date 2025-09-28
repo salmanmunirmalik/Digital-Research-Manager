@@ -238,11 +238,11 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
     <div className="h-full flex flex-col bg-white border-r border-gray-100">
       {/* Modern Header */}
       <div className="p-3 border-b border-gray-100">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-            <span className="text-white font-bold text-sm">DR</span>
+        <div className="flex flex-col items-center space-y-2">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+            <span className="text-white font-bold text-lg">DR</span>
           </div>
-          <div>
+          <div className="text-center">
             <h1 className="text-sm font-bold text-gray-900">Research Manager</h1>
             <p className="text-xs text-gray-500">Digital Lab Platform</p>
           </div>
@@ -280,14 +280,14 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
             <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
               expandedSections.has(section.title) ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
             }`}>
-              <div className="space-y-1 mt-1 ml-3 pl-2 border-l-2 border-gray-100">
+              <div className="grid grid-cols-2 gap-2 mt-1 ml-3 pl-2 border-l-2 border-gray-100">
                 {section.items.map((item, itemIndex) => (
                   <NavLink
                     key={itemIndex}
                     to={item.to}
                     onClick={onMobileLinkClick}
                     className={({ isActive }) =>
-                      `group flex items-center px-2 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      `group flex flex-col items-center px-2 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                         isActive
                           ? `${item.bgColor} ${item.textColor} border border-gray-200 shadow-sm transform scale-105`
                           : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:transform hover:scale-105'
@@ -295,14 +295,14 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
                     }
                     title={item.description}
                   >
-                    <div className={`w-5 h-5 rounded-lg flex items-center justify-center mr-2 transition-all duration-200 ${
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center mb-1 transition-all duration-200 ${
                       item.iconBg || 'bg-gray-100'
                     } group-hover:scale-110`}>
-                      {item.iconSvg || <item.icon className={`w-3 h-3 transition-colors duration-200 ${
+                      {item.iconSvg || <item.icon className={`w-4 h-4 transition-colors duration-200 ${
                         item.iconColor || 'text-gray-600'
                       }`} />}
                     </div>
-                    <span className="text-xs font-medium leading-tight">{item.name}</span>
+                    <span className="text-xs font-medium text-center leading-tight">{item.name}</span>
                   </NavLink>
                 ))}
               </div>
