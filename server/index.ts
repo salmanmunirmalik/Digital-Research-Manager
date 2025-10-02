@@ -6,6 +6,7 @@ import pool from '../database/config';
 import { User, UserRole, UserStatus } from '../types';
 import AIPresentationService from './aiPresentationService.js';
 import AdvancedStatisticalService from './advancedStatsService.js';
+import { ActivityTracker } from './services/activityTracker.js';
 
 // Note: Exports moved to separate files to avoid circular dependencies
 
@@ -3598,8 +3599,8 @@ app.post('/api/advanced-stats/data/load-csv', authenticateToken, async (req, res
     console.log(`CSV data loaded for user ${userId}: ${filePath}`);
 
     res.json({
-      success: true,
       ...result,
+      success: true,
       metadata: {
         userId,
         filePath,
@@ -3631,8 +3632,8 @@ app.post('/api/advanced-stats/data/load-excel', authenticateToken, async (req, r
     console.log(`Excel data loaded for user ${userId}: ${filePath}`);
 
     res.json({
-      success: true,
       ...result,
+      success: true,
       metadata: {
         userId,
         filePath,
@@ -3664,8 +3665,8 @@ app.post('/api/advanced-stats/preprocessing/data-info', authenticateToken, async
     console.log(`Data info retrieved for user ${userId}: ${data.length} rows`);
 
     res.json({
-      success: true,
       ...result,
+      success: true,
       metadata: {
         userId,
         dataRows: data.length,
@@ -3701,8 +3702,8 @@ app.post('/api/advanced-stats/preprocessing/select-columns', authenticateToken, 
     console.log(`Columns selected for user ${userId}: ${columns.join(', ')}`);
 
     res.json({
-      success: true,
       ...result,
+      success: true,
       metadata: {
         userId,
         selectedColumns: columns,
@@ -3734,8 +3735,8 @@ app.post('/api/advanced-stats/preprocessing/remove-duplicates', authenticateToke
     console.log(`Duplicates removed for user ${userId}: ${result.duplicatesRemoved} rows`);
 
     res.json({
-      success: true,
       ...result,
+      success: true,
       metadata: {
         userId,
         duplicatesRemoved: result.duplicatesRemoved,
@@ -3767,8 +3768,8 @@ app.post('/api/advanced-stats/preprocessing/handle-missing', authenticateToken, 
     console.log(`Missing values handled for user ${userId}: ${result.missingHandled} values`);
 
     res.json({
-      success: true,
       ...result,
+      success: true,
       metadata: {
         userId,
         method,
@@ -3801,8 +3802,8 @@ app.post('/api/advanced-stats/analysis/descriptive', authenticateToken, async (r
     console.log(`Descriptive statistics calculated for user ${userId}`);
 
     res.json({
-      success: true,
       ...result,
+      success: true,
       metadata: {
         userId,
         columns: columns || 'all numeric',
@@ -3834,8 +3835,8 @@ app.post('/api/advanced-stats/analysis/correlation', authenticateToken, async (r
     console.log(`Correlation analysis performed for user ${userId}: ${method}`);
 
     res.json({
-      success: true,
       ...result,
+      success: true,
       metadata: {
         userId,
         method,
@@ -3872,8 +3873,8 @@ app.post('/api/advanced-stats/analysis/regression', authenticateToken, async (re
     console.log(`Linear regression performed for user ${userId}: ${targetColumn}`);
 
     res.json({ 
-      success: true,
       ...result,
+      success: true,
       metadata: {
         userId,
         targetColumn,
@@ -3906,8 +3907,8 @@ app.post('/api/advanced-stats/analysis/clustering', authenticateToken, async (re
     console.log(`Clustering analysis performed for user ${userId}: ${algorithm}`);
 
     res.json({
-      success: true,
       ...result,
+      success: true,
       metadata: {
         userId,
         algorithm,
@@ -3949,8 +3950,8 @@ app.post('/api/advanced-stats/analysis/hypothesis-testing', authenticateToken, a
     console.log(`Hypothesis testing performed for user ${userId}: ${testType}`);
 
     res.json({
-      success: true,
       ...result,
+      success: true,
       metadata: {
         userId,
         testType,
@@ -3987,8 +3988,8 @@ app.post('/api/advanced-stats/analysis/anova', authenticateToken, async (req, re
     console.log(`ANOVA analysis performed for user ${userId}: ${groupColumn} vs ${valueColumn}`);
 
     res.json({
-      success: true,
       ...result,
+      success: true,
       metadata: {
         userId,
         groupColumn,
@@ -4025,8 +4026,8 @@ app.post('/api/advanced-stats/visualization/scatter-plot', authenticateToken, as
     console.log(`Scatter plot created for user ${userId}: ${yColumn} vs ${xColumn}`);
 
     res.json({
-      success: true,
       ...result,
+      success: true,
       metadata: {
         userId,
         xColumn,
@@ -4063,8 +4064,8 @@ app.post('/api/advanced-stats/export/csv', authenticateToken, async (req, res) =
     console.log(`Data exported to CSV for user ${userId}: ${filePath}`);
 
     res.json({
-      success: true,
       ...result,
+      success: true,
       metadata: {
         userId,
         filePath,
