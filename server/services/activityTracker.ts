@@ -1,7 +1,7 @@
 // Platform Activity Integration Hooks
 // Automatically track user activities for reference generation
 
-import { pool } from '../index';
+import pool from '../../database/config';
 
 // Activity tracking service
 export class ActivityTracker {

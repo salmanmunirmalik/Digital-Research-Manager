@@ -38,7 +38,7 @@ import {
   ShareIcon,
   DownloadIcon,
   PrinterIcon,
-  TrendingUpIcon,
+
   BellIcon,
   SparklesIcon,
   BrainIcon,
@@ -60,7 +60,8 @@ import {
   MagnifyingGlassIcon,
   FunnelIcon,
   Bars3Icon,
-  Squares2X2Icon
+  Squares2X2Icon,
+  TrendingUpIcon
 } from '../components/icons';
 
 // Simplified Lab Notebook Entry Interface

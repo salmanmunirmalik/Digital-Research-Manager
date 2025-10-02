@@ -4,10 +4,10 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import pool from '../database/config';
 import { User, UserRole, UserStatus } from '../types';
+import AIPresentationService from './aiPresentationService.js';
+import AdvancedStatisticalService from './advancedStatsService.js';
 
-// Export pool and authenticateToken for use in other modules
-export { pool };
-export { authenticateToken };
+// Note: Exports moved to separate files to avoid circular dependencies
 
 const app = express();
 const PORT = process.env.PORT || 5002;
@@ -1163,6 +1163,128 @@ app.get('/api/lab-notebooks', authenticateToken, async (req, res) => {
   }
 });
 
+// Get recent activity for lab notebook
+app.get('/api/lab-notebooks/activity', authenticateToken, async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    
+    // Get recent activities from lab notebook entries
+    const activities = await pool.query(`
+      SELECT 
+        'entry_created' as type,
+        'Created lab notebook entry: ' || e.title as description,
+        u.username as user_name,
+        e.created_at as timestamp,
+        'entry' as category
+      FROM lab_notebook_entries e
+      JOIN users u ON e.user_id = u.id
+      WHERE e.lab_id IN (
+        SELECT lab_id FROM lab_members WHERE user_id = $1
+      )
+      ORDER BY e.created_at DESC
+      LIMIT $2
+    `, [req.user.id, limit]);
+
+    // Format activities for frontend
+    const formattedActivities = activities.rows.map(activity => ({
+      id: `activity_${activity.timestamp}`,
+      type: activity.type,
+      description: activity.description,
+      user_name: activity.user_name,
+      timestamp: activity.timestamp,
+      category: activity.category
+    }));
+
+    res.json({ activities: formattedActivities });
+  } catch (error) {
+    console.error('💥 Get activity error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get smart suggestions for lab notebook
+app.get('/api/lab-notebooks/suggestions', authenticateToken, async (req, res) => {
+  try {
+    const suggestions = [];
+    
+    // Get user's recent entries to generate suggestions
+    const recentEntries = await pool.query(`
+      SELECT title, content, entry_type, tags, equipment_used, materials_used
+      FROM lab_notebook_entries 
+      WHERE user_id = $1 
+      ORDER BY created_at DESC 
+      LIMIT 5
+    `, [req.user.id]);
+
+    // Generate rule-based suggestions
+    for (const entry of recentEntries.rows) {
+      // Protocol suggestions based on content
+      if (entry.content && entry.content.toLowerCase().includes('dna')) {
+        suggestions.push({
+          id: `suggestion_${entry.title}_protocol`,
+          type: 'protocol',
+          title: 'Protocol Recommendation',
+          description: 'Consider using PCR protocol for DNA amplification based on your recent work',
+          confidence: 85,
+          priority: 'medium'
+        });
+      }
+      
+      // Safety suggestions based on materials
+      if (entry.materials_used && entry.materials_used.some((material: string) => 
+        material.toLowerCase().includes('acid') || material.toLowerCase().includes('chemical'))) {
+        suggestions.push({
+          id: `suggestion_${entry.title}_safety`,
+          type: 'safety',
+          title: 'Safety Reminder',
+          description: 'Remember to wear appropriate PPE when handling chemicals',
+          confidence: 95,
+          priority: 'high'
+        });
+      }
+      
+      // Equipment suggestions
+      if (entry.equipment_used && entry.equipment_used.length > 0) {
+        suggestions.push({
+          id: `suggestion_${entry.title}_equipment`,
+          type: 'equipment',
+          title: 'Equipment Optimization',
+          description: 'Consider booking equipment in advance for similar experiments',
+          confidence: 75,
+          priority: 'low'
+        });
+      }
+    }
+
+    // Add general suggestions if no specific ones found
+    if (suggestions.length === 0) {
+      suggestions.push(
+        {
+          id: 'suggestion_general_1',
+          type: 'protocol',
+          title: 'Protocol Recommendation',
+          description: 'Consider documenting your experimental protocols for future reference',
+          confidence: 80,
+          priority: 'medium'
+        },
+        {
+          id: 'suggestion_general_2',
+          type: 'safety',
+          title: 'Safety Reminder',
+          description: 'Always review safety protocols before starting new experiments',
+          confidence: 90,
+          priority: 'high'
+        }
+      );
+    }
+
+    res.json({ suggestions: suggestions.slice(0, 5) });
+  } catch (error) {
+    console.error('💥 Get suggestions error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.get('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -1308,128 +1430,6 @@ app.delete('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('💥 Delete lab notebook error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Get recent activity for lab notebook
-app.get('/api/lab-notebooks/activity', authenticateToken, async (req, res) => {
-  try {
-    const { limit = 10 } = req.query;
-    
-    // Get recent activities from lab notebook entries
-    const activities = await pool.query(`
-      SELECT 
-        'entry_created' as type,
-        'Created lab notebook entry: ' || title as description,
-        u.username as user_name,
-        created_at as timestamp,
-        'entry' as category
-      FROM lab_notebook_entries e
-      JOIN users u ON e.user_id = u.id
-      WHERE e.lab_id IN (
-        SELECT lab_id FROM lab_members WHERE user_id = $1
-      )
-      ORDER BY created_at DESC
-      LIMIT $2
-    `, [req.user.id, limit]);
-
-    // Format activities for frontend
-    const formattedActivities = activities.rows.map(activity => ({
-      id: `activity_${activity.timestamp}`,
-      type: activity.type,
-      description: activity.description,
-      user_name: activity.user_name,
-      timestamp: activity.timestamp,
-      category: activity.category
-    }));
-
-    res.json({ activities: formattedActivities });
-  } catch (error) {
-    console.error('💥 Get activity error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Get smart suggestions for lab notebook
-app.get('/api/lab-notebooks/suggestions', authenticateToken, async (req, res) => {
-  try {
-    const suggestions = [];
-    
-    // Get user's recent entries to generate suggestions
-    const recentEntries = await pool.query(`
-      SELECT title, content, entry_type, tags, equipment_used, materials_used
-      FROM lab_notebook_entries 
-      WHERE user_id = $1 
-      ORDER BY created_at DESC 
-      LIMIT 5
-    `, [req.user.id]);
-
-    // Generate rule-based suggestions
-    for (const entry of recentEntries.rows) {
-      // Protocol suggestions based on content
-      if (entry.content && entry.content.toLowerCase().includes('dna')) {
-        suggestions.push({
-          id: `suggestion_${entry.title}_protocol`,
-          type: 'protocol',
-          title: 'Protocol Recommendation',
-          description: 'Consider using PCR protocol for DNA amplification based on your recent work',
-          confidence: 85,
-          priority: 'medium'
-        });
-      }
-      
-      // Safety suggestions based on materials
-      if (entry.materials_used && entry.materials_used.some((material: string) => 
-        material.toLowerCase().includes('acid') || material.toLowerCase().includes('chemical'))) {
-        suggestions.push({
-          id: `suggestion_${entry.title}_safety`,
-          type: 'safety',
-          title: 'Safety Reminder',
-          description: 'Remember to wear appropriate PPE when handling chemicals',
-          confidence: 95,
-          priority: 'high'
-        });
-      }
-      
-      // Equipment suggestions
-      if (entry.equipment_used && entry.equipment_used.length > 0) {
-        suggestions.push({
-          id: `suggestion_${entry.title}_equipment`,
-          type: 'equipment',
-          title: 'Equipment Optimization',
-          description: 'Consider booking equipment in advance for similar experiments',
-          confidence: 75,
-          priority: 'low'
-        });
-      }
-    }
-
-    // Add general suggestions if no specific ones found
-    if (suggestions.length === 0) {
-      suggestions.push(
-        {
-          id: 'suggestion_general_1',
-          type: 'protocol',
-          title: 'Protocol Recommendation',
-          description: 'Consider documenting your experimental protocols for future reference',
-          confidence: 80,
-          priority: 'medium'
-        },
-        {
-          id: 'suggestion_general_2',
-          type: 'safety',
-          title: 'Safety Reminder',
-          description: 'Always review safety protocols before starting new experiments',
-          confidence: 90,
-          priority: 'high'
-        }
-      );
-    }
-
-    res.json({ suggestions: suggestions.slice(0, 5) });
-  } catch (error) {
-    console.error('💥 Get suggestions error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1815,10 +1815,10 @@ app.post('/api/calendar-events', authenticateToken, async (req, res) => {
     }
 
     const result = await pool.query(`
-      INSERT INTO calendar_events (user_id, title, description, event_date, event_time, event_type, priority, color, is_all_day)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO calendar_events (user_id, title, description, start_time, end_time, event_type, all_day)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
-    `, [req.user.id, title, description, event_date, event_time, event_type, priority, color, is_all_day]);
+    `, [req.user.id, title, description, event_date, event_time, event_type, is_all_day]);
 
     console.log('✅ Calendar event created:', result.rows[0]);
     res.status(201).json(result.rows[0]);
@@ -1832,11 +1832,11 @@ app.post('/api/calendar-events', authenticateToken, async (req, res) => {
 app.get('/api/calendar-events', authenticateToken, async (req, res) => {
   try {
     console.log('🔍 Fetching calendar events for user:', req.user.id);
-    const result = await pool.query(`
-      SELECT * FROM calendar_events 
-      WHERE user_id = $1 
-      ORDER BY event_date ASC, event_time ASC
-    `, [req.user.id]);
+  const result = await pool.query(`
+    SELECT * FROM calendar_events 
+    WHERE user_id = $1 
+    ORDER BY start_time ASC
+  `, [req.user.id]);
 
     console.log('📅 Found calendar events:', result.rows.length);
     res.json(result.rows);
@@ -1867,12 +1867,12 @@ app.put('/api/calendar-events/:id', authenticateToken, async (req, res) => {
 
     const result = await pool.query(`
       UPDATE calendar_events 
-      SET title = $1, description = $2, event_date = $3, event_time = $4, 
-          event_type = $5, priority = $6, color = $7, is_all_day = $8, 
+      SET title = $1, description = $2, start_time = $3, end_time = $4, 
+          event_type = $5, all_day = $6,
           updated_at = CURRENT_TIMESTAMP
-      WHERE id = $9 AND user_id = $10
+      WHERE id = $7 AND user_id = $8
       RETURNING *
-    `, [title, description, event_date, event_time, event_type, priority, color, is_all_day, id, req.user.id]);
+    `, [title, description, event_date, event_time, event_type, is_all_day, id, req.user.id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Calendar event not found' });
@@ -3298,14 +3298,803 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// --- AI PRESENTATION ROUTES ---
+
+// Health check for AI presentation service
+app.get('/api/presentations/ai/health', authenticateToken, async (req, res) => {
+  try {
+    // Validate API key is configured
+    aiPresentationService.validateApiKey();
+    res.json({
+      status: 'healthy',
+      service: 'AI Presentation Generation',
+      timestamp: new Date().toISOString(),
+      features: ['outline_generation', 'content_generation', 'full_presentation', 'content_improvement']
+    });
+  } catch (error) {
+    console.error('AI presentation service health check failed:', error);
+    res.status(500).json({
+      status: 'unhealthy',
+      error: (error as Error).message || 'AI Presentation service unavailable'
+    });
+  }
+});
+
+// Get available presentation themes
+app.get('/api/presentations/ai/themes', authenticateToken, async (req, res) => {
+  try {
+    const themes = aiPresentationService.getAvailableThemes();
+    res.json({ themes });
+  } catch (error) {
+    console.error('Error fetching presentation themes:', error);
+    res.status(500).json({ error: 'Failed to fetch presentation themes' });
+  }
+});
+
+// Generate presentation outline
+app.post('/api/presentations/ai/outline', authenticateToken, async (req, res) => {
+  try {
+    const { topic, context, slides = 8 } = req.body;
+    const userId = (req as any).user.id;
+
+    // Validate request
+    if (!topic || typeof topic !== 'string') {
+      return res.status(400).json({ error: 'Topic is required and must be a string' });
+    }
+
+    if (slides < 3 || slides > 20) {
+      return res.status(400).json({ error: 'Number of slides must be between 3 and 20' });
+    }
+
+    // Validate API key
+    aiPresentationService.validateApiKey();
+
+    // Generate outline
+    const result = await aiPresentationService.generatePresentationOutline(topic, context || '', slides);
+
+    // Log generation for audit trail
+    console.log(`Presentation outline generated for user ${userId}: "${topic}" with ${slides} slides`);
+
+    res.json({
+      success: true,
+      outline: result.outline,
+      metadata: {
+        userId,
+        topic,
+        context,
+        slides,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Presentation outline generation error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Presentation outline generation failed',
+      details: 'Please check your topic and try again'
+    });
+  }
+});
+
+// Generate slide content
+app.post('/api/presentations/ai/slide-content', authenticateToken, async (req, res) => {
+  try {
+    const { slideTitle, slideContent, slideType, context } = req.body;
+    const userId = (req as any).user.id;
+
+    // Validate request
+    if (!slideTitle || !slideContent || !slideType) {
+      return res.status(400).json({ 
+        error: 'slideTitle, slideContent, and slideType are required' 
+      });
+    }
+
+    // Validate API key
+    aiPresentationService.validateApiKey();
+
+    // Generate slide content
+    const result = await aiPresentationService.generateSlideContent(
+      slideTitle, 
+      slideContent, 
+      slideType, 
+      context || ''
+    );
+
+    // Log generation for audit trail
+    console.log(`Slide content generated for user ${userId}: "${slideTitle}"`);
+
+    res.json({
+      success: true,
+      slideData: result.slideData,
+      metadata: {
+        userId,
+        slideTitle,
+        slideType,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Slide content generation error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Slide content generation failed',
+      details: 'Please check your slide details and try again'
+    });
+  }
+});
+
+// Generate full presentation
+app.post('/api/presentations/ai/generate', authenticateToken, async (req, res) => {
+  try {
+    const { topic, context, slides = 8, theme = 'research-professional' } = req.body;
+    const userId = (req as any).user.id;
+
+    // Validate request
+    if (!topic || typeof topic !== 'string') {
+      return res.status(400).json({ error: 'Topic is required and must be a string' });
+    }
+
+    if (slides < 3 || slides > 20) {
+      return res.status(400).json({ error: 'Number of slides must be between 3 and 20' });
+    }
+
+    // Validate API key
+    aiPresentationService.validateApiKey();
+
+    // Generate full presentation
+    const result = await aiPresentationService.generateFullPresentation(
+      topic, 
+      context || '', 
+      slides, 
+      theme
+    );
+
+    // Log generation for audit trail
+    console.log(`Full presentation generated for user ${userId}: "${topic}" with ${slides} slides`);
+
+    res.json({
+      success: true,
+      presentation: result.presentation,
+      metadata: {
+        userId,
+        topic,
+        context,
+        slides,
+        theme,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Full presentation generation error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Full presentation generation failed',
+      details: 'Please check your topic and try again'
+    });
+  }
+});
+
+// Improve presentation content
+app.post('/api/presentations/ai/improve', authenticateToken, async (req, res) => {
+  try {
+    const { presentationId, slideId, feedback, currentContent } = req.body;
+    const userId = (req as any).user.id;
+
+    // Validate request
+    if (!presentationId || !slideId || !feedback || !currentContent) {
+      return res.status(400).json({ 
+        error: 'presentationId, slideId, feedback, and currentContent are required' 
+      });
+    }
+
+    // Validate API key
+    aiPresentationService.validateApiKey();
+
+    // Improve content
+    const result = await aiPresentationService.improvePresentationContent(
+      presentationId,
+      slideId,
+      feedback,
+      currentContent
+    );
+
+    // Log improvement for audit trail
+    console.log(`Presentation content improved for user ${userId}: slide ${slideId} in presentation ${presentationId}`);
+
+    res.json({
+      success: true,
+      improvedContent: result.improvedContent,
+      metadata: {
+        userId,
+        presentationId,
+        slideId,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Presentation content improvement error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Presentation content improvement failed',
+      details: 'Please check your feedback and try again'
+    });
+  }
+});
+
+// --- ADVANCED STATISTICAL ANALYSIS ROUTES ---
+
+// Health check for advanced statistical analysis service
+app.get('/api/advanced-stats/health', authenticateToken, async (req, res) => {
+  try {
+    const healthStatus = await advancedStatsService.healthCheck();
+    res.json(healthStatus);
+  } catch (error) {
+    console.error('Advanced stats service health check failed:', error);
+    res.status(500).json({
+      status: 'unhealthy',
+      error: (error as Error).message || 'Advanced statistical analysis service unavailable'
+    });
+  }
+});
+
+// Execute statistical analysis workflow
+app.post('/api/advanced-stats/workflow/execute', authenticateToken, async (req, res) => {
+  try {
+    const { workflowNodes, workflowConnections, dataSets } = req.body;
+    const userId = (req as any).user.id;
+
+    // Validate request
+    if (!workflowNodes || !Array.isArray(workflowNodes)) {
+      return res.status(400).json({ error: 'workflowNodes array is required' });
+    }
+
+    if (!workflowConnections || !Array.isArray(workflowConnections)) {
+      return res.status(400).json({ error: 'workflowConnections array is required' });
+    }
+
+    // Execute workflow
+    const results = await advancedStatsService.executeWorkflow(
+      workflowNodes, 
+      workflowConnections, 
+      dataSets || {}
+    );
+
+    // Log execution for audit trail
+    console.log(`Statistical workflow executed for user ${userId}: ${workflowNodes.length} nodes`);
+
+    res.json({
+      success: true,
+      results: results.results,
+      executionOrder: results.executionOrder,
+      metadata: {
+        userId,
+        nodeCount: workflowNodes.length,
+        connectionCount: workflowConnections.length,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Workflow execution error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Workflow execution failed',
+      details: 'Please check your workflow configuration and try again'
+    });
+  }
+});
+
+// Load CSV data
+app.post('/api/advanced-stats/data/load-csv', authenticateToken, async (req, res) => {
+  try {
+    const { filePath, options } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!filePath) {
+      return res.status(400).json({ error: 'filePath is required' });
+    }
+
+    const result = await advancedStatsService.loadCSVData(filePath, options);
+
+    console.log(`CSV data loaded for user ${userId}: ${filePath}`);
+
+    res.json({
+      success: true,
+      ...result,
+      metadata: {
+        userId,
+        filePath,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('CSV loading error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Failed to load CSV data',
+      details: 'Please check the file path and format'
+    });
+  }
+});
+
+// Load Excel data
+app.post('/api/advanced-stats/data/load-excel', authenticateToken, async (req, res) => {
+  try {
+    const { filePath, options } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!filePath) {
+      return res.status(400).json({ error: 'filePath is required' });
+    }
+
+    const result = await advancedStatsService.loadExcelData(filePath, options);
+
+    console.log(`Excel data loaded for user ${userId}: ${filePath}`);
+
+    res.json({
+      success: true,
+      ...result,
+      metadata: {
+        userId,
+        filePath,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Excel loading error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Failed to load Excel data',
+      details: 'Please check the file path and format'
+    });
+  }
+});
+
+// Get data information
+app.post('/api/advanced-stats/preprocessing/data-info', authenticateToken, async (req, res) => {
+  try {
+    const { data } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!data || !Array.isArray(data)) {
+      return res.status(400).json({ error: 'Data array is required' });
+    }
+
+    const result = await advancedStatsService.getDataInfo(data);
+
+    console.log(`Data info retrieved for user ${userId}: ${data.length} rows`);
+
+    res.json({
+      success: true,
+      ...result,
+      metadata: {
+        userId,
+        dataRows: data.length,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Data info error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Failed to get data information',
+      details: 'Please check your data format'
+    });
+  }
+});
+
+// Select columns
+app.post('/api/advanced-stats/preprocessing/select-columns', authenticateToken, async (req, res) => {
+  try {
+    const { data, columns } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!data || !Array.isArray(data)) {
+      return res.status(400).json({ error: 'Data array is required' });
+    }
+
+    if (!columns || !Array.isArray(columns)) {
+      return res.status(400).json({ error: 'Columns array is required' });
+    }
+
+    const result = await advancedStatsService.selectColumns(data, columns);
+
+    console.log(`Columns selected for user ${userId}: ${columns.join(', ')}`);
+
+    res.json({
+      success: true,
+      ...result,
+      metadata: {
+        userId,
+        selectedColumns: columns,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Column selection error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Failed to select columns',
+      details: 'Please check your column names'
+    });
+  }
+});
+
+// Remove duplicates
+app.post('/api/advanced-stats/preprocessing/remove-duplicates', authenticateToken, async (req, res) => {
+  try {
+    const { data, subset } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!data || !Array.isArray(data)) {
+      return res.status(400).json({ error: 'Data array is required' });
+    }
+
+    const result = await advancedStatsService.removeDuplicates(data, subset);
+
+    console.log(`Duplicates removed for user ${userId}: ${result.duplicatesRemoved} rows`);
+
+    res.json({
+      success: true,
+      ...result,
+      metadata: {
+        userId,
+        duplicatesRemoved: result.duplicatesRemoved,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Duplicate removal error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Failed to remove duplicates',
+      details: 'Please check your data format'
+    });
+  }
+});
+
+// Handle missing values
+app.post('/api/advanced-stats/preprocessing/handle-missing', authenticateToken, async (req, res) => {
+  try {
+    const { data, method, fillValue } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!data || !Array.isArray(data)) {
+      return res.status(400).json({ error: 'Data array is required' });
+    }
+
+    const result = await advancedStatsService.handleMissingValues(data, method, fillValue);
+
+    console.log(`Missing values handled for user ${userId}: ${result.missingHandled} values`);
+
+    res.json({
+      success: true,
+      ...result,
+      metadata: {
+        userId,
+        method,
+        missingHandled: result.missingHandled,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Missing values handling error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Failed to handle missing values',
+      details: 'Please check your data and method'
+    });
+  }
+});
+
+// Descriptive statistics
+app.post('/api/advanced-stats/analysis/descriptive', authenticateToken, async (req, res) => {
+  try {
+    const { data, columns } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!data || !Array.isArray(data)) {
+      return res.status(400).json({ error: 'Data array is required' });
+    }
+
+    const result = await advancedStatsService.getDescriptiveStatistics(data, columns);
+
+    console.log(`Descriptive statistics calculated for user ${userId}`);
+
+    res.json({
+      success: true,
+      ...result,
+      metadata: {
+        userId,
+        columns: columns || 'all numeric',
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Descriptive statistics error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Failed to calculate descriptive statistics',
+      details: 'Please check your data format'
+    });
+  }
+});
+
+// Correlation analysis
+app.post('/api/advanced-stats/analysis/correlation', authenticateToken, async (req, res) => {
+  try {
+    const { data, method, columns } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!data || !Array.isArray(data)) {
+      return res.status(400).json({ error: 'Data array is required' });
+    }
+
+    const result = await advancedStatsService.correlationAnalysis(data, method, columns);
+
+    console.log(`Correlation analysis performed for user ${userId}: ${method}`);
+
+    res.json({
+      success: true,
+      ...result,
+      metadata: {
+        userId,
+        method,
+        columns: columns || 'all numeric',
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Correlation analysis error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Failed to perform correlation analysis',
+      details: 'Please check your data format'
+    });
+  }
+});
+
+// Linear regression
+app.post('/api/advanced-stats/analysis/regression', authenticateToken, async (req, res) => {
+  try {
+    const { data, targetColumn, featureColumns } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!data || !Array.isArray(data)) {
+      return res.status(400).json({ error: 'Data array is required' });
+    }
+
+    if (!targetColumn) {
+      return res.status(400).json({ error: 'targetColumn is required' });
+    }
+
+    const result = await advancedStatsService.linearRegression(data, targetColumn, featureColumns);
+
+    console.log(`Linear regression performed for user ${userId}: ${targetColumn}`);
+
+    res.json({ 
+      success: true,
+      ...result,
+      metadata: {
+        userId,
+        targetColumn,
+        featureColumns: featureColumns || 'all numeric',
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Linear regression error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Failed to perform linear regression',
+      details: 'Please check your data and column names'
+    });
+  }
+});
+
+// Clustering analysis
+app.post('/api/advanced-stats/analysis/clustering', authenticateToken, async (req, res) => {
+  try {
+    const { data, nClusters, algorithm, columns } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!data || !Array.isArray(data)) {
+      return res.status(400).json({ error: 'Data array is required' });
+    }
+
+    const result = await advancedStatsService.clusteringAnalysis(data, nClusters, algorithm, columns);
+
+    console.log(`Clustering analysis performed for user ${userId}: ${algorithm}`);
+
+    res.json({
+      success: true,
+      ...result,
+      metadata: {
+        userId,
+        algorithm,
+        nClusters,
+        columns: columns || 'all numeric',
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Clustering analysis error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Failed to perform clustering analysis',
+      details: 'Please check your data format'
+    });
+  }
+});
+
+// Hypothesis testing
+app.post('/api/advanced-stats/analysis/hypothesis-testing', authenticateToken, async (req, res) => {
+  try {
+    const { data, testType, columns, options } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!data || !Array.isArray(data)) {
+      return res.status(400).json({ error: 'Data array is required' });
+    }
+
+    if (!testType) {
+      return res.status(400).json({ error: 'testType is required' });
+    }
+
+    if (!columns || !Array.isArray(columns)) {
+      return res.status(400).json({ error: 'columns array is required' });
+    }
+
+    const result = await advancedStatsService.hypothesisTesting(data, testType, columns, options);
+
+    console.log(`Hypothesis testing performed for user ${userId}: ${testType}`);
+
+    res.json({
+      success: true,
+      ...result,
+      metadata: {
+        userId,
+        testType,
+        columns,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Hypothesis testing error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Failed to perform hypothesis testing',
+      details: 'Please check your data and test parameters'
+    });
+  }
+});
+
+// ANOVA analysis
+app.post('/api/advanced-stats/analysis/anova', authenticateToken, async (req, res) => {
+  try {
+    const { data, groupColumn, valueColumn } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!data || !Array.isArray(data)) {
+      return res.status(400).json({ error: 'Data array is required' });
+    }
+
+    if (!groupColumn || !valueColumn) {
+      return res.status(400).json({ error: 'groupColumn and valueColumn are required' });
+    }
+
+    const result = await advancedStatsService.anovaAnalysis(data, groupColumn, valueColumn);
+
+    console.log(`ANOVA analysis performed for user ${userId}: ${groupColumn} vs ${valueColumn}`);
+
+    res.json({
+      success: true,
+      ...result,
+      metadata: {
+        userId,
+        groupColumn,
+        valueColumn,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('ANOVA analysis error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Failed to perform ANOVA analysis',
+      details: 'Please check your data and column names'
+    });
+  }
+});
+
+// Visualization endpoints
+app.post('/api/advanced-stats/visualization/scatter-plot', authenticateToken, async (req, res) => {
+  try {
+    const { data, xColumn, yColumn, options } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!data || !Array.isArray(data)) {
+      return res.status(400).json({ error: 'Data array is required' });
+    }
+
+    if (!xColumn || !yColumn) {
+      return res.status(400).json({ error: 'xColumn and yColumn are required' });
+    }
+
+    const result = await advancedStatsService.createScatterPlot(data, xColumn, yColumn, options);
+
+    console.log(`Scatter plot created for user ${userId}: ${yColumn} vs ${xColumn}`);
+
+    res.json({
+      success: true,
+      ...result,
+      metadata: {
+        userId,
+        xColumn,
+        yColumn,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Scatter plot creation error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Failed to create scatter plot',
+      details: 'Please check your data and column names'
+    });
+  }
+});
+
+// Export endpoints
+app.post('/api/advanced-stats/export/csv', authenticateToken, async (req, res) => {
+  try {
+    const { data, filePath, options } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!data || !Array.isArray(data)) {
+      return res.status(400).json({ error: 'Data array is required' });
+    }
+
+    if (!filePath) {
+      return res.status(400).json({ error: 'filePath is required' });
+    }
+
+    const result = await advancedStatsService.exportToCSV(data, filePath, options);
+
+    console.log(`Data exported to CSV for user ${userId}: ${filePath}`);
+
+    res.json({
+      success: true,
+      ...result,
+      metadata: {
+        userId,
+        filePath,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('CSV export error:', error);
+    res.status(500).json({
+      error: (error as Error).message || 'Failed to export to CSV',
+      details: 'Please check your data and file path'
+    });
+  }
+});
+
 // --- DATA & RESULTS ROUTES ---
+
+// AI Presentation Service Integration
+
+// Initialize services
+const aiPresentationService = new AIPresentationService();
+const advancedStatsService = new AdvancedStatisticalService();
 
 // Get all results for a lab
 app.get('/api/data/results', authenticateToken, async (req, res) => {
   try {
     const { lab_id, data_type, search, tags, date_from, date_to } = req.query;
     const userId = (req as any).user.id;
-
+    
     let query = `
       SELECT r.*, u.username, u.first_name, u.last_name, l.name as lab_name
       FROM research_data r
@@ -3316,20 +4105,20 @@ app.get('/api/data/results', authenticateToken, async (req, res) => {
     
     const queryParams: any[] = [];
     let paramCount = 0;
-
+    
     // Filter by lab_id if provided
     if (lab_id) {
       paramCount++;
       query += ` AND r.lab_id = $${paramCount}`;
       queryParams.push(lab_id);
     }
-
+    
     if (data_type) {
       paramCount++;
       query += ` AND r.type = $${paramCount}`;
       queryParams.push(data_type);
     }
-
+    
     if (search) {
       paramCount++;
       query += ` AND (r.title ILIKE $${paramCount} OR r.summary ILIKE $${paramCount})`;
@@ -3442,11 +4231,11 @@ app.post('/api/data/results', authenticateToken, async (req, res) => {
 app.put('/api/data/results/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const {
+    const { 
       title,
       summary,
       type,
-      category,
+      category, 
       description,
       methodology,
       results,
@@ -3582,7 +4371,7 @@ app.get('/api/data/templates', authenticateToken, async (req, res) => {
 // Create a data template
 app.post('/api/data/templates', authenticateToken, async (req, res) => {
   try {
-    const {
+    const { 
       name,
       description,
       category,
@@ -3637,858 +4426,3 @@ app.get('/api/data/results/stats/overview', authenticateToken, async (req, res) 
   }
 });
 
-// --- RESEARCH DASHBOARD ROUTES ---
-
-// Research Projects Management
-app.get('/api/research/projects', authenticateToken, async (req, res) => {
-  try {
-    const { lab_id, status, priority } = req.query;
-    const userId = (req as any).user.id;
-
-    let query = `
-      SELECT p.*, 
-             u.first_name || ' ' || u.last_name as lead_researcher_name,
-             COUNT(pm.id) as milestone_count,
-             COUNT(CASE WHEN pm.completed = true THEN 1 END) as completed_milestones
-      FROM projects p
-      JOIN users u ON p.lead_researcher_id = u.id
-      LEFT JOIN project_milestones pm ON p.id = pm.project_id
-      WHERE p.lab_id = $1
-    `;
-    
-    const queryParams = [lab_id];
-    let paramCount = 1;
-
-    if (status) {
-      paramCount++;
-      query += ` AND p.status = $${paramCount}`;
-      queryParams.push(status);
-    }
-
-    if (priority) {
-      paramCount++;
-      query += ` AND p.priority = $${paramCount}`;
-      queryParams.push(priority);
-    }
-
-    query += ` GROUP BY p.id, u.first_name, u.last_name ORDER BY p.created_at DESC`;
-
-    const result = await pool.query(query, queryParams);
-    res.json({ projects: result.rows });
-  } catch (error) {
-    console.error('Error fetching research projects:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Research Deadlines Management
-app.get('/api/research/deadlines', authenticateToken, async (req, res) => {
-  try {
-    const { lab_id, priority, status, type } = req.query;
-    const userId = (req as any).user.id;
-
-    let query = `
-      SELECT rd.*, 
-             u.first_name || ' ' || u.last_name as assigned_to_name,
-             p.title as project_title
-      FROM research_deadlines rd
-      LEFT JOIN users u ON rd.assigned_to = u.id
-      LEFT JOIN projects p ON rd.related_project_id = p.id
-      WHERE rd.related_lab_id = $1
-    `;
-    
-    const queryParams = [lab_id];
-    let paramCount = 1;
-
-    if (priority) {
-      paramCount++;
-      query += ` AND rd.priority = $${paramCount}`;
-      queryParams.push(priority);
-    }
-
-    if (status) {
-      paramCount++;
-      query += ` AND rd.status = $${paramCount}`;
-      queryParams.push(status);
-    }
-
-    if (type) {
-      paramCount++;
-      query += ` AND rd.deadline_type = $${paramCount}`;
-      queryParams.push(type);
-    }
-
-    query += ` ORDER BY rd.deadline_date ASC`;
-
-    const result = await pool.query(query, queryParams);
-    res.json({ deadlines: result.rows });
-  } catch (error) {
-    console.error('Error fetching research deadlines:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Research Activities Feed
-app.get('/api/research/activities', authenticateToken, async (req, res) => {
-  try {
-    const { lab_id, type, limit = 50 } = req.query;
-    const userId = (req as any).user.id;
-
-    let query = `
-      SELECT ra.*, 
-             u.first_name || ' ' || u.last_name as user_name,
-             p.title as project_title
-      FROM research_activities ra
-      JOIN users u ON ra.user_id = u.id
-      LEFT JOIN projects p ON ra.project_id = p.id
-      WHERE ra.lab_id = $1
-    `;
-    
-    const queryParams = [lab_id];
-    let paramCount = 1;
-
-    if (type) {
-      paramCount++;
-      query += ` AND ra.activity_type = $${paramCount}`;
-      queryParams.push(type);
-    }
-
-    query += ` ORDER BY ra.created_at DESC LIMIT $${paramCount + 1}`;
-    queryParams.push(limit as string);
-
-    const result = await pool.query(query, queryParams);
-    res.json({ activities: result.rows });
-  } catch (error) {
-    console.error('Error fetching research activities:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Research Insights Management
-app.get('/api/research/insights', authenticateToken, async (req, res) => {
-  try {
-    const { lab_id, priority, category, user_id } = req.query;
-    const userId = (req as any).user.id;
-
-    let query = `
-      SELECT ri.*, 
-             u.first_name || ' ' || u.last_name as user_name,
-             p.title as project_title
-      FROM research_insights ri
-      LEFT JOIN users u ON ri.user_id = u.id
-      LEFT JOIN projects p ON ri.project_id = p.id
-      WHERE ri.lab_id = $1 AND (ri.user_id IS NULL OR ri.user_id = $2)
-    `;
-    
-    const queryParams = [lab_id, userId];
-    let paramCount = 2;
-
-    if (priority) {
-      paramCount++;
-      query += ` AND ri.priority = $${paramCount}`;
-      queryParams.push(priority);
-    }
-
-    if (category) {
-      paramCount++;
-      query += ` AND ri.category = $${paramCount}`;
-      queryParams.push(category);
-    }
-
-    query += ` ORDER BY ri.priority DESC, ri.created_at DESC`;
-
-    const result = await pool.query(query, queryParams);
-    res.json({ insights: result.rows });
-  } catch (error) {
-    console.error('Error fetching research insights:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Research Metrics Calculation
-app.get('/api/research/metrics', authenticateToken, async (req, res) => {
-  try {
-    const { lab_id } = req.query;
-    const userId = (req as any).user.id;
-
-    // Use the database function to calculate metrics
-    const result = await pool.query('SELECT calculate_research_metrics($1) as metrics', [lab_id]);
-    const metrics = result.rows[0].metrics;
-
-    res.json({ metrics });
-  } catch (error) {
-    console.error('Error calculating research metrics:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Research Collaborations Management
-app.get('/api/research/collaborations', authenticateToken, async (req, res) => {
-  try {
-    const { lab_id, status, type } = req.query;
-    const userId = (req as any).user.id;
-
-    let query = `
-      SELECT rc.*, 
-             u.first_name || ' ' || u.last_name as lead_researcher_name,
-             COUNT(cp.id) as partner_count
-      FROM research_collaborations rc
-      JOIN users u ON rc.lead_researcher_id = u.id
-      LEFT JOIN collaboration_partners cp ON rc.id = cp.collaboration_id
-      WHERE rc.lab_id = $1
-    `;
-    
-    const queryParams = [lab_id];
-    let paramCount = 1;
-
-    if (status) {
-      paramCount++;
-      query += ` AND rc.status = $${paramCount}`;
-      queryParams.push(status);
-    }
-
-    if (type) {
-      paramCount++;
-      query += ` AND rc.collaboration_type = $${paramCount}`;
-      queryParams.push(type);
-    }
-
-    query += ` GROUP BY rc.id, u.first_name, u.last_name ORDER BY rc.created_at DESC`;
-
-    const result = await pool.query(query, queryParams);
-    res.json({ collaborations: result.rows });
-  } catch (error) {
-    console.error('Error fetching research collaborations:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// ==============================================
-// RESEARCHER PORTFOLIO ROUTES
-// ==============================================
-
-// Test route
-app.get('/api/researcher-portfolio/test', (req, res) => {
-  res.json({ message: 'Researcher portfolio API is working!' });
-});
-
-// Get researcher profile
-app.get('/api/researcher-portfolio/profiles/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    
-    const result = await pool.query(`
-      SELECT rp.*, u.first_name, u.last_name, u.email, u.role
-      FROM researcher_profiles rp
-      JOIN users u ON rp.user_id = u.id
-      WHERE rp.user_id = $1
-    `, [userId]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Profile not found' });
-    }
-
-    res.json({ profile: result.rows[0] });
-  } catch (error) {
-    console.error('Error fetching profile:', error);
-    res.status(500).json({ error: 'Failed to fetch profile' });
-  }
-});
-
-// Get researcher publications
-app.get('/api/researcher-portfolio/publications/:researcherId', async (req, res) => {
-  try {
-    const { researcherId } = req.params;
-    
-    const result = await pool.query(`
-      SELECT * FROM researcher_publications 
-      WHERE researcher_id = $1 
-      ORDER BY publication_date DESC
-    `, [researcherId]);
-
-    res.json({ publications: result.rows });
-  } catch (error) {
-    console.error('Error fetching publications:', error);
-    res.status(500).json({ error: 'Failed to fetch publications' });
-  }
-});
-
-// Find potential co-supervisors
-app.post('/api/researcher-portfolio/matching/find-supervisors', authenticateToken, async (req, res) => {
-  try {
-    const { research_interests, research_domains, max_results = 10 } = req.body;
-    const student_id = req.user.id;
-
-    // Get student profile
-    const studentProfile = await pool.query(`
-      SELECT research_interests, research_domains FROM researcher_profiles 
-      WHERE user_id = $1
-    `, [student_id]);
-
-    const studentInterests = studentProfile.rows[0]?.research_interests || research_interests || [];
-    const studentDomains = studentProfile.rows[0]?.research_domains || research_domains || [];
-
-    // Find matching supervisors
-    const result = await pool.query(`
-      SELECT 
-        u.id, u.first_name, u.last_name, u.email,
-        rp.institution, rp.position, rp.research_interests, rp.research_domains,
-        rp.expertise_areas, rp.availability_status, rp.max_students, rp.current_students,
-        rp.total_publications, rp.total_citations, rp.h_index,
-        calculate_research_compatibility($1, rp.research_domains, rp.research_interests) as compatibility_score
-      FROM users u
-      JOIN researcher_profiles rp ON u.id = rp.user_id
-      WHERE u.role IN ('principal_researcher', 'co_supervisor')
-        AND rp.availability_status = 'available'
-        AND rp.current_students < rp.max_students
-      ORDER BY compatibility_score DESC
-      LIMIT $2
-    `, [JSON.stringify(studentInterests), parseInt(max_results)]);
-
-    res.json({ 
-      supervisors: result.rows,
-      studentProfile: {
-        interests: studentInterests,
-        domains: studentDomains
-      }
-    });
-  } catch (error) {
-    console.error('Error finding supervisors:', error);
-    res.status(500).json({ error: 'Failed to find supervisors' });
-  }
-});
-
-// Get exchange opportunities
-app.get('/api/researcher-portfolio/exchange/opportunities', async (req, res) => {
-  try {
-    const { domain, status = 'active', limit = 20 } = req.query;
-    
-    let sql = `
-      SELECT 
-        reo.*, 
-        u.first_name, u.last_name, u.email as host_email,
-        l.name as lab_name, l.institution
-      FROM research_exchange_opportunities reo
-      JOIN users u ON reo.host_researcher_id = u.id
-      JOIN labs l ON reo.host_lab_id = l.id
-      WHERE reo.status = $1
-    `;
-    const params: any[] = [status];
-    let paramCount = 1;
-
-    if (domain) {
-      paramCount++;
-      sql += ` AND $${paramCount} = ANY(reo.research_domains)`;
-      params.push(domain);
-    }
-
-    sql += ` ORDER BY reo.created_at DESC LIMIT $${paramCount + 1}`;
-    params.push(parseInt(limit as string));
-
-    const result = await pool.query(sql, params);
-    res.json({ opportunities: result.rows });
-  } catch (error) {
-    console.error('Error fetching exchange opportunities:', error);
-    res.status(500).json({ error: 'Failed to fetch exchange opportunities' });
-  }
-});
-
-// ==============================================
-// CROSS-ENTITY INTEGRATION ROUTES
-// ==============================================
-
-// Import cross-entity integration routes
-import crossEntityIntegrationRoutes from './routes/crossEntityIntegration';
-import unifiedCollaborationRoutes from './routes/unifiedCollaboration';
-import experimentTrackerRoutes from './routes/experimentTracker';
-import professionalProtocolsRoutes from './routes/professionalProtocols';
-import { ActivityTracker } from './services/activityTracker';
-
-app.use('/api/cross-entity', crossEntityIntegrationRoutes);
-app.use('/api/collaboration', unifiedCollaborationRoutes);
-app.use('/api/experiments', experimentTrackerRoutes);
-app.use('/api/professional-protocols', professionalProtocolsRoutes);
-
-// ==============================================
-// INSTRUMENT MANAGEMENT API
-// ==============================================
-
-// Instrument Maintenance API
-app.post('/api/instruments/:id/maintenance', authenticateToken, async (req, res) => {
-  try {
-    const { id: instrumentId } = req.params;
-    const { 
-      type, 
-      title, 
-      description, 
-      scheduled_date, 
-      priority, 
-      assigned_to, 
-      estimated_duration, 
-      cost, 
-      parts_used, 
-      notes, 
-      checklist 
-    } = req.body;
-
-    if (!type || !title || !scheduled_date) {
-      return res.status(400).json({ error: 'Type, title, and scheduled date are required' });
-    }
-
-    // Check if instrument exists
-    const instrument = await pool.query(`
-      SELECT * FROM instruments WHERE id = $1
-    `, [instrumentId]);
-
-    if (instrument.rows.length === 0) {
-      return res.status(404).json({ error: 'Instrument not found' });
-    }
-
-    // Create maintenance record
-    const result = await pool.query(`
-      INSERT INTO instrument_maintenance (
-        instrument_id, type, title, description, scheduled_date, priority,
-        assigned_to, estimated_duration, cost, parts_used, notes, checklist,
-        status, created_by
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'scheduled', $13)
-      RETURNING *
-    `, [
-      instrumentId, type, title, description, scheduled_date, priority,
-      assigned_to, estimated_duration || 60, cost || 0, parts_used || [], 
-      notes, checklist || [], req.user.id
-    ]);
-
-    res.status(201).json({ maintenance: result.rows[0] });
-  } catch (error) {
-    console.error('Error creating maintenance record:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/api/instruments/:id/maintenance', authenticateToken, async (req, res) => {
-  try {
-    const { id: instrumentId } = req.params;
-    
-    const result = await pool.query(`
-      SELECT m.*, u.first_name, u.last_name as assigned_to_name
-      FROM instrument_maintenance m
-      LEFT JOIN users u ON m.assigned_to = u.id
-      WHERE m.instrument_id = $1
-      ORDER BY m.scheduled_date DESC
-    `, [instrumentId]);
-
-    res.json({ maintenance: result.rows });
-  } catch (error) {
-    console.error('Error fetching maintenance records:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Instrument Roster API
-app.post('/api/instruments/:id/roster', authenticateToken, async (req, res) => {
-  try {
-    const { id: instrumentId } = req.params;
-    const { 
-      user_id, 
-      role, 
-      training_level, 
-      certification_date, 
-      certification_expiry, 
-      notes 
-    } = req.body;
-
-    if (!user_id || !role) {
-      return res.status(400).json({ error: 'User ID and role are required' });
-    }
-
-    // Check if instrument exists
-    const instrument = await pool.query(`
-      SELECT * FROM instruments WHERE id = $1
-    `, [instrumentId]);
-
-    if (instrument.rows.length === 0) {
-      return res.status(404).json({ error: 'Instrument not found' });
-    }
-
-    // Create roster entry
-    const result = await pool.query(`
-      INSERT INTO instrument_rosters (
-        instrument_id, user_id, role, training_level, certification_date,
-        certification_expiry, notes, status, created_by
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending_approval', $8)
-      RETURNING *
-    `, [
-      instrumentId, user_id, role, training_level, certification_date,
-      certification_expiry, notes, req.user.id
-    ]);
-
-    res.status(201).json({ roster: result.rows[0] });
-  } catch (error) {
-    console.error('Error adding to roster:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/api/instruments/:id/roster', authenticateToken, async (req, res) => {
-  try {
-    const { id: instrumentId } = req.params;
-    
-    const result = await pool.query(`
-      SELECT r.*, u.first_name, u.last_name, u.email
-      FROM instrument_rosters r
-      JOIN users u ON r.user_id = u.id
-      WHERE r.instrument_id = $1
-      ORDER BY r.created_at DESC
-    `, [instrumentId]);
-
-    res.json({ roster: result.rows });
-  } catch (error) {
-    console.error('Error fetching roster:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Instrument Usage API
-app.post('/api/instruments/:id/usage', authenticateToken, async (req, res) => {
-  try {
-    const { id: instrumentId } = req.params;
-    const { 
-      start_time, 
-      end_time, 
-      purpose, 
-      samples_processed, 
-      notes 
-    } = req.body;
-
-    if (!start_time || !end_time || !purpose) {
-      return res.status(400).json({ error: 'Start time, end time, and purpose are required' });
-    }
-
-    // Create usage record
-    const result = await pool.query(`
-      INSERT INTO instrument_usage (
-        instrument_id, user_id, start_time, end_time, purpose,
-        samples_processed, notes
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING *
-    `, [
-      instrumentId, req.user.id, start_time, end_time, purpose,
-      samples_processed || 0, notes
-    ]);
-
-    res.status(201).json({ usage: result.rows[0] });
-  } catch (error) {
-    console.error('Error recording usage:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/api/instruments/:id/usage', authenticateToken, async (req, res) => {
-  try {
-    const { id: instrumentId } = req.params;
-    const { start_date, end_date } = req.query;
-    
-    let query = `
-      SELECT u.*, usr.first_name, usr.last_name
-      FROM instrument_usage u
-      JOIN users usr ON u.user_id = usr.id
-      WHERE u.instrument_id = $1
-    `;
-    
-    const params = [instrumentId];
-    if (start_date) {
-      query += ` AND u.start_time >= $2`;
-      params.push(start_date as string);
-    }
-    if (end_date) {
-      query += ` AND u.end_time <= $${params.length + 1}`;
-      params.push(end_date as string);
-    }
-    
-    query += ` ORDER BY u.start_time DESC`;
-    
-    const result = await pool.query(query, params);
-    res.json({ usage: result.rows });
-  } catch (error) {
-    console.error('Error fetching usage records:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// ==============================================
-// LAB MANAGEMENT QUICK ACTIONS API
-// ==============================================
-
-// Meetings API
-app.post('/api/meetings', authenticateToken, async (req, res) => {
-  try {
-    const { title, description, date, time, duration, attendees, location, agenda, lab_id } = req.body;
-
-    if (!title || !date || !time) {
-      return res.status(400).json({ error: 'Title, date, and time are required' });
-    }
-
-    const result = await pool.query(`
-      INSERT INTO meetings (title, description, scheduled_date, scheduled_time, duration_minutes, 
-                           attendees, location, agenda, lab_id, created_by, status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'scheduled')
-      RETURNING *
-    `, [title, description, date, time, duration || 60, attendees || [], location, agenda, lab_id || 'demo-lab-id', req.user.id]);
-
-    res.status(201).json({ meeting: result.rows[0] });
-  } catch (error) {
-    console.error('Error creating meeting:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/api/meetings', authenticateToken, async (req, res) => {
-  try {
-    const { lab_id } = req.query;
-    
-    let query = `
-      SELECT m.*, u.first_name, u.last_name as creator_name
-      FROM meetings m
-      JOIN users u ON m.created_by = u.id
-      WHERE 1=1
-    `;
-    
-    const params = [];
-    if (lab_id) {
-      query += ` AND m.lab_id = $1`;
-      params.push(lab_id);
-    }
-    
-    query += ` ORDER BY m.scheduled_date DESC, m.scheduled_time DESC`;
-    
-    const result = await pool.query(query, params);
-    res.json({ meetings: result.rows });
-  } catch (error) {
-    console.error('Error fetching meetings:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Issues API
-app.post('/api/issues', authenticateToken, async (req, res) => {
-  try {
-    const { title, description, priority, category, assigned_to, status, attachments, lab_id } = req.body;
-
-    if (!title || !description) {
-      return res.status(400).json({ error: 'Title and description are required' });
-    }
-
-    const result = await pool.query(`
-      INSERT INTO issues (title, description, priority, category, assigned_to, status, 
-                         attachments, lab_id, created_by, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-      RETURNING *
-    `, [title, description, priority || 'medium', category, assigned_to, status || 'open', 
-        attachments || [], lab_id || 'demo-lab-id', req.user.id]);
-
-    res.status(201).json({ issue: result.rows[0] });
-  } catch (error) {
-    console.error('Error creating issue:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/api/issues', authenticateToken, async (req, res) => {
-  try {
-    const { lab_id, status, priority } = req.query;
-    
-    let query = `
-      SELECT i.*, u.first_name, u.last_name as creator_name,
-             a.first_name as assignee_first_name, a.last_name as assignee_last_name
-      FROM issues i
-      JOIN users u ON i.created_by = u.id
-      LEFT JOIN users a ON i.assigned_to = a.id
-      WHERE 1=1
-    `;
-    
-    const params = [];
-    let paramCount = 0;
-    
-    if (lab_id) {
-      paramCount++;
-      query += ` AND i.lab_id = $${paramCount}`;
-      params.push(lab_id);
-    }
-    
-    if (status) {
-      paramCount++;
-      query += ` AND i.status = $${paramCount}`;
-      params.push(status);
-    }
-    
-    if (priority) {
-      paramCount++;
-      query += ` AND i.priority = $${paramCount}`;
-      params.push(priority);
-    }
-    
-    query += ` ORDER BY i.created_at DESC`;
-    
-    const result = await pool.query(query, params);
-    res.json({ issues: result.rows });
-  } catch (error) {
-    console.error('Error fetching issues:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Achievements API
-app.post('/api/achievements', authenticateToken, async (req, res) => {
-  try {
-    const { title, description, category, impact_level, tags, lab_id } = req.body;
-
-    if (!title || !description) {
-      return res.status(400).json({ error: 'Title and description are required' });
-    }
-
-    const result = await pool.query(`
-      INSERT INTO achievements (title, description, category, impact_level, tags, 
-                               lab_id, created_by, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-      RETURNING *
-    `, [title, description, category, impact_level || 'medium', tags || [], 
-        lab_id || 'demo-lab-id', req.user.id]);
-
-    res.status(201).json({ achievement: result.rows[0] });
-  } catch (error) {
-    console.error('Error creating achievement:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/api/achievements', authenticateToken, async (req, res) => {
-  try {
-    const { lab_id, category } = req.query;
-    
-    let query = `
-      SELECT a.*, u.first_name, u.last_name as creator_name
-      FROM achievements a
-      JOIN users u ON a.created_by = u.id
-      WHERE 1=1
-    `;
-    
-    const params = [];
-    if (lab_id) {
-      query += ` AND a.lab_id = $1`;
-      params.push(lab_id);
-    }
-    
-    if (category) {
-      query += ` AND a.category = $2`;
-      params.push(category);
-    }
-    
-    query += ` ORDER BY a.created_at DESC`;
-    
-    const result = await pool.query(query, params);
-    res.json({ achievements: result.rows });
-  } catch (error) {
-    console.error('Error fetching achievements:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Cross-Entity Analytics Endpoint
-app.get('/api/cross-entity/analytics/workflow', authenticateToken, async (req, res) => {
-  try {
-    const { labId, timeRange } = req.query;
-    const userId = (req as any).user.id;
-
-    // Calculate workflow analytics
-    const analytics = await Promise.all([
-      // Total notebook entries
-      pool.query(`
-        SELECT COUNT(*) as count 
-        FROM lab_notebook_entries 
-        WHERE lab_id = $1
-        ${timeRange ? `AND created_at >= NOW() - INTERVAL '${timeRange} days'` : ''}
-      `, [labId]),
-      
-      // Total protocols
-      pool.query(`
-        SELECT COUNT(*) as count 
-        FROM protocols 
-        WHERE lab_id = $1
-        ${timeRange ? `AND created_at >= NOW() - INTERVAL '${timeRange} days'` : ''}
-      `, [labId]),
-      
-      // Total results
-      pool.query(`
-        SELECT COUNT(*) as count 
-        FROM results 
-        WHERE lab_id = $1
-        ${timeRange ? `AND created_at >= NOW() - INTERVAL '${timeRange} days'` : ''}
-      `, [labId]),
-      
-      // Total bookings
-      pool.query(`
-        SELECT COUNT(*) as count 
-        FROM instrument_bookings 
-        WHERE lab_id = $1
-        ${timeRange ? `AND created_at >= NOW() - INTERVAL '${timeRange} days'` : ''}
-      `, [labId]),
-      
-      // Total relationships (mock - would need actual relationship table)
-      pool.query(`
-        SELECT COUNT(*) as count 
-        FROM lab_notebook_entries 
-        WHERE lab_id = $1 AND related_protocols IS NOT NULL
-        ${timeRange ? `AND created_at >= NOW() - INTERVAL '${timeRange} days'` : ''}
-      `, [labId])
-    ]);
-
-    const workflowAnalytics = {
-      totalNotebookEntries: parseInt(analytics[0].rows[0].count),
-      totalProtocols: parseInt(analytics[1].rows[0].count),
-      totalResults: parseInt(analytics[2].rows[0].count),
-      totalBookings: parseInt(analytics[3].rows[0].count),
-      totalRelationships: parseInt(analytics[4].rows[0].count),
-      syncStatusCounts: {
-        'synced': parseInt(analytics[0].rows[0].count),
-        'pending': 0,
-        'failed': 0,
-        'conflict': 0
-      }
-    };
-
-    res.json(workflowAnalytics);
-  } catch (error) {
-    console.error('Error fetching workflow analytics:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Start server
-const startServer = async () => {
-  try {
-    // Test database connection
-    const client = await pool.connect();
-    console.log('✅ Connected to PostgreSQL database');
-    client.release();
-
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
-      console.log(`🔧 API URL: http://localhost:${PORT}/api`);
-      console.log('🗄️  Database: PostgreSQL');
-
-      // Add researcher portfolio test route
-      app.get('/api/researcher-portfolio/test', (req, res) => {
-        res.json({ message: 'Researcher portfolio API is working!' });
-      });
-    });
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
-  }
-};
-
-startServer();

@@ -1,0 +1,55 @@
+{
+  "timestamp": "20251002_211143",
+  "summary": {
+    "totalTests": 0,
+    "passedTests": 0,
+    "failedTests": 0,
+    "skippedTests": 0,
+    "duration": 0
+  },
+  "suites": [
+    {
+      "name": "API",
+      "totalTests": 0,
+      "passedTests": 0,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "duration": 0,
+      "tests": [],
+      "coverage": null
+    },
+    {
+      "name": "CRUD",
+      "totalTests": 0,
+      "passedTests": 0,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "duration": 0,
+      "tests": [],
+      "coverage": null
+    },
+    {
+      "name": "UI",
+      "totalTests": 0,
+      "passedTests": 0,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "duration": 0,
+      "tests": [],
+      "coverage": null
+    },
+    {
+      "name": "INTEGRATION",
+      "totalTests": 0,
+      "passedTests": 0,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "duration": 0,
+      "tests": [],
+      "coverage": null
+    }
+  ],
+  "coverage": {},
+  "performance": {},
+  "recommendations": []
+}

@@ -39,7 +39,7 @@ import {
   CloudIcon,
   CodeIcon,
   SparklesIcon,
-  TrendingUpIcon,
+
   ZapIcon,
   RocketIcon,
   ShieldCheckIcon,
@@ -50,7 +50,8 @@ import {
   HistoryIcon,
   FilterIcon,
   SortAscendingIcon,
-  SortDescendingIcon
+  SortDescendingIcon,
+  TrendingUpIcon
 } from '../components/icons';
 
 interface SequenceAnalysis {

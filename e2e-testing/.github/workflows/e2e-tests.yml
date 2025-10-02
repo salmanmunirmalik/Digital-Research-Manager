@@ -1,0 +1,411 @@
+name: E2E Testing Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  # Setup job
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      node-version: ${{ steps.set-node-version.outputs.version }}
+      cache-key: ${{ steps.cache-key.outputs.key }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set Node.js version
+        id: set-node-version
+        run: echo "version=18" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.set-node-version.outputs.version }}
+          cache: 'npm'
+
+      - name: Generate cache key
+        id: cache-key
+        run: echo "key=${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}" >> $GITHUB_OUTPUT
+
+  # Install dependencies
+  install:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.setup.outputs.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          cd e2e-testing
+          npm install
+
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: e2e-testing/node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
+
+  # Start services
+  start-services:
+    needs: [setup, install]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: researchlab
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.setup.outputs.node-version }}
+
+      - name: Install dependencies
+        run: |
+          cd e2e-testing
+          npm install
+
+      - name: Start services
+        run: |
+          cd ..
+          npm install
+          pnpm run dev &
+          sleep 30
+
+      - name: Wait for services
+        run: |
+          # Wait for frontend
+          timeout 60 bash -c 'until curl -f http://localhost:5173; do sleep 2; done'
+          
+          # Wait for backend
+          timeout 60 bash -c 'until curl -f http://localhost:5002/health; do sleep 2; done'
+          
+          # Wait for stats service
+          timeout 60 bash -c 'until curl -f http://localhost:5003/health; do sleep 2; done'
+
+      - name: Service health check
+        run: |
+          curl -f http://localhost:5173 || exit 1
+          curl -f http://localhost:5002/health || exit 1
+          curl -f http://localhost:5003/health || exit 1
+
+  # API Tests
+  api-tests:
+    needs: [setup, install, start-services]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.setup.outputs.node-version }}
+
+      - name: Install dependencies
+        run: |
+          cd e2e-testing
+          npm install
+
+      - name: Run API tests
+        run: |
+          cd e2e-testing
+          npm run test:api
+        env:
+          NODE_ENV: test
+          BASE_URL: http://localhost:5173
+          BACKEND_URL: http://localhost:5002
+          STATS_SERVICE_URL: http://localhost:5003
+
+      - name: Upload API test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: api-test-results
+          path: e2e-testing/test-results/api/
+
+  # CRUD Tests
+  crud-tests:
+    needs: [setup, install, start-services]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: researchlab
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.setup.outputs.node-version }}
+
+      - name: Install dependencies
+        run: |
+          cd e2e-testing
+          npm install
+
+      - name: Run CRUD tests
+        run: |
+          cd e2e-testing
+          npm run test:crud
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: researchlab
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+
+      - name: Upload CRUD test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: crud-test-results
+          path: e2e-testing/test-results/crud/
+
+  # UI Tests
+  ui-tests:
+    needs: [setup, install, start-services]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.setup.outputs.node-version }}
+
+      - name: Install dependencies
+        run: |
+          cd e2e-testing
+          npm install
+
+      - name: Install Puppeteer
+        run: |
+          cd e2e-testing
+          npx puppeteer browsers install chrome
+
+      - name: Run UI tests
+        run: |
+          cd e2e-testing
+          npm run test:ui
+        env:
+          NODE_ENV: test
+          BASE_URL: http://localhost:5173
+          HEADLESS: true
+
+      - name: Upload UI test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ui-test-results
+          path: e2e-testing/test-results/ui/
+
+  # Integration Tests
+  integration-tests:
+    needs: [setup, install, start-services]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.setup.outputs.node-version }}
+
+      - name: Install dependencies
+        run: |
+          cd e2e-testing
+          npm install
+
+      - name: Run Integration tests
+        run: |
+          cd e2e-testing
+          npm run test:integration
+        env:
+          NODE_ENV: test
+          BASE_URL: http://localhost:5173
+          BACKEND_URL: http://localhost:5002
+          STATS_SERVICE_URL: http://localhost:5003
+
+      - name: Upload Integration test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: integration-test-results
+          path: e2e-testing/test-results/integration/
+
+  # Performance Tests
+  performance-tests:
+    needs: [setup, install, start-services]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.setup.outputs.node-version }}
+
+      - name: Install dependencies
+        run: |
+          cd e2e-testing
+          npm install
+
+      - name: Run Performance tests
+        run: |
+          cd e2e-testing
+          node scripts/performance-tests.js
+        env:
+          NODE_ENV: test
+          BASE_URL: http://localhost:5173
+          BACKEND_URL: http://localhost:5002
+
+      - name: Upload Performance test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-test-results
+          path: e2e-testing/test-results/performance/
+
+  # Security Tests
+  security-tests:
+    needs: [setup, install, start-services]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.setup.outputs.node-version }}
+
+      - name: Install dependencies
+        run: |
+          cd e2e-testing
+          npm install
+
+      - name: Run Security tests
+        run: |
+          cd e2e-testing
+          node scripts/security-tests.js
+        env:
+          NODE_ENV: test
+          BASE_URL: http://localhost:5173
+          BACKEND_URL: http://localhost:5002
+
+      - name: Upload Security test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-test-results
+          path: e2e-testing/test-results/security/
+
+  # Generate Report
+  generate-report:
+    needs: [api-tests, crud-tests, ui-tests, integration-tests, performance-tests, security-tests]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.setup.outputs.node-version }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Install dependencies
+        run: |
+          cd e2e-testing
+          npm install
+
+      - name: Generate comprehensive report
+        run: |
+          cd e2e-testing
+          node scripts/generate-test-report.js ./test-results $(date +%Y%m%d_%H%M%S)
+
+      - name: Upload comprehensive report
+        uses: actions/upload-artifact@v3
+        with:
+          name: comprehensive-test-report
+          path: e2e-testing/test-results/
+
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            try {
+              const reportPath = 'e2e-testing/test-results/test-summary.md';
+              if (fs.existsSync(reportPath)) {
+                const report = fs.readFileSync(reportPath, 'utf8');
+                github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `## 🧪 E2E Test Results\n\n${report}`
+                });
+              }
+            } catch (error) {
+              console.log('Could not create PR comment:', error.message);
+            }
+
+  # Notify on failure
+  notify-failure:
+    needs: [api-tests, crud-tests, ui-tests, integration-tests]
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+      - name: Notify failure
+        run: |
+          echo "❌ E2E tests failed!"
+          echo "Check the test results in the artifacts section."

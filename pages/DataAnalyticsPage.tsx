@@ -9,7 +9,7 @@ import {
   ChartBarIcon,
   TableIcon,
   CalculatorIcon,
-  TrendingUpIcon,
+
   LightbulbIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -19,7 +19,8 @@ import {
   TrashIcon,
   PlusIcon,
   EyeIcon,
-  EyeOffIcon
+  EyeOffIcon,
+  TrendingUpIcon
 } from '../components/icons';
 
 interface DataPoint {

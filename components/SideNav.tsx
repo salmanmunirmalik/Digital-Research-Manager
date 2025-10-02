@@ -22,12 +22,12 @@ import {
   CalculatorIcon,
   SearchIcon,
   LightbulbIcon,
-  BarChart3Icon,
   BarChartIcon,
   SettingsIcon,
   RocketIcon,
   BrainCircuitIcon,
-  DnaIcon
+  DnaIcon,
+  PackageIcon
 } from './icons';
 import { getUserDisplayName, getRoleDisplayName, getRolePermissions } from '../utils/roleAccess';
 
@@ -104,22 +104,6 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
         )
       },
       { 
-        name: 'Lab Management', 
-        to: '/lab-management', 
-        icon: BuildingOfficeIcon, 
-        description: 'Manage lab resources and operations',
-        color: 'from-orange-500 to-orange-600',
-        bgColor: 'bg-orange-50',
-        textColor: 'text-orange-700',
-        iconColor: 'text-orange-600',
-        iconBg: 'bg-orange-100',
-        iconSvg: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          </svg>
-        )
-      },
-      { 
         name: 'Research Tools', 
         to: '/research-tools', 
         icon: CalculatorIcon, 
@@ -132,6 +116,38 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
         iconSvg: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+        )
+      },
+      { 
+        name: 'AI Presentations', 
+        to: '/ai-presentations', 
+        icon: PresentationChartLineIcon, 
+        description: 'Create intelligent presentations with AI',
+        color: 'from-blue-500 to-purple-600',
+        bgColor: 'bg-blue-50',
+        textColor: 'text-blue-700',
+        iconColor: 'text-blue-600',
+        iconBg: 'bg-blue-100',
+        iconSvg: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m0 0V1a1 1 0 011-1h2a1 1 0 011 1v22a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3M7 4H5a1 1 0 00-1 1v16a1 1 0 001 1h2m0-18v18" />
+          </svg>
+        )
+      },
+      { 
+        name: 'Statistical Analysis Tools', 
+        to: '/statistical-analysis-tools', 
+        icon: BarChartIcon, 
+        description: 'Advanced statistical analysis and data mining',
+        color: 'from-purple-500 to-purple-600',
+        bgColor: 'bg-purple-50',
+        textColor: 'text-purple-700',
+        iconColor: 'text-purple-600',
+        iconBg: 'bg-purple-100',
+        iconSvg: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
         )
       },
@@ -152,18 +168,50 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
         )
       },
       { 
-        name: 'Presentations', 
-        to: '/presentations', 
-        icon: PresentationChartLineIcon, 
-        description: 'AI-generated research presentations',
-        color: 'from-pink-500 to-pink-600',
-        bgColor: 'bg-pink-50',
-        textColor: 'text-pink-700',
-        iconColor: 'text-pink-600',
-        iconBg: 'bg-pink-100',
+        name: 'Journals Directory', 
+        to: '/journals-directory', 
+        icon: NewspaperIcon, 
+        description: 'Discover scientific journals and publication venues',
+        color: 'from-emerald-500 to-emerald-600',
+        bgColor: 'bg-emerald-50',
+        textColor: 'text-emerald-700',
+        iconColor: 'text-emerald-600',
+        iconBg: 'bg-emerald-100',
         iconSvg: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-10 0a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2M9 12l2 2 4-4" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+          </svg>
+        )
+      },
+      { 
+        name: 'Supplier Marketplace', 
+        to: '/supplier-marketplace', 
+        icon: PackageIcon, 
+        description: 'Find research suppliers and materials',
+        color: 'from-purple-500 to-purple-600',
+        bgColor: 'bg-purple-50',
+        textColor: 'text-purple-700',
+        iconColor: 'text-purple-600',
+        iconBg: 'bg-purple-100',
+        iconSvg: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+        )
+      },
+      { 
+        name: 'Lab Management', 
+        to: '/lab-management', 
+        icon: BuildingOfficeIcon, 
+        description: 'Manage lab resources and operations',
+        color: 'from-orange-500 to-orange-600',
+        bgColor: 'bg-orange-50',
+        textColor: 'text-orange-700',
+        iconColor: 'text-orange-600',
+        iconBg: 'bg-orange-100',
+        iconSvg: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
           </svg>
         )
       },

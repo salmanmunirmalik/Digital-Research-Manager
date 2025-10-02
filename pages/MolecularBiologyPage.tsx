@@ -38,7 +38,7 @@ import {
   TrashIcon,
   EditIcon,
   CopyIcon,
-  TrendingUpIcon,
+
   ZapIcon,
   RocketIcon,
   ShieldCheckIcon,
@@ -47,7 +47,8 @@ import {
   HeartIcon,
   SortAscendingIcon,
   SortDescendingIcon,
-  RefreshCwIcon
+  RefreshCwIcon,
+  TrendingUpIcon
 } from '../components/icons';
 
 // PCR Master Mix Calculator State

@@ -10,11 +10,14 @@ import LabNotebookPage from './pages/LabNotebookPage';
 import LabManagementPage from './pages/LabManagementPage';
 import ProtocolsPage from './pages/ProtocolsPage';
 import DataResultsPage from './pages/DataResultsPage';
-import AutomatedPresentationsPage from './pages/AutomatedPresentationsPage';
 import GlobalDataSharingPage from './pages/GlobalDataSharingPage';
 import HelpForumPage from './pages/HelpForumPage';
 import ConferenceNewsPage from './pages/ConferenceNewsPage';
 import ResearchToolsPage from './pages/ResearchToolsPage';
+import StatisticalAnalysisToolsPage from './pages/StatisticalAnalysisToolsPage';
+import AIPresentationsPage from './pages/AIPresentationsPage';
+import SupplierMarketplacePage from './pages/SupplierMarketplacePage';
+import JournalsDirectoryPage from './pages/JournalsDirectoryPage';
 import ReferenceLibraryPage from './pages/ReferenceLibraryPage';
 import SimplifiedResearcherPortfolioPage from './pages/SimplifiedResearcherPortfolioPage';
 import MyPortfolioPage from './pages/MyPortfolioPage';
@@ -291,15 +294,6 @@ const AppContent: React.FC = () => {
 
       {/* Research collaboration routes - All authenticated users */}
       <Route 
-        path="/presentations" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><AutomatedPresentationsPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
-
-      <Route 
         path="/data-sharing" 
         element={
           <ProtectedRoute>
@@ -324,6 +318,38 @@ const AppContent: React.FC = () => {
             <DemoLayout><ResearchToolsPage /></DemoLayout>
           </ProtectedRoute>
         } 
+      />
+      <Route 
+        path="/statistical-analysis-tools" 
+        element={
+          <ProtectedRoute>
+            <DemoLayout><StatisticalAnalysisToolsPage /></DemoLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/ai-presentations" 
+        element={
+          <ProtectedRoute>
+            <DemoLayout><AIPresentationsPage /></DemoLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/supplier-marketplace" 
+        element={
+          <ProtectedRoute>
+            <DemoLayout><SupplierMarketplacePage /></DemoLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route 
+        path="/journals-directory" 
+        element={
+          <ProtectedRoute>
+            <DemoLayout><JournalsDirectoryPage /></DemoLayout>
+          </ProtectedRoute>
+        }
       />
       <Route 
         path="/reference-library" 

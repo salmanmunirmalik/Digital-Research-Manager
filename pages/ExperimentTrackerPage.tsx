@@ -43,7 +43,7 @@ import {
   UsersIcon,
   GlobeAltIcon,
   FireIcon,
-  TrendingUpIcon,
+
   XMarkIcon,
   CheckIcon,
   ArrowUpIcon,
@@ -51,7 +51,8 @@ import {
   MinusIcon,
   InformationCircleIcon,
   ExclamationCircleIcon,
-  QuestionMarkCircleIcon
+  QuestionMarkCircleIcon,
+  TrendingUpIcon
 } from '../components/icons';
 
 const ExperimentTrackerPage: React.FC = () => {

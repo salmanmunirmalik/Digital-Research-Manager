@@ -1,0 +1,39 @@
+{
+  "name": "research-lab-e2e-testing",
+  "version": "1.0.0",
+  "description": "Comprehensive E2E testing framework for Research Lab Platform",
+  "scripts": {
+    "test": "jest",
+    "test:ui": "jest --config=jest.config.ui.js",
+    "test:api": "jest --config=jest.config.api.js",
+    "test:crud": "jest --config=jest.config.crud.js",
+    "test:integration": "jest --config=jest.config.integration.js",
+    "test:all": "npm run test:api && npm run test:crud && npm run test:ui && npm run test:integration",
+    "test:local": "ENVIRONMENT=local npm run test:all",
+    "test:production": "ENVIRONMENT=production npm run test:all",
+    "test:report": "npm run test:all && npm run generate-report",
+    "generate-report": "node scripts/generate-test-report.js",
+    "puppeteer:install": "npx puppeteer browsers install chrome"
+  },
+  "dependencies": {
+    "puppeteer": "^21.0.0",
+    "jest": "^29.0.0",
+    "jest-environment-node": "^29.0.0",
+    "jest-environment-jsdom": "^29.0.0",
+    "jest-html-reporters": "^3.1.0",
+    "jest-junit": "^16.0.0",
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "fs-extra": "^11.0.0",
+    "moment": "^2.29.0",
+    "colors": "^1.4.0",
+    "pg": "^8.11.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "@types/puppeteer": "^7.0.0",
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.10.0",
+    "typescript": "^5.0.0"
+  }
+}
