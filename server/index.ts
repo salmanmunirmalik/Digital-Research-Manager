@@ -4095,7 +4095,7 @@ app.get('/api/data/results', authenticateToken, async (req, res) => {
   try {
     const { lab_id, data_type, search, tags, date_from, date_to } = req.query;
     const userId = (req as any).user.id;
-    
+
     let query = `
       SELECT r.*, u.username, u.first_name, u.last_name, l.name as lab_name
       FROM research_data r
@@ -4106,20 +4106,20 @@ app.get('/api/data/results', authenticateToken, async (req, res) => {
     
     const queryParams: any[] = [];
     let paramCount = 0;
-    
+
     // Filter by lab_id if provided
     if (lab_id) {
       paramCount++;
       query += ` AND r.lab_id = $${paramCount}`;
       queryParams.push(lab_id);
     }
-    
+
     if (data_type) {
       paramCount++;
       query += ` AND r.type = $${paramCount}`;
       queryParams.push(data_type);
     }
-    
+
     if (search) {
       paramCount++;
       query += ` AND (r.title ILIKE $${paramCount} OR r.summary ILIKE $${paramCount})`;
@@ -4232,11 +4232,11 @@ app.post('/api/data/results', authenticateToken, async (req, res) => {
 app.put('/api/data/results/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
+    const {
       title,
       summary,
       type,
-      category, 
+      category,
       description,
       methodology,
       results,
@@ -4372,7 +4372,7 @@ app.get('/api/data/templates', authenticateToken, async (req, res) => {
 // Create a data template
 app.post('/api/data/templates', authenticateToken, async (req, res) => {
   try {
-    const { 
+    const {
       name,
       description,
       category,
@@ -4426,4 +4426,354 @@ app.get('/api/data/results/stats/overview', authenticateToken, async (req, res) 
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// ===== RESEARCH DATA BANK ROUTES =====
+
+// Get all organizations with filtering and pagination
+app.get('/api/databank/organizations', authenticateToken, async (req, res) => {
+  try {
+    const { 
+      type, 
+      category, 
+      country, 
+      verified, 
+      search, 
+      page = 1, 
+      limit = 20,
+      sortBy = 'verified',
+      sortOrder = 'desc'
+    } = req.query as any;
+
+    let query = `
+      SELECT 
+        o.*,
+        COUNT(d.id) as data_count,
+        AVG(r.rating) as avg_rating,
+        COUNT(r.id) as rating_count
+      FROM databank_organizations o
+      LEFT JOIN databank_data_offers d ON o.id = d.organization_id
+      LEFT JOIN databank_ratings r ON o.id = r.organization_id
+      WHERE 1=1
+    `;
+    
+    const params: any[] = [];
+    let paramCount = 0;
+
+    if (type && type !== 'all') {
+      paramCount++;
+      query += ` AND o.type = $${paramCount}`;
+      params.push(type);
+    }
+
+    if (category && category !== 'all') {
+      paramCount++;
+      query += ` AND o.category = $${paramCount}`;
+      params.push(category);
+    }
+
+    if (country && country !== 'all') {
+      paramCount++;
+      query += ` AND o.country ILIKE $${paramCount}`;
+      params.push(`%${country}%`);
+    }
+
+    if (verified !== undefined) {
+      paramCount++;
+      query += ` AND o.verified = $${paramCount}`;
+      params.push(verified === 'true');
+    }
+
+    if (search) {
+      paramCount++;
+      query += ` AND (
+        o.name ILIKE $${paramCount} OR 
+        o.description ILIKE $${paramCount} OR 
+        EXISTS (
+          SELECT 1 FROM unnest(o.specializations) AS spec 
+          WHERE spec ILIKE $${paramCount}
+        )
+      )`;
+      params.push(`%${search}%`);
+    }
+
+    query += ` GROUP BY o.id`;
+
+    // Add sorting
+    const validSortFields = ['name', 'rating', 'joined_date', 'verified'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'verified';
+    const order = sortOrder === 'asc' ? 'ASC' : 'DESC';
+    
+    if (sortField === 'rating') {
+      query += ` ORDER BY avg_rating ${order} NULLS LAST, o.joined_date DESC`;
+    } else if (sortField === 'verified') {
+      query += ` ORDER BY o.verified ${order}, avg_rating DESC NULLS LAST`;
+    } else {
+      query += ` ORDER BY o.${sortField} ${order}`;
+    }
+
+    // Add pagination
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    paramCount++;
+    query += ` LIMIT $${paramCount}`;
+    params.push(parseInt(limit));
+    
+      paramCount++;
+    query += ` OFFSET $${paramCount}`;
+    params.push(offset);
+
+    const result = await pool.query(query, params);
+    
+    // Get total count for pagination
+    let countQuery = `
+      SELECT COUNT(*) as total
+      FROM databank_organizations o
+      WHERE 1=1
+    `;
+    const countParams: any[] = [];
+    let countParamCount = 0;
+
+    if (type && type !== 'all') {
+      countParamCount++;
+      countQuery += ` AND o.type = $${countParamCount}`;
+      countParams.push(type);
+    }
+    if (category && category !== 'all') {
+      countParamCount++;
+      countQuery += ` AND o.category = $${countParamCount}`;
+      countParams.push(category);
+    }
+    if (country && country !== 'all') {
+      countParamCount++;
+      countQuery += ` AND o.country ILIKE $${countParamCount}`;
+      countParams.push(`%${country}%`);
+    }
+    if (verified !== undefined) {
+      countParamCount++;
+      countQuery += ` AND o.verified = $${countParamCount}`;
+      countParams.push(verified === 'true');
+    }
+    if (search) {
+      countParamCount++;
+      countQuery += ` AND (
+        o.name ILIKE $${countParamCount} OR 
+        o.description ILIKE $${countParamCount} OR 
+        EXISTS (
+          SELECT 1 FROM unnest(o.specializations) AS spec 
+          WHERE spec ILIKE $${countParamCount}
+        )
+      )`;
+      countParams.push(`%${search}%`);
+    }
+
+    const countResult = await pool.query(countQuery, countParams);
+    const total = parseInt(countResult.rows[0].total);
+
+    res.json({
+      organizations: result.rows,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit))
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching organizations:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get organization by ID
+app.get('/api/databank/organizations/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const orgResult = await pool.query(`
+      SELECT 
+        o.*,
+        COUNT(d.id) as data_count,
+        AVG(r.rating) as avg_rating,
+        COUNT(r.id) as rating_count
+      FROM databank_organizations o
+      LEFT JOIN databank_data_offers d ON o.id = d.organization_id
+      LEFT JOIN databank_ratings r ON o.id = r.organization_id
+      WHERE o.id = $1
+      GROUP BY o.id
+    `, [id]);
+
+    if (orgResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    const organization = orgResult.rows[0];
+
+    // Get data offers for this organization
+    const dataResult = await pool.query(`
+      SELECT * FROM databank_data_offers
+      WHERE organization_id = $1
+      ORDER BY last_updated DESC
+    `, [id]);
+
+    organization.data_offers = dataResult.rows;
+
+    res.json({ organization });
+
+  } catch (error) {
+    console.error('Error fetching organization:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Register new organization
+app.post('/api/databank/organizations', authenticateToken, async (req, res) => {
+  try {
+    const { 
+      name,
+      type, 
+      category,
+      country,
+      region,
+      contactEmail,
+      website,
+      description, 
+      specializations
+    } = req.body;
+
+    const result = await pool.query(`
+      INSERT INTO databank_organizations (
+        name, type, category, country, region, contact_email, 
+        website, description, specializations, verified, rating, 
+        joined_date, last_active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, 0.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      RETURNING *
+    `, [name, type, category, country, region, contactEmail, website, description, specializations]);
+
+    console.log('📊 New organization registered:', { name, type, category, contactEmail });
+
+    res.json({ 
+      organization: result.rows[0],
+      message: 'Organization registered successfully. It will be verified before appearing publicly.'
+    });
+
+  } catch (error) {
+    console.error('Error registering organization:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Submit data request
+app.post('/api/databank/data-requests', authenticateToken, async (req, res) => {
+  try {
+    const { 
+      dataOfferId,
+      requesterName,
+      requesterInstitution,
+      requesterEmail,
+      purpose, 
+      methodology,
+      timeline,
+      collaborationProposed,
+      additionalNotes
+    } = req.body;
+
+    const result = await pool.query(`
+      INSERT INTO databank_data_requests (
+        data_offer_id, requester_name, requester_institution, requester_email,
+        purpose, methodology, timeline, collaboration_proposed, additional_notes,
+        status, submitted_date
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', CURRENT_TIMESTAMP)
+      RETURNING *
+    `, [
+      dataOfferId, requesterName, requesterInstitution, requesterEmail,
+      purpose, methodology, timeline, collaborationProposed, additionalNotes
+    ]);
+
+    // Update request count for the data offer
+    await pool.query(`
+      UPDATE databank_data_offers 
+      SET request_count = request_count + 1 
+      WHERE id = $1
+    `, [dataOfferId]);
+
+    console.log('📊 New data request submitted:', { 
+      dataOfferId, 
+      requesterName, 
+      requesterInstitution,
+      purpose: purpose.substring(0, 100) + '...'
+    });
+
+    res.json({ 
+      data_request: result.rows[0],
+      message: 'Data request submitted successfully. The organization will review your request.'
+    });
+
+  } catch (error) {
+    console.error('Error submitting data request:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get platform statistics
+app.get('/api/databank/stats', authenticateToken, async (req, res) => {
+  try {
+    const [orgStats, dataStats, requestStats] = await Promise.all([
+      // Organization statistics
+      pool.query(`
+        SELECT 
+          COUNT(*) as total_organizations,
+          COUNT(*) FILTER (WHERE verified = true) as verified_organizations,
+          COUNT(*) FILTER (WHERE type = 'research_lab') as research_labs,
+          COUNT(*) FILTER (WHERE type = 'hospital') as hospitals,
+          COUNT(*) FILTER (WHERE type = 'ngo') as ngos,
+          COUNT(*) FILTER (WHERE country = 'United States') as us_organizations
+        FROM databank_organizations
+      `),
+      
+      // Data offer statistics
+      pool.query(`
+        SELECT 
+          COUNT(*) as total_data_offers,
+          COUNT(*) FILTER (WHERE access_level = 'open') as open_data,
+          COUNT(*) FILTER (WHERE access_level = 'restricted') as restricted_data,
+          COUNT(*) FILTER (WHERE access_level = 'collaboration_required') as collaboration_data,
+          SUM(request_count) as total_requests
+        FROM databank_data_offers
+      `),
+      
+      // Request statistics
+      pool.query(`
+        SELECT 
+          COUNT(*) as total_requests,
+          COUNT(*) FILTER (WHERE status = 'pending') as pending_requests,
+          COUNT(*) FILTER (WHERE status = 'approved') as approved_requests,
+          COUNT(*) FILTER (WHERE status = 'rejected') as rejected_requests,
+          COUNT(*) FILTER (WHERE submitted_date >= CURRENT_DATE - INTERVAL '30 days') as recent_requests
+        FROM databank_data_requests
+      `)
+    ]);
+
+    const stats = {
+      organizations: orgStats.rows[0],
+      data_offers: dataStats.rows[0],
+      requests: requestStats.rows[0],
+      generated_at: new Date().toISOString()
+    };
+
+    res.json({ stats });
+
+  } catch (error) {
+    console.error('Error fetching platform statistics:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Research Data Bank API available at http://localhost:${PORT}/api/databank`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+});
+
+export default app;
 

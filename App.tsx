@@ -11,6 +11,7 @@ import LabManagementPage from './pages/LabManagementPage';
 import ProtocolsPage from './pages/ProtocolsPage';
 import DataResultsPage from './pages/DataResultsPage';
 import GlobalDataSharingPage from './pages/GlobalDataSharingPage';
+import ResearchDataBankPage from './pages/ResearchDataBankPage';
 import HelpForumPage from './pages/HelpForumPage';
 import ConferenceNewsPage from './pages/ConferenceNewsPage';
 import ResearchToolsPage from './pages/ResearchToolsPage';
@@ -86,6 +87,17 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     </svg>
                   </div>
                   Events & Opportunities
+                </Link>
+                <Link 
+                  to="/research-databank" 
+                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center hover:bg-gray-50 hover:shadow-sm"
+                >
+                  <div className="w-6 h-6 bg-teal-100 rounded-lg flex items-center justify-center mr-2">
+                    <svg className="w-3 h-3 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                    </svg>
+                  </div>
+                  Data Bank
                 </Link>
                 <Link 
                   to="/help-forum" 
@@ -298,6 +310,14 @@ const AppContent: React.FC = () => {
         element={
           <ProtectedRoute>
             <DemoLayout><GlobalDataSharingPage /></DemoLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/research-databank" 
+        element={
+          <ProtectedRoute>
+            <DemoLayout><ResearchDataBankPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
