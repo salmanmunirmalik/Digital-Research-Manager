@@ -42,6 +42,7 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+DROP TRIGGER IF EXISTS update_research_data_updated_at ON research_data;
 CREATE TRIGGER update_research_data_updated_at 
     BEFORE UPDATE ON research_data 
     FOR EACH ROW 

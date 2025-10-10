@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import TeamMessagingWidget from '../components/TeamMessagingWidget';
 import { 
   PlusIcon, 
   UsersIcon, 
@@ -6043,6 +6044,9 @@ const LabManagementPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Team Messaging Widget */}
+      <TeamMessagingWidget />
     </div>
   );
 };

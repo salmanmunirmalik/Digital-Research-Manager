@@ -4768,6 +4768,94 @@ app.get('/api/databank/stats', authenticateToken, async (req, res) => {
   }
 });
 
+// =================================
+// TEAM MESSAGING API ROUTES
+// =================================
+
+// Get user's conversations
+app.get('/api/conversations', authenticateToken, async (req, res) => {
+  try {
+    const { type } = req.query;
+    
+    let whereClause = '';
+    const params: any[] = [req.user.id];
+    
+    if (type && (type === 'group' || type === 'direct')) {
+      whereClause = 'AND c.type = $2';
+      params.push(type);
+    }
+    
+    const result = await pool.query(`
+      SELECT c.*, COUNT(DISTINCT cp.user_id) as participants
+      FROM conversations c
+      JOIN conversation_participants cp_user ON c.id = cp_user.conversation_id AND cp_user.user_id = $1
+      LEFT JOIN conversation_participants cp ON c.id = cp.conversation_id
+      WHERE 1=1 ${whereClause}
+      GROUP BY c.id
+      ORDER BY c.updated_at DESC
+    `, params);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('💥 Get conversations error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get messages for a conversation
+app.get('/api/conversations/:id/messages', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { limit = 50 } = req.query;
+    
+    const participant = await pool.query(`
+      SELECT * FROM conversation_participants 
+      WHERE conversation_id = $1 AND user_id = $2
+    `, [id, req.user.id]);
+    
+    if (participant.rows.length === 0) {
+      return res.status(403).json({ error: 'Not a participant' });
+    }
+    
+    const result = await pool.query(`
+      SELECT m.*, u.username as sender_name
+      FROM messages m
+      JOIN users u ON m.sender_id = u.id
+      WHERE m.conversation_id = $1
+      ORDER BY m.created_at ASC
+      LIMIT $2
+    `, [id, limit]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('💥 Get messages error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Send a message
+app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+    
+    if (!content) {
+      return res.status(400).json({ error: 'Content required' });
+    }
+    
+    const result = await pool.query(`
+      INSERT INTO messages (conversation_id, sender_id, content)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `, [id, req.user.id, content]);
+    
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('💥 Send message error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

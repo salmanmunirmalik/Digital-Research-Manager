@@ -120,22 +120,6 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
         )
       },
       { 
-        name: 'AI Presentations', 
-        to: '/ai-presentations', 
-        icon: PresentationChartLineIcon, 
-        description: 'Create intelligent presentations with AI',
-        color: 'from-blue-500 to-purple-600',
-        bgColor: 'bg-blue-50',
-        textColor: 'text-blue-700',
-        iconColor: 'text-blue-600',
-        iconBg: 'bg-blue-100',
-        iconSvg: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m0 0V1a1 1 0 011-1h2a1 1 0 011 1v22a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3M7 4H5a1 1 0 00-1 1v16a1 1 0 001 1h2m0-18v18" />
-          </svg>
-        )
-      },
-      { 
         name: 'Statistical Analysis Tools', 
         to: '/statistical-analysis-tools', 
         icon: BarChartIcon, 
@@ -164,22 +148,6 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
         iconSvg: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-          </svg>
-        )
-      },
-      { 
-        name: 'Journals Directory', 
-        to: '/journals-directory', 
-        icon: NewspaperIcon, 
-        description: 'Discover scientific journals and publication venues',
-        color: 'from-emerald-500 to-emerald-600',
-        bgColor: 'bg-emerald-50',
-        textColor: 'text-emerald-700',
-        iconColor: 'text-emerald-600',
-        iconBg: 'bg-emerald-100',
-        iconSvg: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
           </svg>
         )
       },

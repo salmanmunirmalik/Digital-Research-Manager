@@ -18,7 +18,6 @@ import ResearchToolsPage from './pages/ResearchToolsPage';
 import StatisticalAnalysisToolsPage from './pages/StatisticalAnalysisToolsPage';
 import AIPresentationsPage from './pages/AIPresentationsPage';
 import SupplierMarketplacePage from './pages/SupplierMarketplacePage';
-import JournalsDirectoryPage from './pages/JournalsDirectoryPage';
 import ReferenceLibraryPage from './pages/ReferenceLibraryPage';
 import SimplifiedResearcherPortfolioPage from './pages/SimplifiedResearcherPortfolioPage';
 import MyPortfolioPage from './pages/MyPortfolioPage';
@@ -38,6 +37,7 @@ import BioinformaticsToolsPage from './pages/BioinformaticsToolsPage';
 import MolecularBiologyPage from './pages/MolecularBiologyPage';
 import DataAnalyticsPage from './pages/DataAnalyticsPage';
 import LandingPage from './pages/LandingPage';
+import TeamManagementPage from './pages/TeamManagementPage';
 
 // Modern Layout Component with Quillbot-inspired design
 const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -360,14 +360,6 @@ const AppContent: React.FC = () => {
         element={
           <ProtectedRoute>
             <DemoLayout><SupplierMarketplacePage /></DemoLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route 
-        path="/journals-directory" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><JournalsDirectoryPage /></DemoLayout>
           </ProtectedRoute>
         }
       />

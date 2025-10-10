@@ -25,6 +25,7 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+DROP TRIGGER IF EXISTS update_quick_notes_updated_at ON quick_notes;
 CREATE TRIGGER update_quick_notes_updated_at 
     BEFORE UPDATE ON quick_notes 
     FOR EACH ROW 

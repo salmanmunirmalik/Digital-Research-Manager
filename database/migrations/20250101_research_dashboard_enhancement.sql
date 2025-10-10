@@ -17,10 +17,10 @@ END $$;
 -- Note: Schema should be applied separately
 
 -- Insert sample data for testing
-INSERT INTO research_deadlines (title, description, deadline_type, deadline_date, priority, lab_id, created_by) VALUES
-('NIH Grant Proposal Submission', 'R01 application for cancer research funding', 'grant', '2024-04-15', 'high', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'c8ace470-5e21-4d3b-ab95-da6084311657'),
-('Nature Paper Review Deadline', 'Response to reviewer comments', 'publication', '2024-04-22', 'high', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'c8ace470-5e21-4d3b-ab95-da6084311657'),
-('Conference Abstract Submission', 'ASCO Annual Meeting abstract', 'conference', '2024-05-01', 'medium', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'c8ace470-5e21-4d3b-ab95-da6084311657');
+INSERT INTO research_deadlines (title, description, deadline_type, deadline_date, priority, related_lab_id, created_by) VALUES
+('NIH Grant Proposal Submission', 'R01 application for cancer research funding', 'grant', '2024-04-15', 'high', 'c8ace470-5e21-4d3b-ab95-da6084311657', '4fd07593-fdfd-46ca-890c-f7875e3c47fb'),
+('Nature Paper Review Deadline', 'Response to reviewer comments', 'publication', '2024-04-22', 'high', 'c8ace470-5e21-4d3b-ab95-da6084311657', '4fd07593-fdfd-46ca-890c-f7875e3c47fb'),
+('Conference Abstract Submission', 'ASCO Annual Meeting abstract', 'conference', '2024-05-01', 'medium', 'c8ace470-5e21-4d3b-ab95-da6084311657', '4fd07593-fdfd-46ca-890c-f7875e3c47fb');
 
 INSERT INTO research_insights (insight_type, title, description, category, priority, confidence_score, lab_id, action_label, action_route) VALUES
 ('opportunity', 'Grant Opportunity Alert', 'NSF has a new call for proposals matching your CRISPR research area. Deadline in 3 weeks.', 'grants', 'high', 92, 'c8ace470-5e21-4d3b-ab95-da6084311657', 'View Details', '/grants'),
@@ -28,13 +28,13 @@ INSERT INTO research_insights (insight_type, title, description, category, prior
 ('suggestion', 'Collaboration Opportunity', 'Dr. Johnson from Stanford is working on similar CRISPR research. Consider reaching out.', 'collaborations', 'medium', 78, 'c8ace470-5e21-4d3b-ab95-da6084311657', 'Connect', '/collaborations');
 
 INSERT INTO research_activities (activity_type, title, description, user_id, lab_id, impact_level) VALUES
-('experiment', 'Completed Phase 2 CRISPR experiments', 'Successfully completed gene editing experiments with 85% efficiency', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'high'),
-('publication', 'Paper accepted in Nature Biotechnology', 'CRISPR-based cancer therapy paper accepted for publication', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'high'),
-('collaboration', 'New collaboration with MIT initiated', 'Partnership for machine learning drug discovery project', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'medium');
+('experiment', 'Completed Phase 2 CRISPR experiments', 'Successfully completed gene editing experiments with 85% efficiency', '4fd07593-fdfd-46ca-890c-f7875e3c47fb', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'high'),
+('publication', 'Paper accepted in Nature Biotechnology', 'CRISPR-based cancer therapy paper accepted for publication', '4fd07593-fdfd-46ca-890c-f7875e3c47fb', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'high'),
+('collaboration', 'New collaboration with MIT initiated', 'Partnership for machine learning drug discovery project', '4fd07593-fdfd-46ca-890c-f7875e3c47fb', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'medium');
 
 INSERT INTO research_collaborations (title, description, collaboration_type, status, start_date, end_date, lab_id, lead_researcher_id, funding_amount, publications_count, outcomes) VALUES
-('CRISPR Cancer Therapy Consortium', 'Multi-institutional collaboration for CRISPR-based cancer therapies', 'external', 'active', '2023-09-01', '2025-08-31', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'c8ace470-5e21-4d3b-ab95-da6084311657', 500000, 2, ARRAY['2 publications', '1 patent filed', '3 conference presentations']),
-('Industry Partnership - Drug Discovery', 'Collaborative drug discovery using machine learning approaches', 'industry', 'active', '2024-01-01', '2024-12-31', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'c8ace470-5e21-4d3b-ab95-da6084311657', 200000, 0, ARRAY['1 patent application', '2 publications in progress']);
+('CRISPR Cancer Therapy Consortium', 'Multi-institutional collaboration for CRISPR-based cancer therapies', 'external', 'active', '2023-09-01', '2025-08-31', 'c8ace470-5e21-4d3b-ab95-da6084311657', '4fd07593-fdfd-46ca-890c-f7875e3c47fb', 500000, 2, ARRAY['2 publications', '1 patent filed', '3 conference presentations']),
+('Industry Partnership - Drug Discovery', 'Collaborative drug discovery using machine learning approaches', 'industry', 'active', '2024-01-01', '2024-12-31', 'c8ace470-5e21-4d3b-ab95-da6084311657', '4fd07593-fdfd-46ca-890c-f7875e3c47fb', 200000, 0, ARRAY['1 patent application', '2 publications in progress']);
 
 INSERT INTO collaboration_partners (collaboration_id, partner_name, institution, role, contact_email) VALUES
 ((SELECT id FROM research_collaborations WHERE title = 'CRISPR Cancer Therapy Consortium' LIMIT 1), 'Dr. Johnson', 'Stanford', 'Co-PI', 'johnson@stanford.edu'),
@@ -111,8 +111,8 @@ BEGIN
         'collaborationScore', LEAST(100, (SELECT COUNT(*) FROM research_collaborations WHERE lab_id = p_lab_id AND status = 'active') * 20),
         'productivityTrend', 'up',
         'fundingSecured', (SELECT COALESCE(SUM(funding_amount), 0) FROM research_collaborations WHERE lab_id = p_lab_id AND status = 'active'),
-        'grantApplications', (SELECT COUNT(*) FROM research_deadlines WHERE lab_id = p_lab_id AND deadline_type = 'grant'),
-        'conferencePresentations', (SELECT COUNT(*) FROM research_deadlines WHERE lab_id = p_lab_id AND deadline_type = 'conference')
+        'grantApplications', (SELECT COUNT(*) FROM research_deadlines WHERE related_lab_id = p_lab_id AND deadline_type = 'grant'),
+        'conferencePresentations', (SELECT COUNT(*) FROM research_deadlines WHERE related_lab_id = p_lab_id AND deadline_type = 'conference')
     ) INTO result;
     
     RETURN result;
@@ -146,7 +146,7 @@ BEGIN
     -- Count upcoming high-priority deadlines
     SELECT COUNT(*) INTO deadline_count
     FROM research_deadlines rd
-    WHERE rd.lab_id = p_lab_id 
+    WHERE rd.related_lab_id = p_lab_id 
     AND rd.priority = 'high' 
     AND rd.status = 'upcoming'
     AND rd.deadline_date <= CURRENT_DATE + INTERVAL '7 days';
@@ -187,16 +187,16 @@ SELECT
     COUNT(DISTINCT CASE WHEN ri.is_read = false THEN ri.id END) as unread_insights
 FROM labs l
 LEFT JOIN projects p ON l.id = p.lab_id
-LEFT JOIN research_deadlines rd ON l.id = rd.lab_id
+LEFT JOIN research_deadlines rd ON l.id = rd.related_lab_id
 LEFT JOIN research_collaborations rc ON l.id = rc.lab_id
 LEFT JOIN research_activities ra ON l.id = ra.lab_id
 LEFT JOIN research_insights ri ON l.id = ri.lab_id
 GROUP BY l.id, l.name;
 
 -- Grant permissions
-GRANT SELECT ON research_dashboard_data TO authenticated;
-GRANT EXECUTE ON FUNCTION calculate_research_metrics(UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION generate_smart_insights(UUID, UUID) TO authenticated;
+-- GRANT SELECT ON research_dashboard_data TO authenticated;
+-- GRANT EXECUTE ON FUNCTION calculate_research_metrics(UUID) TO authenticated;
+-- GRANT EXECUTE ON FUNCTION generate_smart_insights(UUID, UUID) TO authenticated;
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_projects_lab_status ON projects(lab_id, status);

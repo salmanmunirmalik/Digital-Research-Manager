@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Page</title>
+</head>
+<body>
+    <h1>If you see this, the issue is with React, not the server</h1>
+    <script>
+        console.log('Test page loaded successfully');
+        fetch('http://localhost:5173/')
+            .then(r => r.text())
+            .then(html => {
+                console.log('Main page HTML length:', html.length);
+                console.log('Has root div:', html.includes('id="root"'));
+            });
+    </script>
+</body>
+</html>
+
