@@ -15,8 +15,6 @@ import ResearchDataBankPage from './pages/ResearchDataBankPage';
 import HelpForumPage from './pages/HelpForumPage';
 import ConferenceNewsPage from './pages/ConferenceNewsPage';
 import ResearchToolsPage from './pages/ResearchToolsPage';
-import StatisticalAnalysisToolsPage from './pages/StatisticalAnalysisToolsPage';
-import AIPresentationsPage from './pages/AIPresentationsPage';
 import SupplierMarketplacePage from './pages/SupplierMarketplacePage';
 import ReferenceLibraryPage from './pages/ReferenceLibraryPage';
 import SimplifiedResearcherPortfolioPage from './pages/SimplifiedResearcherPortfolioPage';
@@ -336,22 +334,6 @@ const AppContent: React.FC = () => {
         element={
           <ProtectedRoute>
             <DemoLayout><ResearchToolsPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/statistical-analysis-tools" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><StatisticalAnalysisToolsPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/ai-presentations" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><AIPresentationsPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />

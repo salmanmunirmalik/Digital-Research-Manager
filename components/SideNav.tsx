@@ -56,6 +56,22 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
   const getNavItems = () => {
     return [
       { 
+        name: 'Lab Management', 
+        to: '/lab-management', 
+        icon: BuildingOfficeIcon, 
+        description: 'Manage lab resources and operations',
+        color: 'from-orange-500 to-orange-600',
+        bgColor: 'bg-orange-50',
+        textColor: 'text-orange-700',
+        iconColor: 'text-orange-600',
+        iconBg: 'bg-orange-100',
+        iconSvg: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+        )
+      },
+      { 
         name: 'Lab Notebook', 
         to: '/lab-notebook', 
         icon: BookOpenIcon, 
@@ -120,22 +136,6 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
         )
       },
       { 
-        name: 'Statistical Analysis Tools', 
-        to: '/statistical-analysis-tools', 
-        icon: BarChartIcon, 
-        description: 'Advanced statistical analysis and data mining',
-        color: 'from-purple-500 to-purple-600',
-        bgColor: 'bg-purple-50',
-        textColor: 'text-purple-700',
-        iconColor: 'text-purple-600',
-        iconBg: 'bg-purple-100',
-        iconSvg: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-        )
-      },
-      { 
         name: 'Research Assistant', 
         to: '/research-assistant', 
         icon: LightbulbIcon, 
@@ -164,22 +164,6 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
         iconSvg: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-          </svg>
-        )
-      },
-      { 
-        name: 'Lab Management', 
-        to: '/lab-management', 
-        icon: BuildingOfficeIcon, 
-        description: 'Manage lab resources and operations',
-        color: 'from-orange-500 to-orange-600',
-        bgColor: 'bg-orange-50',
-        textColor: 'text-orange-700',
-        iconColor: 'text-orange-600',
-        iconBg: 'bg-orange-100',
-        iconSvg: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
           </svg>
         )
       },
