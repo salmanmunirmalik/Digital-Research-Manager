@@ -34,7 +34,6 @@ import {
   AcademicCapIcon,
   TrendingUpIcon
 } from '../components/icons';
-import AIPresentationModal from '../components/AIPresentationModal';
 
 // Enhanced data structure for real research needs
 interface ResearchDataEntry {
@@ -104,10 +103,6 @@ const DataResultsPage: React.FC = () => {
   const [addModalType, setAddModalType] = useState<'experiment' | 'analysis' | 'image' | 'document' | 'protocol' | 'code'>('experiment');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  
-  // Presentation modal state
-  const [showAIPresentationModal, setShowAIPresentationModal] = useState(false);
-  
 
   // Fetch data from API
   const fetchData = async () => {
@@ -859,20 +854,6 @@ const DataResultsPage: React.FC = () => {
                 <PlusIcon className="w-4 h-4 mr-2" />
                 Add Data
               </Button>
-              <Button 
-                onClick={() => setShowAIPresentationModal(true)}
-                className="bg-purple-600 hover:bg-purple-700"
-              >
-                <PresentationChartLineIcon className="w-4 h-4 mr-2" />
-                AI Presentations
-              </Button>
-              <Button 
-                onClick={() => window.location.href = '/data-sharing'}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <ShareIcon className="w-4 h-4 mr-2" />
-                Data Sharing
-              </Button>
             </div>
           </div>
         </div>
@@ -1249,14 +1230,6 @@ const DataResultsPage: React.FC = () => {
           </div>
         )}
 
-        {/* Presentation Modal */}
-        
-        {showAIPresentationModal && (
-          <AIPresentationModal 
-            onClose={() => setShowAIPresentationModal(false)}
-            dataEntries={dataEntries}
-          />
-        )}
 
       </div>
     </div>
