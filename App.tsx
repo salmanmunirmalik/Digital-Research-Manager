@@ -454,12 +454,12 @@ const AppContent: React.FC = () => {
       />
 
       {/* Profile and Settings Routes */}
-      {/* Profile - Now using Scientist Passport as main profile */}
+      {/* Profile - Personal account information */}
       <Route 
         path="/profile" 
         element={
           <ProtectedRoute>
-            <DemoLayout><ScientistPassportPage /></DemoLayout>
+            <DemoLayout><SettingsPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
