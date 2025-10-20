@@ -649,6 +649,9 @@ app.get('/api/advanced-stats/workflow-templates', authenticateToken, async (req,
 import scientistPassportRoutes from './routes/scientistPassport.js';
 import serviceMarketplaceRoutes from './routes/serviceMarketplace.js';
 import negativeResultsRoutes from './routes/negativeResults.js';
+import paperLibraryRoutes from './routes/paperLibrary.js';
+import externalDatabasesRoutes from './routes/externalDatabases.js';
+import projectManagementRoutes from './routes/projectManagement.js';
 
 // Simple auth middleware for demo
 const demoAuth = (req, res, next) => {
@@ -677,11 +680,17 @@ app.get('/api/test-revolutionary', async (req, res) => {
 app.use('/api/scientist-passport', demoAuth, scientistPassportRoutes);
 app.use('/api/services', demoAuth, serviceMarketplaceRoutes);
 app.use('/api/negative-results', demoAuth, negativeResultsRoutes);
+app.use('/api/papers', demoAuth, paperLibraryRoutes);
+app.use('/api/external-db', demoAuth, externalDatabasesRoutes);
+app.use('/api/project-management', demoAuth, projectManagementRoutes);
 
 console.log('✨ Revolutionary features API routes registered:');
-console.log('   - /api/scientist-passport');
-console.log('   - /api/services');
-console.log('   - /api/negative-results');
+console.log('   - /api/scientist-passport (Skills, Certifications, Availability)');
+console.log('   - /api/services (Service Marketplace)');
+console.log('   - /api/negative-results (Failed Experiments Database)');
+console.log('   - /api/papers (DOI Integration & Paper Library)');
+console.log('   - /api/external-db (Materials Project, Lens.org)');
+console.log('   - /api/project-management (Projects, Work Packages, PI Reviews)');
 
 app.listen(PORT, () => {
   console.log(`Working server running on port ${PORT}`);
