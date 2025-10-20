@@ -8,7 +8,7 @@ import { getUserDisplayName, getRoleDisplayName } from './utils/roleAccess';
 // Import all pages
 import LabNotebookPage from './pages/LabNotebookPage';
 import LabManagementPage from './pages/LabManagementPage';
-import ProtocolsPage from './pages/ProtocolsPage';
+import ProfessionalProtocolsPage from './pages/ProfessionalProtocolsPage'; // Main protocols page
 import DataResultsPage from './pages/DataResultsPage';
 import GlobalDataSharingPage from './pages/GlobalDataSharingPage';
 import ResearchDataBankPage from './pages/ResearchDataBankPage';
@@ -18,16 +18,14 @@ import ResearchToolsPage from './pages/ResearchToolsPage';
 import SupplierMarketplacePage from './pages/SupplierMarketplacePage';
 import ServiceMarketplacePage from './pages/ServiceMarketplacePage';
 import NegativeResultsPage from './pages/NegativeResultsPage';
-import PaperLibraryPage from './pages/PaperLibraryPage';
+import PaperLibraryPage from './pages/PaperLibraryPage'; // Main reference library
 import ProjectManagementPage from './pages/ProjectManagementPage';
 import PIReviewDashboardPage from './pages/PIReviewDashboardPage';
-import ReferenceLibraryPage from './pages/ReferenceLibraryPage';
 import SimplifiedResearcherPortfolioPage from './pages/SimplifiedResearcherPortfolioPage';
 import MyPortfolioPage from './pages/MyPortfolioPage';
 import CollaborationNetworkingPage from './pages/CollaborationNetworkingPage';
 import EventsOpportunitiesPage from './pages/EventsOpportunitiesPage';
 import ExperimentTrackerPage from './pages/ExperimentTrackerPage';
-import ProfessionalProtocolsPage from './pages/ProfessionalProtocolsPage';
 
 import ResearchAssistantPage from './pages/ResearchAssistantPage';
 import LoginPage from './pages/LoginPage';
@@ -292,9 +290,9 @@ const AppContent: React.FC = () => {
         path="/protocols" 
         element={
           <ProtectedRoute>
-            <DemoLayout><ProtocolsPage /></DemoLayout>
+            <DemoLayout><ProfessionalProtocolsPage /></DemoLayout>
           </ProtectedRoute>
-        } 
+        }
       />
       
       
@@ -395,7 +393,7 @@ const AppContent: React.FC = () => {
         path="/reference-library" 
         element={
           <ProtectedRoute>
-            <DemoLayout><ReferenceLibraryPage /></DemoLayout>
+            <DemoLayout><PaperLibraryPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
