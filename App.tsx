@@ -29,7 +29,6 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import SettingsPage from './pages/SettingsPage';
-import ProfilePage from './pages/ProfilePage';
 import ScientistPassportPage from './pages/ScientistPassportPage';
 
 import BioinformaticsToolsPage from './pages/BioinformaticsToolsPage';
@@ -455,12 +454,12 @@ const AppContent: React.FC = () => {
       />
 
       {/* Profile and Settings Routes */}
-      {/* Profile - Personal account information & bio */}
+      {/* Profile - Redirects to Settings (no separate profile page) */}
       <Route 
         path="/profile" 
         element={
           <ProtectedRoute>
-            <DemoLayout><ProfilePage /></DemoLayout>
+            <DemoLayout><SettingsPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
