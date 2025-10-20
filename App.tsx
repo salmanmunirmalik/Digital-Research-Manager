@@ -30,6 +30,7 @@ import RegisterPage from './pages/RegisterPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import UnifiedProfilePage from './pages/UnifiedProfilePage';
 import SettingsPage from './pages/SettingsPage';
+import ScientistPassportPage from './pages/ScientistPassportPage';
 
 import BioinformaticsToolsPage from './pages/BioinformaticsToolsPage';
 import MolecularBiologyPage from './pages/MolecularBiologyPage';
@@ -426,6 +427,14 @@ const AppContent: React.FC = () => {
         element={
           <ProtectedRoute>
             <DemoLayout><MyPortfolioPage /></DemoLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/scientist-passport" 
+        element={
+          <ProtectedRoute>
+            <DemoLayout><ScientistPassportPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
