@@ -123,13 +123,16 @@ const ScientistPassportPage: React.FC = () => {
         axios.get('/api/scientist-passport/platform-scores', { headers })
       ]);
 
-      setSkills(skillsRes.data);
-      setCertifications(certsRes.data);
-      setAvailability(availRes.data);
-      setSpeakingProfile(speakingRes.data);
-      setPlatformScores(scoresRes.data);
+      // Safely handle all responses
+      setSkills(Array.isArray(skillsRes.data) ? skillsRes.data : []);
+      setCertifications(Array.isArray(certsRes.data) ? certsRes.data : []);
+      setAvailability(availRes.data || null);
+      setSpeakingProfile(speakingRes.data || null);
+      setPlatformScores(scoresRes.data || null);
     } catch (error) {
       console.error('Error fetching passport data:', error);
+      setSkills([]);
+      setCertifications([]);
     } finally {
       setLoading(false);
     }

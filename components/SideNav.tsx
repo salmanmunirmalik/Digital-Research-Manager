@@ -258,7 +258,7 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
 
   return (
     <div className="h-full flex flex-col bg-white border-r border-gray-100">
-      <style jsx>{`
+      <style>{`
         @keyframes fadeInUp {
           from {
             opacity: 0;

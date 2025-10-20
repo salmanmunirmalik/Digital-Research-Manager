@@ -105,9 +105,16 @@ const ServiceMarketplacePage: React.FC = () => {
         params
       });
       
-      setServices(response.data);
+      // Ensure we always set an array
+      if (Array.isArray(response.data)) {
+        setServices(response.data);
+      } else {
+        console.error('API returned non-array:', response.data);
+        setServices([]);
+      }
     } catch (error) {
       console.error('Error fetching services:', error);
+      setServices([]);
     } finally {
       setLoading(false);
     }
@@ -120,9 +127,16 @@ const ServiceMarketplacePage: React.FC = () => {
       const response = await axios.get('/api/services/my-listings', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setMyServices(response.data);
+      // Ensure we always set an array
+      if (Array.isArray(response.data)) {
+        setMyServices(response.data);
+      } else {
+        console.error('API returned non-array:', response.data);
+        setMyServices([]);
+      }
     } catch (error) {
       console.error('Error fetching my services:', error);
+      setMyServices([]);
     } finally {
       setLoading(false);
     }

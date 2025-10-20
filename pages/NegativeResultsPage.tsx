@@ -94,9 +94,16 @@ const NegativeResultsPage: React.FC = () => {
         params
       });
       
-      setNegativeResults(response.data);
+      // Ensure we always set an array
+      if (Array.isArray(response.data)) {
+        setNegativeResults(response.data);
+      } else {
+        console.error('API returned non-array:', response.data);
+        setNegativeResults([]);
+      }
     } catch (error) {
       console.error('Error fetching negative results:', error);
+      setNegativeResults([]);
     } finally {
       setLoading(false);
     }
@@ -109,9 +116,16 @@ const NegativeResultsPage: React.FC = () => {
       const response = await axios.get('/api/negative-results/my/submissions', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setNegativeResults(response.data);
+      // Ensure we always set an array
+      if (Array.isArray(response.data)) {
+        setNegativeResults(response.data);
+      } else {
+        console.error('API returned non-array:', response.data);
+        setNegativeResults([]);
+      }
     } catch (error) {
       console.error('Error fetching my submissions:', error);
+      setNegativeResults([]);
     } finally {
       setLoading(false);
     }
