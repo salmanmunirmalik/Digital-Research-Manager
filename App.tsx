@@ -9,8 +9,7 @@ import { getUserDisplayName, getRoleDisplayName } from './utils/roleAccess';
 import LabNotebookPage from './pages/LabNotebookPage';
 import LabManagementPage from './pages/LabManagementPage';
 import ProfessionalProtocolsPage from './pages/ProfessionalProtocolsPage'; // Main protocols page
-import DataResultsPage from './pages/DataResultsPage';
-import GlobalDataSharingPage from './pages/GlobalDataSharingPage';
+import DataResultsPage from './pages/DataResultsPage'; // Includes global sharing tab
 import ResearchDataBankPage from './pages/ResearchDataBankPage';
 import HelpForumPage from './pages/HelpForumPage';
 import ConferenceNewsPage from './pages/ConferenceNewsPage';
@@ -21,8 +20,6 @@ import NegativeResultsPage from './pages/NegativeResultsPage';
 import PaperLibraryPage from './pages/PaperLibraryPage'; // Main reference library
 import ProjectManagementPage from './pages/ProjectManagementPage';
 import PIReviewDashboardPage from './pages/PIReviewDashboardPage';
-import SimplifiedResearcherPortfolioPage from './pages/SimplifiedResearcherPortfolioPage';
-import MyPortfolioPage from './pages/MyPortfolioPage';
 import CollaborationNetworkingPage from './pages/CollaborationNetworkingPage';
 import EventsOpportunitiesPage from './pages/EventsOpportunitiesPage';
 import ExperimentTrackerPage from './pages/ExperimentTrackerPage';
@@ -31,7 +28,6 @@ import ResearchAssistantPage from './pages/ResearchAssistantPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
-import UnifiedProfilePage from './pages/UnifiedProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import ScientistPassportPage from './pages/ScientistPassportPage';
 
@@ -307,11 +303,12 @@ const AppContent: React.FC = () => {
       />
 
       {/* Research collaboration routes - All authenticated users */}
+      {/* Global Data Sharing - Now integrated into Data & Results */}
       <Route 
         path="/data-sharing" 
         element={
           <ProtectedRoute>
-            <DemoLayout><GlobalDataSharingPage /></DemoLayout>
+            <DemoLayout><DataResultsPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
@@ -457,19 +454,21 @@ const AppContent: React.FC = () => {
       />
 
       {/* Profile and Settings Routes */}
+      {/* Profile - Now using Scientist Passport as main profile */}
       <Route 
         path="/profile" 
         element={
           <ProtectedRoute>
-            <DemoLayout><UnifiedProfilePage /></DemoLayout>
+            <DemoLayout><ScientistPassportPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
+      {/* My Portfolio - Redirects to Scientist Passport */}
       <Route 
         path="/my-portfolio" 
         element={
           <ProtectedRoute>
-            <DemoLayout><MyPortfolioPage /></DemoLayout>
+            <DemoLayout><ScientistPassportPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
