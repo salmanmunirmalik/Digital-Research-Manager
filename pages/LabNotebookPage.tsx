@@ -263,12 +263,12 @@ const LabNotebookPage: React.FC = () => {
       bgColor: 'bg-indigo-100'
     },
     { 
-      id: 'meeting', 
-      name: 'Meeting', 
-      description: 'Document meeting notes and decisions',
-      icon: UsersIcon,
-      color: 'text-pink-600',
-      bgColor: 'bg-pink-100'
+      id: 'progress_review', 
+      name: 'Progress Review', 
+      description: 'Submit progress reports & receive PI feedback',
+      icon: ClipboardListIcon,
+      color: 'text-violet-600',
+      bgColor: 'bg-violet-100'
     },
     { 
       id: 'problem', 
@@ -302,8 +302,8 @@ const LabNotebookPage: React.FC = () => {
       case 'results':
         setShowResultsForm(true);
         break;
-      case 'meeting':
-        setShowMeetingForm(true);
+      case 'progress_review':
+        window.location.href = '/pi-review-dashboard';
         break;
       case 'problem':
         setShowProblemForm(true);
@@ -756,8 +756,8 @@ const LabNotebookPage: React.FC = () => {
           case 'results':
             setShowResultsForm(false);
             break;
-          case 'meeting':
-            setShowMeetingForm(false);
+          case 'progress_review':
+            // Handled by navigation
             break;
           case 'problem':
             setShowProblemForm(false);
@@ -1464,8 +1464,8 @@ const LabNotebookPage: React.FC = () => {
             <h2 className="text-2xl font-bold text-gray-900">Lab Notebook Entries</h2>
           </div>
 
-              {/* Search and Filters */}
-              <Card>
+            {/* Search and Filters */}
+            <Card>
               <CardContent className="pt-6">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="md:col-span-2">
