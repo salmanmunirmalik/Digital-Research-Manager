@@ -8,6 +8,11 @@ import AIPresentationService from './aiPresentationService.js';
 import AdvancedStatisticalService from './advancedStatsService.js';
 import { ActivityTracker } from './services/activityTracker.js';
 
+// Revolutionary features route modules
+import scientistPassportRoutes from './routes/scientistPassport.js';
+import serviceMarketplaceRoutes from './routes/serviceMarketplace.js';
+import negativeResultsRoutes from './routes/negativeResults.js';
+
 // Note: Exports moved to separate files to avoid circular dependencies
 
 const app = express();
@@ -4784,7 +4789,7 @@ app.get('/api/conversations', authenticateToken, async (req, res) => {
       whereClause = 'AND c.type = $2';
       params.push(type);
     }
-    
+
     const result = await pool.query(`
       SELECT c.*, COUNT(DISTINCT cp.user_id) as participants
       FROM conversations c
@@ -4816,7 +4821,7 @@ app.get('/api/conversations/:id/messages', authenticateToken, async (req, res) =
     if (participant.rows.length === 0) {
       return res.status(403).json({ error: 'Not a participant' });
     }
-    
+
     const result = await pool.query(`
       SELECT m.*, u.username as sender_name
       FROM messages m
@@ -4842,13 +4847,13 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
     if (!content) {
       return res.status(400).json({ error: 'Content required' });
     }
-    
+
     const result = await pool.query(`
       INSERT INTO messages (conversation_id, sender_id, content)
       VALUES ($1, $2, $3)
       RETURNING *
     `, [id, req.user.id, content]);
-    
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('💥 Send message error:', error);
@@ -4856,10 +4861,25 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
   }
 });
 
+// =================================
+// REVOLUTIONARY FEATURES API ROUTES
+// =================================
+
+// Mount the revolutionary feature routes with authentication
+app.use('/api/scientist-passport', authenticateToken, scientistPassportRoutes);
+app.use('/api/services', authenticateToken, serviceMarketplaceRoutes);
+app.use('/api/negative-results', authenticateToken, negativeResultsRoutes);
+
+console.log('✨ Revolutionary features API routes registered:');
+console.log('   - /api/scientist-passport (Enhanced profiles & skills)');
+console.log('   - /api/services (Service marketplace)');
+console.log('   - /api/negative-results (Failed experiments database)');
+
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Research Data Bank API available at http://localhost:${PORT}/api/databank`);
+  console.log(`✨ Revolutionary Features API available at http://localhost:${PORT}/api/scientist-passport`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
 });
 
