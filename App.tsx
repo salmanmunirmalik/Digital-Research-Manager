@@ -18,6 +18,8 @@ import ResearchToolsPage from './pages/ResearchToolsPage';
 import SupplierMarketplacePage from './pages/SupplierMarketplacePage';
 import ServiceMarketplacePage from './pages/ServiceMarketplacePage';
 import NegativeResultsPage from './pages/NegativeResultsPage';
+import PaperLibraryPage from './pages/PaperLibraryPage';
+import ProjectManagementPage from './pages/ProjectManagementPage';
 import ReferenceLibraryPage from './pages/ReferenceLibraryPage';
 import SimplifiedResearcherPortfolioPage from './pages/SimplifiedResearcherPortfolioPage';
 import MyPortfolioPage from './pages/MyPortfolioPage';
@@ -361,6 +363,22 @@ const AppContent: React.FC = () => {
         element={
           <ProtectedRoute>
             <DemoLayout><NegativeResultsPage /></DemoLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route 
+        path="/paper-library" 
+        element={
+          <ProtectedRoute>
+            <DemoLayout><PaperLibraryPage /></DemoLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route 
+        path="/project-management" 
+        element={
+          <ProtectedRoute>
+            <DemoLayout><ProjectManagementPage /></DemoLayout>
           </ProtectedRoute>
         }
       />
