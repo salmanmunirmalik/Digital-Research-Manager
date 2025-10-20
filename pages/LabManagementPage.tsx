@@ -265,6 +265,7 @@ interface InstrumentAlert {
 
 const LabManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [teamView, setTeamView] = useState<'table' | 'tree'>('table');
   
   // Modal states
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -3416,15 +3417,41 @@ const LabManagementPage: React.FC = () => {
             <h2 className="text-lg font-semibold text-gray-900">Team Members</h2>
             <p className="text-gray-600">Manage your research team and their roles</p>
               </div>
-              <button
-                onClick={handleAddMember}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <UserPlusIcon className="w-4 h-4 mr-2" />
-                Add Member
-              </button>
+              <div className="flex items-center space-x-3">
+                {/* View Toggle */}
+                <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setTeamView('table')}
+                    className={`px-3 py-1.5 text-sm rounded ${teamView === 'table' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'}`}
+                    title="Table View"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setTeamView('tree')}
+                    className={`px-3 py-1.5 text-sm rounded ${teamView === 'tree' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'}`}
+                    title="Phylogenetic Tree View"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
+                  </button>
+                </div>
+                <button
+                  onClick={handleAddMember}
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <UserPlusIcon className="w-4 h-4 mr-2" />
+                  Add Member
+                </button>
+              </div>
             </div>
               </div>
+
+          {/* Table View */}
+          {teamView === 'table' && (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -3488,6 +3515,277 @@ const LabManagementPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          )}
+
+          {/* Phylogenetic Tree View */}
+          {teamView === 'tree' && (
+            <div className="p-8">
+              <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <svg className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <div>
+                    <h3 className="text-sm font-semibold text-blue-900 mb-1">Phylogenetic Team Tree</h3>
+                    <p className="text-xs text-blue-700">
+                      Visual hierarchy showing research lineage and reporting structure. Branch lengths represent team relationships.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tree Structure */}
+              <div className="relative">
+                {/* PI (Root) */}
+                <div className="flex justify-center mb-8">
+                  <div className="relative">
+                    {/* Vertical line down from PI */}
+                    <div className="absolute left-1/2 transform -translate-x-1/2 top-full w-0.5 h-12 bg-gradient-to-b from-purple-400 to-transparent"></div>
+                    
+                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 shadow-xl border-4 border-purple-300">
+                      <div className="flex flex-col items-center text-white">
+                        <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-3 border-4 border-white/30">
+                          <span className="text-3xl font-bold">👨‍🔬</span>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-bold text-lg">Dr. Sarah Chen</div>
+                          <div className="text-sm bg-white/20 px-3 py-1 rounded-full mt-2">Principal Investigator</div>
+                          <div className="text-xs mt-1 opacity-90">Lab Director</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Level 1: PostDocs / Senior Researchers */}
+                <div className="relative mb-8">
+                  {/* Horizontal connecting line */}
+                  <div className="absolute top-0 left-1/4 right-1/4 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent"></div>
+                  
+                  <div className="grid grid-cols-3 gap-8 max-w-5xl mx-auto">
+                    {/* PostDoc 1 */}
+                    <div className="relative">
+                      {/* Vertical line up */}
+                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-12 bg-gradient-to-t from-blue-400 to-transparent"></div>
+                      {/* Vertical line down */}
+                      <div className="absolute left-1/2 transform -translate-x-1/2 top-full w-0.5 h-12 bg-gradient-to-b from-blue-400 to-transparent"></div>
+                      
+                      <div className="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl p-4 shadow-lg border-2 border-blue-300">
+                        <div className="flex flex-col items-center text-white">
+                          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-2 border-2 border-white/30">
+                            <span className="text-2xl">👨‍💻</span>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-semibold">Dr. Michael Brown</div>
+                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">PostDoc</div>
+                            <div className="text-xs mt-1 opacity-80">Molecular Biology</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* PostDoc 2 */}
+                    <div className="relative">
+                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-12 bg-gradient-to-t from-green-400 to-transparent"></div>
+                      <div className="absolute left-1/2 transform -translate-x-1/2 top-full w-0.5 h-12 bg-gradient-to-b from-green-400 to-transparent"></div>
+                      
+                      <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl p-4 shadow-lg border-2 border-green-300">
+                        <div className="flex flex-col items-center text-white">
+                          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-2 border-2 border-white/30">
+                            <span className="text-2xl">👩‍🔬</span>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-semibold">Dr. Emily Davis</div>
+                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">PostDoc</div>
+                            <div className="text-xs mt-1 opacity-80">Biochemistry</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Visiting Researcher */}
+                    <div className="relative">
+                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-12 bg-gradient-to-t from-orange-400 to-transparent"></div>
+                      
+                      <div className="bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl p-4 shadow-lg border-2 border-orange-300">
+                        <div className="flex flex-col items-center text-white">
+                          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-2 border-2 border-white/30">
+                            <span className="text-2xl">🌍</span>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-semibold">Dr. Raj Patel</div>
+                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">Visiting</div>
+                            <div className="text-xs mt-1 opacity-80">Bioinformatics</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Level 2: PhD Students */}
+                <div className="relative mb-8">
+                  <div className="grid grid-cols-4 gap-6 max-w-6xl mx-auto">
+                    {/* PhD under PostDoc 1 */}
+                    <div className="relative">
+                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-12 bg-gradient-to-t from-indigo-400 to-transparent"></div>
+                      <div className="absolute left-1/2 transform -translate-x-1/2 top-full w-0.5 h-8 bg-gradient-to-b from-indigo-400 to-transparent"></div>
+                      
+                      <div className="bg-gradient-to-r from-indigo-400 to-purple-400 rounded-lg p-3 shadow-md border border-indigo-200">
+                        <div className="flex flex-col items-center text-white">
+                          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-2">
+                            <span className="text-lg">🎓</span>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-semibold text-sm">Alice Wang</div>
+                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">PhD Student</div>
+                            <div className="text-xs mt-1 opacity-75">Year 3</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-12 bg-gradient-to-t from-indigo-400 to-transparent"></div>
+                      
+                      <div className="bg-gradient-to-r from-indigo-400 to-purple-400 rounded-lg p-3 shadow-md border border-indigo-200">
+                        <div className="flex flex-col items-center text-white">
+                          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-2">
+                            <span className="text-lg">🎓</span>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-semibold text-sm">Bob Lee</div>
+                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">PhD Student</div>
+                            <div className="text-xs mt-1 opacity-75">Year 2</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* PhD under PostDoc 2 */}
+                    <div className="relative">
+                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-12 bg-gradient-to-t from-teal-400 to-transparent"></div>
+                      <div className="absolute left-1/2 transform -translate-x-1/2 top-full w-0.5 h-8 bg-gradient-to-b from-teal-400 to-transparent"></div>
+                      
+                      <div className="bg-gradient-to-r from-teal-400 to-cyan-400 rounded-lg p-3 shadow-md border border-teal-200">
+                        <div className="flex flex-col items-center text-white">
+                          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-2">
+                            <span className="text-lg">🎓</span>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-semibold text-sm">Charlie Kim</div>
+                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">PhD Student</div>
+                            <div className="text-xs mt-1 opacity-75">Year 4</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-12 bg-gradient-to-t from-teal-400 to-transparent"></div>
+                      
+                      <div className="bg-gradient-to-r from-teal-400 to-cyan-400 rounded-lg p-3 shadow-md border border-teal-200">
+                        <div className="flex flex-col items-center text-white">
+                          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-2">
+                            <span className="text-lg">🎓</span>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-semibold text-sm">Diana Martinez</div>
+                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">PhD Student</div>
+                            <div className="text-xs mt-1 opacity-75">Year 1</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Level 3: Masters & Research Assistants */}
+                <div className="relative">
+                  <div className="grid grid-cols-3 gap-6 max-w-4xl mx-auto">
+                    <div className="relative">
+                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-8 bg-gradient-to-t from-pink-400 to-transparent"></div>
+                      
+                      <div className="bg-gradient-to-r from-pink-400 to-rose-400 rounded-lg p-3 shadow-md border border-pink-200">
+                        <div className="flex flex-col items-center text-white">
+                          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mb-2">
+                            <span className="text-sm">📚</span>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-semibold text-sm">Eva Chen</div>
+                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">Masters</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-8 bg-gradient-to-t from-cyan-400 to-transparent"></div>
+                      
+                      <div className="bg-gradient-to-r from-cyan-400 to-sky-400 rounded-lg p-3 shadow-md border border-cyan-200">
+                        <div className="flex flex-col items-center text-white">
+                          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mb-2">
+                            <span className="text-sm">📚</span>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-semibold text-sm">Frank Liu</div>
+                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">Masters</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-8 bg-gradient-to-t from-amber-400 to-transparent"></div>
+                      
+                      <div className="bg-gradient-to-r from-amber-400 to-yellow-400 rounded-lg p-3 shadow-md border border-amber-200">
+                        <div className="flex flex-col items-center text-white">
+                          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mb-2">
+                            <span className="text-sm">🔬</span>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-semibold text-sm">Grace Park</div>
+                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">Research Asst</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Legend */}
+                <div className="mt-12 bg-gray-50 rounded-lg p-6 border border-gray-200">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-4">Tree Legend</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg"></div>
+                      <span className="text-gray-700">PI / Lab Director</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg"></div>
+                      <span className="text-gray-700">PostDocs</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-lg"></div>
+                      <span className="text-gray-700">PhD Students</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-gradient-to-r from-pink-400 to-rose-400 rounded-lg"></div>
+                      <span className="text-gray-700">Masters / RA</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 text-xs text-gray-600">
+                    <p className="flex items-center space-x-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Lines represent supervision relationships. Colors indicate career stage and research lineage.</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
                 </div>
               )}
 
