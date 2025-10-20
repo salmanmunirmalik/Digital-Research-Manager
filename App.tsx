@@ -16,6 +16,8 @@ import HelpForumPage from './pages/HelpForumPage';
 import ConferenceNewsPage from './pages/ConferenceNewsPage';
 import ResearchToolsPage from './pages/ResearchToolsPage';
 import SupplierMarketplacePage from './pages/SupplierMarketplacePage';
+import ServiceMarketplacePage from './pages/ServiceMarketplacePage';
+import NegativeResultsPage from './pages/NegativeResultsPage';
 import ReferenceLibraryPage from './pages/ReferenceLibraryPage';
 import SimplifiedResearcherPortfolioPage from './pages/SimplifiedResearcherPortfolioPage';
 import MyPortfolioPage from './pages/MyPortfolioPage';
@@ -343,6 +345,22 @@ const AppContent: React.FC = () => {
         element={
           <ProtectedRoute>
             <DemoLayout><SupplierMarketplacePage /></DemoLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route 
+        path="/service-marketplace" 
+        element={
+          <ProtectedRoute>
+            <DemoLayout><ServiceMarketplacePage /></DemoLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route 
+        path="/negative-results" 
+        element={
+          <ProtectedRoute>
+            <DemoLayout><NegativeResultsPage /></DemoLayout>
           </ProtectedRoute>
         }
       />
