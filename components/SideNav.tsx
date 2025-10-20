@@ -27,7 +27,9 @@ import {
   RocketIcon,
   BrainCircuitIcon,
   DnaIcon,
-  PackageIcon
+  PackageIcon,
+  BriefcaseIcon,
+  FireIcon
 } from './icons';
 import { getUserDisplayName, getRoleDisplayName, getRolePermissions } from '../utils/roleAccess';
 
