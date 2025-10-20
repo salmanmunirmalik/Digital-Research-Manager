@@ -45,14 +45,16 @@ router.get('/listings', async (req, res) => {
   try {
     const { category, service_type, min_price, max_price, search, sort_by = 'rating' } = req.query;
     
+    console.log('📋 Fetching service listings with filters:', { category, service_type, search });
+    
     let query = `
       SELECT 
         sl.*,
-        u.first_name || ' ' || u.last_name as provider_name,
-        u.role as provider_position,
-        u.bio as provider_institution
+        COALESCE(u.first_name || ' ' || u.last_name, 'Unknown') as provider_name,
+        COALESCE(u.role::text, 'researcher') as provider_position,
+        COALESCE(u.bio, '') as provider_institution
       FROM service_listings sl
-      JOIN users u ON sl.provider_id = u.id
+      LEFT JOIN users u ON sl.provider_id = u.id
       WHERE sl.is_active = true
     `;
 
@@ -78,7 +80,7 @@ router.get('/listings', async (req, res) => {
     }
 
     if (max_price) {
-      query += ` AND sl.price_range_max <= $${paramCount}`;
+      query += ` AND COALESCE(sl.price_range_max, sl.base_price) <= $${paramCount}`;
       params.push(max_price);
       paramCount++;
     }
@@ -87,7 +89,7 @@ router.get('/listings', async (req, res) => {
       query += ` AND (
         sl.service_title ILIKE $${paramCount} OR
         sl.service_description ILIKE $${paramCount} OR
-        array_to_string(sl.tags, ',') ILIKE $${paramCount}
+        COALESCE(array_to_string(sl.tags, ','), '') ILIKE $${paramCount}
       )`;
       params.push(`%${search}%`);
       paramCount++;
@@ -95,7 +97,7 @@ router.get('/listings', async (req, res) => {
 
     // Sorting
     if (sort_by === 'rating') {
-      query += ` ORDER BY sl.average_rating DESC, sl.total_ratings DESC`;
+      query += ` ORDER BY COALESCE(sl.average_rating, 0) DESC, COALESCE(sl.total_ratings, 0) DESC`;
     } else if (sort_by === 'price_low') {
       query += ` ORDER BY sl.base_price ASC`;
     } else if (sort_by === 'price_high') {
@@ -106,11 +108,14 @@ router.get('/listings', async (req, res) => {
 
     query += ` LIMIT 50`;
 
+    console.log('📋 Executing query...');
     const result = await pool.query(query, params);
+    console.log(`✅ Found ${result.rows.length} service listings`);
     res.json(result.rows);
   } catch (error: any) {
-    console.error('Error fetching service listings:', error);
-    res.status(500).json({ error: 'Failed to fetch service listings' });
+    console.error('❌ Error fetching service listings:', error.message);
+    console.error('Stack:', error.stack);
+    res.status(500).json({ error: 'Failed to fetch service listings', details: error.message });
   }
 });
 

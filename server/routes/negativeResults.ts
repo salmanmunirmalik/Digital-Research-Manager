@@ -21,17 +21,19 @@ router.get('/', async (req, res) => {
       sort_by = 'recent', limit = 50
     } = req.query;
 
+    console.log('🔬 Fetching negative results with filters:', { research_field, search, sort_by });
+
     let query = `
       SELECT 
         nr.*,
-        u.first_name || ' ' || u.last_name as researcher_name,
-        u.email as current_institution,
-        CASE WHEN nr.anonymous_sharing THEN 'Anonymous' ELSE u.first_name || ' ' || u.last_name END as display_name,
-        l.name as lab_name
+        COALESCE(u.first_name || ' ' || u.last_name, 'Anonymous') as researcher_name,
+        COALESCE(u.email, '') as current_institution,
+        CASE WHEN COALESCE(nr.anonymous_sharing, false) THEN 'Anonymous' ELSE COALESCE(u.first_name || ' ' || u.last_name, 'Anonymous') END as display_name,
+        COALESCE(l.name, '') as lab_name
       FROM negative_results nr
-      JOIN users u ON nr.researcher_id = u.id
+      LEFT JOIN users u ON nr.researcher_id = u.id
       LEFT JOIN labs l ON nr.lab_id = l.id
-      WHERE nr.is_publicly_searchable = true
+      WHERE COALESCE(nr.is_publicly_searchable, true) = true
     `;
 
     const params: any[] = [];
@@ -48,7 +50,7 @@ router.get('/', async (req, res) => {
         nr.experiment_title ILIKE $${paramCount} OR
         nr.original_hypothesis ILIKE $${paramCount} OR
         nr.lessons_learned ILIKE $${paramCount} OR
-        array_to_string(nr.tags, ',') ILIKE $${paramCount}
+        COALESCE(array_to_string(nr.tags, ','), '') ILIKE $${paramCount}
       )`;
       params.push(`%${search}%`);
       paramCount++;
@@ -58,21 +60,24 @@ router.get('/', async (req, res) => {
     if (sort_by === 'recent') {
       query += ` ORDER BY nr.created_at DESC`;
     } else if (sort_by === 'helpful') {
-      query += ` ORDER BY nr.helpful_votes DESC`;
+      query += ` ORDER BY COALESCE(nr.helpful_votes, 0) DESC`;
     } else if (sort_by === 'citations') {
-      query += ` ORDER BY nr.citation_count DESC`;
+      query += ` ORDER BY COALESCE(nr.citation_count, 0) DESC`;
     } else if (sort_by === 'impact') {
-      query += ` ORDER BY nr.saved_someone_votes DESC`;
+      query += ` ORDER BY COALESCE(nr.saved_someone_votes, 0) DESC`;
     }
 
     query += ` LIMIT $${paramCount}`;
     params.push(limit);
 
+    console.log('🔬 Executing query...');
     const result = await pool.query(query, params);
+    console.log(`✅ Found ${result.rows.length} negative results`);
     res.json(result.rows);
   } catch (error: any) {
-    console.error('Error fetching negative results:', error);
-    res.status(500).json({ error: 'Failed to fetch negative results' });
+    console.error('❌ Error fetching negative results:', error.message);
+    console.error('Stack:', error.stack);
+    res.status(500).json({ error: 'Failed to fetch negative results', details: error.message });
   }
 });
 
