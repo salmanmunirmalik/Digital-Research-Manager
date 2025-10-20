@@ -11,9 +11,9 @@ const path = require('path');
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'researchlab',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
+  database: process.env.DB_NAME || 'digital_research_manager',
+  user: process.env.DB_USER || 'm.salmanmalik',
+  password: process.env.DB_PASSWORD || '',
 });
 
 // Migration files to run (in order)

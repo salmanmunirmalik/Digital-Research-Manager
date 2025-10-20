@@ -4,9 +4,14 @@
  */
 
 import { Router } from 'express';
-import pool from '../../database/config';
+import pool from '../../database/config.js';
 
 const router = Router();
+
+// Test route
+router.get('/test', (req, res) => {
+  res.json({ message: 'Service marketplace routes are loaded!' });
+});
 
 // ==============================================
 // SERVICE CATEGORIES
@@ -15,6 +20,7 @@ const router = Router();
 // Get all service categories
 router.get('/categories', async (req, res) => {
   try {
+    console.log('🔍 Fetching service categories...');
     const result = await pool.query(`
       SELECT *
       FROM service_categories
@@ -22,10 +28,11 @@ router.get('/categories', async (req, res) => {
       ORDER BY display_order, name
     `);
 
+    console.log(`✅ Found ${result.rows.length} categories`);
     res.json(result.rows);
   } catch (error: any) {
-    console.error('Error fetching service categories:', error);
-    res.status(500).json({ error: 'Failed to fetch service categories' });
+    console.error('❌ Error fetching service categories:', error.message);
+    res.status(500).json({ error: 'Failed to fetch service categories', details: error.message });
   }
 });
 
@@ -42,14 +49,11 @@ router.get('/listings', async (req, res) => {
       SELECT 
         sl.*,
         u.first_name || ' ' || u.last_name as provider_name,
-        u.current_position as provider_position,
-        u.current_institution as provider_institution,
-        sps.average_rating as provider_average_rating,
-        sps.total_projects_completed as provider_total_projects
+        u.role as provider_position,
+        u.bio as provider_institution
       FROM service_listings sl
       JOIN users u ON sl.provider_id = u.id
-      LEFT JOIN service_provider_stats sps ON sl.provider_id = sps.provider_id
-      WHERE sl.is_active = true AND sl.currently_accepting_projects = true
+      WHERE sl.is_active = true
     `;
 
     const params: any[] = [];
@@ -119,16 +123,11 @@ router.get('/listings/:id', async (req, res) => {
       SELECT 
         sl.*,
         u.first_name || ' ' || u.last_name as provider_name,
-        u.current_position as provider_position,
-        u.current_institution as provider_institution,
-        u.bio as provider_bio,
-        sps.average_rating as provider_average_rating,
-        sps.total_projects_completed as provider_total_projects,
-        sps.on_time_delivery_rate,
-        sps.client_satisfaction_rate
+        u.role as provider_position,
+        u.email as provider_institution,
+        u.bio as provider_bio
       FROM service_listings sl
       JOIN users u ON sl.provider_id = u.id
-      LEFT JOIN service_provider_stats sps ON sl.provider_id = sps.provider_id
       WHERE sl.id = $1
     `, [id]);
 

@@ -641,6 +641,49 @@ app.get('/api/advanced-stats/workflow-templates', authenticateToken, async (req,
   }
 });
 
+// =================================
+// REVOLUTIONARY FEATURES API ROUTES
+// =================================
+
+// Import new route modules
+import scientistPassportRoutes from './routes/scientistPassport.js';
+import serviceMarketplaceRoutes from './routes/serviceMarketplace.js';
+import negativeResultsRoutes from './routes/negativeResults.js';
+
+// Simple auth middleware for demo
+const demoAuth = (req, res, next) => {
+  req.user = {
+    id: '550e8400-e29b-41d4-a716-446655440003',
+    email: 'demo@researchlab.com',
+    username: 'demo_user',
+    first_name: 'Demo',
+    last_name: 'User',
+    role: 'researcher'
+  };
+  next();
+};
+
+// Test endpoint to verify database connection
+app.get('/api/test-revolutionary', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*) FROM service_categories');
+    res.json({ success: true, count: result.rows[0].count, message: 'Revolutionary features database connected!' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Mount the revolutionary feature routes
+app.use('/api/scientist-passport', demoAuth, scientistPassportRoutes);
+app.use('/api/services', demoAuth, serviceMarketplaceRoutes);
+app.use('/api/negative-results', demoAuth, negativeResultsRoutes);
+
+console.log('✨ Revolutionary features API routes registered:');
+console.log('   - /api/scientist-passport');
+console.log('   - /api/services');
+console.log('   - /api/negative-results');
+
 app.listen(PORT, () => {
   console.log(`Working server running on port ${PORT}`);
+  console.log(`✨ Revolutionary Features API available!`);
 });

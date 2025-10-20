@@ -5,7 +5,7 @@
  */
 
 import { Router } from 'express';
-import pool from '../../database/config';
+import pool from '../../database/config.js';
 
 const router = Router();
 
@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
       SELECT 
         nr.*,
         u.first_name || ' ' || u.last_name as researcher_name,
-        u.current_institution,
+        u.email as current_institution,
         CASE WHEN nr.anonymous_sharing THEN 'Anonymous' ELSE u.first_name || ' ' || u.last_name END as display_name,
         l.name as lab_name
       FROM negative_results nr
@@ -85,8 +85,8 @@ router.get('/:id', async (req, res) => {
       SELECT 
         nr.*,
         u.first_name || ' ' || u.last_name as researcher_name,
-        u.current_position,
-        u.current_institution,
+        u.role as current_position,
+        u.email as current_institution,
         CASE WHEN nr.anonymous_sharing THEN 'Anonymous' ELSE u.first_name || ' ' || u.last_name END as display_name,
         l.name as lab_name
       FROM negative_results nr
