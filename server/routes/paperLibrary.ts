@@ -7,6 +7,7 @@
 import { Router } from 'express';
 import pool from '../../database/config.js';
 import { paperFetchingService } from '../services/doiIntegration.js';
+import autoIndexing from '../utils/autoIndexing.js';
 
 const router = Router();
 
@@ -253,7 +254,17 @@ router.post('/save-paper', async (req: any, res) => {
       ai_key_findings, my_notes, tags, folder
     ]);
     
-    res.json(result.rows[0]);
+    const savedPaper = result.rows[0];
+    
+    // Auto-index for AI learning (non-blocking)
+    autoIndexing.autoIndexContent(
+      userId,
+      'paper',
+      savedPaper.id,
+      savedPaper
+    ).catch(err => console.error('Error auto-indexing paper:', err));
+    
+    res.json(savedPaper);
   } catch (error: any) {
     console.error('Error saving paper:', error);
     res.status(500).json({ error: 'Failed to save paper', details: error.message });

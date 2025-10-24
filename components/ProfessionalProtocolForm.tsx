@@ -334,14 +334,56 @@ const ProfessionalProtocolForm: React.FC<ProfessionalProtocolFormProps> = ({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">YouTube Video URL (Optional)</label>
-        <Input
-          value={formData.youtube_video_url || ''}
-          onChange={(e) => handleInputChange('youtube_video_url', e.target.value)}
-          placeholder="https://www.youtube.com/watch?v=..."
-          type="url"
-        />
-        <p className="text-xs text-gray-500 mt-1">Add a YouTube video tutorial for this protocol</p>
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+          <svg className="w-5 h-5 mr-2 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"/>
+          </svg>
+          YouTube Video Tutorial (Optional)
+        </label>
+        <div className="flex space-x-2">
+          <Input
+            value={formData.youtube_video_url || ''}
+            onChange={(e) => handleInputChange('youtube_video_url', e.target.value)}
+            placeholder="https://www.youtube.com/watch?v=..."
+            type="url"
+            className="flex-1"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const url = formData.youtube_video_url || '';
+              if (url) {
+                // Convert watch URL to embed URL
+                const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)?.[1];
+                if (videoId) {
+                  handleInputChange('youtube_video_url', `https://www.youtube.com/embed/${videoId}`);
+                }
+              }
+            }}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center space-x-2"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"/>
+            </svg>
+            <span>Convert</span>
+          </button>
+        </div>
+        <p className="text-xs text-gray-500 mt-1 flex items-center">
+          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Paste any YouTube URL and click Convert to embed it in your protocol
+        </p>
+        {formData.youtube_video_url && formData.youtube_video_url.includes('embed') && (
+          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm text-green-800 flex items-center">
+              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              Video URL ready for embedding!
+            </p>
+          </div>
+        )}
       </div>
 
       <div>

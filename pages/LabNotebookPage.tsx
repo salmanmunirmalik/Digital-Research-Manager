@@ -61,7 +61,8 @@ import {
   FunnelIcon,
   Bars3Icon,
   Squares2X2Icon,
-  TrendingUpIcon
+  TrendingUpIcon,
+  FireIcon
 } from '../components/icons';
 
 // Simplified Lab Notebook Entry Interface
@@ -121,21 +122,6 @@ interface SmartSuggestion {
   priority: 'low' | 'medium' | 'high';
 }
 
-interface CalendarEvent {
-  id: string;
-  title: string;
-  description: string;
-  event_date: string;
-  event_time: string | null;
-  event_type: 'meeting' | 'deadline' | 'reminder' | 'experiment' | 'appointment';
-  priority: 'low' | 'medium' | 'high';
-  color: string;
-  is_all_day: boolean;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-}
-
 const LabNotebookPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -162,23 +148,6 @@ const LabNotebookPage: React.FC = () => {
   const [showMeetingForm, setShowMeetingForm] = useState(false);
   const [showProblemForm, setShowProblemForm] = useState(false);
   const [showQuickNoteModal, setShowQuickNoteModal] = useState(false);
-  
-  // Calendar state
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
-  const [showEventModal, setShowEventModal] = useState(false);
-  const [showEventForm, setShowEventForm] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [eventForm, setEventForm] = useState({
-    title: '',
-    description: '',
-    date: '',
-    time: '',
-    type: 'meeting' as const,
-    priority: 'medium' as const,
-    color: 'blue'
-  });
   
   // Simplified entry form
   const [entryForm, setEntryForm] = useState({
@@ -277,6 +246,14 @@ const LabNotebookPage: React.FC = () => {
       icon: ExclamationTriangleIcon,
       color: 'text-red-600',
       bgColor: 'bg-red-100'
+    },
+    { 
+      id: 'negative_results', 
+      name: 'Negative Results', 
+      description: 'Document failed experiments & build transparency',
+      icon: FireIcon,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-100'
     }
   ];
 
@@ -308,187 +285,11 @@ const LabNotebookPage: React.FC = () => {
       case 'problem':
         setShowProblemForm(true);
         break;
+      case 'negative_results':
+        navigate('/negative-results');
+        break;
       default:
         setShowNewEntryModal(true);
-    }
-  };
-
-  // Calendar functions
-  const getEventsForDate = (date: string) => {
-    return calendarEvents.filter(event => event.event_date === date);
-  };
-
-  const handleDateClick = (date: number) => {
-    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
-    setSelectedDate(dateStr);
-    setEventForm(prev => ({ ...prev, date: dateStr }));
-    setShowEventForm(true);
-  };
-
-  const handleEventClick = (event: CalendarEvent) => {
-    setSelectedEvent(event);
-    setShowEventModal(true);
-  };
-
-  const handleCreateEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user?.id) return;
-
-    try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        console.error('No auth token found');
-        return;
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/calendar-events`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          title: eventForm.title,
-          description: eventForm.description,
-          event_date: eventForm.date,
-          event_time: eventForm.time || null,
-          event_type: eventForm.type,
-          priority: eventForm.priority,
-          color: eventForm.color,
-          is_all_day: !eventForm.time
-        })
-      });
-
-      if (response.ok) {
-        const newEvent = await response.json();
-        setCalendarEvents(prev => [...prev, newEvent]);
-        setShowEventForm(false);
-        setEventForm({
-          title: '',
-          description: '',
-          date: '',
-          time: '',
-          type: 'meeting',
-          priority: 'medium',
-          color: 'blue'
-        });
-      } else {
-        console.error('Failed to create event');
-      }
-    } catch (error) {
-      console.error('Error creating event:', error);
-    }
-  };
-
-  const handleUpdateEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedEvent) return;
-
-    try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        console.error('No auth token found');
-        return;
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/calendar-events/${selectedEvent.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          title: eventForm.title,
-          description: eventForm.description,
-          event_date: eventForm.date,
-          event_time: eventForm.time || null,
-          event_type: eventForm.type,
-          priority: eventForm.priority,
-          color: eventForm.color,
-          is_all_day: !eventForm.time
-        })
-      });
-
-      if (response.ok) {
-        const updatedEvent = await response.json();
-        setCalendarEvents(prev => prev.map(event => 
-          event.id === selectedEvent.id ? updatedEvent : event
-        ));
-        setShowEventModal(false);
-        setSelectedEvent(null);
-      } else {
-        console.error('Failed to update event');
-      }
-    } catch (error) {
-      console.error('Error updating event:', error);
-    }
-  };
-
-  const handleDeleteEvent = async (eventId: string) => {
-    if (window.confirm('Are you sure you want to delete this event?')) {
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-          console.error('No auth token found');
-          return;
-        }
-
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/calendar-events/${eventId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.ok) {
-          setCalendarEvents(prev => prev.filter(event => event.id !== eventId));
-          setShowEventModal(false);
-          setSelectedEvent(null);
-        } else {
-          console.error('Failed to delete event');
-        }
-      } catch (error) {
-        console.error('Error deleting event:', error);
-      }
-    }
-  };
-
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    setCurrentDate(prev => {
-      const newDate = new Date(prev);
-      if (direction === 'prev') {
-        newDate.setMonth(prev.getMonth() - 1);
-      } else {
-        newDate.setMonth(prev.getMonth() + 1);
-      }
-      return newDate;
-    });
-  };
-
-  const fetchCalendarEvents = async () => {
-    if (!user?.id) return;
-    
-    try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        console.log('No auth token found, using mock data');
-        return;
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/calendar-events`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const events = await response.json();
-        setCalendarEvents(events);
-      } else {
-        console.error('Failed to fetch calendar events');
-      }
-    } catch (error) {
-      console.error('Error fetching calendar events:', error);
     }
   };
 
@@ -922,7 +723,6 @@ const LabNotebookPage: React.FC = () => {
   // Load data
   useEffect(() => {
     fetchEntries();
-    fetchCalendarEvents();
     fetchQuickNotes();
     fetchRecentActivity();
     fetchSmartSuggestions();
@@ -1191,248 +991,12 @@ const LabNotebookPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        {/* Real-Time Smart Calendar */}
-        <Card className="mb-4">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <BookOpenIcon className="h-5 w-5 text-blue-600" />
-                Lab Notebook
-                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Smart Calendar</span>
-        </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => navigateMonth('prev')}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <span className="text-sm font-medium text-gray-700">
-                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </span>
-                <button 
-                  onClick={() => navigateMonth('next')}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-          </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* Interactive Calendar Grid */}
-              <div className="lg:col-span-2">
-                <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40 rounded-2xl p-4 shadow-xl border border-blue-100/50 backdrop-blur-sm">
-                  {/* Day Headers */}
-                  <div className="grid grid-cols-7 gap-1 mb-3">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                      <div key={day} className="text-center text-xs font-semibold text-blue-700 py-2 bg-white/90 rounded-lg backdrop-blur-sm shadow-sm border border-blue-100/50">
-                        {day}
-          </div>
-                    ))}
-          </div>
-
-                  {/* Calendar Dates */}
-                  <div className="grid grid-cols-7 gap-1">
-                    {Array.from({ length: 35 }, (_, i) => {
-                      const date = i - 6 + 1;
-                      const isCurrentMonth = date > 0 && date <= 31;
-                      const isToday = date === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear();
-                      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
-                      const dayEvents = getEventsForDate(dateStr);
-                      const hasEvent = dayEvents.length > 0;
-                      const isPast = new Date(dateStr) < new Date(new Date().setHours(0, 0, 0, 0));
-                      const isWeekend = i % 7 === 0 || i % 7 === 6;
-                      
-                      return (
-                        <div
-                          key={i}
-                          onClick={() => isCurrentMonth && handleDateClick(date)}
-                          className={`
-                            relative aspect-square flex flex-col items-center justify-center text-xs font-medium rounded-lg cursor-pointer transition-all duration-300 group
-                            ${isCurrentMonth 
-                              ? isToday 
-                                ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/30 scale-105 ring-2 ring-blue-400' 
-                                : hasEvent 
-                                  ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-900 hover:from-blue-200 hover:to-blue-300 hover:shadow-md hover:scale-105 border border-blue-300/50' 
-                                  : isPast
-                                    ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 hover:shadow-sm'
-                                    : isWeekend
-                                      ? 'text-blue-600 hover:bg-white hover:shadow-md hover:scale-105 bg-white/60'
-                                      : 'text-blue-700 hover:bg-white hover:shadow-md hover:scale-105 bg-white/80'
-                              : 'text-slate-300 hover:text-slate-400'
-                            }
-                          `}
-                        >
-                          {isCurrentMonth && (
-                            <>
-                              <span className="relative z-10">{date}</span>
-                              {/* Event List */}
-                              {dayEvents.length > 0 && (
-                                <div className="absolute bottom-0 left-0 right-0 p-1 space-y-0.5">
-                                  {dayEvents.slice(0, 2).map((event) => (
-                                    <div
-                                      key={event.id}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleEventClick(event);
-                                      }}
-                                      className={`text-xs px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80 ${
-                                        event.color === 'blue' ? 'bg-blue-500 text-white' :
-                                        event.color === 'green' ? 'bg-green-500 text-white' :
-                                        event.color === 'red' ? 'bg-red-500 text-white' :
-                                        event.color === 'yellow' ? 'bg-yellow-500 text-black' :
-                                        'bg-blue-500 text-white'
-                                      }`}
-                                      title={event.title}
-                                    >
-                                      {event.title}
-              </div>
-                  ))}
-                                  {dayEvents.length > 2 && (
-                                    <div className="text-xs text-blue-600 font-medium">
-                                      +{dayEvents.length - 2} more
-              </div>
-                                  )}
-                                </div>
-                              )}
-                            </>
-                          )}
-                          
-                          {/* Hover Effect */}
-                          <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          
-                              {/* Today's Glow Effect */}
-                              {isToday && (
-                                <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-blue-400/20 to-blue-500/20 animate-pulse"></div>
-                              )}
-              </div>
-                    );
-                  })}
-            </div>
-                  
-                      {/* Calendar Footer */}
-                      <div className="mt-3 flex items-center justify-between text-xs text-blue-600">
-                        <div className="flex items-center space-x-3">
-                          <div className="flex items-center space-x-1">
-                            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
-                            <span>Today</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                            <span>Events</span>
-                          </div>
-                        </div>
-                        <div className="text-blue-500">
-                          {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                        </div>
-                      </div>
-                </div>
-              </div>
-
-              {/* Smart Features Panel */}
-                <div className="space-y-3">
-                {/* Today's Schedule */}
-                <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
-                  <h3 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                    Today's Schedule
-                  </h3>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center space-x-2 p-1.5 bg-blue-50 rounded-lg">
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                        <div className="flex-1">
-                        <p className="text-xs font-medium text-blue-900">Team Standup</p>
-                        <p className="text-xs text-blue-700">9:00 AM - 9:30 AM</p>
-              </div>
-            </div>
-                    <div className="flex items-center space-x-2 p-1.5 bg-green-50 rounded-lg">
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-green-900">Lab Session</p>
-                        <p className="text-xs text-green-700">2:00 PM - 4:00 PM</p>
-                          </div>
-                        </div>
-                      </div>
-          </div>
-
-                {/* Quick Notes */}
-                <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
-                  <h3 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                    <svg className="w-3 h-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Quick Notes
-                  </h3>
-                  <div className="space-y-1.5">
-                    <div className="p-1.5 bg-purple-50 rounded-lg">
-                      <p className="text-xs font-medium text-purple-900">Lab meeting notes</p>
-                      <p className="text-xs text-purple-700">Review experiment results</p>
-                    </div>
-                    <div className="p-1.5 bg-blue-50 rounded-lg">
-                      <p className="text-xs font-medium text-blue-900">Equipment check</p>
-                      <p className="text-xs text-blue-700">Calibrate pH meter</p>
-                    </div>
-                    <button className="w-full p-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-left">
-                      <div className="flex items-center space-x-2">
-                        <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        <span className="text-xs font-medium text-gray-700">Add Note</span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Recent Activity */}
-                <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
-                  <h3 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                    <svg className="w-3 h-3 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Recent Activity
-                  </h3>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center space-x-2 p-1.5 bg-green-50 rounded-lg">
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-green-900">Experiment completed</p>
-                        <p className="text-xs text-green-700">2 hours ago</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2 p-1.5 bg-blue-50 rounded-lg">
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-blue-900">Equipment booked</p>
-                        <p className="text-xs text-blue-700">4 hours ago</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2 p-1.5 bg-purple-50 rounded-lg">
-                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-purple-900">Note added</p>
-                        <p className="text-xs text-purple-700">1 day ago</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-      </div>
-              </CardContent>
-            </Card>
-
         {/* Entry Type Selection Section */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <SparklesIcon className="h-5 w-5 text-blue-600" />
-              Quick Actions
+              Start Entries
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -2071,182 +1635,6 @@ const LabNotebookPage: React.FC = () => {
                 >
                   Save Changes
                 </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Event Form Modal */}
-      {showEventForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Add Event</h2>
-                <button
-                  onClick={() => setShowEventForm(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              </div>
-              <form onSubmit={handleCreateEvent} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
-                  <input
-                    type="text"
-                    value={eventForm.title}
-                    onChange={(e) => setEventForm(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Event title"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                  <textarea
-                    value={eventForm.description}
-                    onChange={(e) => setEventForm(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Event description"
-                    rows={3}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                    <input
-                      type="date"
-                      value={eventForm.date}
-                      onChange={(e) => setEventForm(prev => ({ ...prev, date: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
-                    <input
-                      type="time"
-                      value={eventForm.time}
-                      onChange={(e) => setEventForm(prev => ({ ...prev, time: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                    <select
-                      value={eventForm.type}
-                      onChange={(e) => setEventForm(prev => ({ ...prev, type: e.target.value as any }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="meeting">Meeting</option>
-                      <option value="deadline">Deadline</option>
-                      <option value="reminder">Reminder</option>
-                      <option value="experiment">Experiment</option>
-                      <option value="appointment">Appointment</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
-                    <select
-                      value={eventForm.color}
-                      onChange={(e) => setEventForm(prev => ({ ...prev, color: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="blue">Blue</option>
-                      <option value="green">Green</option>
-                      <option value="red">Red</option>
-                      <option value="yellow">Yellow</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowEventForm(false)}
-                    className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-                  >
-                    Add Event
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Event Detail Modal */}
-      {showEventModal && selectedEvent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Event Details</h2>
-                <button
-                  onClick={() => setShowEventModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-medium text-gray-900">{selectedEvent.title}</h3>
-                  <p className="text-sm text-gray-600">{selectedEvent.description}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-700">Date:</span>
-                    <p className="text-gray-600">{new Date(selectedEvent.event_date).toLocaleDateString()}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Time:</span>
-                    <p className="text-gray-600">{selectedEvent.event_time || 'All day'}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Type:</span>
-                    <p className="text-gray-600 capitalize">{selectedEvent.event_type}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Priority:</span>
-                    <p className="text-gray-600 capitalize">{selectedEvent.priority}</p>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-3 pt-4">
-                  <button
-                    onClick={() => {
-                      setEventForm({
-                        title: selectedEvent.title,
-                        description: selectedEvent.description,
-                        date: selectedEvent.event_date,
-                        time: selectedEvent.event_time || '',
-                        type: selectedEvent.event_type,
-                        priority: selectedEvent.priority,
-                        color: selectedEvent.color
-                      });
-                      setShowEventModal(false);
-                      setShowEventForm(true);
-                    }}
-                    className="px-4 py-2 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteEvent(selectedEvent.id)}
-                    className="px-4 py-2 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
-                  >
-                    Delete
-                  </button>
-                </div>
               </div>
             </div>
           </div>

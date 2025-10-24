@@ -109,6 +109,7 @@ interface DataRequest {
 }
 
 const ResearchDataBankPage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'databank'>('databank');
   const [organizations, setOrganizations] = useState<DataBankOrganization[]>([]);
   const [filteredOrgs, setFilteredOrgs] = useState<DataBankOrganization[]>([]);
   const [selectedOrg, setSelectedOrg] = useState<DataBankOrganization | null>(null);
@@ -403,7 +404,6 @@ const ResearchDataBankPage: React.FC = () => {
         </div>
       </div>
 
-      {/* How It Works Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-10">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">How Research Data Bank Works</h2>

@@ -676,6 +676,96 @@ app.get('/api/test-revolutionary', async (req, res) => {
   }
 });
 
+// Calendar Events API endpoints
+app.get('/api/calendar-events', demoAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM calendar_events WHERE user_id = $1 ORDER BY start_time ASC',
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching calendar events:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/calendar-events', demoAuth, async (req, res) => {
+  try {
+    const { title, description, start_time, end_time, event_type, priority, color, all_day } = req.body;
+    
+    if (!title || !start_time) {
+      return res.status(400).json({ error: 'Title and start_time are required' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO calendar_events (user_id, title, description, start_time, end_time, event_type, all_day)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [req.user.id, title, description, start_time, end_time || start_time, event_type || 'meeting', all_day || false]
+    );
+    
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating calendar event:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/calendar-events/:id', demoAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, start_time, end_time, event_type, priority, color, all_day } = req.body;
+
+    if (!title || !start_time) {
+      return res.status(400).json({ error: 'Title and start_time are required' });
+    }
+
+    const result = await pool.query(
+      `UPDATE calendar_events 
+       SET title = $1, description = $2, start_time = $3, end_time = $4, event_type = $5, all_day = $6, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $7 AND user_id = $8
+       RETURNING *`,
+      [title, description, start_time, end_time || start_time, event_type, all_day || false, id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Calendar event not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating calendar event:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/calendar-events/:id', demoAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      'DELETE FROM calendar_events WHERE id = $1 AND user_id = $2 RETURNING *',
+      [id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Calendar event not found' });
+    }
+
+    res.json({ message: 'Calendar event deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting calendar event:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+console.log('✨ Calendar Events API routes registered:');
+console.log('   - GET /api/calendar-events');
+console.log('   - POST /api/calendar-events');
+console.log('   - PUT /api/calendar-events/:id');
+console.log('   - DELETE /api/calendar-events/:id');
+
 // Mount the revolutionary feature routes
 app.use('/api/scientist-passport', demoAuth, scientistPassportRoutes);
 app.use('/api/services', demoAuth, serviceMarketplaceRoutes);

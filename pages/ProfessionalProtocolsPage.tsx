@@ -4,581 +4,519 @@ import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
-import ProfessionalProtocolForm from '../components/ProfessionalProtocolForm';
+import { 
+  ClockIcon, 
+  CheckCircleIcon, 
+  StarIcon,
+  PlayIcon,
+  BookOpenIcon,
+  ShieldCheckIcon,
+  AcademicCapIcon,
+  FireIcon,
+  MagnifyingGlassIcon,
+  PlusIcon,
+  LightBulbIcon,
+  ExclamationTriangleIcon,
+  UserGroupIcon,
+  ClipboardDocumentCheckIcon,
+  ShareIcon,
+  BookmarkIcon,
+  ArrowDownTrayIcon,
+  PrinterIcon
+} from '@heroicons/react/24/outline';
 
-interface ProfessionalProtocol {
+interface Protocol {
   id: string;
   title: string;
   description: string;
-  protocol_type: string;
   category: string;
-  subcategory?: string;
+  status: 'draft' | 'published' | 'archived';
   version: string;
-  difficulty_level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
-  skill_requirements: string[];
-  estimated_duration_minutes: number;
-  estimated_cost_usd: number;
-  cost_per_sample: number;
-  safety_level: 'low' | 'medium' | 'high' | 'biosafety_level_2' | 'biosafety_level_3';
-  ppe_required: string[];
-  objective: string;
-  background?: string;
-  reagents: any[];
-  equipment: any[];
-  procedure_steps: any[];
-  expected_results: string;
-  privacy_level: 'personal' | 'team' | 'lab' | 'institution' | 'global';
-  status: 'draft' | 'review' | 'validated' | 'approved' | 'archived' | 'deprecated';
-  validation_level: 'none' | 'peer_reviewed' | 'lab_validated' | 'institution_approved' | 'published';
-  tags: string[];
-  literature_references: string[];
+  last_updated: string;
+  author: string;
+  institution: string;
   usage_count: number;
   success_rate: number;
-  average_rating: number;
+  rating: number;
   total_ratings: number;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  last_used_at?: string;
+  video_url?: string;
+  
+  // Core protocol data
+  objective: string;
+  background: string;
+  materials: string[];
+  equipment: string[];
+  safety_notes: string[];
+  procedure: ProtocolStep[];
+  expected_results: string;
+  troubleshooting: { issue: string; solution: string }[];
+  references: string[];
+  tags: string[];
 }
 
-interface ProtocolTemplate {
-  id: string;
-  template_name: string;
-  protocol_type: string;
-  category: string;
-  description: string;
-  template_data: any;
-  usage_count: number;
-  created_by: string;
-  created_at: string;
+interface Material {
+  name: string;
+  quantity: string;
+  unit: string;
+  concentration?: string;
+  supplier?: string;
+  catalog_number?: string;
+  storage_conditions?: string;
 }
 
-const ProfessionalProtocolsPage: React.FC = () => {
+interface Equipment {
+  name: string;
+  model?: string;
+  calibration_required: boolean;
+  maintenance_schedule?: string;
+}
+
+const ProtocolsPage: React.FC = () => {
   const { user } = useAuth();
-  const [protocols, setProtocols] = useState<ProfessionalProtocol[]>([]);
-  const [templates, setTemplates] = useState<ProtocolTemplate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  
-  // UI State
+  const [protocols, setProtocols] = useState<Protocol[]>([]);
+  const [selectedProtocol, setSelectedProtocol] = useState<Protocol | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<ProtocolTemplate | null>(null);
-  const [selectedProtocol, setSelectedProtocol] = useState<ProfessionalProtocol | null>(null);
-  const [showProtocolDetails, setShowProtocolDetails] = useState(false);
-  
-  // Filters
-  const [filters, setFilters] = useState({
-    search: '',
-    protocol_type: '',
-    category: '',
-    difficulty_level: '',
-    privacy_level: '',
-    status: '',
-    validation_level: ''
-  });
+  const [activeStep, setActiveStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [isSaved, setIsSaved] = useState(false);
 
-  // Mock data for demonstration
-  const mockProtocols: ProfessionalProtocol[] = [
+  // Mock protocols with realistic data
+  const mockProtocols: Protocol[] = [
     {
       id: '1',
-      title: 'Western Blot for Protein Detection',
-      description: 'Complete Western Blot protocol for detecting and quantifying specific proteins in biological samples',
-      protocol_type: 'western_blot',
-      category: 'protein_analysis',
-      subcategory: 'protein_detection',
-      version: '2.1',
-      difficulty_level: 'intermediate',
-      skill_requirements: ['pipetting', 'microscopy', 'data_analysis'],
-      estimated_duration_minutes: 480,
-      estimated_cost_usd: 150.00,
-      cost_per_sample: 12.50,
-      safety_level: 'medium',
-      ppe_required: ['lab_coat', 'gloves', 'safety_goggles'],
+      title: 'Western Blotting: Protein Detection & Quantification',
+      description: 'A comprehensive protocol for detecting and quantifying specific proteins using Western Blot technique',
+      category: 'Protein Analysis',
+      status: 'published',
+      version: '3.2',
+      last_updated: '2024-01-15',
+      author: 'Dr. Sarah Chen',
+      institution: 'University Research Lab',
+      usage_count: 1247,
+      success_rate: 94.5,
+      rating: 4.6,
+      total_ratings: 89,
+      video_url: 'https://www.youtube.com/embed/LMsz-p9-a90',
       objective: 'Detect and quantify specific proteins using Western Blot technique',
-      background: 'Western Blot is a widely used technique for protein detection and quantification',
-      reagents: [
-        { name: 'SDS-PAGE Gel', concentration: '10%', supplier: 'Bio-Rad', catalog: '456-1093' },
-        { name: 'Transfer Buffer', concentration: '1x', supplier: 'Bio-Rad', catalog: '170-3935' }
+      background: 'Western Blot is a widely used technique for protein detection and quantification in biological samples. It combines SDS-PAGE electrophoresis with protein transfer to a membrane and specific antibody detection.',
+      materials: [
+        {
+          name: 'SDS-PAGE gel',
+          quantity: '1',
+          unit: 'gel',
+          concentration: '10% acrylamide',
+          supplier: 'Bio-Rad',
+          catalog_number: '456-1093',
+          storage_conditions: 'Store at 4°C'
+        },
+        {
+          name: 'Transfer buffer',
+          quantity: '1',
+          unit: 'L',
+          concentration: '1x',
+          supplier: 'Bio-Rad',
+          catalog_number: '170-3935',
+          storage_conditions: 'Store at room temperature'
+        },
+        {
+          name: 'PVDF membrane',
+          quantity: '1',
+          unit: 'membrane',
+          supplier: 'Millipore',
+          catalog_number: 'IPVH00010',
+          storage_conditions: 'Store at room temperature'
+        },
+        {
+          name: 'Primary antibody',
+          quantity: 'Variable',
+          unit: 'µL',
+          concentration: 'Variable',
+          supplier: 'Variable',
+          storage_conditions: 'Store at 4°C or -20°C'
+        },
+        {
+          name: 'Secondary antibody',
+          quantity: 'Variable',
+          unit: 'µL',
+          concentration: 'Variable',
+          supplier: 'Variable',
+          storage_conditions: 'Store at 4°C or -20°C'
+        },
+        {
+          name: 'ECL substrate',
+          quantity: '1',
+          unit: 'kit',
+          supplier: 'Thermo Fisher',
+          catalog_number: '32106',
+          storage_conditions: 'Store at 4°C, protect from light'
+        },
+        {
+          name: 'Blocking buffer',
+          quantity: '50',
+          unit: 'mL',
+          concentration: '5% BSA',
+          storage_conditions: 'Store at 4°C'
+        },
+        {
+          name: 'TBST buffer',
+          quantity: '1',
+          unit: 'L',
+          concentration: '1x',
+          storage_conditions: 'Store at room temperature'
+        }
       ],
       equipment: [
-        { name: 'Electrophoresis Unit', specifications: 'Mini-PROTEAN Tetra System', calibration: 'Monthly' },
-        { name: 'Transfer Unit', specifications: 'Mini Trans-Blot Cell', calibration: 'Monthly' }
+        {
+          name: 'Electrophoresis apparatus',
+          model: 'Mini-PROTEAN Tetra System',
+          calibration_required: false,
+          maintenance_schedule: 'Clean after each use'
+        },
+        {
+          name: 'Transfer apparatus',
+          model: 'Mini Trans-Blot Cell',
+          calibration_required: false,
+          maintenance_schedule: 'Clean after each use'
+        },
+        {
+          name: 'Power supply',
+          model: 'Bio-Rad PowerPac HC',
+          calibration_required: true,
+          maintenance_schedule: 'Annual calibration'
+        },
+        {
+          name: 'Membrane transfer cassette',
+          calibration_required: false,
+          maintenance_schedule: 'Clean after each use'
+        },
+        {
+          name: 'Chemiluminescence imager',
+          model: 'Bio-Rad ChemiDoc MP',
+          calibration_required: true,
+          maintenance_schedule: 'Quarterly calibration'
+        }
       ],
-      procedure_steps: [
-        { step: 1, description: 'Prepare SDS-PAGE gel', duration_minutes: 30, critical: true },
-        { step: 2, description: 'Load samples and run electrophoresis', duration_minutes: 60, critical: true },
-        { step: 3, description: 'Transfer proteins to membrane', duration_minutes: 90, critical: true }
+      safety_notes: [
+        'Wear gloves and lab coat at all times',
+        'Methanol is flammable - use in well-ventilated area',
+        'Avoid direct contact with acrylamide (neurotoxic)',
+        'Dispose of waste according to institutional guidelines'
       ],
-      expected_results: 'Clear, specific bands corresponding to target protein molecular weight',
-      privacy_level: 'lab',
-      status: 'approved',
-      validation_level: 'lab_validated',
-      tags: ['protein', 'detection', 'antibody', 'molecular_biology'],
-      literature_references: ['Towbin et al., 1979', 'Burnette, 1981'],
-      usage_count: 45,
-      success_rate: 92.5,
-      average_rating: 4.3,
-      total_ratings: 12,
-      created_by: user?.id || 'user-1',
-      created_at: '2024-01-15T10:00:00Z',
-      updated_at: '2024-01-20T14:30:00Z',
-      last_used_at: '2024-01-25T09:15:00Z'
-    },
-    {
-      id: '2',
-      title: 'PCR Amplification Protocol',
-      description: 'Standard Polymerase Chain Reaction protocol for DNA amplification',
-      protocol_type: 'pcr',
-      category: 'molecular_biology',
-      subcategory: 'dna_amplification',
-      version: '1.5',
-      difficulty_level: 'beginner',
-      skill_requirements: ['pipetting', 'aseptic_technique'],
-      estimated_duration_minutes: 180,
-      estimated_cost_usd: 75.00,
-      cost_per_sample: 5.00,
-      safety_level: 'low',
-      ppe_required: ['lab_coat', 'gloves'],
-      objective: 'Amplify specific DNA sequences using polymerase chain reaction',
-      background: 'PCR is a fundamental technique in molecular biology for amplifying DNA sequences',
-      reagents: [
-        { name: 'PCR Master Mix', concentration: '2x', supplier: 'Thermo Fisher', catalog: 'K0171' },
-        { name: 'Forward Primer', concentration: '10 μM', supplier: 'IDT', catalog: 'Custom' }
+      procedure: [
+        {
+          id: 1,
+          title: 'Sample Preparation',
+          description: 'Prepare protein samples in Laemmli buffer. Heat at 95°C for 5 minutes. Load 20-30 µg protein per lane.',
+          duration: 15,
+          critical: true,
+          materials_needed: [
+            { name: 'Protein samples', quantity: 'Variable', unit: 'µL' },
+            { name: 'Laemmli buffer', quantity: '10', unit: 'µL' },
+            { name: 'Heat block', quantity: '1', unit: 'unit' }
+          ],
+          tips: ['Ensure protein concentration is accurately measured', 'Keep samples on ice until ready to load']
+        },
+        {
+          id: 2,
+          title: 'Electrophoresis',
+          description: 'Load samples onto SDS-PAGE gel. Run at 120V until dye front reaches bottom of gel (approximately 90 minutes).',
+          duration: 90,
+          critical: true,
+          materials_needed: [
+            { name: 'SDS-PAGE gel', quantity: '1', unit: 'gel' },
+            { name: 'Running buffer', quantity: '500', unit: 'mL' }
+          ],
+          warnings: ['Do not exceed voltage limits', 'Monitor gel temperature'],
+          tips: ['Use protein ladder for molecular weight reference']
+        },
+        {
+          id: 3,
+          title: 'Protein Transfer',
+          description: 'Transfer proteins to PVDF membrane using wet transfer method at 100V for 60 minutes in cold room.',
+          duration: 60,
+          critical: true,
+          materials_needed: [
+            { name: 'PVDF membrane', quantity: '1', unit: 'membrane' },
+            { name: 'Transfer buffer', quantity: '1', unit: 'L' },
+            { name: 'Filter paper', quantity: '4', unit: 'sheets' }
+          ],
+          warnings: ['Methanol is flammable - work in well-ventilated area'],
+          tips: ['Ensure good contact between gel and membrane', 'Use cold transfer buffer']
+        },
+        {
+          id: 4,
+          title: 'Blocking',
+          description: 'Block membrane with 5% BSA in TBST for 1 hour at room temperature with gentle shaking.',
+          duration: 60,
+          critical: false,
+          materials_needed: [
+            { name: '5% BSA', quantity: '50', unit: 'mL' },
+            { name: 'TBST buffer', quantity: '500', unit: 'mL' },
+            { name: 'Shaker', quantity: '1', unit: 'unit' }
+          ],
+          tips: ['Ensure complete coverage of membrane']
+        },
+        {
+          id: 5,
+          title: 'Primary Antibody Incubation',
+          description: 'Incubate membrane with primary antibody diluted in blocking buffer overnight at 4°C.',
+          duration: 960,
+          critical: true,
+          materials_needed: [
+            { name: 'Primary antibody', quantity: 'Variable', unit: 'µL' },
+            { name: 'Blocking buffer', quantity: '10', unit: 'mL' }
+          ],
+          tips: ['Use optimal antibody dilution', 'Store membrane at 4°C']
+        },
+        {
+          id: 6,
+          title: 'Washing',
+          description: 'Wash membrane 3 times for 5 minutes each in TBST with gentle shaking.',
+          duration: 15,
+          critical: true,
+          materials_needed: [
+            { name: 'TBST buffer', quantity: '500', unit: 'mL' }
+          ],
+          tips: ['Ensure thorough washing to reduce background']
+        },
+        {
+          id: 7,
+          title: 'Secondary Antibody Incubation',
+          description: 'Incubate membrane with HRP-conjugated secondary antibody for 1 hour at room temperature.',
+          duration: 60,
+          critical: true,
+          materials_needed: [
+            { name: 'Secondary antibody (HRP-conjugated)', quantity: 'Variable', unit: 'µL' }
+          ],
+          tips: ['Protect from light during incubation']
+        },
+        {
+          id: 8,
+          title: 'Detection',
+          description: 'Apply ECL substrate and image using chemiluminescence imager.',
+          duration: 10,
+          critical: true,
+          materials_needed: [
+            { name: 'ECL substrate', quantity: '1', unit: 'mL' },
+            { name: 'Chemiluminescence imager', quantity: '1', unit: 'unit' }
+          ],
+          tips: ['Work quickly once substrate is applied', 'Use appropriate exposure time']
+        }
       ],
-      equipment: [
-        { name: 'Thermal Cycler', specifications: 'Applied Biosystems 2720', calibration: 'Monthly' }
+      expected_results: 'Clear, specific bands corresponding to target protein molecular weight. Band intensity should correlate with protein abundance.',
+      troubleshooting: [
+        { issue: 'No bands detected', solution: 'Check antibody specificity and concentration. Verify protein transfer efficiency.' },
+        { issue: 'High background', solution: 'Increase blocking time. Use higher concentration of blocking agent.' },
+        { issue: 'Multiple bands', solution: 'Check antibody specificity. May need to use different antibody.' }
       ],
-      procedure_steps: [
-        { step: 1, description: 'Prepare PCR reaction mix', duration_minutes: 15, critical: true },
-        { step: 2, description: 'Run PCR cycles', duration_minutes: 120, critical: true },
-        { step: 3, description: 'Analyze results', duration_minutes: 45, critical: false }
+      references: [
+        'Towbin H, et al. (1979) Electrophoretic transfer of proteins from polyacrylamide gels to nitrocellulose sheets',
+        'Burnette WN (1981) Western blotting: electrophoretic transfer of proteins from SDS-polyacrylamide gels'
       ],
-      expected_results: 'Single band of expected size on agarose gel',
-      privacy_level: 'global',
-      status: 'approved',
-      validation_level: 'published',
-      tags: ['pcr', 'dna', 'amplification', 'molecular_biology'],
-      literature_references: ['Mullis et al., 1986', 'Saiki et al., 1988'],
-      usage_count: 128,
-      success_rate: 95.2,
-      average_rating: 4.6,
-      total_ratings: 28,
-      created_by: user?.id || 'user-2',
-      created_at: '2024-01-10T08:00:00Z',
-      updated_at: '2024-01-18T16:45:00Z',
-      last_used_at: '2024-01-26T11:30:00Z'
-    },
-    {
-      id: '3',
-      title: 'ELISA Protein Quantification',
-      description: 'Enzyme-Linked Immunosorbent Assay for protein quantification',
-      protocol_type: 'elisa',
-      category: 'immunoassays',
-      subcategory: 'protein_quantification',
-      version: '1.2',
-      difficulty_level: 'intermediate',
-      skill_requirements: ['pipetting', 'data_analysis', 'quality_control'],
-      estimated_duration_minutes: 300,
-      estimated_cost_usd: 200.00,
-      cost_per_sample: 15.00,
-      safety_level: 'low',
-      ppe_required: ['lab_coat', 'gloves'],
-      objective: 'Quantify specific proteins in biological samples using ELISA',
-      background: 'ELISA is a plate-based assay technique for detecting and quantifying proteins',
-      reagents: [
-        { name: 'ELISA Plate', concentration: '96-well', supplier: 'Corning', catalog: '3590' },
-        { name: 'Capture Antibody', concentration: 'Variable', supplier: 'R&D Systems', catalog: 'Custom' }
-      ],
-      equipment: [
-        { name: 'Plate Reader', specifications: 'BioTek Synergy H1', calibration: 'Weekly' }
-      ],
-      procedure_steps: [
-        { step: 1, description: 'Coat plate with capture antibody', duration_minutes: 480, critical: true },
-        { step: 2, description: 'Block and add samples', duration_minutes: 180, critical: true },
-        { step: 3, description: 'Add detection antibody and substrate', duration_minutes: 90, critical: true }
-      ],
-      expected_results: 'Linear standard curve with R² > 0.99',
-      privacy_level: 'team',
-      status: 'review',
-      validation_level: 'peer_reviewed',
-      tags: ['elisa', 'protein', 'quantification', 'immunoassay'],
-      literature_references: ['Engvall & Perlmann, 1971', 'Voller et al., 1978'],
-      usage_count: 23,
-      success_rate: 88.7,
-      average_rating: 4.1,
-      total_ratings: 8,
-      created_by: user?.id || 'user-3',
-      created_at: '2024-01-12T12:00:00Z',
-      updated_at: '2024-01-22T10:15:00Z',
-      last_used_at: '2024-01-24T14:20:00Z'
-    }
-  ];
-
-  const mockTemplates: ProtocolTemplate[] = [
-    {
-      id: '1',
-      template_name: 'Western Blot Standard Protocol',
-      protocol_type: 'western_blot',
-      category: 'protein_analysis',
-      description: 'Complete Western Blot protocol template',
-      template_data: {
-        objective: 'Detect and quantify specific proteins in biological samples using Western Blot technique',
-        difficulty_level: 'intermediate',
-        estimated_duration_minutes: 480,
-        safety_level: 'medium',
-        ppe_required: ['lab_coat', 'gloves', 'safety_goggles'],
-        reagents: [
-          { name: 'SDS-PAGE Gel', concentration: '10%', supplier: 'Bio-Rad', catalog: '456-1093' },
-          { name: 'Transfer Buffer', concentration: '1x', supplier: 'Bio-Rad', catalog: '170-3935' }
-        ],
-        equipment: [
-          { name: 'Electrophoresis Unit', specifications: 'Mini-PROTEAN Tetra System', calibration: 'Monthly' }
-        ]
-      },
-      usage_count: 156,
-      created_by: 'system',
-      created_at: '2024-01-01T00:00:00Z'
-    },
-    {
-      id: '2',
-      template_name: 'PCR Standard Protocol',
-      protocol_type: 'pcr',
-      category: 'molecular_biology',
-      description: 'Standard PCR protocol template',
-      template_data: {
-        objective: 'Amplify specific DNA sequences using polymerase chain reaction',
-        difficulty_level: 'beginner',
-        estimated_duration_minutes: 180,
-        safety_level: 'low',
-        ppe_required: ['lab_coat', 'gloves'],
-        reagents: [
-          { name: 'PCR Master Mix', concentration: '2x', supplier: 'Thermo Fisher', catalog: 'K0171' }
-        ],
-        equipment: [
-          { name: 'Thermal Cycler', specifications: 'Applied Biosystems 2720', calibration: 'Monthly' }
-        ]
-      },
-      usage_count: 234,
-      created_by: 'system',
-      created_at: '2024-01-01T00:00:00Z'
+      tags: ['protein', 'western blot', 'antibody', 'immunoblot', 'protein detection']
     }
   ];
 
   useEffect(() => {
-    // Load mock data
     setProtocols(mockProtocols);
-    setTemplates(mockTemplates);
-    setIsLoading(false);
   }, []);
 
   const filteredProtocols = protocols.filter(protocol => {
-    return (
-      (!filters.search || protocol.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-       protocol.description.toLowerCase().includes(filters.search.toLowerCase()) ||
-       protocol.tags.some(tag => tag.toLowerCase().includes(filters.search.toLowerCase()))) &&
-      (!filters.protocol_type || protocol.protocol_type === filters.protocol_type) &&
-      (!filters.category || protocol.category === filters.category) &&
-      (!filters.difficulty_level || protocol.difficulty_level === filters.difficulty_level) &&
-      (!filters.privacy_level || protocol.privacy_level === filters.privacy_level) &&
-      (!filters.status || protocol.status === filters.status) &&
-      (!filters.validation_level || protocol.validation_level === filters.validation_level)
-    );
+    const matchesSearch = protocol.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         protocol.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         protocol.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesCategory = !filterCategory || protocol.category === filterCategory;
+    return matchesSearch && matchesCategory;
   });
 
-  const handleCreateProtocol = async (protocolData: ProfessionalProtocol) => {
-    try {
-      // In a real app, this would make an API call
-      const newProtocol: ProfessionalProtocol = {
-        ...protocolData,
-        id: Date.now().toString(),
-        usage_count: 0,
-        success_rate: 0,
-        average_rating: 0,
-        total_ratings: 0,
-        created_by: user?.id || 'current-user',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      setProtocols(prev => [newProtocol, ...prev]);
-      setShowCreateForm(false);
-      setShowTemplateModal(false);
-      setSelectedTemplate(null);
-    } catch (error) {
-      console.error('Error creating protocol:', error);
+  const toggleStepComplete = (stepId: number) => {
+    const newCompleted = new Set(completedSteps);
+    if (newCompleted.has(stepId)) {
+      newCompleted.delete(stepId);
+    } else {
+      newCompleted.add(stepId);
+    }
+    setCompletedSteps(newCompleted);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownload = () => {
+    alert('Download functionality - In a real app, this would download the protocol as PDF');
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: selectedProtocol?.title,
+        text: selectedProtocol?.description,
+        url: window.location.href
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert('Link copied to clipboard!');
     }
   };
 
-  const getDifficultyColor = (level: string) => {
-    switch (level) {
-      case 'beginner': return 'bg-green-100 text-green-800';
-      case 'intermediate': return 'bg-yellow-100 text-yellow-800';
-      case 'advanced': return 'bg-orange-100 text-orange-800';
-      case 'expert': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getSafetyColor = (level: string) => {
-    switch (level) {
-      case 'low': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
-      case 'biosafety_level_2': return 'bg-red-100 text-red-800';
-      case 'biosafety_level_3': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800';
-      case 'review': return 'bg-blue-100 text-blue-800';
-      case 'validated': return 'bg-green-100 text-green-800';
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'archived': return 'bg-gray-100 text-gray-800';
-      case 'deprecated': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const handleSave = () => {
+    setIsSaved(!isSaved);
+    alert(isSaved ? 'Protocol unsaved' : 'Protocol saved to your library');
   };
 
   const formatDuration = (minutes: number) => {
-    if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
   };
 
-  if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Professional Protocols</h1>
-          <p className="text-gray-600 mt-1">Manage and share standardized research protocols</p>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Protocol Library</h1>
+              <p className="text-gray-600 text-lg">Standardized research protocols with step-by-step guidance</p>
         </div>
-        <div className="flex space-x-3">
           <Button
-            onClick={() => setShowTemplateModal(true)}
-            variant="outline"
-            className="flex items-center space-x-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span>From Template</span>
-          </Button>
-          <Button
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-6 py-3"
             onClick={() => setShowCreateForm(true)}
-            className="bg-slate-800 hover:bg-slate-700 flex items-center space-x-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>Create Protocol</span>
+            >
+              <PlusIcon className="w-5 h-5 mr-2" />
+              Create Protocol
           </Button>
-        </div>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Search and Filters */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Search</label>
+                <div className="relative">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <Input
-                value={filters.search}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search protocols..."
+                    className="pl-10"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Protocol Type</label>
-              <Select
-                value={filters.protocol_type}
-                onChange={(e) => setFilters(prev => ({ ...prev, protocol_type: e.target.value }))}
-                options={[
-                  { value: '', label: 'All Types' },
-                  { value: 'western_blot', label: 'Western Blot' },
-                  { value: 'pcr', label: 'PCR' },
-                  { value: 'elisa', label: 'ELISA' },
-                  { value: 'cell_culture', label: 'Cell Culture' },
-                  { value: 'immunofluorescence', label: 'Immunofluorescence' },
-                  { value: 'flow_cytometry', label: 'Flow Cytometry' },
-                  { value: 'microscopy', label: 'Microscopy' }
-                ]}
-              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
               <Select
-                value={filters.category}
-                onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value }))}
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
                 options={[
                   { value: '', label: 'All Categories' },
-                  { value: 'molecular_biology', label: 'Molecular Biology' },
-                  { value: 'cell_biology', label: 'Cell Biology' },
-                  { value: 'protein_analysis', label: 'Protein Analysis' },
-                  { value: 'immunology', label: 'Immunology' },
-                  { value: 'microscopy', label: 'Microscopy' },
-                  { value: 'analytical', label: 'Analytical Chemistry' }
+                    { value: 'Protein Analysis', label: 'Protein Analysis' },
+                    { value: 'Molecular Biology', label: 'Molecular Biology' },
+                    { value: 'Cell Culture', label: 'Cell Culture' }
                 ]}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Privacy Level</label>
-              <Select
-                value={filters.privacy_level}
-                onChange={(e) => setFilters(prev => ({ ...prev, privacy_level: e.target.value }))}
-                options={[
-                  { value: '', label: 'All Privacy Levels' },
-                  { value: 'personal', label: 'Only Me' },
-                  { value: 'team', label: 'My Team' },
-                  { value: 'lab', label: 'My Lab' },
-                  { value: 'institution', label: 'My Institution' },
-                  { value: 'global', label: 'Global' }
-                ]}
-              />
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Quick Stats</label>
+                <div className="flex items-center space-x-4 h-10">
+                  <div className="flex items-center space-x-2">
+                    <UserGroupIcon className="w-5 h-5 text-blue-600" />
+                    <span className="text-sm font-medium text-gray-700">{protocols.length} protocols</span>
+            </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircleIcon className="w-5 h-5 text-emerald-600" />
+                    <span className="text-sm font-medium text-gray-700">
+                      {(protocols.reduce((acc, p) => acc + p.success_rate, 0) / protocols.length).toFixed(1)}% avg success
+                    </span>
+          </div>
+                </div>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Protocols Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        {/* Protocol Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredProtocols.map((protocol) => (
-          <Card key={protocol.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Card key={protocol.id} className="hover:shadow-xl transition-all duration-300 cursor-pointer group border border-gray-200">
             <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg font-semibold text-gray-900 line-clamp-2">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1 pr-4">
+                    <CardTitle className="text-lg font-bold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
                     {protocol.title}
                   </CardTitle>
                   <p className="text-sm text-gray-600 mt-1 line-clamp-2">
                     {protocol.description}
                   </p>
                 </div>
-                <div className="flex flex-col items-end space-y-1 ml-2">
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(protocol.difficulty_level)}`}>
-                    {protocol.difficulty_level}
-                  </span>
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getSafetyColor(protocol.safety_level)}`}>
-                    {protocol.safety_level.replace('_', ' ')}
-                  </span>
+                  {protocol.video_url && (
+                    <div className="ml-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center">
+                      <PlayIcon className="w-3 h-3 mr-1" />
+                      Video
+                    </div>
+                  )}
                 </div>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold">
+                    {protocol.category}
+                  </span>
+                  <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold">
+                    <ShieldCheckIcon className="w-3 h-3 inline mr-1" />
+                    {protocol.success_rate}% success
+                  </span>
               </div>
             </CardHeader>
             
             <CardContent className="pt-0">
               <div className="space-y-3">
-                {/* Protocol Info */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">Duration:</span>
-                    <span className="ml-1 font-medium">{formatDuration(protocol.estimated_duration_minutes)}</span>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <ClockIcon className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-600">{formatDuration(protocol.procedure.reduce((acc, step) => acc + step.duration, 0))}</span>
                   </div>
-                  <div>
-                    <span className="text-gray-500">Cost:</span>
-                    <span className="ml-1 font-medium">${protocol.cost_per_sample}/sample</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Usage:</span>
-                    <span className="ml-1 font-medium">{protocol.usage_count} times</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Success Rate:</span>
-                    <span className="ml-1 font-medium">{protocol.success_rate.toFixed(1)}%</span>
+                    <div className="flex items-center space-x-2">
+                      <UserGroupIcon className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-600">{protocol.usage_count} uses</span>
                   </div>
                 </div>
 
-                {/* Status and Privacy */}
-                <div className="flex items-center justify-between">
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(protocol.status)}`}>
-                    {protocol.status}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {protocol.privacy_level === 'personal' ? 'Only Me' :
-                     protocol.privacy_level === 'team' ? 'My Team' :
-                     protocol.privacy_level === 'lab' ? 'My Lab' :
-                     protocol.privacy_level === 'institution' ? 'My Institution' : 'Global'}
-                  </span>
-                </div>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-1">
-                  {protocol.tags.slice(0, 3).map((tag, index) => (
-                    <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      {tag}
-                    </span>
-                  ))}
-                  {protocol.tags.length > 3 && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      +{protocol.tags.length - 3}
-                    </span>
-                  )}
-                </div>
-
-                {/* Rating */}
-                <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 pt-2 border-t border-gray-100">
                   <div className="flex items-center">
                     {[1, 2, 3, 4, 5].map((star) => (
-                      <svg
+                        <StarIcon
                         key={star}
                         className={`w-4 h-4 ${
-                          star <= Math.round(protocol.average_rating)
-                            ? 'text-yellow-400'
+                            star <= Math.round(protocol.rating)
+                              ? 'text-yellow-400 fill-yellow-400'
                             : 'text-gray-300'
                         }`}
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
+                        />
                     ))}
                   </div>
                   <span className="text-sm text-gray-600">
-                    {protocol.average_rating.toFixed(1)} ({protocol.total_ratings} reviews)
+                      {protocol.rating.toFixed(1)} ({protocol.total_ratings})
                   </span>
                 </div>
 
-                {/* Actions */}
-                <div className="flex space-x-2 pt-2">
                   <Button
-                    variant="outline"
-                    size="sm"
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                     onClick={() => {
                       setSelectedProtocol(protocol);
-                      setShowProtocolDetails(true);
-                    }}
-                    className="flex-1"
-                  >
-                    View Details
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="bg-slate-800 hover:bg-slate-700 flex-1"
-                    onClick={() => {
-                      // Track usage
-                      setProtocols(prev => prev.map(p => 
-                        p.id === protocol.id 
-                          ? { ...p, usage_count: p.usage_count + 1, last_used_at: new Date().toISOString() }
-                          : p
-                      ));
+                      setShowDetails(true);
+                      setActiveStep(0);
+                      setCompletedSteps(new Set());
                     }}
                   >
-                    Use Protocol
+                    View Protocol
                   </Button>
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -589,107 +527,461 @@ const ProfessionalProtocolsPage: React.FC = () => {
       {filteredProtocols.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
-            <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No protocols found</h3>
-            <p className="text-gray-600 mb-4">
-              {filters.search || filters.protocol_type || filters.category || filters.privacy_level
-                ? 'Try adjusting your filters or search terms.'
-                : 'Get started by creating your first professional protocol.'}
-            </p>
-            <Button
-              onClick={() => setShowCreateForm(true)}
-              className="bg-slate-800 hover:bg-slate-700"
-            >
-              Create Protocol
-            </Button>
+              <AcademicCapIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No protocols found</h3>
+              <p className="text-gray-600">Try adjusting your filters</p>
           </CardContent>
         </Card>
       )}
+      </div>
 
-      {/* Create Protocol Form */}
-      {showCreateForm && (
-        <ProfessionalProtocolForm
-          onSubmit={handleCreateProtocol}
-          onCancel={() => setShowCreateForm(false)}
-        />
-      )}
-
-      {/* Template Selection Modal */}
-      {showTemplateModal && (
+      {/* Protocol Detail Modal */}
+      {showDetails && selectedProtocol && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">Choose Protocol Template</h2>
+          <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6 border-b border-gray-200">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 pr-8">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold">
+                      {selectedProtocol.category}
+                    </span>
+                    <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold">
+                      {selectedProtocol.success_rate}% success
+                    </span>
+                    <span className="text-sm text-gray-600">
+                      v{selectedProtocol.version}
+                    </span>
+                  </div>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-2">{selectedProtocol.title}</h2>
+                  <div className="flex items-center space-x-4 text-sm text-gray-600">
+                    <span className="flex items-center">
+                      <ClockIcon className="w-4 h-4 mr-1" />
+                      {formatDuration(selectedProtocol.procedure.reduce((acc, step) => acc + step.duration, 0))}
+                    </span>
+                    <span className="flex items-center">
+                      <CheckCircleIcon className="w-4 h-4 mr-1" />
+                      {selectedProtocol.success_rate}% success
+                    </span>
+                    <span className="flex items-center">
+                      <UserGroupIcon className="w-4 h-4 mr-1" />
+                      {selectedProtocol.usage_count} uses
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => setShowTemplateModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                    onClick={handleSave}
+                    className={`p-2 rounded-lg transition-colors ${
+                      isSaved ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                    }`}
+                    title="Save protocol"
+                  >
+                    <BookmarkIcon className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={handleShare}
+                    className="p-2 rounded-lg bg-gray-100 text-gray-400 hover:bg-gray-200 transition-colors"
+                    title="Share protocol"
+                  >
+                    <ShareIcon className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={handleDownload}
+                    className="p-2 rounded-lg bg-gray-100 text-gray-400 hover:bg-gray-200 transition-colors"
+                    title="Download protocol"
+                  >
+                    <ArrowDownTrayIcon className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={handlePrint}
+                    className="p-2 rounded-lg bg-gray-100 text-gray-400 hover:bg-gray-200 transition-colors"
+                    title="Print protocol"
+                  >
+                    <PrinterIcon className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setShowDetails(false)}
+                    className="ml-2 p-2 rounded-lg bg-gray-100 text-gray-400 hover:bg-gray-200 transition-colors"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
+                </div>
               </div>
             </div>
             
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {templates.map((template) => (
-                  <Card key={template.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="overflow-y-auto max-h-[calc(95vh-200px)] bg-gray-50 p-6">
+              {/* Overview */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Objective */}
+                  <Card>
                     <CardHeader>
-                      <CardTitle className="text-lg font-semibold text-gray-900">
-                        {template.template_name}
+                      <CardTitle className="flex items-center">
+                        <LightBulbIcon className="w-5 h-5 mr-2 text-blue-600" />
+                        Objective
                       </CardTitle>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {template.description}
-                      </p>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-2 text-sm">
-                        <div>
-                          <span className="text-gray-500">Type:</span>
-                          <span className="ml-1 font-medium capitalize">{template.protocol_type.replace('_', ' ')}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Category:</span>
-                          <span className="ml-1 font-medium capitalize">{template.category.replace('_', ' ')}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Used:</span>
-                          <span className="ml-1 font-medium">{template.usage_count} times</span>
-                        </div>
-                      </div>
-                      <Button
-                        className="w-full mt-4 bg-slate-800 hover:bg-slate-700"
-                        onClick={() => {
-                          setSelectedTemplate(template);
-                          setShowTemplateModal(false);
-                          setShowCreateForm(true);
-                        }}
-                      >
-                        Use This Template
-                      </Button>
+                      <p className="text-gray-700">{selectedProtocol.objective}</p>
                     </CardContent>
                   </Card>
+
+                  {/* Background */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <BookOpenIcon className="w-5 h-5 mr-2 text-blue-600" />
+                        Background
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700">{selectedProtocol.background}</p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Materials */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <ClipboardDocumentCheckIcon className="w-5 h-5 mr-2 text-blue-600" />
+                        Materials & Equipment
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-2">Materials</h4>
+                          <ul className="list-disc list-inside space-y-1 text-gray-700">
+                            {selectedProtocol.materials.map((material, index) => (
+                              <li key={index}>
+                                <span className="font-medium">{material.name}</span>
+                                {material.quantity && ` - ${material.quantity} ${material.unit}`}
+                                {material.concentration && ` (${material.concentration})`}
+                                {material.supplier && ` - ${material.supplier}`}
+                                {material.catalog_number && ` [${material.catalog_number}]`}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-2">Equipment</h4>
+                          <ul className="list-disc list-inside space-y-1 text-gray-700">
+                            {selectedProtocol.equipment.map((equipment, index) => (
+                              <li key={index}>
+                                <span className="font-medium">{equipment.name}</span>
+                                {equipment.model && ` - ${equipment.model}`}
+                                {equipment.calibration_required && ' (Calibration Required)'}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Safety Notes */}
+                  <Card className="border-orange-200 bg-orange-50">
+                    <CardHeader>
+                      <CardTitle className="flex items-center text-orange-900">
+                        <ExclamationTriangleIcon className="w-5 h-5 mr-2" />
+                        Safety Notes
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="list-disc list-inside space-y-1 text-orange-900">
+                        {selectedProtocol.safety_notes.map((note, index) => (
+                          <li key={index}>{note}</li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                      </div>
+
+                {/* Sidebar */}
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Protocol Info</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Version</span>
+                          <span className="font-bold">{selectedProtocol.version}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Author</span>
+                          <span className="font-bold">{selectedProtocol.author}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Last Updated</span>
+                          <span className="font-bold">{selectedProtocol.last_updated}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Institution</span>
+                          <span className="font-bold">{selectedProtocol.institution}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Tags</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedProtocol.tags.map((tag, index) => (
+                          <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Interactive Procedure */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <ClipboardDocumentCheckIcon className="w-5 h-5 mr-2 text-blue-600" />
+                    Step-by-Step Procedure
+                  </CardTitle>
+                  <p className="text-sm text-gray-600 mt-2">
+                    {completedSteps.size} of {selectedProtocol.procedure.length} steps completed
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {selectedProtocol.procedure.map((step, index) => (
+                      <div
+                        key={step.id}
+                        className={`p-6 rounded-xl border-2 transition-all ${
+                          activeStep === index
+                            ? 'border-blue-500 bg-blue-50'
+                            : completedSteps.has(step.id)
+                            ? 'border-emerald-300 bg-emerald-50'
+                            : 'border-gray-200 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-start space-x-4">
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-white ${
+                            completedSteps.has(step.id)
+                              ? 'bg-emerald-500'
+                              : step.critical
+                              ? 'bg-red-500'
+                              : 'bg-blue-500'
+                          }`}>
+                            {step.id}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-lg font-bold text-gray-900">{step.title}</h4>
+                              <div className="flex items-center space-x-2">
+                                {step.critical && (
+                                  <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold">
+                                    Critical
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => toggleStepComplete(step.id)}
+                                  className={`p-2 rounded-lg transition-colors ${
+                                    completedSteps.has(step.id)
+                                      ? 'bg-emerald-100 text-emerald-600'
+                                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                  }`}
+                                >
+                                  <CheckCircleIcon className="w-5 h-5" />
+                                </button>
+                              </div>
+                            </div>
+                            <p className="text-gray-700 mb-3">{step.description}</p>
+                            <div className="flex items-center space-x-4 text-sm text-gray-600">
+                              <span className="flex items-center">
+                                <ClockIcon className="w-4 h-4 mr-1" />
+                                {step.duration}m
+                              </span>
+                              {step.materials_needed && (
+                                <span className="flex items-center">
+                                  <ClipboardDocumentCheckIcon className="w-4 h-4 mr-1" />
+                                  {step.materials_needed.length} materials
+                                </span>
+                              )}
+                            </div>
+                            {step.materials_needed && (
+                              <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                                <p className="text-xs font-semibold text-gray-700 mb-2">Materials Needed:</p>
+                                <div className="space-y-1">
+                                  {step.materials_needed.map((material, idx) => (
+                                    <div key={idx} className="flex items-center justify-between text-xs bg-white p-2 rounded border border-gray-200">
+                                      <span className="font-medium text-gray-900">{material.name}</span>
+                                      <span className="text-gray-600">{material.quantity} {material.unit}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {step.warnings && step.warnings.length > 0 && (
+                              <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                <p className="text-xs font-semibold text-orange-900 mb-1 flex items-center">
+                                  <ExclamationTriangleIcon className="w-4 h-4 mr-1" />
+                                  Warnings:
+                                </p>
+                                <ul className="list-disc list-inside text-xs text-orange-900">
+                                  {step.warnings.map((warning, idx) => (
+                                    <li key={idx}>{warning}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {step.tips && step.tips.length > 0 && (
+                              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <p className="text-xs font-semibold text-blue-900 mb-1 flex items-center">
+                                  <LightBulbIcon className="w-4 h-4 mr-1" />
+                                  Tips:
+                                </p>
+                                <ul className="list-disc list-inside text-xs text-blue-900">
+                                  {step.tips.map((tip, idx) => (
+                                    <li key={idx}>{tip}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                    </CardContent>
+                  </Card>
+
+              {/* Expected Results */}
+              <Card className="bg-emerald-50 border-emerald-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-emerald-900">
+                    <CheckCircleIcon className="w-5 h-5 mr-2" />
+                    Expected Results
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-emerald-900">{selectedProtocol.expected_results}</p>
+                </CardContent>
+              </Card>
+
+              {/* Troubleshooting */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <LightBulbIcon className="w-5 h-5 mr-2 text-blue-600" />
+                    Troubleshooting
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {selectedProtocol.troubleshooting.map((item, index) => (
+                      <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                        <p className="font-semibold text-gray-900 mb-1">Issue: {item.issue}</p>
+                        <p className="text-gray-700">Solution: {item.solution}</p>
+                      </div>
                 ))}
+              </div>
+                </CardContent>
+              </Card>
+
+              {/* References */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <BookOpenIcon className="w-5 h-5 mr-2 text-blue-600" />
+                    References
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="list-disc list-inside space-y-1 text-gray-700">
+                    {selectedProtocol.references.map((ref, index) => (
+                      <li key={index}>{ref}</li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+
+              {/* Video Section - Now at the end */}
+              {selectedProtocol.video_url && (
+                <Card className="bg-white">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <PlayIcon className="w-6 h-6 mr-2 text-red-600" />
+                      Video Tutorial
+                    </CardTitle>
+                    <p className="text-sm text-gray-600 mt-2">
+                      Watch this comprehensive video tutorial demonstrating the complete protocol
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="relative aspect-video bg-black rounded-lg overflow-hidden shadow-lg">
+                      <iframe
+                        src={selectedProtocol.video_url}
+                        className="absolute inset-0 w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        title="Protocol Video Tutorial"
+                      />
+            </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 border-t border-gray-200 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <StarIcon
+                        key={star}
+                        className={`w-5 h-5 ${
+                          star <= Math.round(selectedProtocol.rating)
+                            ? 'text-yellow-400 fill-yellow-400'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-gray-700">
+                    {selectedProtocol.rating.toFixed(1)} ({selectedProtocol.total_ratings} reviews)
+                  </span>
+                </div>
+                <div className="flex space-x-3">
+                  <Button variant="outline" onClick={() => setShowDetails(false)}>
+                    Close
+                  </Button>
+                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                    Use This Protocol
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Protocol Details Modal */}
-      {showProtocolDetails && selectedProtocol && (
+      {/* Create Protocol Modal */}
+      {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
+          <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden shadow-2xl">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">{selectedProtocol.title}</h2>
+                <h2 className="text-2xl font-bold">Create New Protocol</h2>
                 <button
-                  onClick={() => setShowProtocolDetails(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowCreateForm(false)}
+                  className="text-white hover:text-gray-200 transition-colors"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -698,96 +990,236 @@ const ProfessionalProtocolsPage: React.FC = () => {
               </div>
             </div>
             
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+            <div className="p-6 overflow-y-auto max-h-[calc(95vh-200px)]">
               <div className="space-y-6">
-                {/* Basic Info */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Protocol Information</h3>
+                {/* Basic Information */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <h3 className="text-lg font-bold text-blue-900 mb-4">Basic Information</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <span className="text-gray-500">Objective:</span>
-                      <p className="mt-1 text-gray-900">{selectedProtocol.objective}</p>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Protocol Title *</label>
+                      <Input
+                        placeholder="e.g., Western Blotting: Protein Detection"
+                        className="border-2"
+                      />
                     </div>
                     <div>
-                      <span className="text-gray-500">Version:</span>
-                      <p className="mt-1 text-gray-900">{selectedProtocol.version}</p>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Category *</label>
+                      <Select
+                        options={[
+                          { value: '', label: 'Select Category' },
+                          { value: 'Protein Analysis', label: 'Protein Analysis' },
+                          { value: 'Molecular Biology', label: 'Molecular Biology' },
+                          { value: 'Cell Culture', label: 'Cell Culture' },
+                          { value: 'Biochemistry', label: 'Biochemistry' },
+                          { value: 'Genetics', label: 'Genetics' }
+                        ]}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Description *</label>
+                    <textarea
+                      className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows={3}
+                      placeholder="Brief description of the protocol..."
+                    />
+                  </div>
+                </div>
+
+                {/* Scientific Context */}
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+                  <h3 className="text-lg font-bold text-purple-900 mb-4">Scientific Context</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Objective *</label>
+                      <textarea
+                        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        rows={3}
+                        placeholder="What does this protocol accomplish?"
+                      />
                     </div>
                     <div>
-                      <span className="text-gray-500">Duration:</span>
-                      <p className="mt-1 text-gray-900">{formatDuration(selectedProtocol.estimated_duration_minutes)}</p>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Background & Rationale *</label>
+                      <textarea
+                        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        rows={4}
+                        placeholder="Scientific background and rationale for this protocol..."
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Materials & Equipment */}
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
+                  <h3 className="text-lg font-bold text-emerald-900 mb-4">Materials & Equipment</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Materials *</label>
+                      <textarea
+                        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        rows={6}
+                        placeholder="Enter materials with details (one per line)&#10;Example:&#10;SDS-PAGE gel (10% acrylamide) - Bio-Rad #456-1093&#10;Transfer buffer (1x) - Bio-Rad #170-3935&#10;PVDF membrane - Millipore #IPVH00010"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Include name, concentration, supplier, and catalog number</p>
                     </div>
                     <div>
-                      <span className="text-gray-500">Cost per Sample:</span>
-                      <p className="mt-1 text-gray-900">${selectedProtocol.cost_per_sample}</p>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Equipment *</label>
+                      <textarea
+                        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        rows={6}
+                        placeholder="Enter equipment (one per line)&#10;Example:&#10;Electrophoresis apparatus (Mini-PROTEAN Tetra)&#10;Transfer apparatus (Mini Trans-Blot Cell)&#10;Power supply (Bio-Rad PowerPac HC)"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Include equipment name and model if applicable</p>
                     </div>
+                  </div>
+                </div>
+
+                {/* Safety & Warnings */}
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+                  <h3 className="text-lg font-bold text-orange-900 mb-4">Safety & Warnings</h3>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Safety Notes *</label>
+                    <textarea
+                      className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows={4}
+                      placeholder="Important safety precautions and warnings..."
+                    />
                   </div>
                 </div>
 
                 {/* Procedure Steps */}
+                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
+                  <h3 className="text-lg font-bold text-indigo-900 mb-4">Procedure Steps</h3>
+                  <div className="space-y-4">
+                    <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Procedure Steps</h3>
-                  <div className="space-y-3">
-                    {selectedProtocol.procedure_steps.map((step, index) => (
-                      <div key={index} className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                          step.critical ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {step.step}
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Step Title *</label>
+                          <Input placeholder="e.g., Sample Preparation" className="border-2" />
                         </div>
-                        <div className="flex-1">
-                          <p className="text-gray-900">{step.description}</p>
-                          <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
-                            <span>Duration: {step.duration_minutes}m</span>
-                            {step.temperature && <span>Temperature: {step.temperature}</span>}
-                            {step.critical && <span className="text-red-600 font-medium">Critical Step</span>}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Duration (minutes) *</label>
+                          <Input type="number" placeholder="e.g., 15" className="border-2" />
                           </div>
                         </div>
+                      <div className="mb-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Step Description *</label>
+                        <textarea
+                          className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          rows={3}
+                          placeholder="Detailed description of this step..."
+                        />
                       </div>
-                    ))}
+                      <div className="flex items-center space-x-4">
+                        <label className="flex items-center">
+                          <input type="checkbox" className="mr-2" />
+                          <span className="text-sm font-semibold text-gray-700">Critical Step</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input type="checkbox" className="mr-2" />
+                          <span className="text-sm font-semibold text-gray-700">Has warnings</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input type="checkbox" className="mr-2" />
+                          <span className="text-sm font-semibold text-gray-700">Has tips</span>
+                        </label>
+                      </div>
+                    </div>
+                    <Button variant="outline" className="w-full">
+                      + Add Another Step
+                    </Button>
                   </div>
                 </div>
 
                 {/* Expected Results */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                  <h3 className="text-lg font-bold text-green-900 mb-4">Expected Results</h3>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Expected Results</h3>
-                  <p className="text-gray-900">{selectedProtocol.expected_results}</p>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">What should researchers expect to see? *</label>
+                    <textarea
+                      className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows={3}
+                      placeholder="Describe the expected outcome..."
+                    />
+                  </div>
+                </div>
+
+                {/* Troubleshooting */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                  <h3 className="text-lg font-bold text-yellow-900 mb-4">Troubleshooting</h3>
+                  <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Common Issue</label>
+                        <Input placeholder="e.g., No bands detected" className="border-2" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Solution</label>
+                        <Input placeholder="e.g., Check antibody concentration" className="border-2" />
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="outline" className="w-full mt-4">
+                    + Add Another Troubleshooting Tip
+                  </Button>
                 </div>
 
                 {/* References */}
-                {selectedProtocol.literature_references.length > 0 && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">References</h3>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Literature References</h3>
-                    <ul className="list-disc list-inside space-y-1">
-                      {selectedProtocol.literature_references.map((ref, index) => (
-                        <li key={index} className="text-gray-900">{ref}</li>
-                      ))}
-                    </ul>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Literature References</label>
+                    <textarea
+                      className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows={3}
+                      placeholder="Enter references (one per line)..."
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Enter one reference per line</p>
                   </div>
-                )}
+                </div>
+
+                {/* Additional Options */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <h3 className="text-lg font-bold text-blue-900 mb-4">Additional Options</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                        <PlayIcon className="w-5 h-5 mr-2 text-red-600" />
+                        YouTube Video Tutorial (Optional)
+                      </label>
+                      <Input
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        className="border-2"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Add a video tutorial for this protocol</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Tags</label>
+                      <Input
+                        placeholder="e.g., protein, western blot, antibody (comma separated)"
+                        className="border-2"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Add tags separated by commas</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             
-            <div className="p-6 border-t border-gray-200 bg-gray-50">
+            <div className="bg-gray-50 border-t border-gray-200 p-6">
               <div className="flex justify-end space-x-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowProtocolDetails(false)}
-                >
-                  Close
+                <Button variant="outline" onClick={() => setShowCreateForm(false)}>
+                  Cancel
                 </Button>
                 <Button
-                  className="bg-slate-800 hover:bg-slate-700"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                   onClick={() => {
-                    // Track usage
-                    setProtocols(prev => prev.map(p => 
-                      p.id === selectedProtocol.id 
-                        ? { ...p, usage_count: p.usage_count + 1, last_used_at: new Date().toISOString() }
-                        : p
-                    ));
-                    setShowProtocolDetails(false);
+                    alert('Protocol creation form - In a real app, this would save to the database');
+                    setShowCreateForm(false);
                   }}
                 >
-                  Use This Protocol
+                  Create Protocol
                 </Button>
               </div>
             </div>
@@ -798,4 +1230,5 @@ const ProfessionalProtocolsPage: React.FC = () => {
   );
 };
 
-export default ProfessionalProtocolsPage;
+export default ProtocolsPage;
+

@@ -12,6 +12,11 @@ import { ActivityTracker } from './services/activityTracker.js';
 import scientistPassportRoutes from './routes/scientistPassport.js';
 import serviceMarketplaceRoutes from './routes/serviceMarketplace.js';
 import negativeResultsRoutes from './routes/negativeResults.js';
+import aiTrainingRoutes from './routes/aiTraining.js';
+import aiProviderKeysRoutes from './routes/aiProviderKeys.js';
+import settingsRoutes from './routes/settings.js';
+import communicationsRoutes from './routes/communications.js';
+import autoIndexing from './utils/autoIndexing.js';
 
 // Note: Exports moved to separate files to avoid circular dependencies
 
@@ -710,6 +715,14 @@ app.post('/api/protocols', authenticateToken, async (req, res) => {
       // Don't fail the main request if activity tracking fails
     }
 
+    // Auto-index for AI learning (non-blocking)
+    autoIndexing.autoIndexContent(
+      req.user.id,
+      'protocol',
+      protocol.id,
+      protocol
+    ).catch(err => console.error('Error auto-indexing protocol:', err));
+
     // Create initial sharing record with the lab
     try {
       await pool.query(`
@@ -1097,6 +1110,14 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
     const entry = result.rows[0];
 
     console.log('📓 Lab notebook entry created:', { entryId: entry.id, title: entry.title, creator: req.user.username });
+
+    // Auto-index for AI learning (non-blocking)
+    autoIndexing.autoIndexContent(
+      req.user.id,
+      'lab_notebook_entry',
+      entry.id,
+      entry
+    ).catch(err => console.error('Error auto-indexing lab notebook:', err));
 
     res.status(201).json({
       message: 'Lab notebook entry created successfully',
@@ -4226,7 +4247,17 @@ app.post('/api/data/results', authenticateToken, async (req, res) => {
       tags || [], privacy_level || 'lab', finalLabId, userId, JSON.stringify(files || []), JSON.stringify(metadata || {})
     ]);
 
-    res.status(201).json(result.rows[0]);
+    const researchData = result.rows[0];
+
+    // Auto-index for AI learning (non-blocking)
+    autoIndexing.autoIndexContent(
+      userId,
+      'research_data',
+      researchData.id,
+      researchData
+    ).catch(err => console.error('Error auto-indexing research data:', err));
+
+    res.status(201).json(researchData);
   } catch (error) {
     console.error('Error creating result:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -4868,12 +4899,21 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
 // Mount the revolutionary feature routes with authentication
 app.use('/api/scientist-passport', authenticateToken, scientistPassportRoutes);
 app.use('/api/services', authenticateToken, serviceMarketplaceRoutes);
-app.use('/api/negative-results', authenticateToken, negativeResultsRoutes);
+// Note: Negative results browse endpoint is public, but authenticated endpoints require auth
+app.use('/api/negative-results', negativeResultsRoutes);
+app.use('/api/ai-training', authenticateToken, aiTrainingRoutes);
+app.use('/api/ai-providers', authenticateToken, aiProviderKeysRoutes);
+app.use('/api/settings', authenticateToken, settingsRoutes);
+app.use('/api/communications', authenticateToken, communicationsRoutes);
 
 console.log('✨ Revolutionary features API routes registered:');
 console.log('   - /api/scientist-passport (Enhanced profiles & skills)');
 console.log('   - /api/services (Service marketplace)');
 console.log('   - /api/negative-results (Failed experiments database)');
+console.log('   - /api/ai-training (Personalized AI training)');
+console.log('   - /api/ai-providers (API key management)');
+console.log('   - /api/settings (User settings & preferences)');
+console.log('   - /api/communications (Unified communications hub)');
 
 // Start server
     app.listen(PORT, () => {

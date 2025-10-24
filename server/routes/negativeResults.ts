@@ -6,14 +6,64 @@
 
 import { Router } from 'express';
 import pool from '../../database/config.js';
+import jwt from 'jsonwebtoken';
+import autoIndexing from '../utils/autoIndexing.js';
 
 const router = Router();
+
+// Authentication middleware
+const authenticateToken = async (req: any, res: any, next: any) => {
+  try {
+    const authHeader = req.headers['authorization'] as string | undefined;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Missing or invalid Authorization header' });
+    }
+    const token = authHeader.split(' ')[1];
+    
+    // Demo token handling for testing
+    if (token === 'demo-token-123') {
+      req.user = {
+        id: '550e8400-e29b-41d4-a716-446655440003',
+        email: 'demo@researchlab.com',
+        username: 'student',
+        first_name: 'Demo',
+        last_name: 'User',
+        role: 'student',
+        status: 'active',
+        lab_id: '650e8400-e29b-41d4-a716-446655440000'
+      };
+      return next();
+    }
+    
+    const payload: any = jwt.verify(token, process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production');
+
+    // Load user from DB
+    const result = await pool.query(
+      'SELECT id, email, username, first_name, last_name, role, status FROM users WHERE id = $1',
+      [payload.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    const user = result.rows[0];
+    if (user.status !== 'active') {
+      return res.status(403).json({ error: 'Account is not active' });
+    }
+
+    req.user = user;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+};
 
 // ==============================================
 // NEGATIVE RESULTS SUBMISSIONS
 // ==============================================
 
-// Browse/search negative results
+// Browse/search negative results - PUBLIC
 router.get('/', async (req, res) => {
   try {
     const {
@@ -29,7 +79,14 @@ router.get('/', async (req, res) => {
         COALESCE(u.first_name || ' ' || u.last_name, 'Anonymous') as researcher_name,
         COALESCE(u.email, '') as current_institution,
         CASE WHEN COALESCE(nr.anonymous_sharing, false) THEN 'Anonymous' ELSE COALESCE(u.first_name || ' ' || u.last_name, 'Anonymous') END as display_name,
-        COALESCE(l.name, '') as lab_name
+        COALESCE(l.name, '') as lab_name,
+        COALESCE(nr.helpful_votes, 0) as helpful_votes,
+        COALESCE(nr.saved_someone_votes, 0) as saved_someone_votes,
+        COALESCE(nr.citation_count, 0) as citation_count,
+        COALESCE(nr.views_count, 0) as views_count,
+        COALESCE(nr.reproduction_attempts, 0) as reproduction_attempts,
+        COALESCE(nr.estimated_cost_usd, 0) as estimated_cost_usd,
+        COALESCE(nr.time_spent_hours, 0) as time_spent_hours
       FROM negative_results nr
       LEFT JOIN users u ON nr.researcher_id = u.id
       LEFT JOIN labs l ON nr.lab_id = l.id
@@ -119,15 +176,28 @@ router.get('/:id', async (req, res) => {
 });
 
 // Get my negative results
-router.get('/my/submissions', async (req: any, res) => {
+router.get('/my/submissions', authenticateToken, async (req: any, res) => {
   try {
     const researcherId = req.user.id;
 
     const result = await pool.query(`
       SELECT 
         nr.*,
-        (SELECT COUNT(*) FROM negative_result_comments WHERE negative_result_id = nr.id) as comments_count
+        (SELECT COUNT(*) FROM negative_result_comments WHERE negative_result_id = nr.id) as comments_count,
+        COALESCE(u.first_name || ' ' || u.last_name, 'Anonymous') as researcher_name,
+        COALESCE(u.email, '') as current_institution,
+        CASE WHEN COALESCE(nr.anonymous_sharing, false) THEN 'Anonymous' ELSE COALESCE(u.first_name || ' ' || u.last_name, 'Anonymous') END as display_name,
+        COALESCE(l.name, '') as lab_name,
+        COALESCE(nr.helpful_votes, 0) as helpful_votes,
+        COALESCE(nr.saved_someone_votes, 0) as saved_someone_votes,
+        COALESCE(nr.citation_count, 0) as citation_count,
+        COALESCE(nr.views_count, 0) as views_count,
+        COALESCE(nr.reproduction_attempts, 0) as reproduction_attempts,
+        COALESCE(nr.estimated_cost_usd, 0) as estimated_cost_usd,
+        COALESCE(nr.time_spent_hours, 0) as time_spent_hours
       FROM negative_results nr
+      LEFT JOIN users u ON nr.researcher_id = u.id
+      LEFT JOIN labs l ON nr.lab_id = l.id
       WHERE nr.researcher_id = $1
       ORDER BY nr.created_at DESC
     `, [researcherId]);
@@ -140,7 +210,7 @@ router.get('/my/submissions', async (req: any, res) => {
 });
 
 // Submit a negative result
-router.post('/', async (req: any, res) => {
+router.post('/', authenticateToken, async (req: any, res) => {
   try {
     const researcherId = req.user.id;
     const {
@@ -187,6 +257,16 @@ router.post('/', async (req: any, res) => {
       experiment_date, tags
     ]);
 
+    const negativeResult = result.rows[0];
+
+    // Auto-index for AI learning (non-blocking)
+    autoIndexing.autoIndexContent(
+      researcherId,
+      'negative_result',
+      negativeResult.id,
+      negativeResult
+    ).catch(err => console.error('Error auto-indexing negative result:', err));
+
     // Update contributor stats
     await updateContributorStats(researcherId);
 
@@ -198,7 +278,7 @@ router.post('/', async (req: any, res) => {
 });
 
 // Update a negative result
-router.put('/:id', async (req: any, res) => {
+router.put('/:id', authenticateToken, async (req: any, res) => {
   try {
     const researcherId = req.user.id;
     const { id } = req.params;
@@ -255,7 +335,7 @@ router.get('/:id/variations', async (req, res) => {
 });
 
 // Add a variation attempt
-router.post('/:id/variations', async (req: any, res) => {
+router.post('/:id/variations', authenticateToken, async (req: any, res) => {
   try {
     const researcherId = req.user.id;
     const { id } = req.params;
@@ -331,7 +411,7 @@ router.get('/:id/comments', async (req, res) => {
 });
 
 // Add a comment
-router.post('/:id/comments', async (req: any, res) => {
+router.post('/:id/comments', authenticateToken, async (req: any, res) => {
   try {
     const commenterId = req.user.id;
     const { id } = req.params;
@@ -361,7 +441,7 @@ router.post('/:id/comments', async (req: any, res) => {
 // ==============================================
 
 // Vote helpful
-router.post('/:id/vote-helpful', async (req: any, res) => {
+router.post('/:id/vote-helpful', authenticateToken, async (req: any, res) => {
   try {
     const { id } = req.params;
 
@@ -384,7 +464,7 @@ router.post('/:id/vote-helpful', async (req: any, res) => {
 });
 
 // Vote "saved me time/money"
-router.post('/:id/vote-saved-me', async (req: any, res) => {
+router.post('/:id/vote-saved-me', authenticateToken, async (req: any, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
@@ -423,7 +503,7 @@ router.post('/:id/vote-saved-me', async (req: any, res) => {
 // ==============================================
 
 // Get my saved negative results
-router.get('/my/saved', async (req: any, res) => {
+router.get('/my/saved', authenticateToken, async (req: any, res) => {
   try {
     const userId = req.user.id;
 
@@ -449,7 +529,7 @@ router.get('/my/saved', async (req: any, res) => {
 });
 
 // Save/bookmark a negative result
-router.post('/:id/save', async (req: any, res) => {
+router.post('/:id/save', authenticateToken, async (req: any, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
@@ -473,7 +553,7 @@ router.post('/:id/save', async (req: any, res) => {
 });
 
 // Unsave a negative result
-router.delete('/:id/save', async (req: any, res) => {
+router.delete('/:id/save', authenticateToken, async (req: any, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
@@ -495,7 +575,7 @@ router.delete('/:id/save', async (req: any, res) => {
 // ==============================================
 
 // Cite a negative result
-router.post('/:id/cite', async (req: any, res) => {
+router.post('/:id/cite', authenticateToken, async (req: any, res) => {
   try {
     const citingUserId = req.user.id;
     const { id } = req.params;
@@ -575,7 +655,7 @@ router.get('/:id/alternatives', async (req, res) => {
 });
 
 // Submit a successful alternative
-router.post('/:id/alternatives', async (req: any, res) => {
+router.post('/:id/alternatives', authenticateToken, async (req: any, res) => {
   try {
     const researcherId = req.user.id;
     const { id } = req.params;

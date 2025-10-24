@@ -39,37 +39,40 @@ interface SideNavProps {
 
 const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
   const { user, isAuthenticated } = useAuth();
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [showUserProfile, setShowUserProfile] = useState(false);
 
   // Get user permissions
   const userPermissions = user ? getRolePermissions(user.role) : null;
 
-  const toggleSection = (sectionTitle: string) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(sectionTitle)) {
-      newExpanded.delete(sectionTitle);
-    } else {
-      newExpanded.add(sectionTitle);
-    }
-    setExpandedSections(newExpanded);
-  };
+  interface NavItem {
+    name: string;
+    to: string;
+    icon: any;
+    description: string;
+    color: string;
+    bgColor: string;
+    textColor: string;
+    iconColor: string;
+    iconBg: string;
+    iconSvg: React.ReactNode;
+  }
 
-  const getNavItems = () => {
+  const getNavItems = (): NavItem[] => {
     return [
       { 
-        name: 'Lab Management', 
-        to: '/lab-management', 
-        icon: BuildingOfficeIcon, 
-        description: 'Manage lab resources and operations',
-        color: 'from-orange-500 to-orange-600',
-        bgColor: 'bg-orange-50',
-        textColor: 'text-orange-700',
-        iconColor: 'text-orange-600',
-        iconBg: 'bg-orange-100',
+        name: 'Dashboard', 
+        to: '/dashboard', 
+        icon: PresentationChartLineIcon, 
+        description: 'Overview of your research activities',
+        color: 'from-indigo-500 to-purple-600',
+        bgColor: 'bg-indigo-50',
+        textColor: 'text-indigo-700',
+        iconColor: 'text-indigo-600',
+        iconBg: 'bg-indigo-100',
         iconSvg: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13l4-4 4 4 5-5 5 5v7H3v-7z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h18v3H3V3z" />
           </svg>
         )
       },
@@ -122,7 +125,23 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
         )
       },
       { 
-        name: 'Research Tools', 
+        name: 'Research Assistant', 
+        to: '/research-assistant', 
+        icon: LightbulbIcon, 
+        description: 'AI-powered research help, literature search, and paper library',
+        color: 'from-yellow-500 to-yellow-600',
+        bgColor: 'bg-yellow-50',
+        textColor: 'text-yellow-700',
+        iconColor: 'text-yellow-600',
+        iconBg: 'bg-yellow-100',
+        iconSvg: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+          </svg>
+        )
+      },
+      { 
+        name: 'Smart Tools', 
         to: '/research-tools', 
         icon: CalculatorIcon, 
         description: 'Scientific calculators and unit conversion',
@@ -138,91 +157,26 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
         )
       },
       { 
-        name: 'Research Assistant', 
-        to: '/research-assistant', 
-        icon: LightbulbIcon, 
-        description: 'AI-powered research help and literature search',
-        color: 'from-yellow-500 to-yellow-600',
-        bgColor: 'bg-yellow-50',
-        textColor: 'text-yellow-700',
-        iconColor: 'text-yellow-600',
-        iconBg: 'bg-yellow-100',
-        iconSvg: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-          </svg>
-        )
-      },
-      { 
-        name: 'Supplier Marketplace', 
-        to: '/supplier-marketplace', 
-        icon: PackageIcon, 
-        description: 'Find research suppliers and materials',
-        color: 'from-purple-500 to-purple-600',
-        bgColor: 'bg-purple-50',
-        textColor: 'text-purple-700',
-        iconColor: 'text-purple-600',
-        iconBg: 'bg-purple-100',
-        iconSvg: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-          </svg>
-        )
-      },
-      { 
-        name: 'Service Marketplace', 
-        to: '/service-marketplace', 
-        icon: BriefcaseIcon, 
-        description: 'Offer your expertise or find professional services',
-        color: 'from-emerald-500 to-emerald-600',
-        bgColor: 'bg-emerald-50',
-        textColor: 'text-emerald-700',
-        iconColor: 'text-emerald-600',
-        iconBg: 'bg-emerald-100',
-        iconSvg: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z" />
-          </svg>
-        )
-      },
-      { 
-        name: 'Negative Results', 
-        to: '/negative-results', 
-        icon: FireIcon, 
-        description: '🚀 Revolutionary: Share failed experiments & build transparency reputation',
-        color: 'from-orange-500 to-red-600',
+        name: 'Lab Management', 
+        to: '/lab-management', 
+        icon: BuildingOfficeIcon, 
+        description: 'Manage lab resources and operations',
+        color: 'from-orange-500 to-orange-600',
         bgColor: 'bg-orange-50',
         textColor: 'text-orange-700',
         iconColor: 'text-orange-600',
         iconBg: 'bg-orange-100',
         iconSvg: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
           </svg>
         )
       },
       { 
-        name: 'Paper Library', 
-        to: '/paper-library', 
-        icon: BookOpenIcon, 
-        description: 'Auto-fetch papers by DOI/ORCID · Save full paper or AI summary',
-        color: 'from-indigo-500 to-indigo-600',
-        bgColor: 'bg-indigo-50',
-        textColor: 'text-indigo-700',
-        iconColor: 'text-indigo-600',
-        iconBg: 'bg-indigo-100',
-        iconSvg: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-          </svg>
-        )
-      },
-      { 
-        name: 'Scientist Passport', 
-        to: '/scientist-passport', 
-        icon: ShieldCheckIcon, 
-        description: '🏆 Gamified scientific reputation based on contributions, skills & impact',
+        name: 'Profile', 
+        to: '/profile', 
+        icon: UserIcon, 
+        description: 'Manage your academic profile and publications',
         color: 'from-teal-500 to-teal-600',
         bgColor: 'bg-teal-50',
         textColor: 'text-teal-700',
@@ -230,7 +184,7 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
         iconBg: 'bg-teal-100',
         iconSvg: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
         )
       },
@@ -285,41 +239,46 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
 
       {/* Enhanced Navigation Items */}
       <nav className="flex-1 p-2 overflow-y-auto">
-              <div className="space-y-1">
-          {navItems.map((item, itemIndex) => (
+        <div className="space-y-1">
+          {navItems.map((item, itemIndex) => {
+            return (
+              <div key={itemIndex}>
+                <div className="flex items-center">
                   <NavLink
-                    key={itemIndex}
                     to={item.to}
                     onClick={onMobileLinkClick}
                     className={({ isActive }) =>
-                `group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-md ${
+                      `group flex-1 flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-md ${
                         isActive
-                    ? `${item.bgColor} ${item.textColor} border border-gray-200 shadow-lg scale-105`
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                          ? `${item.bgColor} ${item.textColor} border border-gray-200 shadow-lg scale-105`
+                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                       }`
                     }
                     title={item.description}
-              style={{
-                animationDelay: `${itemIndex * 50}ms`,
-                animation: 'fadeInUp 0.6s ease-out forwards'
-              }}
-            >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 transition-all duration-300 ease-in-out ${
-                item.iconBg || 'bg-gray-100'
-              } group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-lg`}>
-                {item.iconSvg || <item.icon className={`w-4 h-4 transition-all duration-300 ${
-                  item.iconColor || 'text-gray-600'
-                } group-hover:scale-110`} />}
-              </div>
-              <span className="text-sm font-medium leading-tight transition-all duration-300 group-hover:translate-x-1">
-                {item.name}
+                    style={{
+                      animationDelay: `${itemIndex * 50}ms`,
+                      animation: 'fadeInUp 0.6s ease-out forwards'
+                    }}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 transition-all duration-300 ease-in-out ${
+                      item.iconBg || 'bg-gray-100'
+                    } group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-lg`}>
+                      {item.iconSvg || <item.icon className={`w-4 h-4 transition-all duration-300 ${
+                        item.iconColor || 'text-gray-600'
+                      } group-hover:scale-110`} />}
+                    </div>
+                    <span className="text-sm font-medium leading-tight transition-all duration-300 group-hover:translate-x-1">
+                      {item.name}
                     </span>
-              <div className={`ml-auto w-2 h-2 rounded-full transition-all duration-300 ${
-                item.iconColor ? item.iconColor.replace('text-', 'bg-') : 'bg-gray-300'
-              } group-hover:scale-125 group-hover:opacity-80`}></div>
-                      </NavLink>
-                    ))}
-                  </div>
+                    <div className={`ml-auto w-2 h-2 rounded-full transition-all duration-300 ${
+                      item.iconColor ? item.iconColor.replace('text-', 'bg-') : 'bg-gray-300'
+                    } group-hover:scale-125 group-hover:opacity-80`}></div>
+                  </NavLink>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </nav>
 
       {/* Modern Bottom Section */}
