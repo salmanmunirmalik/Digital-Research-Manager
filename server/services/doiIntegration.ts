@@ -393,7 +393,8 @@ export class PaperFetchingService {
     }
 
     // If no specific format detected, try search across all
-    return this.searchAcrossAll(identifier);
+    const papers = await this.searchAcrossAll(identifier);
+    return papers.length > 0 ? papers[0] : null;
   }
 
   /**
