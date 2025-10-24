@@ -5,7 +5,7 @@
 
 import express from 'express';
 import { Pool } from 'pg';
-import authenticateToken from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth.js';
 import bcrypt from 'bcrypt';
 
 const router = express.Router();

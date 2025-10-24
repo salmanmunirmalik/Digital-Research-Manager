@@ -545,6 +545,15 @@ export class ScientificDatabaseService {
     this.lens = new LensService();
   }
 
+  // Public getters for accessing private services
+  getMaterialsProject(): MaterialsProjectService {
+    return this.materialsProject;
+  }
+
+  getLens(): LensService {
+    return this.lens;
+  }
+
   /**
    * Comprehensive search across all databases
    */

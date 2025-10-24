@@ -23,7 +23,7 @@ router.post('/materials/search-formula', async (req, res) => {
     }
 
     console.log(`🔬 Searching materials by formula: ${formula}`);
-    const materials = await scientificDatabaseService.materialsProject.searchByFormula(formula);
+    const materials = await scientificDatabaseService.getMaterialsProject().searchByFormula(formula);
     
     res.json({ count: materials.length, materials });
   } catch (error: any) {
@@ -42,7 +42,7 @@ router.post('/materials/search-elements', async (req, res) => {
     }
 
     console.log(`🔬 Searching materials by elements: ${elements.join(', ')}`);
-    const materials = await scientificDatabaseService.materialsProject.searchByElements(elements, isStable);
+    const materials = await scientificDatabaseService.getMaterialsProject().searchByElements(elements, isStable);
     
     res.json({ count: materials.length, materials });
   } catch (error: any) {
@@ -61,7 +61,7 @@ router.post('/materials/search-bandgap', async (req, res) => {
     }
 
     console.log(`🔬 Searching materials with band gap: ${minGap}-${maxGap} eV`);
-    const materials = await scientificDatabaseService.materialsProject.searchByBandGap(minGap, maxGap);
+    const materials = await scientificDatabaseService.getMaterialsProject().searchByBandGap(minGap, maxGap);
     
     res.json({ count: materials.length, materials });
   } catch (error: any) {
@@ -76,7 +76,7 @@ router.get('/materials/:materialId', async (req, res) => {
     const { materialId } = req.params;
     
     console.log(`🔬 Fetching material: ${materialId}`);
-    const material = await scientificDatabaseService.materialsProject.getMaterialById(materialId);
+    const material = await scientificDatabaseService.getMaterialsProject().getMaterialById(materialId);
     
     if (!material) {
       return res.status(404).json({ error: 'Material not found' });
@@ -103,7 +103,7 @@ router.post('/lens/search-papers', async (req, res) => {
     }
 
     console.log(`📖 Searching Lens.org scholarly works: ${query}`);
-    const papers = await scientificDatabaseService.lens.searchScholarship(query, limit);
+    const papers = await scientificDatabaseService.getLens().searchScholarship(query, limit);
     
     res.json({ count: papers.length, papers });
   } catch (error: any) {
@@ -122,7 +122,7 @@ router.post('/lens/search-patents', async (req, res) => {
     }
 
     console.log(`📜 Searching Lens.org patents: ${query}`);
-    const patents = await scientificDatabaseService.lens.searchPatents(query, limit);
+    const patents = await scientificDatabaseService.getLens().searchPatents(query, limit);
     
     res.json({ count: patents.length, patents });
   } catch (error: any) {
@@ -141,7 +141,7 @@ router.post('/lens/track-citations', async (req, res) => {
     }
 
     console.log(`📊 Tracking citations for DOI: ${doi}`);
-    const citations = await scientificDatabaseService.lens.trackCitations(doi);
+    const citations = await scientificDatabaseService.getLens().trackCitations(doi);
     
     res.json(citations);
   } catch (error: any) {
@@ -160,7 +160,7 @@ router.post('/lens/identify-trends', async (req, res) => {
     }
 
     console.log(`📈 Identifying trends in: ${domain} (last ${years} years)`);
-    const trends = await scientificDatabaseService.lens.identifyTrends(domain, years);
+    const trends = await scientificDatabaseService.getLens().identifyTrends(domain, years);
     
     res.json(trends);
   } catch (error: any) {

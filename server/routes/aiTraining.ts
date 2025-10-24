@@ -5,9 +5,9 @@
 
 import express from 'express';
 import { Pool } from 'pg';
-import authenticateToken from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth.js';
 import axios from 'axios';
-import { getUserApiKey, getUserDefaultProvider } from './aiProviderKeys';
+import { getUserApiKey, getUserDefaultProvider } from './aiProviderKeys.js';
 
 const router = express.Router();
 
@@ -36,10 +36,12 @@ async function generateEmbedding(text: string, userId?: string): Promise<number[
     let apiKey = process.env.OPENAI_API_KEY;
     let endpoint = 'https://api.openai.com/v1/embeddings';
     let model = 'text-embedding-3-small';
+    let defaultProvider = 'openai';
+    let userApiKey: string | null = null;
     
     if (userId) {
-      const defaultProvider = await getUserDefaultProvider(userId, 'embedding');
-      const userApiKey = await getUserApiKey(userId, defaultProvider);
+      defaultProvider = await getUserDefaultProvider(userId, 'embedding');
+      userApiKey = await getUserApiKey(userId, defaultProvider);
       
       if (userApiKey) {
         apiKey = userApiKey;
