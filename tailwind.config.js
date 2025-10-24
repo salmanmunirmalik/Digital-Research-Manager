@@ -20,6 +20,10 @@ export default {
           800: '#1e40af',
           900: '#1e3a8a',
         },
+        'dark-grey': '#1f2937',
+        'yellow-400': '#facc15',
+        'yellow-500': '#eab308',
+        'yellow-600': '#ca8a04',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

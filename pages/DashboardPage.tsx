@@ -428,14 +428,14 @@ const DashboardPage: React.FC = () => {
               </button>
 
               <button
-                onClick={() => navigate('/profile')}
+                onClick={() => navigate('/journal')}
                 className="bg-white rounded-lg shadow-sm p-6 border border-gray-100 hover:shadow-md transition-all text-left group"
               >
-                <div className="p-3 bg-indigo-100 rounded-lg mb-4 inline-block group-hover:scale-110 transition-transform">
-                  <UserIcon className="w-6 h-6 text-indigo-600" />
+                <div className="p-3 bg-purple-100 rounded-lg mb-4 inline-block group-hover:scale-110 transition-transform">
+                  <BookOpenIcon className="w-6 h-6 text-purple-600" />
                 </div>
-                <h3 className="text-sm font-medium text-gray-900 mb-1">My Profile</h3>
-                <p className="text-xs text-gray-600">Academic profile and publications</p>
+                <h3 className="text-sm font-medium text-gray-900 mb-1">Journal</h3>
+                <p className="text-xs text-gray-600">Science For All Journal - Open access</p>
               </button>
             </div>
 

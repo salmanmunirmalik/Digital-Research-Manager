@@ -73,7 +73,7 @@ interface ResearcherProfile {
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'publications' | 'research' | 'awards' | 'social'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'publications' | 'research' | 'social'>('overview');
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<ResearcherProfile | null>(null);
   const [publications, setPublications] = useState<Publication[]>([]);
@@ -91,10 +91,6 @@ const ProfilePage: React.FC = () => {
 
   const [researchInterests, setResearchInterests] = useState<string[]>([]);
   const [newInterest, setNewInterest] = useState('');
-  const [awards, setAwards] = useState<string[]>([]);
-  const [newAward, setNewAward] = useState('');
-  const [grants, setGrants] = useState<string[]>([]);
-  const [newGrant, setNewGrant] = useState('');
   const [socialLinks, setSocialLinks] = useState({
     orcid_id: '',
     google_scholar_id: '',
@@ -247,28 +243,6 @@ const ProfilePage: React.FC = () => {
     setResearchInterests(researchInterests.filter((_, i) => i !== index));
   };
 
-  const addAward = () => {
-    if (newAward.trim()) {
-      setAwards([...awards, newAward.trim()]);
-      setNewAward('');
-    }
-  };
-
-  const removeAward = (index: number) => {
-    setAwards(awards.filter((_, i) => i !== index));
-  };
-
-  const addGrant = () => {
-    if (newGrant.trim()) {
-      setGrants([...grants, newGrant.trim()]);
-      setNewGrant('');
-    }
-  };
-
-  const removeGrant = (index: number) => {
-    setGrants(grants.filter((_, i) => i !== index));
-  };
-
   if (loading && !profile) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -278,28 +252,28 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Professional Header Banner */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
-          <div className="bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 px-8 py-12">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-8">
+          <div className="bg-gradient-to-br from-gray-50 via-white to-blue-50/30 px-8 py-12 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-6">
                 <div className="relative">
-                  <div className="w-28 h-28 bg-white rounded-full flex items-center justify-center shadow-xl ring-4 ring-white/20">
-                    <CpuChipIcon className="w-14 h-14 text-indigo-700" />
+                  <div className="w-28 h-28 bg-gradient-to-br from-gray-800 to-gray-700 rounded-full flex items-center justify-center shadow-xl ring-4 ring-gray-100">
+                    <CpuChipIcon className="w-14 h-14 text-yellow-400" />
                   </div>
-                  <div className="absolute bottom-0 right-0 w-8 h-8 bg-green-500 rounded-full border-4 border-white shadow-lg flex items-center justify-center">
+                  <div className="absolute bottom-0 right-0 w-8 h-8 bg-yellow-500 rounded-full border-4 border-white shadow-lg flex items-center justify-center">
                     <SparklesIcon className="w-4 h-4 text-white" />
                   </div>
                 </div>
                 <div>
                   <div className="flex items-center space-x-2 mb-2">
-                    <h1 className="text-4xl font-bold text-white">{user?.first_name} {user?.last_name}</h1>
-                    <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full backdrop-blur-sm">AI Training Active</span>
+                    <h1 className="text-4xl font-bold text-gray-900">{user?.first_name} {user?.last_name}</h1>
+                    <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full border border-yellow-300">AI Training Active</span>
                   </div>
-                  <p className="text-gray-300 text-lg mb-3">{profile?.position || 'Researcher'}</p>
-                  <div className="flex items-center space-x-6 text-sm text-gray-300">
+                  <p className="text-gray-600 text-lg mb-3">{profile?.position || 'Researcher'}</p>
+                  <div className="flex items-center space-x-6 text-sm text-gray-600">
                     {profile?.institution && (
                       <span className="flex items-center">
                         <BuildingOfficeIcon className="w-4 h-4 mr-2" />
@@ -318,7 +292,7 @@ const ProfilePage: React.FC = () => {
               <div className="flex items-center space-x-3">
                 <button
                   onClick={() => setEditing(!editing)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all backdrop-blur-sm border border-white/20"
+                  className="flex items-center space-x-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-all shadow-sm"
                 >
                   <PencilIcon className="w-5 h-5" />
                   <span>{editing ? 'Cancel' : 'Edit Profile'}</span>
@@ -363,54 +337,13 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
-                <BookOpenIcon className="w-6 h-6 text-blue-600" />
-              </div>
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Publications</span>
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{profile?.total_publications || 0}</p>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center">
-                <StarIcon className="w-6 h-6 text-emerald-600" />
-              </div>
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Citations</span>
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{profile?.total_citations || 0}</p>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
-                <TrophyIcon className="w-6 h-6 text-purple-600" />
-              </div>
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">H-Index</span>
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{profile?.h_index || 0}</p>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
-                <CalendarIcon className="w-6 h-6 text-orange-600" />
-              </div>
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Experience</span>
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{profile?.years_of_experience || 0} <span className="text-lg text-gray-500">yrs</span></p>
-          </div>
-        </div>
-
         {/* Navigation Tabs */}
-        <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-1">
+        <div className="mb-6 bg-white rounded-xl shadow-md border border-gray-200 p-1 bg-gradient-to-br from-gray-50/50 to-white">
           <div className="flex space-x-1">
             {[
               { id: 'overview', label: 'Overview', icon: UserIcon, description: 'Basic info for AI context' },
               { id: 'publications', label: 'Publications', icon: BookOpenIcon, description: 'Train AI with your work' },
               { id: 'research', label: 'Research Interests', icon: LightBulbIcon, description: 'Define your domain' },
-              { id: 'awards', label: 'Awards & Grants', icon: TrophyIcon, description: 'Showcase achievements' },
               { id: 'social', label: 'Social Links', icon: LinkIcon, description: 'Connect your profiles' }
             ].map((tab) => (
               <button
@@ -418,7 +351,7 @@ const ProfilePage: React.FC = () => {
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`flex-1 flex flex-col items-center justify-center space-y-1 py-3 px-4 rounded-lg transition-all ${
                   activeTab === tab.id
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                    ? 'bg-gray-800 text-white shadow-lg'
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
@@ -526,22 +459,6 @@ const ProfilePage: React.FC = () => {
                   />
                 </div>
 
-                {/* Mentorship Style */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-4">Mentorship Style</h2>
-                  <textarea
-                    value={profile?.mentorship_style || ''}
-                    onChange={(e) => setProfile({ ...profile!, mentorship_style: e.target.value })}
-                    disabled={!editing}
-                    className={`w-full px-4 py-3 rounded-lg border transition-all ${
-                      editing 
-                        ? 'border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white' 
-                        : 'border-transparent bg-gray-50'
-                    }`}
-                    rows={4}
-                    placeholder="Describe your mentorship approach..."
-                  />
-                </div>
               </div>
 
               {/* Right Column */}
@@ -576,7 +493,7 @@ const ProfilePage: React.FC = () => {
                 <div className="flex space-x-3">
                   <button
                     onClick={() => setShowAddPublicationModal(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg"
+                    className="flex items-center space-x-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all shadow-lg"
                   >
                     <PlusIcon className="w-5 h-5" />
                     <span>Add Publication</span>
@@ -662,87 +579,6 @@ const ProfilePage: React.FC = () => {
                     </button>
                   </div>
                 ))}
-              </div>
-            </div>
-          )}
-
-          {/* Awards & Grants Tab */}
-          {activeTab === 'awards' && (
-            <div className="space-y-6">
-              {/* Awards */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Awards</h2>
-                
-                <div className="mb-6">
-                  <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      value={newAward}
-                      onChange={(e) => setNewAward(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && addAward()}
-                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                      placeholder="Add award"
-                    />
-                    <button
-                      onClick={addAward}
-                      className="px-6 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all"
-                    >
-                      Add
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {awards.map((award, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <span className="text-gray-700">{award}</span>
-                      <button
-                        onClick={() => removeAward(index)}
-                        className="text-gray-600 hover:text-red-600 transition-colors"
-                      >
-                        <TrashIcon className="w-5 h-5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Grants */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Grants</h2>
-                
-                <div className="mb-6">
-                  <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      value={newGrant}
-                      onChange={(e) => setNewGrant(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && addGrant()}
-                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                      placeholder="Add grant"
-                    />
-                    <button
-                      onClick={addGrant}
-                      className="px-6 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all"
-                    >
-                      Add
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {grants.map((grant, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <span className="text-gray-700">{grant}</span>
-                      <button
-                        onClick={() => removeGrant(index)}
-                        className="text-gray-600 hover:text-red-600 transition-colors"
-                      >
-                        <TrashIcon className="w-5 h-5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           )}

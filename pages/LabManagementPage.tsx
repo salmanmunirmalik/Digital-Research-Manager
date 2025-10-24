@@ -265,7 +265,7 @@ interface InstrumentAlert {
 
 const LabManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [teamView, setTeamView] = useState<'table' | 'tree'>('table');
+  const [teamView, setTeamView] = useState<'table' | 'tree'>('tree');
   
   // Modal states
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -3198,7 +3198,6 @@ const LabManagementPage: React.FC = () => {
         <nav className="-mb-px flex space-x-8">
           {[
             { id: 'overview', name: 'Overview', icon: ChartBarIcon },
-            { id: 'members', name: 'Team Members', icon: UsersIcon },
             { id: 'projects', name: 'Projects', icon: BuildingOfficeIcon },
             { id: 'protocols', name: 'Protocols', icon: ClipboardPasteIcon },
             { id: 'inventory', name: 'Inventory', icon: PackageIcon },
@@ -3223,7 +3222,7 @@ const LabManagementPage: React.FC = () => {
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Stats Overview */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -3311,483 +3310,358 @@ const LabManagementPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <button 
-                onClick={() => setShowMeetingModal(true)}
-                className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg hover:from-blue-100 hover:to-indigo-100 transition-all text-left"
-              >
+          {/* Team Members Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Team Members</h2>
+                  <p className="text-gray-600">Manage your research team and their roles</p>
+                </div>
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <UsersIcon className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-blue-900">Schedule Team Meeting</p>
-                    <p className="text-sm text-blue-700">Coordinate with team members</p>
+                  {/* View Toggle */}
+                  <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setTeamView('tree')}
+                      className={`px-3 py-1.5 text-sm rounded ${teamView === 'tree' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'}`}
+                      title="Tree View"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setTeamView('table')}
+                      className={`px-3 py-1.5 text-sm rounded ${teamView === 'table' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'}`}
+                      title="Table View"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
-              </button>
-              
-              <button 
-                onClick={() => setShowIssueModal(true)}
-                className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg hover:from-green-100 hover:to-emerald-100 transition-all text-left"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <BeakerIcon className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-green-900">Report Experiment Issue</p>
-                    <p className="text-sm text-green-700">Get help from the team</p>
-                  </div>
-                </div>
-              </button>
-              
-              <button 
-                onClick={() => setShowAchievementModal(true)}
-                className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg hover:from-purple-100 hover:to-indigo-100 transition-all text-left"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <ChartBarIcon className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-purple-900">Share Achievement</p>
-                    <p className="text-sm text-purple-700">Celebrate team success</p>
-                  </div>
-                </div>
-              </button>
-
-              <button 
-                onClick={() => setShowProtocolModal(true)}
-                className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg hover:from-blue-100 hover:to-cyan-100 transition-all text-left"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <ClipboardPasteIcon className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-blue-900">Create Protocol</p>
-                    <p className="text-sm text-blue-700">Document new procedures</p>
-                  </div>
-                </div>
-              </button>
-
-              <button 
-                onClick={() => setActiveTab('inventory')}
-                className="p-4 bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-lg hover:from-green-100 hover:to-teal-100 transition-all text-left"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <PackageIcon className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-green-900">Check Inventory</p>
-                    <p className="text-sm text-green-700">Review stock levels</p>
-                  </div>
-                </div>
-              </button>
-
-              <button 
-                onClick={() => setActiveTab('instruments')}
-                className="p-4 bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 rounded-lg hover:from-pink-100 hover:to-rose-100 transition-all text-left"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center">
-                    <FlaskConicalIcon className="w-5 h-5 text-pink-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-pink-900">Schedule Maintenance</p>
-                    <p className="text-sm text-pink-700">Book instrument service</p>
-                  </div>
-                </div>
-              </button>
+              </div>
             </div>
+
+            {/* Phylogenetic Tree View */}
+            {teamView === 'tree' && (
+              <div className="p-8 bg-gradient-to-br from-gray-50 to-white">
+                {/* Tree Structure */}
+                <div className="max-w-7xl mx-auto">
+                  {/* PI (Root) */}
+                  <div className="flex justify-center mb-12">
+                    <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 shadow-2xl border-2 border-gray-600 hover:border-gray-500 transition-all transform hover:scale-105 max-w-xs">
+                      <div className="flex flex-col items-center space-y-4">
+                        <div className="w-20 h-20 bg-gradient-to-br from-gray-700 to-gray-900 rounded-full flex items-center justify-center shadow-lg ring-4 ring-gray-700/50">
+                          <span className="text-white font-bold text-2xl">SC</span>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-bold text-white text-lg">Dr. Sarah Chen</div>
+                          <div className="text-sm text-gray-300 mt-1">Principal Investigator</div>
+                        </div>
+                        <div className="w-10 h-10 rounded-full bg-purple-500 shadow-lg flex items-center justify-center">
+                          <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Level 1: PostDocs / Senior Researchers */}
+                  <div className="mb-12">
+                    <div className="grid grid-cols-3 gap-8 max-w-5xl mx-auto px-4">
+                      {/* PostDoc 1 */}
+                      <div className="group">
+                        <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-blue-200 hover:border-blue-400 hover:shadow-xl transition-all transform hover:scale-105">
+                          <div className="flex flex-col items-center space-y-3">
+                            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg ring-4 ring-blue-100">
+                              <span className="text-white font-bold text-lg">MB</span>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-bold text-gray-900 text-base">Dr. Michael Brown</div>
+                              <div className="text-xs text-gray-600 mt-1">PostDoc</div>
+                            </div>
+                            <div className="w-8 h-8 rounded-full bg-blue-500 shadow-md flex items-center justify-center">
+                              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                                <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* PostDoc 2 */}
+                      <div className="group">
+                        <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-green-200 hover:border-green-400 hover:shadow-xl transition-all transform hover:scale-105">
+                          <div className="flex flex-col items-center space-y-3">
+                            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg ring-4 ring-green-100">
+                              <span className="text-white font-bold text-lg">ED</span>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-bold text-gray-900 text-base">Dr. Emily Davis</div>
+                              <div className="text-xs text-gray-600 mt-1">PostDoc</div>
+                            </div>
+                            <div className="w-8 h-8 rounded-full bg-green-500 shadow-md flex items-center justify-center">
+                              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                                <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Visiting Researcher */}
+                      <div className="group">
+                        <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-orange-200 hover:border-orange-400 hover:shadow-xl transition-all transform hover:scale-105">
+                          <div className="flex flex-col items-center space-y-3">
+                            <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg ring-4 ring-orange-100">
+                              <span className="text-white font-bold text-lg">RP</span>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-bold text-gray-900 text-base">Dr. Raj Patel</div>
+                              <div className="text-xs text-gray-600 mt-1">Visiting</div>
+                            </div>
+                            <div className="w-8 h-8 rounded-full bg-orange-500 shadow-md flex items-center justify-center">
+                              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Level 2: PhD Students */}
+                  <div className="mb-12">
+                    <div className="grid grid-cols-4 gap-6 max-w-6xl mx-auto px-4">
+                      {/* PhD under PostDoc 1 */}
+                      <div className="group">
+                        <div className="bg-white rounded-xl p-4 shadow-md border-2 border-indigo-200 hover:border-indigo-400 hover:shadow-lg transition-all transform hover:scale-105">
+                          <div className="flex flex-col items-center space-y-2">
+                            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md ring-2 ring-indigo-100">
+                              <span className="text-white font-bold text-sm">AW</span>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-semibold text-gray-900 text-xs">Alice Wang</div>
+                              <div className="text-xs text-gray-600">PhD</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="group">
+                        <div className="bg-white rounded-xl p-4 shadow-md border-2 border-indigo-200 hover:border-indigo-400 hover:shadow-lg transition-all transform hover:scale-105">
+                          <div className="flex flex-col items-center space-y-2">
+                            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md ring-2 ring-indigo-100">
+                              <span className="text-white font-bold text-sm">BL</span>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-semibold text-gray-900 text-xs">Bob Lee</div>
+                              <div className="text-xs text-gray-600">PhD</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* PhD under PostDoc 2 */}
+                      <div className="group">
+                        <div className="bg-white rounded-xl p-4 shadow-md border-2 border-teal-200 hover:border-teal-400 hover:shadow-lg transition-all transform hover:scale-105">
+                          <div className="flex flex-col items-center space-y-2">
+                            <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center shadow-md ring-2 ring-teal-100">
+                              <span className="text-white font-bold text-sm">CK</span>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-semibold text-gray-900 text-xs">Charlie Kim</div>
+                              <div className="text-xs text-gray-600">PhD</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="group">
+                        <div className="bg-white rounded-xl p-4 shadow-md border-2 border-teal-200 hover:border-teal-400 hover:shadow-lg transition-all transform hover:scale-105">
+                          <div className="flex flex-col items-center space-y-2">
+                            <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center shadow-md ring-2 ring-teal-100">
+                              <span className="text-white font-bold text-sm">DM</span>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-semibold text-gray-900 text-xs">Diana Martinez</div>
+                              <div className="text-xs text-gray-600">PhD</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Level 3: Masters & Research Assistants */}
+                  <div>
+                    <div className="grid grid-cols-3 gap-6 max-w-4xl mx-auto px-4">
+                      <div className="group">
+                        <div className="bg-white rounded-xl p-4 shadow-md border-2 border-pink-200 hover:border-pink-400 hover:shadow-lg transition-all transform hover:scale-105">
+                          <div className="flex flex-col items-center space-y-2">
+                            <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-pink-600 rounded-full flex items-center justify-center shadow-md ring-2 ring-pink-100">
+                              <span className="text-white font-bold text-sm">EC</span>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-semibold text-gray-900 text-xs">Eva Chen</div>
+                              <div className="text-xs text-gray-600">Masters</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="group">
+                        <div className="bg-white rounded-xl p-4 shadow-md border-2 border-cyan-200 hover:border-cyan-400 hover:shadow-lg transition-all transform hover:scale-105">
+                          <div className="flex flex-col items-center space-y-2">
+                            <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-full flex items-center justify-center shadow-md ring-2 ring-cyan-100">
+                              <span className="text-white font-bold text-sm">FL</span>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-semibold text-gray-900 text-xs">Frank Liu</div>
+                              <div className="text-xs text-gray-600">Masters</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="group">
+                        <div className="bg-white rounded-xl p-4 shadow-md border-2 border-amber-200 hover:border-amber-400 hover:shadow-lg transition-all transform hover:scale-105">
+                          <div className="flex flex-col items-center space-y-2">
+                            <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center shadow-md ring-2 ring-amber-100">
+                              <span className="text-white font-bold text-sm">GP</span>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-semibold text-gray-900 text-xs">Grace Park</div>
+                              <div className="text-xs text-gray-600">Research Asst</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Legend */}
+                  <div className="mt-20 bg-white rounded-2xl p-8 shadow-lg border-2 border-gray-200">
+                    <h4 className="text-base font-bold text-gray-900 mb-6 flex items-center justify-center">
+                      <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Team Structure Legend
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-gray-800 to-gray-900 rounded-full shadow-md flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <span className="text-sm text-gray-700 font-medium">PI / Lab Director</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full shadow-md flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                          </svg>
+                        </div>
+                        <span className="text-sm text-gray-700 font-medium">PostDocs</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-full shadow-md flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                          </svg>
+                        </div>
+                        <span className="text-sm text-gray-700 font-medium">PhD Students</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-full shadow-md flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                          </svg>
+                        </div>
+                        <span className="text-sm text-gray-700 font-medium">Masters / RA</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Table View */}
+            {teamView === 'table' && (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {mockMembers.map((member) => (
+                      <tr key={member.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
+                              <span className="text-white font-medium text-sm">
+                                {member.name.split(' ').map(n => n[0]).join('')}
+                              </span>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">{member.name}</div>
+                              <div className="text-sm text-gray-500">{member.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(member.role)}`}>
+                            {member.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(member.status)}`}>
+                            {member.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(member.joinedDate).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleEditItem(member)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Edit member"
+                            >
+                              <PencilIcon className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteItem(member.id, 'member')}
+                              className="text-red-600 hover:text-red-900"
+                              title="Delete member"
+                            >
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
-
-      {activeTab === 'members' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-            <h2 className="text-lg font-semibold text-gray-900">Team Members</h2>
-            <p className="text-gray-600">Manage your research team and their roles</p>
-              </div>
-              <div className="flex items-center space-x-3">
-                {/* View Toggle */}
-                <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-                  <button
-                    onClick={() => setTeamView('table')}
-                    className={`px-3 py-1.5 text-sm rounded ${teamView === 'table' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'}`}
-                    title="Table View"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => setTeamView('tree')}
-                    className={`px-3 py-1.5 text-sm rounded ${teamView === 'tree' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'}`}
-                    title="Phylogenetic Tree View"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                    </svg>
-                  </button>
-                </div>
-                <button
-                  onClick={handleAddMember}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <UserPlusIcon className="w-4 h-4 mr-2" />
-                  Add Member
-                </button>
-              </div>
-            </div>
-              </div>
-
-          {/* Table View */}
-          {teamView === 'table' && (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {mockMembers.map((member) => (
-                  <tr key={member.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
-                          <span className="text-white font-medium text-sm">
-                            {member.name.split(' ').map(n => n[0]).join('')}
-                          </span>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{member.name}</div>
-                          <div className="text-sm text-gray-500">{member.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(member.role)}`}>
-                        {member.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(member.status)}`}>
-                        {member.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(member.joinedDate).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                  <button
-                          onClick={() => handleEditItem(member)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Edit member"
-                  >
-                    <PencilIcon className="w-4 h-4" />
-                  </button>
-                        <button 
-                          onClick={() => handleDeleteItem(member.id, 'member')}
-                          className="text-red-600 hover:text-red-900"
-                          title="Delete member"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                  </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          )}
-
-          {/* Phylogenetic Tree View */}
-          {teamView === 'tree' && (
-            <div className="p-8">
-              <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <svg className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  <div>
-                    <h3 className="text-sm font-semibold text-blue-900 mb-1">Phylogenetic Team Tree</h3>
-                    <p className="text-xs text-blue-700">
-                      Visual hierarchy showing research lineage and reporting structure. Branch lengths represent team relationships.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tree Structure */}
-              <div className="relative">
-                {/* PI (Root) */}
-                <div className="flex justify-center mb-8">
-                  <div className="relative">
-                    {/* Vertical line down from PI */}
-                    <div className="absolute left-1/2 transform -translate-x-1/2 top-full w-0.5 h-12 bg-gradient-to-b from-purple-400 to-transparent"></div>
-                    
-                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 shadow-xl border-4 border-purple-300">
-                      <div className="flex flex-col items-center text-white">
-                        <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-3 border-4 border-white/30">
-                          <span className="text-3xl font-bold">👨‍🔬</span>
-                        </div>
-                        <div className="text-center">
-                          <div className="font-bold text-lg">Dr. Sarah Chen</div>
-                          <div className="text-sm bg-white/20 px-3 py-1 rounded-full mt-2">Principal Investigator</div>
-                          <div className="text-xs mt-1 opacity-90">Lab Director</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Level 1: PostDocs / Senior Researchers */}
-                <div className="relative mb-8">
-                  {/* Horizontal connecting line */}
-                  <div className="absolute top-0 left-1/4 right-1/4 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent"></div>
-                  
-                  <div className="grid grid-cols-3 gap-8 max-w-5xl mx-auto">
-                    {/* PostDoc 1 */}
-                    <div className="relative">
-                      {/* Vertical line up */}
-                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-12 bg-gradient-to-t from-blue-400 to-transparent"></div>
-                      {/* Vertical line down */}
-                      <div className="absolute left-1/2 transform -translate-x-1/2 top-full w-0.5 h-12 bg-gradient-to-b from-blue-400 to-transparent"></div>
-                      
-                      <div className="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl p-4 shadow-lg border-2 border-blue-300">
-                        <div className="flex flex-col items-center text-white">
-                          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-2 border-2 border-white/30">
-                            <span className="text-2xl">👨‍💻</span>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-semibold">Dr. Michael Brown</div>
-                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">PostDoc</div>
-                            <div className="text-xs mt-1 opacity-80">Molecular Biology</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* PostDoc 2 */}
-                    <div className="relative">
-                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-12 bg-gradient-to-t from-green-400 to-transparent"></div>
-                      <div className="absolute left-1/2 transform -translate-x-1/2 top-full w-0.5 h-12 bg-gradient-to-b from-green-400 to-transparent"></div>
-                      
-                      <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl p-4 shadow-lg border-2 border-green-300">
-                        <div className="flex flex-col items-center text-white">
-                          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-2 border-2 border-white/30">
-                            <span className="text-2xl">👩‍🔬</span>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-semibold">Dr. Emily Davis</div>
-                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">PostDoc</div>
-                            <div className="text-xs mt-1 opacity-80">Biochemistry</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Visiting Researcher */}
-                    <div className="relative">
-                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-12 bg-gradient-to-t from-orange-400 to-transparent"></div>
-                      
-                      <div className="bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl p-4 shadow-lg border-2 border-orange-300">
-                        <div className="flex flex-col items-center text-white">
-                          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-2 border-2 border-white/30">
-                            <span className="text-2xl">🌍</span>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-semibold">Dr. Raj Patel</div>
-                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">Visiting</div>
-                            <div className="text-xs mt-1 opacity-80">Bioinformatics</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Level 2: PhD Students */}
-                <div className="relative mb-8">
-                  <div className="grid grid-cols-4 gap-6 max-w-6xl mx-auto">
-                    {/* PhD under PostDoc 1 */}
-                    <div className="relative">
-                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-12 bg-gradient-to-t from-indigo-400 to-transparent"></div>
-                      <div className="absolute left-1/2 transform -translate-x-1/2 top-full w-0.5 h-8 bg-gradient-to-b from-indigo-400 to-transparent"></div>
-                      
-                      <div className="bg-gradient-to-r from-indigo-400 to-purple-400 rounded-lg p-3 shadow-md border border-indigo-200">
-                        <div className="flex flex-col items-center text-white">
-                          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-2">
-                            <span className="text-lg">🎓</span>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-semibold text-sm">Alice Wang</div>
-                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">PhD Student</div>
-                            <div className="text-xs mt-1 opacity-75">Year 3</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="relative">
-                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-12 bg-gradient-to-t from-indigo-400 to-transparent"></div>
-                      
-                      <div className="bg-gradient-to-r from-indigo-400 to-purple-400 rounded-lg p-3 shadow-md border border-indigo-200">
-                        <div className="flex flex-col items-center text-white">
-                          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-2">
-                            <span className="text-lg">🎓</span>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-semibold text-sm">Bob Lee</div>
-                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">PhD Student</div>
-                            <div className="text-xs mt-1 opacity-75">Year 2</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* PhD under PostDoc 2 */}
-                    <div className="relative">
-                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-12 bg-gradient-to-t from-teal-400 to-transparent"></div>
-                      <div className="absolute left-1/2 transform -translate-x-1/2 top-full w-0.5 h-8 bg-gradient-to-b from-teal-400 to-transparent"></div>
-                      
-                      <div className="bg-gradient-to-r from-teal-400 to-cyan-400 rounded-lg p-3 shadow-md border border-teal-200">
-                        <div className="flex flex-col items-center text-white">
-                          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-2">
-                            <span className="text-lg">🎓</span>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-semibold text-sm">Charlie Kim</div>
-                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">PhD Student</div>
-                            <div className="text-xs mt-1 opacity-75">Year 4</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="relative">
-                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-12 bg-gradient-to-t from-teal-400 to-transparent"></div>
-                      
-                      <div className="bg-gradient-to-r from-teal-400 to-cyan-400 rounded-lg p-3 shadow-md border border-teal-200">
-                        <div className="flex flex-col items-center text-white">
-                          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-2">
-                            <span className="text-lg">🎓</span>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-semibold text-sm">Diana Martinez</div>
-                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">PhD Student</div>
-                            <div className="text-xs mt-1 opacity-75">Year 1</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Level 3: Masters & Research Assistants */}
-                <div className="relative">
-                  <div className="grid grid-cols-3 gap-6 max-w-4xl mx-auto">
-                    <div className="relative">
-                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-8 bg-gradient-to-t from-pink-400 to-transparent"></div>
-                      
-                      <div className="bg-gradient-to-r from-pink-400 to-rose-400 rounded-lg p-3 shadow-md border border-pink-200">
-                        <div className="flex flex-col items-center text-white">
-                          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mb-2">
-                            <span className="text-sm">📚</span>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-semibold text-sm">Eva Chen</div>
-                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">Masters</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="relative">
-                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-8 bg-gradient-to-t from-cyan-400 to-transparent"></div>
-                      
-                      <div className="bg-gradient-to-r from-cyan-400 to-sky-400 rounded-lg p-3 shadow-md border border-cyan-200">
-                        <div className="flex flex-col items-center text-white">
-                          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mb-2">
-                            <span className="text-sm">📚</span>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-semibold text-sm">Frank Liu</div>
-                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">Masters</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="relative">
-                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full w-0.5 h-8 bg-gradient-to-t from-amber-400 to-transparent"></div>
-                      
-                      <div className="bg-gradient-to-r from-amber-400 to-yellow-400 rounded-lg p-3 shadow-md border border-amber-200">
-                        <div className="flex flex-col items-center text-white">
-                          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mb-2">
-                            <span className="text-sm">🔬</span>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-semibold text-sm">Grace Park</div>
-                            <div className="text-xs bg-white/20 px-2 py-0.5 rounded-full mt-1">Research Asst</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Legend */}
-                <div className="mt-12 bg-gray-50 rounded-lg p-6 border border-gray-200">
-                  <h4 className="text-sm font-semibold text-gray-900 mb-4">Tree Legend</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg"></div>
-                      <span className="text-gray-700">PI / Lab Director</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg"></div>
-                      <span className="text-gray-700">PostDocs</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-lg"></div>
-                      <span className="text-gray-700">PhD Students</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-gradient-to-r from-pink-400 to-rose-400 rounded-lg"></div>
-                      <span className="text-gray-700">Masters / RA</span>
-                    </div>
-                  </div>
-                  <div className="mt-4 text-xs text-gray-600">
-                    <p className="flex items-center space-x-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>Lines represent supervision relationships. Colors indicate career stage and research lineage.</span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-                </div>
-              )}
 
       {activeTab === 'projects' && (
         <div className="space-y-6">

@@ -16,6 +16,7 @@ import aiTrainingRoutes from './routes/aiTraining.js';
 import aiProviderKeysRoutes from './routes/aiProviderKeys.js';
 import settingsRoutes from './routes/settings.js';
 import communicationsRoutes from './routes/communications.js';
+import scientistFirstRoutes from './routes/scientistFirst.js';
 import autoIndexing from './utils/autoIndexing.js';
 
 // Note: Exports moved to separate files to avoid circular dependencies
@@ -4905,6 +4906,7 @@ app.use('/api/ai-training', authenticateToken, aiTrainingRoutes);
 app.use('/api/ai-providers', authenticateToken, aiProviderKeysRoutes);
 app.use('/api/settings', authenticateToken, settingsRoutes);
 app.use('/api/communications', authenticateToken, communicationsRoutes);
+app.use('/api/scientist-first', scientistFirstRoutes);
 
 console.log('✨ Revolutionary features API routes registered:');
 console.log('   - /api/scientist-passport (Enhanced profiles & skills)');
