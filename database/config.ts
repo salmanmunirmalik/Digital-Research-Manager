@@ -1,19 +1,40 @@
 import { Pool, PoolConfig } from 'pg';
 
-// Database configuration
-const dbConfig: PoolConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'digital_research_manager',
-  user: process.env.DB_USER || 'm.salmanmalik',
-  password: process.env.DB_PASSWORD || '',
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
-};
+const DEFAULT_MAX_CLIENTS = Number(process.env.DB_POOL_MAX || 20);
+const DEFAULT_IDLE_TIMEOUT = Number(process.env.DB_IDLE_TIMEOUT || 30_000);
+const DEFAULT_CONNECTION_TIMEOUT = Number(process.env.DB_CONNECTION_TIMEOUT || 2_000);
 
-// Create connection pool
-const pool = new Pool(dbConfig);
+function buildPoolConfig(): PoolConfig {
+  if (process.env.DATABASE_URL) {
+    const useSsl = process.env.DB_SSL === 'true' || process.env.NODE_ENV === 'production';
+    return {
+      connectionString: process.env.DATABASE_URL,
+      ssl: useSsl ? { rejectUnauthorized: false } : undefined,
+      max: DEFAULT_MAX_CLIENTS,
+      idleTimeoutMillis: DEFAULT_IDLE_TIMEOUT,
+      connectionTimeoutMillis: DEFAULT_CONNECTION_TIMEOUT,
+    };
+  }
+
+  const host = process.env.DB_HOST || '127.0.0.1';
+  const port = Number(process.env.DB_PORT || 5432);
+  const database = process.env.DB_NAME || 'digital_research_manager';
+  const user = process.env.DB_USER || process.env.USER || 'postgres';
+  const password = process.env.DB_PASSWORD || '';
+
+  return {
+    host,
+    port,
+    database,
+    user,
+    password,
+    max: DEFAULT_MAX_CLIENTS,
+    idleTimeoutMillis: DEFAULT_IDLE_TIMEOUT,
+    connectionTimeoutMillis: DEFAULT_CONNECTION_TIMEOUT,
+  };
+}
+
+const pool = new Pool(buildPoolConfig());
 
 // Test database connection
 pool.on('connect', () => {

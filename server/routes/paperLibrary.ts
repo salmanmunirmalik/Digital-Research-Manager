@@ -9,7 +9,7 @@ import pool from '../../database/config.js';
 import { paperFetchingService } from '../services/doiIntegration.js';
 import autoIndexing from '../utils/autoIndexing.js';
 
-const router = Router();
+const router: Router = Router();
 
 // ==============================================
 // PAPER FETCHING & DOI INTEGRATION

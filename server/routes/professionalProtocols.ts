@@ -27,7 +27,7 @@ const authenticateToken = async (req: any, res: any, next: any) => {
   }
 };
 
-const router = Router();
+const router: Router = Router();
 
 // Professional Protocol Types
 interface ProfessionalProtocol {

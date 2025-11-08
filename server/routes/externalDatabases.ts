@@ -7,7 +7,7 @@
 import { Router } from 'express';
 import { scientificDatabaseService } from '../services/externalDatabases.js';
 
-const router = Router();
+const router: Router = Router();
 
 // ==============================================
 // MATERIALS PROJECT INTEGRATION

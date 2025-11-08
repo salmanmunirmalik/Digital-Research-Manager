@@ -27,7 +27,7 @@ const authenticateToken = async (req: any, res: any, next: any) => {
   }
 };
 
-const router = Router();
+const router: Router = Router();
 
 // Apply authentication middleware to all routes
 router.use(authenticateToken);

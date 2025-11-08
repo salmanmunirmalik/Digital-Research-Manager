@@ -1,7 +1,7 @@
-import express from 'express';
+import express, { type Router } from 'express';
 import { Pool } from 'pg';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // Initialize database connection
 const pool = new Pool({

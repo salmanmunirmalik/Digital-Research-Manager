@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { type Application } from 'express';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -7,6 +7,7 @@ import { User, UserRole, UserStatus } from '../types';
 import AIPresentationService from './aiPresentationService.js';
 import AdvancedStatisticalService from './advancedStatsService.js';
 import { ActivityTracker } from './services/activityTracker.js';
+import { authenticateToken } from './middleware/auth.js';
 
 // Revolutionary features route modules
 import scientistPassportRoutes from './routes/scientistPassport.js';
@@ -21,7 +22,7 @@ import autoIndexing from './utils/autoIndexing.js';
 
 // Note: Exports moved to separate files to avoid circular dependencies
 
-const app = express();
+const app: Application = express();
 const PORT = process.env.PORT || 5002;
 
 // Extend Express Request interface to include user
@@ -50,55 +51,6 @@ app.use(express.json());
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
-
-// Authentication Middleware (JWT verification)
-const authenticateToken = async (req: any, res: any, next: any) => {
-  try {
-    const authHeader = req.headers['authorization'] as string | undefined;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Missing or invalid Authorization header' });
-    }
-    const token = authHeader.split(' ')[1];
-    
-    // Demo token handling for testing
-    if (token === 'demo-token-123') {
-      // Use a demo user for testing
-      req.user = {
-        id: '550e8400-e29b-41d4-a716-446655440003',
-        email: 'demo@researchlab.com',
-        username: 'student',
-        first_name: 'Demo',
-        last_name: 'User',
-        role: 'student',
-        status: 'active',
-        lab_id: '650e8400-e29b-41d4-a716-446655440000'
-      };
-      return next();
-    }
-    
-    const payload: any = jwt.verify(token, JWT_SECRET);
-
-    // Load user from DB
-    const result = await pool.query(
-      'SELECT id, email, username, first_name, last_name, role, status FROM users WHERE id = $1',
-      [payload.userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-
-    const user = result.rows[0];
-    if (user.status !== 'active') {
-      return res.status(403).json({ error: 'Account is not active' });
-    }
-
-    req.user = user;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
-};
 
 // Health check endpoint
 app.get('/health', (req, res) => {

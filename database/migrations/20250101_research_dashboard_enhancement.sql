@@ -16,34 +16,62 @@ END $$;
 -- Apply the research dashboard schema
 -- Note: Schema should be applied separately
 
--- Insert sample data for testing
-INSERT INTO research_deadlines (title, description, deadline_type, deadline_date, priority, related_lab_id, created_by) VALUES
-('NIH Grant Proposal Submission', 'R01 application for cancer research funding', 'grant', '2024-04-15', 'high', 'c8ace470-5e21-4d3b-ab95-da6084311657', '4fd07593-fdfd-46ca-890c-f7875e3c47fb'),
-('Nature Paper Review Deadline', 'Response to reviewer comments', 'publication', '2024-04-22', 'high', 'c8ace470-5e21-4d3b-ab95-da6084311657', '4fd07593-fdfd-46ca-890c-f7875e3c47fb'),
-('Conference Abstract Submission', 'ASCO Annual Meeting abstract', 'conference', '2024-05-01', 'medium', 'c8ace470-5e21-4d3b-ab95-da6084311657', '4fd07593-fdfd-46ca-890c-f7875e3c47fb');
+-- Insert sample data for testing (only if baseline lab/user data exists)
+DO $SAMPLEDATA$
+BEGIN
+    IF EXISTS (SELECT 1 FROM labs) AND EXISTS (SELECT 1 FROM users) THEN
+        INSERT INTO research_deadlines (title, description, deadline_type, deadline_date, priority, related_lab_id, created_by)
+        SELECT 'NIH Grant Proposal Submission', 'R01 application for cancer research funding', 'grant', '2024-04-15', 'high', l.id, u.id
+        FROM labs l CROSS JOIN users u LIMIT 1;
 
-INSERT INTO research_insights (insight_type, title, description, category, priority, confidence_score, lab_id, action_label, action_route) VALUES
-('opportunity', 'Grant Opportunity Alert', 'NSF has a new call for proposals matching your CRISPR research area. Deadline in 3 weeks.', 'grants', 'high', 92, 'c8ace470-5e21-4d3b-ab95-da6084311657', 'View Details', '/grants'),
-('achievement', 'Productivity Milestone', 'You''ve published 5 papers this year - 25% above lab average!', 'productivity', 'medium', 100, 'c8ace470-5e21-4d3b-ab95-da6084311657', NULL, NULL),
-('suggestion', 'Collaboration Opportunity', 'Dr. Johnson from Stanford is working on similar CRISPR research. Consider reaching out.', 'collaborations', 'medium', 78, 'c8ace470-5e21-4d3b-ab95-da6084311657', 'Connect', '/collaborations');
+        INSERT INTO research_deadlines (title, description, deadline_type, deadline_date, priority, related_lab_id, created_by)
+        SELECT 'Nature Paper Review Deadline', 'Response to reviewer comments', 'publication', '2024-04-22', 'high', l.id, u.id
+        FROM labs l CROSS JOIN users u LIMIT 1;
 
-INSERT INTO research_activities (activity_type, title, description, user_id, lab_id, impact_level) VALUES
-('experiment', 'Completed Phase 2 CRISPR experiments', 'Successfully completed gene editing experiments with 85% efficiency', '4fd07593-fdfd-46ca-890c-f7875e3c47fb', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'high'),
-('publication', 'Paper accepted in Nature Biotechnology', 'CRISPR-based cancer therapy paper accepted for publication', '4fd07593-fdfd-46ca-890c-f7875e3c47fb', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'high'),
-('collaboration', 'New collaboration with MIT initiated', 'Partnership for machine learning drug discovery project', '4fd07593-fdfd-46ca-890c-f7875e3c47fb', 'c8ace470-5e21-4d3b-ab95-da6084311657', 'medium');
+        INSERT INTO research_deadlines (title, description, deadline_type, deadline_date, priority, related_lab_id, created_by)
+        SELECT 'Conference Abstract Submission', 'ASCO Annual Meeting abstract', 'conference', '2024-05-01', 'medium', l.id, u.id
+        FROM labs l CROSS JOIN users u LIMIT 1;
 
-INSERT INTO research_collaborations (title, description, collaboration_type, status, start_date, end_date, lab_id, lead_researcher_id, funding_amount, publications_count, outcomes) VALUES
-('CRISPR Cancer Therapy Consortium', 'Multi-institutional collaboration for CRISPR-based cancer therapies', 'external', 'active', '2023-09-01', '2025-08-31', 'c8ace470-5e21-4d3b-ab95-da6084311657', '4fd07593-fdfd-46ca-890c-f7875e3c47fb', 500000, 2, ARRAY['2 publications', '1 patent filed', '3 conference presentations']),
-('Industry Partnership - Drug Discovery', 'Collaborative drug discovery using machine learning approaches', 'industry', 'active', '2024-01-01', '2024-12-31', 'c8ace470-5e21-4d3b-ab95-da6084311657', '4fd07593-fdfd-46ca-890c-f7875e3c47fb', 200000, 0, ARRAY['1 patent application', '2 publications in progress']);
+        INSERT INTO research_insights (insight_type, title, description, category, priority, confidence_score, lab_id, action_label, action_route)
+        SELECT 'opportunity', 'Grant Opportunity Alert', 'NSF has a new call for proposals matching your CRISPR research area. Deadline in 3 weeks.', 'grants', 'high', 92, l.id, 'View Details', '/grants'
+        FROM labs l LIMIT 1;
 
-INSERT INTO collaboration_partners (collaboration_id, partner_name, institution, role, contact_email) VALUES
-((SELECT id FROM research_collaborations WHERE title = 'CRISPR Cancer Therapy Consortium' LIMIT 1), 'Dr. Johnson', 'Stanford', 'Co-PI', 'johnson@stanford.edu'),
-((SELECT id FROM research_collaborations WHERE title = 'CRISPR Cancer Therapy Consortium' LIMIT 1), 'Dr. Lee', 'MIT', 'Collaborator', 'lee@mit.edu'),
-((SELECT id FROM research_collaborations WHERE title = 'Industry Partnership - Drug Discovery' LIMIT 1), 'Dr. Martinez', 'PharmaCorp', 'Industry Partner', 'martinez@pharmacorp.com');
+        INSERT INTO research_insights (insight_type, title, description, category, priority, confidence_score, lab_id)
+        SELECT 'achievement', 'Productivity Milestone', 'You''ve published 5 papers this year - 25% above lab average!', 'productivity', 'medium', 100, l.id
+        FROM labs l LIMIT 1;
 
-INSERT INTO research_trends (title, description, category, impact_level, timeframe, relevance_score, sources, recommendations) VALUES
-('AI-Driven Drug Discovery', 'Machine learning approaches are revolutionizing drug discovery with 40% faster lead identification', 'technology', 'high', 'medium', 95, ARRAY['Nature Reviews Drug Discovery', 'Science', 'Cell'], ARRAY['Consider integrating AI tools', 'Partner with ML experts', 'Apply for AI-focused grants']),
-('CRISPR Clinical Trials', 'CRISPR therapies are entering Phase III trials with promising safety profiles', 'methodology', 'high', 'short', 88, ARRAY['New England Journal of Medicine', 'Nature Medicine'], ARRAY['Monitor clinical trial results', 'Consider translational research', 'Network with clinical researchers']);
+        INSERT INTO research_insights (insight_type, title, description, category, priority, confidence_score, lab_id, action_label, action_route)
+        SELECT 'suggestion', 'Collaboration Opportunity', 'Consider reaching out to collaborators working in similar areas.', 'collaborations', 'medium', 78, l.id, 'Connect', '/collaborations'
+        FROM labs l LIMIT 1;
+
+        INSERT INTO research_activities (activity_type, title, description, user_id, lab_id, impact_level)
+        SELECT 'experiment', 'Completed Phase 2 experiments', 'Successfully completed gene editing experiments with 85% efficiency', u.id, l.id, 'high'
+        FROM users u CROSS JOIN labs l LIMIT 1;
+
+        INSERT INTO research_activities (activity_type, title, description, user_id, lab_id, impact_level)
+        SELECT 'publication', 'Paper accepted in Nature Biotechnology', 'CRISPR-based cancer therapy paper accepted for publication', u.id, l.id, 'high'
+        FROM users u CROSS JOIN labs l LIMIT 1;
+
+        INSERT INTO research_activities (activity_type, title, description, user_id, lab_id, impact_level)
+        SELECT 'collaboration', 'New collaboration initiated', 'Partnership for machine learning drug discovery project', u.id, l.id, 'medium'
+        FROM users u CROSS JOIN labs l LIMIT 1;
+
+        INSERT INTO research_collaborations (title, description, collaboration_type, status, start_date, end_date, lab_id, lead_researcher_id, funding_amount, publications_count, outcomes)
+        SELECT 'Flagship Collaboration', 'Multi-institutional collaboration for next-generation therapies', 'external', 'active', CURRENT_DATE - INTERVAL '180 days', CURRENT_DATE + INTERVAL '365 days', l.id, u.id, 500000, 2, ARRAY['2 publications', '1 patent filed']
+        FROM labs l CROSS JOIN users u LIMIT 1;
+
+        INSERT INTO collaboration_partners (collaboration_id, partner_name, institution, role, contact_email)
+        SELECT rc.id, 'Dr. Johnson', 'Stanford', 'Co-PI', 'johnson@example.com'
+        FROM research_collaborations rc LIMIT 1;
+
+        INSERT INTO research_trends (title, description, category, impact_level, timeframe, relevance_score, sources, recommendations, lab_id)
+        SELECT 'AI-Driven Research', 'Machine learning approaches are revolutionizing discovery workflows', 'technology', 'high', 'medium', 95, ARRAY['Nature Reviews', 'Science'], ARRAY['Integrate AI tools', 'Explore funding'], l.id
+        FROM labs l LIMIT 1;
+    ELSE
+        RAISE NOTICE 'Skipping research dashboard sample data (labs/users not present).';
+    END IF;
+END
+$SAMPLEDATA$;
 
 -- Update existing projects with research-specific fields
 UPDATE projects SET 

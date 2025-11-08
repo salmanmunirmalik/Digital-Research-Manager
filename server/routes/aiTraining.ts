@@ -3,13 +3,13 @@
  * Personalized AI training for each scientist using RAG
  */
 
-import express from 'express';
+import express, { type Router } from 'express';
 import { Pool } from 'pg';
 import { authenticateToken } from '../middleware/auth.js';
 import axios from 'axios';
 import { getUserApiKey, getUserDefaultProvider } from './aiProviderKeys.js';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // Initialize database connection
 const pool = new Pool({

@@ -9,7 +9,7 @@ import pool from '../../database/config.js';
 import jwt from 'jsonwebtoken';
 import autoIndexing from '../utils/autoIndexing.js';
 
-const router = Router();
+const router: Router = Router();
 
 // Authentication middleware
 const authenticateToken = async (req: any, res: any, next: any) => {

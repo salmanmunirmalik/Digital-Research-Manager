@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently \"pnpm run dev:frontend\" \"pnpm run dev:backend\" \"pnpm run dev:stats\"",
     "dev:frontend": "vite",
-    "dev:backend": "NODE_OPTIONS='--max-old-space-size=8192' nodemon --exec tsx server/working-server.js",
+    "dev:backend": "NODE_OPTIONS='--max-old-space-size=8192' tsx watch server/index.ts",
     "dev:stats": "cd stats_service && python3 -m uvicorn advanced_main:app --host 0.0.0.0 --port 5003 --reload",
     "dev:advanced-stats": "./scripts/start-advanced-stats-service.sh",
     "dev:full-advanced": "concurrently \"pnpm run dev:frontend\" \"pnpm run dev:backend\" \"pnpm run dev:stats\" \"pnpm run dev:advanced-stats\"",

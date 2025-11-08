@@ -32,11 +32,9 @@ RUN adduser -S nextjs -u 1001
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy dependencies and install prod packages
 COPY package.json pnpm-lock.yaml ./
-
-# Install only production dependencies
-RUN pnpm install --frozen-lockfile --prod && pnpm store prune
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts && pnpm store prune
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
@@ -49,7 +47,7 @@ RUN mkdir -p logs && chown nextjs:nodejs logs
 USER nextjs
 
 # Expose port
-EXPOSE 5001
+EXPOSE 5002
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

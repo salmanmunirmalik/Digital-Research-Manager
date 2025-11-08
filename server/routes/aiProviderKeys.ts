@@ -3,12 +3,12 @@
  * Allow users to add their own API keys for OpenAI, Gemini, CoPilot, Perplexity, etc.
  */
 
-import express from 'express';
+import express, { type Router } from 'express';
 import { Pool } from 'pg';
 import { authenticateToken } from '../middleware/auth.js';
 import crypto from 'crypto';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // Initialize database connection
 const pool = new Pool({

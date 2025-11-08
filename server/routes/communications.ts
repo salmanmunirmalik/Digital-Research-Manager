@@ -3,11 +3,11 @@
  * Centralized communication system for all user interactions
  */
 
-import express from 'express';
+import express, { type Router } from 'express';
 import pool from '../../database/config.js';
 import { authenticateToken } from '../middleware/auth.js';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // Get unified inbox (all communications)
 router.get('/inbox', authenticateToken, async (req: any, res) => {

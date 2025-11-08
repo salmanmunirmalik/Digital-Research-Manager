@@ -3,17 +3,11 @@
  * Handles article submissions, reviews, and interactions
  */
 
-import express from 'express';
-import { Pool } from 'pg';
+import express, { type Router } from 'express';
+import pool from '../../database/config.js';
 import { authenticateToken } from '../middleware/auth.js';
 
-const router = express.Router();
-
-// Initialize database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+const router: Router = express.Router();
 
 // Get all articles
 router.get('/articles', async (req, res) => {
@@ -184,20 +178,19 @@ router.delete('/articles/:id', authenticateToken, async (req: any, res) => {
 });
 
 // Get user's liked articles
-router.get('/likes', async (req, res) => {
+router.get('/likes', authenticateToken, async (req: any, res) => {
   try {
-    const authHeader = req.headers['authorization'];
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.json([]);
-    }
-    
-    const token = authHeader.split(' ')[1];
-    // Note: In production, you'd verify the token properly
-    // For now, return empty array if not authenticated
-    res.json([]);
-  } catch (error) {
+    const userId = req.user.id;
+    const result = await pool.query(
+      `SELECT article_id 
+       FROM sfaj_likes 
+       WHERE user_id = $1`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error: any) {
     console.error('Error fetching likes:', error);
-    res.json([]);
+    res.status(500).json({ error: 'Failed to fetch likes' });
   }
 });
 

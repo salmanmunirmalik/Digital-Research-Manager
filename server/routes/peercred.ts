@@ -1,7 +1,7 @@
 // PeerCred Reference System - Core API Routes
 // Sophisticated, fair, and transparent reference platform
 
-import express from 'express';
+import express, { type Router } from 'express';
 import pool from '../../database/config.js';
 import jwt from 'jsonwebtoken';
 
@@ -30,7 +30,7 @@ const authenticateToken = async (req: any, res: any, next: any) => {
   }
 };
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // Get user's reference profile
 router.get('/profile', authenticateToken, async (req: any, res: any) => {

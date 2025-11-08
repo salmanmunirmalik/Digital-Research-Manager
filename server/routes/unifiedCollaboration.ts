@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { type Router } from 'express';
 import pool from '../../database/config.js';
 import jwt from 'jsonwebtoken';
 
@@ -27,7 +27,7 @@ const authenticateToken = async (req: any, res: any, next: any) => {
   }
 };
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // ==============================================
 // UNIFIED PROFILE MANAGEMENT

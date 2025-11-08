@@ -6,7 +6,7 @@
 import { Router } from 'express';
 import pool from '../../database/config.js';
 
-const router = Router();
+const router: Router = Router();
 
 // ==============================================
 // TECHNICAL SKILLS
