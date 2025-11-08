@@ -2,7 +2,7 @@ import express, { type Application } from 'express';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import pool from '../database/config';
+import pool from '../database/config.js';
 import { User, UserRole, UserStatus } from '../types';
 import AIPresentationService from './aiPresentationService.js';
 import AdvancedStatisticalService from './advancedStatsService.js';
