@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Reference directories (not needed for build)
+presentation-ai-reference
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
