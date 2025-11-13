@@ -1,7 +1,24 @@
 import { Protocol, Project, ResultEntry, InventoryItem, Instrument } from '../types';
 
-// Simple environment-based API URL configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+const resolveApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL.replace(/\/$/, '');
+  }
+
+  if (typeof window !== 'undefined') {
+    const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    if (isLocalhost) {
+      const port = import.meta.env.VITE_API_PORT || '5002';
+      return `http://localhost:${port}/api`;
+    }
+
+    return `${window.location.origin}/api`;
+  }
+
+  return 'http://localhost:5002/api';
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -17,7 +34,8 @@ const apiRequest = async <T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> => {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${API_BASE_URL}${normalizedEndpoint}`;
   const config: RequestInit = {
     headers: getAuthHeaders(),
     ...options,
@@ -420,9 +438,11 @@ export const getCurrentUser = () => {
     id: 'demo-user-123',
     username: 'demo_user',
     email: 'demo@researchlab.com',
-    first_name: 'Demo',
-    last_name: 'User',
-    role: 'Principal Investigator'
+    first_name: 'Sarah',
+    last_name: 'Martinez',
+    role: 'Principal Investigator',
+    avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
+    current_institution: 'Stanford University'
   };
 };
 

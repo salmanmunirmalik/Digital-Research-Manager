@@ -26,11 +26,13 @@ const authenticateToken = async (req: any, res: any, next: any) => {
         id: '550e8400-e29b-41d4-a716-446655440003',
         email: 'demo@researchlab.com',
         username: 'student',
-        first_name: 'Demo',
-        last_name: 'User',
+        first_name: 'Sarah',
+        last_name: 'Martinez',
         role: 'student',
         status: 'active',
-        lab_id: '650e8400-e29b-41d4-a716-446655440000'
+        lab_id: '650e8400-e29b-41d4-a716-446655440000',
+        avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
+        current_institution: 'Stanford University'
       };
       return next();
     }

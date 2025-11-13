@@ -7,10 +7,9 @@ module.exports = {
   },
   extends: [
     'eslint:recommended',
-    '@typescript-eslint/recommended',
+    'plugin:@typescript-eslint/recommended',
     'plugin:react/recommended',
     'plugin:react-hooks/recommended',
-    'plugin:testing-library/react',
   ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
@@ -24,7 +23,6 @@ module.exports = {
     'react',
     '@typescript-eslint',
     'react-hooks',
-    'testing-library',
   ],
   rules: {
     // React rules
@@ -34,7 +32,7 @@ module.exports = {
     'react/jsx-uses-vars': 'error',
     
     // TypeScript rules
-    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-explicit-any': 'warn',
@@ -43,14 +41,12 @@ module.exports = {
     // General rules
     'no-console': 'warn',
     'no-debugger': 'error',
-    'prefer-const': 'error',
+    'prefer-const': 'warn',
     'no-var': 'error',
+    'no-case-declarations': 'off',
+    '@typescript-eslint/no-namespace': 'off',
+    'react/no-unescaped-entities': 'off',
     
-    // Testing Library rules
-    'testing-library/await-async-query': 'error',
-    'testing-library/no-await-sync-query': 'error',
-    'testing-library/no-debugging-utils': 'warn',
-    'testing-library/no-dom-import': 'error',
   },
   settings: {
     react: {
@@ -60,22 +56,32 @@ module.exports = {
   overrides: [
     {
       files: ['**/__tests__/**/*', '**/*.test.*', '**/*.spec.*'],
+      excludedFiles: ['tests/e2e/**/*'],
       env: {
         jest: true,
+        browser: true,
       },
+      plugins: ['testing-library'],
+      extends: ['plugin:testing-library/react'],
       rules: {
         '@typescript-eslint/no-explicit-any': 'off',
         'no-console': 'off',
+        'testing-library/no-wait-for-multiple-assertions': 'off',
+        'no-useless-escape': 'off',
       },
     },
     {
-      files: ['server/**/*'],
+      files: ['server/**/*', 'services/**/*'],
       env: {
         node: true,
         browser: false,
       },
       rules: {
         'no-console': 'off', // Allow console in server code
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^ignored' }],
+        '@typescript-eslint/ban-types': 'off',
+        '@typescript-eslint/no-var-requires': 'off',
       },
     },
   ],

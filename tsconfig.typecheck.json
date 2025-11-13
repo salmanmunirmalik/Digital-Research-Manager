@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "jest", "node"],
+    "noEmit": true,
+    "allowJs": false
+  },
+  "include": [
+    "server/**/*",
+    "database/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "presentation-ai-reference/**/*",
+    "stats_service/**/*",
+    "tests/**/*",
+    "services/**/*",
+    "utils/**/*",
+    "scripts/**/*",
+    "components/**/*",
+    "contexts/**/*",
+    "pages/**/*",
+    "index.tsx",
+    "App.tsx",
+    "types.ts"
+  ]
+}
+

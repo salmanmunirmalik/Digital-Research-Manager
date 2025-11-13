@@ -135,6 +135,7 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 {/* User Menu Dropdown */}
                 <div className="relative user-menu">
                   <button
+                    data-testid="user-menu-toggle"
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-gray-50 hover:shadow-sm"
                   >
@@ -148,7 +149,10 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   
                   {/* Dropdown Menu */}
                   {showUserMenu && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
+                    <div
+                      className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50"
+                      data-testid="user-menu-dropdown"
+                    >
                       {/* User Info */}
                       <div className="px-4 py-3 border-b border-gray-100">
                         <p className="text-sm font-semibold text-gray-900">{user?.first_name} {user?.last_name}</p>
@@ -186,6 +190,7 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       {/* Logout */}
                       <div className="py-1">
                         <button
+                          data-testid="sign-out-button"
                           onClick={async () => {
                             try {
                               await logout();

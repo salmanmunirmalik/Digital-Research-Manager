@@ -446,7 +446,10 @@ const ResearchAssistantPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+        data-testid="research-assistant-page"
+      >
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-3 mb-4">
@@ -517,20 +520,29 @@ const ResearchAssistantPage: React.FC = () => {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2 mb-8">
-          <div className="flex space-x-1 flex-wrap">
+        <div
+          className="bg-white rounded-xl shadow-sm border border-gray-200 p-2 mb-8"
+          data-testid="research-assistant-tabs"
+        >
+          <div className="flex space-x-1 flex-wrap" role="tablist">
             {[
               { id: 'assistant', label: 'AI Assistant', icon: ChatBubbleLeftRightIcon },
               { id: 'literature-papers', label: 'Literature & Papers', icon: BookOpenIcon }
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => {
+                  setActiveTab(tab.id as any);
+                  if (tab.id === 'literature-papers') {
+                    fetchMyPapers();
+                  }
+                }}
                 className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'bg-blue-100 text-blue-700 border border-blue-200'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 }`}
+                data-testid={`research-assistant-tab-${tab.id}`}
               >
                 <tab.icon className="w-4 h-4" />
                 <span>{tab.label}</span>
@@ -541,7 +553,10 @@ const ResearchAssistantPage: React.FC = () => {
 
         {/* Tab Content */}
         {activeTab === 'assistant' && (
-          <div className="h-[calc(100vh-280px)] flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div
+            className="h-[calc(100vh-280px)] flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+            data-testid="assistant-tab-panel"
+          >
             {/* Chat Header */}
             <div className="border-b border-gray-200 px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50">
               <div className="flex items-center space-x-3">
@@ -556,7 +571,10 @@ const ResearchAssistantPage: React.FC = () => {
             </div>
 
             {/* Chat Messages Area */}
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+            <div
+              className="flex-1 overflow-y-auto px-6 py-6 space-y-6"
+              data-testid="assistant-chat-history"
+            >
               {researchQueries.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full">
                   <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mb-4">
@@ -651,7 +669,10 @@ const ResearchAssistantPage: React.FC = () => {
             </div>
 
             {/* Input Area */}
-            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
+            <div
+              className="border-t border-gray-200 px-6 py-4 bg-gray-50"
+              data-testid="assistant-input-area"
+            >
               <div className="flex items-end space-x-3">
                 <div className="flex-1">
                 <textarea
@@ -696,9 +717,9 @@ const ResearchAssistantPage: React.FC = () => {
         )}
 
         {activeTab === 'literature-papers' && (
-          <div>
+          <div data-testid="literature-tab-panel">
             {/* Literature & Papers Header */}
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-6 flex items-center justify-between" data-testid="literature-header">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Literature & Papers</h2>
                 <p className="text-gray-600 text-sm">Search for papers and manage your personal library</p>
@@ -722,9 +743,12 @@ const ResearchAssistantPage: React.FC = () => {
             </div>
 
             {/* Sub-Tabs */}
-            <div className="mb-6 flex space-x-2 border-b border-gray-200">
+            <div className="mb-6 flex space-x-2 border-b border-gray-200" data-testid="paper-subtabs">
                         <button
-                onClick={() => setPaperLibraryView('library')}
+                onClick={() => {
+                  setPaperLibraryView('library');
+                  fetchMyPapers();
+                }}
                 className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
                   paperLibraryView === 'library'
                     ? 'border-blue-500 text-blue-600'
@@ -747,7 +771,7 @@ const ResearchAssistantPage: React.FC = () => {
                       
             {/* Library View */}
             {paperLibraryView === 'library' && (
-              <div>
+              <div data-testid="paper-library-view">
                 {loadingPapers ? (
                   <div className="text-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -846,7 +870,7 @@ const ResearchAssistantPage: React.FC = () => {
 
             {/* Add Paper View */}
             {paperLibraryView === 'add-paper' && (
-              <div className="max-w-3xl mx-auto">
+              <div className="max-w-3xl mx-auto" data-testid="paper-add-view">
                 <div className="bg-white rounded-lg shadow-sm p-6">
                   <h2 className="text-xl font-bold text-gray-900 mb-6">Add Paper to Library</h2>
                   
@@ -1004,11 +1028,18 @@ const ResearchAssistantPage: React.FC = () => {
               
       {/* ORCID Import Modal */}
       {showOrcidImport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          data-testid="orcid-modal-overlay"
+        >
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" data-testid="orcid-modal">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Import Papers from ORCID</h3>
-              <button onClick={() => setShowOrcidImport(false)} className="text-gray-400 hover:text-gray-600">
+              <button
+                onClick={() => setShowOrcidImport(false)}
+                className="text-gray-400 hover:text-gray-600"
+                data-testid="orcid-modal-close"
+              >
                 <XMarkIcon className="w-6 h-6" />
               </button>
               </div>
@@ -1034,6 +1065,7 @@ const ResearchAssistantPage: React.FC = () => {
                 onClick={handleOrcidImport}
                 disabled={fetching}
                 className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                data-testid="orcid-modal-submit"
               >
                 {fetching ? 'Fetching...' : 'Import All Papers'}
               </button>

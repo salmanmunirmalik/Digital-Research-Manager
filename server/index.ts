@@ -24,6 +24,22 @@ import autoIndexing from './utils/autoIndexing.js';
 
 const app: Application = express();
 const PORT = process.env.PORT || 5002;
+const ENABLE_DEMO_AUTH = process.env.ENABLE_DEMO_AUTH === 'true';
+const DEMO_AUTH_EMAIL = process.env.DEMO_AUTH_EMAIL || 'researcher@researchlab.com';
+const DEMO_AUTH_PASSWORD = process.env.DEMO_AUTH_PASSWORD || 'researcher123';
+const DEMO_AUTH_TOKEN = process.env.DEMO_AUTH_TOKEN || 'demo-token-123';
+
+const demoAuthUser = {
+  id: 'demo-user-0001',
+  email: DEMO_AUTH_EMAIL,
+  username: DEMO_AUTH_EMAIL.split('@')[0] || 'demo_user',
+  first_name: 'Sarah',
+  last_name: 'Martinez',
+  role: 'researcher',
+  status: 'active',
+  avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
+  current_institution: 'Stanford University'
+};
 
 // Extend Express Request interface to include user
 declare global {
@@ -140,6 +156,21 @@ app.post('/api/auth/login', async (req, res) => {
     if (!email || !password) {
       console.log('❌ Login failed: Missing credentials');
       return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Demo auth bypass for Playwright/E2E flows
+    if (
+      ENABLE_DEMO_AUTH &&
+      email === DEMO_AUTH_EMAIL &&
+      password === DEMO_AUTH_PASSWORD
+    ) {
+      console.log('✅ Demo auth login successful');
+
+      return res.json({
+        message: 'Demo login successful',
+        user: demoAuthUser,
+        token: DEMO_AUTH_TOKEN
+      });
     }
 
     // Find user

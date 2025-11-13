@@ -25,9 +25,7 @@ import {
   TrashIcon,
   StarIcon,
   ShieldCheckIcon,
-  CalendarIcon,
   ClockIcon,
-  GlobeAltIcon,
   MicrophoneIcon,
   BriefcaseIcon,
   SparklesIcon,
@@ -103,26 +101,6 @@ const ScientistPassportPage: React.FC = () => {
       const mockData: GamificationData = {
         overallScore: 847,
         badges: [
-          {
-            id: 'bronze_transparency',
-            name: 'Bronze Transparency Contributor',
-            description: 'Shared 10 failed experiments',
-            icon: '🥉',
-            color: 'orange',
-            earned: true,
-            progress: 10,
-            maxProgress: 10
-          },
-          {
-            id: 'silver_transparency',
-            name: 'Silver Transparency Contributor',
-            description: 'Shared 50 failed experiments',
-            icon: '🥈',
-            color: 'gray',
-            earned: true,
-            progress: 52,
-            maxProgress: 50
-          },
           {
             id: 'gold_transparency',
             name: 'Gold Transparency Contributor',
@@ -273,116 +251,165 @@ const ScientistPassportPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Hero Section - Minimalist Passport Design */}
-        <div className="relative mb-6 overflow-hidden">
-          {/* Passport Card */}
-          <div className="bg-gradient-to-br from-gray-50 via-gray-50 to-gray-100 rounded-lg shadow-lg border-2 border-gray-200">
+        {/* Open Passport Layout */}
+        <div className="relative mb-10">
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-100 via-gray-50 to-gray-200 rounded-[32px] shadow-xl"></div>
+          <div
+            className="relative flex flex-col lg:flex-row rounded-[32px] border border-[#d6c9a2] bg-[#f9f5eb] overflow-hidden"
+            style={{
+              backgroundImage:
+                'radial-gradient(circle at 25px 25px, rgba(214,201,162,0.35) 1px, transparent 0)',
+              backgroundSize: '60px 60px'
+            }}
+          >
+            <div className="absolute inset-y-8 left-1/2 hidden lg:block w-px bg-gradient-to-b from-transparent via-[#d6c9a2] to-transparent shadow-[0_0_12px_rgba(0,0,0,0.08)]"></div>
+            <div className="absolute inset-y-0 left-1/2 hidden lg:block w-5 -translate-x-1/2 bg-gradient-to-b from-transparent via-black/5 to-transparent opacity-30"></div>
             
-            {/* Subtle pattern overlay */}
-            <div className="absolute inset-0 opacity-10 pointer-events-none" style={{
-              backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(100, 100, 100, 0.3) 1px, transparent 0)',
-              backgroundSize: '30px 30px'
-            }}></div>
-            
-            {/* Passport content */}
-            <div className="relative p-6">
-              {/* Top section - Title and Score */}
-              <div className="flex items-center justify-between mb-6 pb-6 border-b-2 border-gray-300">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg flex items-center justify-center shadow-md">
-                    <ShieldCheckIcon className="w-7 h-7 text-white" />
+            {/* Left Page */}
+            <div className="flex-1 px-7 py-8 lg:px-10 lg:py-12 space-y-8">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.38em] text-gray-500">Scientific Passport</p>
+                  <p className="text-xs text-gray-600 mt-1">Digital Research Manager Authority</p>
+                </div>
+                <div className="w-12 h-12 rounded-full border-2 border-[#d6c9a2] flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-700 shadow-md">
+                  <ShieldCheckIcon className="w-7 h-7 text-white" />
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-start sm:space-x-6 space-y-6 sm:space-y-0">
+                <div className="w-36 h-48 border-4 border-[#d6c9a2] rounded-lg overflow-hidden relative shadow-inner">
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-300 via-gray-200 to-gray-100"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-24 h-24 rounded-full bg-white shadow-lg border-4 border-white flex items-center justify-center">
+                      <img
+                        src={user?.avatar_url || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80'}
+                        alt="Passport portrait"
+                        className="w-full h-full object-cover rounded-full border-2 border-white shadow-md"
+                      />
+                    </div>
                   </div>
+                  <div className="absolute bottom-0 w-full py-1 bg-black/10 text-center text-[10px] text-gray-600 tracking-[0.3em] uppercase">
+                    Passport Photo
+                  </div>
+                </div>
+
+                <div className="flex-1 space-y-4">
                   <div>
-                    <div className="text-gray-900 text-xs font-semibold tracking-wider uppercase">SCIENTIFIC PASSPORT</div>
-                    <div className="text-gray-600 text-xs">Digital Research Manager</div>
+                    <h3 className="text-xs font-semibold text-gray-500 tracking-[0.2em] uppercase mb-2">Personal Information</h3>
+                    <div className="bg-white/70 border border-[#d6c9a2] rounded-xl px-4 py-3 shadow-sm">
+                      <p className="text-[11px] text-gray-500 uppercase mb-1">Name</p>
+                      <p className="text-lg font-semibold text-gray-800 tracking-wide">
+                        {user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : 'Dr. Maya Chen'}
+                      </p>
+                    </div>
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-white/70 border border-[#d6c9a2] rounded-xl px-4 py-3 shadow-sm">
+                      <p className="text-[11px] text-gray-500 uppercase mb-1">Researcher ID</p>
+                      <p className="text-sm font-mono tracking-widest text-gray-700">
+                        {user?.id?.substring(0, 8)?.toUpperCase() || 'MC-4827A1B'}
+                      </p>
+                    </div>
+                    <div className="bg-white/70 border border-[#d6c9a2] rounded-xl px-4 py-3 shadow-sm">
+                      <p className="text-[11px] text-gray-500 uppercase mb-1">Classification</p>
+                      <p className="text-sm font-semibold text-gray-800">{getScoreBadge(gamificationData.overallScore)}</p>
+                    </div>
+                  </div>
+
                 </div>
-                <div className="text-right">
-                  <div className="text-gray-600 text-xs font-medium mb-1">Reputation Score</div>
-                  <div className={`text-3xl font-bold ${getScoreColor(gamificationData.overallScore)}`}>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-dashed border-[#d6c9a2]">
+                <div className="bg-white/60 rounded-xl px-4 py-3 text-center border border-[#d6c9a2]/60 shadow-sm">
+                  <p className="text-xl font-semibold text-gray-800">{gamificationData.communityImpact.peopleHelped}</p>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">People Helped</p>
+                </div>
+                <div className="bg-white/60 rounded-xl px-4 py-3 text-center border border-[#d6c9a2]/60 shadow-sm">
+                  <p className="text-xl font-semibold text-gray-800">{gamificationData.communityImpact.citationsReceived}</p>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Citations</p>
+                </div>
+                <div className="bg-white/60 rounded-xl px-4 py-3 text-center border border-[#d6c9a2]/60 shadow-sm">
+                  <p className="text-xl font-semibold text-gray-800">{gamificationData.badges.filter(b => b.earned).length}</p>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Badges</p>
+                </div>
+                <div className="bg-white/60 rounded-xl px-4 py-3 text-center border border-[#d6c9a2]/60 shadow-sm">
+                  <p className="text-xl font-semibold text-gray-800">{gamificationData.communityImpact.timeSaved}h</p>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Time Saved</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="rounded-xl border border-[#d6c9a2]/60 bg-white/60 px-4 py-3 shadow-sm">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mb-1">Community Impact</p>
+                  <p className="text-sm text-gray-700">
+                    ${gamificationData.communityImpact.moneySaved.toLocaleString()} saved for collaborators.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-[#d6c9a2]/60 bg-white/60 px-4 py-3 shadow-sm">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mb-1">Collaborations</p>
+                  <p className="text-sm text-gray-700">
+                    {gamificationData.contributions.find((c) => c.category === 'Collaborations')?.impact || 'Global network activity'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Page */}
+            <div className="flex-1 px-7 py-8 lg:px-10 lg:py-12 space-y-8 bg-[#fefbf2]/90 backdrop-blur">
+              <div className="flex items-start justify-between flex-wrap gap-4">
+                <div className="text-right lg:text-right lg:ml-auto">
+                  <p className="text-[11px] uppercase tracking-[0.3em] text-gray-500 mb-2">Reputation Score</p>
+                  <p className={`text-5xl font-bold ${getScoreColor(gamificationData.overallScore)}`}>
                     {gamificationData.overallScore}
-                  </div>
-                  <div className="text-gray-600 text-xs font-medium mt-1">{getScoreBadge(gamificationData.overallScore)}</div>
+                  </p>
+                  <p className="text-sm font-medium text-gray-600 mt-1">{getScoreBadge(gamificationData.overallScore)}</p>
                 </div>
               </div>
 
-              {/* Main content - Compact layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
-                {/* Photo section */}
-                <div className="lg:col-span-1">
-                  <div className="bg-white rounded-lg p-2 border border-gray-300 shadow-sm">
-                    <div className="aspect-[3/4] bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-lg flex items-center justify-center overflow-hidden relative">
-                      {/* Profile picture placeholder with professional look */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-700"></div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center shadow-xl border-4 border-white">
-                          <span className="text-4xl font-bold text-indigo-700">
-                            {user?.first_name?.[0]}{user?.last_name?.[0]}
-                          </span>
-                        </div>
-                      </div>
-                      {/* Professional decoration */}
-                      <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-blue-900/20 to-transparent"></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {Object.entries(gamificationData.trustScores).map(([key, value]) => (
+                  <div
+                    key={key}
+                    className="relative rounded-xl border border-[#d6c9a2]/60 bg-white/70 px-4 py-3 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-600 capitalize">
+                        {key.replace(/([A-Z])/g, ' $1').trim()}
+                      </p>
+                      <p className="text-lg font-semibold text-gray-800">{value}/100</p>
+                    </div>
+                    <div className="mt-3 h-2 rounded-full bg-[#e9e1c8]">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-gray-900 to-gray-700"
+                        style={{ width: `${value}%` }}
+                      ></div>
                     </div>
                   </div>
-                </div>
+                ))}
+              </div>
 
-                {/* Personal details */}
-                <div className="lg:col-span-2 space-y-2">
-                  <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-gray-300 shadow-sm">
-                    <div className="text-gray-700 text-xs font-medium mb-1">NAME</div>
-                    <div className="text-gray-900 text-base font-semibold">{user?.first_name} {user?.last_name}</div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-gray-300 shadow-sm">
-                      <div className="text-gray-700 text-xs font-medium mb-1">RESEARCHER ID</div>
-                      <div className="text-gray-700 text-xs font-mono">{user?.id?.substring(0, 8)?.toUpperCase()}</div>
+              <div>
+                <h4 className="text-xs font-semibold text-gray-500 tracking-[0.28em] uppercase mb-3">Official Stamps</h4>
+                <div className="flex flex-wrap gap-3">
+                  {gamificationData.badges
+                    .filter((badge) => badge.earned)
+                    .slice(0, 5)
+                    .map((badge) => (
+                      <div
+                        key={badge.id}
+                        className="relative px-4 py-3 border-2 border-dashed border-[#d6c9a2] rounded-xl bg-white/60 shadow-sm"
+                      >
+                        <p className="text-2xl">{badge.icon}</p>
+                        <p className="mt-2 text-[11px] uppercase tracking-widest text-gray-600 max-w-[140px]">
+                          {badge.name}
+                        </p>
                       </div>
-                    
-                    <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-gray-300 shadow-sm">
-                      <div className="text-gray-700 text-xs font-medium mb-1">CLASSIFICATION</div>
-                      <div className="text-gray-700 text-xs font-semibold">{getScoreBadge(gamificationData.overallScore)}</div>
-                    </div>
-                  </div>
+                    ))}
                 </div>
+              </div>
 
-                {/* Core stats grid */}
-                <div className="lg:col-span-1 grid grid-cols-2 gap-2">
-                  <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 text-center border border-gray-300 shadow-sm">
-                    <div className="text-xl font-bold text-gray-900 mb-1">{gamificationData.communityImpact.peopleHelped}</div>
-                    <div className="text-xs text-gray-600">People Helped</div>
-                  </div>
-                  <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 text-center border border-gray-300 shadow-sm">
-                    <div className="text-xl font-bold text-gray-900 mb-1">{gamificationData.communityImpact.citationsReceived}</div>
-                    <div className="text-xs text-gray-600">Citations</div>
-                  </div>
-                  <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 text-center border border-gray-300 shadow-sm">
-                    <div className="text-xl font-bold text-gray-900 mb-1">{gamificationData.badges.filter(b => b.earned).length}</div>
-                    <div className="text-xs text-gray-600">Badges</div>
-                  </div>
-                  <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 text-center border border-gray-300 shadow-sm">
-                    <div className="text-xl font-bold text-gray-900 mb-1">{gamificationData.communityImpact.timeSaved}h</div>
-                    <div className="text-xs text-gray-600">Time Saved</div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Footer with metadata */}
-              <div className="grid grid-cols-3 gap-3 pt-4 border-t border-gray-300">
-                <div className="text-gray-700">
-                  <div className="text-xs opacity-70 mb-1">Date of Issue</div>
-                  <div className="text-xs font-semibold">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                </div>
-                <div className="text-gray-700">
-                  <div className="text-xs opacity-70 mb-1">Institution</div>
-                  <div className="text-xs font-semibold">{user?.current_institution || 'Research Institution'}</div>
-                </div>
-                <div className="text-gray-700 text-right">
-                  <div className="text-xs opacity-70 mb-1">Authority</div>
-                  <div className="text-xs font-semibold">Digital Research Manager</div>
-                  </div>
-              </div>
             </div>
           </div>
         </div>

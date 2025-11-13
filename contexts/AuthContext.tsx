@@ -10,6 +10,8 @@ interface User {
   role: string;
   lab_id?: string;
   created_at: string;
+  avatar_url?: string;
+  current_institution?: string;
 }
 
 interface AuthContextType {
@@ -30,11 +32,13 @@ const mockUser: User = {
   id: '550e8400-e29b-41d4-a716-446655440003',
   username: 'demo_user',
   email: 'demo@researchlab.com',
-  first_name: 'Demo',
-  last_name: 'User',
+  first_name: 'Sarah',
+  last_name: 'Martinez',
   role: 'student',
   lab_id: '650e8400-e29b-41d4-a716-446655440000',
-  created_at: new Date().toISOString()
+  created_at: new Date().toISOString(),
+  avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
+  current_institution: 'Stanford University'
 };
 
 const mockToken = 'demo-token-123';

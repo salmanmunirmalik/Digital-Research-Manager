@@ -65,6 +65,14 @@ interface FilterState {
   showPopular: boolean;
 }
 
+const TOOL_TYPE_OPTIONS: Array<{ value: FilterState['type']; label: string }> = [
+  { value: 'calculator', label: 'Calculator' },
+  { value: 'converter', label: 'Converter' },
+  { value: 'analyzer', label: 'Analyzer' },
+  { value: 'designer', label: 'Designer' },
+  { value: 'simulator', label: 'Simulator' }
+];
+
 interface Category {
   id: string;
   name: string;
@@ -764,28 +772,64 @@ const ResearchToolsPage: React.FC = () => {
 
   const results = calculateResults();
 
+  const activeFilterChips = useMemo(() => {
+    const chips: string[] = [];
+
+    if (filters.type !== 'all') {
+      const typeLabel = TOOL_TYPE_OPTIONS.find((option) => option.value === filters.type)?.label ?? filters.type;
+      chips.push(`Type: ${typeLabel}`);
+    }
+
+    if (filters.category !== 'all') {
+      const categoryLabel = categories.find((category) => category.id === filters.category)?.name;
+      if (categoryLabel) {
+        chips.push(`Category: ${categoryLabel}`);
+      }
+    }
+
+    if (filters.complexity !== 'all') {
+      const label = filters.complexity.charAt(0).toUpperCase() + filters.complexity.slice(1);
+      chips.push(`Complexity: ${label}`);
+    }
+
+    if (filters.showFavorites) {
+      chips.push('Favorites');
+    }
+
+    if (filters.showNew) {
+      chips.push('New Tools');
+    }
+
+    if (filters.showPopular) {
+      chips.push('Popular');
+    }
+
+    return chips;
+  }, [filters, categories]);
+
     return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+        aria-hidden={selectedTool !== null}
+      >
         
-      {/* Header */}
+        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-              <BeakerIcon className="w-6 h-6 text-white" />
-          </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Research Tools
-        </h1>
-              <p className="text-gray-600 mt-1">
-                Professional calculators and analysis tools for research
-        </p>
+            <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg">
+              <BeakerIcon className="w-6 h-6 text-yellow-400" />
             </div>
-                </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Research Tools Library</h1>
+              <p className="text-gray-600 mt-1">
+                Professional calculators, planners, and scientific utilities to accelerate research workflows.
+              </p>
+            </div>
+          </div>
 
           {/* Quick Stats */}
-          <div className="flex items-center space-x-6 text-sm text-gray-500">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
             <div className="flex items-center space-x-2">
               <CalculatorIcon className="w-4 h-4" />
               <span>{allTools.length} Tools</span>
@@ -796,73 +840,38 @@ const ResearchToolsPage: React.FC = () => {
             </div>
             <div className="flex items-center space-x-2">
               <TrendingUpIcon className="w-4 h-4" />
-              <span>Popular & New</span>
+              <span>Popular &amp; New</span>
             </div>
           </div>
         </div>
 
         {/* Search and Filters */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-            {/* Search Bar */}
-          <div className="relative mb-6">
-              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="relative w-full lg:w-1/2">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
               <input
-                type="text"
-                placeholder="Search tools, calculators, and converters..."
+                type="search"
+                placeholder="Search tools..."
+                aria-label="Search tools"
                 value={filters.search}
                 onChange={(e) => updateFilter('search', e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400"
               />
-                  </div>
+            </div>
 
-          {/* Filter Controls */}
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Quick Filters */}
-                <button
-                    onClick={() => updateFilter('showNew', !filters.showNew)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      filters.showNew 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                New Tools
-                </button>
-                <button
-                    onClick={() => updateFilter('showPopular', !filters.showPopular)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      filters.showPopular 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    Popular
-                </button>
-                <button
-                    onClick={() => updateFilter('showFavorites', !filters.showFavorites)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      filters.showFavorites 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                My Favorites
-              </button>
-
-              {/* Advanced Filters Toggle */}
+            <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
               <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                onClick={() => setShowFilters(true)}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-yellow-300 hover:bg-slate-800 transition"
+                aria-haspopup="dialog"
+                aria-expanded={showFilters}
               >
                 <FilterIcon className="w-4 h-4" />
-                More Filters
-                </button>
-          </div>
+                Filter Tools
+              </button>
 
-              {/* View Controls */}
-              <div className="flex items-center gap-3">
-                {/* Sort */}
+              <div className="flex items-center gap-3 justify-between sm:justify-start">
                 <select
                   value={`${filters.sortBy}-${filters.sortOrder}`}
                   onChange={(e) => {
@@ -870,7 +879,8 @@ const ResearchToolsPage: React.FC = () => {
                     updateFilter('sortBy', sortBy);
                     updateFilter('sortOrder', sortOrder);
                   }}
-                className="px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-yellow-400"
+                  aria-label="Sort tools"
                 >
                   <option value="popularity-desc">Most Popular</option>
                   <option value="name-asc">Name A-Z</option>
@@ -879,89 +889,105 @@ const ResearchToolsPage: React.FC = () => {
                   <option value="rating-desc">Highest Rated</option>
                 </select>
 
-                {/* View Mode */}
-                <div className="flex border border-gray-200 rounded-lg overflow-hidden">
-                        <button
+                <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+                  <button
+                    type="button"
                     onClick={() => updateFilter('viewMode', 'grid')}
-                    className={`p-2 ${filters.viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                        >
+                    className={`inline-flex items-center gap-2 px-3 py-2 transition ${
+                      filters.viewMode === 'grid'
+                        ? 'bg-slate-900 text-yellow-300'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                    aria-pressed={filters.viewMode === 'grid'}
+                  >
                     <GridIcon className="w-4 h-4" />
-                        </button>
-                        <button
+                    Grid View
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => updateFilter('viewMode', 'list')}
-                    className={`p-2 ${filters.viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                        >
+                    className={`inline-flex items-center gap-2 px-3 py-2 transition ${
+                      filters.viewMode === 'list'
+                        ? 'bg-slate-900 text-yellow-300'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                    aria-pressed={filters.viewMode === 'list'}
+                  >
                     <ListIcon className="w-4 h-4" />
-                        </button>
-                  </div>
+                    List View
+                  </button>
                 </div>
-                    </div>
-
-            {/* Advanced Filters */}
-            {showFilters && (
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Category Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                    <select
-                      value={filters.category}
-                      onChange={(e) => updateFilter('category', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="all">All Categories</option>
-                      {categories.map(category => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                 </div>
-
-                  {/* Type Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                    <select
-                      value={filters.type}
-                      onChange={(e) => updateFilter('type', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="all">All Types</option>
-                      <option value="calculator">Calculators</option>
-                      <option value="converter">Converters</option>
-                      <option value="analyzer">Analyzers</option>
-                      <option value="designer">Designers</option>
-                      <option value="simulator">Simulators</option>
-                    </select>
               </div>
+            </div>
+          </div>
 
-                  {/* Complexity Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Complexity</label>
-                    <select
-                      value={filters.complexity}
-                      onChange={(e) => updateFilter('complexity', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="all">All Levels</option>
-                      <option value="beginner">Beginner</option>
-                      <option value="intermediate">Intermediate</option>
-                      <option value="advanced">Advanced</option>
-                    </select>
-                </div>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => updateFilter('showNew', !filters.showNew)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                filters.showNew
+                  ? 'bg-slate-900 text-yellow-300'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              New Tools
+            </button>
+            <button
+              onClick={() => updateFilter('showPopular', !filters.showPopular)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                filters.showPopular
+                  ? 'bg-slate-900 text-yellow-300'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Popular
+            </button>
+            <button
+              onClick={() => updateFilter('showFavorites', !filters.showFavorites)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                filters.showFavorites
+                  ? 'bg-slate-900 text-yellow-300'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              My Favorites
+            </button>
+          </div>
+        </div>
+
+        {/* Category Overview */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Browse by Category</h2>
+            <span className="text-sm text-gray-500">{categories.length} scientific focus areas</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {categories.slice(0, 6).map((category) => (
+              <div
+                key={category.id}
+                className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition cursor-pointer"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`w-10 h-10 rounded-lg bg-${category.color}-100 flex items-center justify-center`}>
+                    <category.icon className={`w-5 h-5 text-${category.color}-600`} />
                   </div>
-
-              <div className="mt-4">
-                    <button
-                      onClick={clearFilters}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
-                >
-                  Clear All Filters
-                    </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{category.name}</h3>
+                    <p className="text-sm text-gray-500">{category.subcategories.length} tool groups</p>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 mb-3">{category.description}</p>
+                <div className="flex flex-wrap gap-2">
+                  {category.subcategories.slice(0, 3).map((sub) => (
+                    <span key={sub} className="px-2 py-1 rounded-full bg-gray-100 text-gray-600 text-xs">
+                      {sub}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
           {/* Results Summary */}
           <div className="mb-6">
@@ -974,6 +1000,18 @@ const ResearchToolsPage: React.FC = () => {
                 {favorites.size} favorites • {recentTools.length} recently used
                     </div>
                 </div>
+          {activeFilterChips.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2" data-testid="active-filters">
+              {activeFilterChips.map((chip) => (
+                <span
+                  key={chip}
+                  className="px-3 py-1 rounded-full bg-slate-900 text-yellow-300 text-xs font-semibold uppercase tracking-wide"
+                >
+                  {chip}
+                </span>
+              ))}
+            </div>
+          )}
             </div>
 
           {/* Tools Grid/List */}
@@ -1108,19 +1146,196 @@ const ResearchToolsPage: React.FC = () => {
               <p className="text-gray-600 mb-4">
                 Try adjusting your search terms or filters to find what you're looking for.
               </p>
-                        <button
-                onClick={clearFilters}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-                        >
-                Clear All Filters
-                        </button>
+            <button
+              onClick={clearFilters}
+              className="px-4 py-2 rounded-lg bg-slate-900 text-yellow-300 hover:bg-slate-800 transition-colors"
+            >
+              Clear All Filters
+            </button>
             </div>
           )}
               </div>
-                
+        
+      {/* Filter Drawer */}
+      {showFilters && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tool-filters-title"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-40 p-4"
+        >
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 id="tool-filters-title" className="text-xl font-semibold text-gray-900">
+                Tool Filters
+              </h2>
+              <button
+                onClick={() => setShowFilters(false)}
+                className="p-2 rounded-full hover:bg-gray-100 transition"
+                aria-label="Close filters"
+              >
+                <XMarkIcon className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="px-6 py-6 space-y-6">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Tool Type</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {TOOL_TYPE_OPTIONS.map((option) => (
+                    <label
+                      key={option.value}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer ${
+                        filters.type === option.value ? 'border-slate-900 bg-slate-900/5' : 'border-gray-200'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="tool-type"
+                        value={option.value}
+                        checked={filters.type === option.value}
+                        onChange={(e) => updateFilter('type', e.target.value)}
+                        className="text-slate-900 focus:ring-yellow-400"
+                      />
+                      {option.label}
+                    </label>
+                  ))}
+                  <label
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer ${
+                      filters.type === 'all' ? 'border-slate-900 bg-slate-900/5' : 'border-gray-200'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="tool-type"
+                      value="all"
+                      checked={filters.type === 'all'}
+                      onChange={(e) => updateFilter('type', e.target.value)}
+                      className="text-slate-900 focus:ring-yellow-400"
+                    />
+                    All types
+                  </label>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                  <select
+                    value={filters.category}
+                    onChange={(e) => updateFilter('category', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-yellow-400"
+                  >
+                    <option value="all">All Categories</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Complexity</label>
+                  <select
+                    value={filters.complexity}
+                    onChange={(e) => updateFilter('complexity', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-yellow-400"
+                  >
+                    <option value="all">All Levels</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Sort By</label>
+                <select
+                  value={`${filters.sortBy}-${filters.sortOrder}`}
+                  onChange={(e) => {
+                    const [sortBy, sortOrder] = e.target.value.split('-');
+                    updateFilter('sortBy', sortBy);
+                    updateFilter('sortOrder', sortOrder);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-yellow-400"
+                >
+                  <option value="popularity-desc">Most Popular</option>
+                  <option value="name-asc">Name A-Z</option>
+                  <option value="name-desc">Name Z-A</option>
+                  <option value="recent-desc">Recently Used</option>
+                  <option value="rating-desc">Highest Rated</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={filters.showFavorites}
+                    onChange={(e) => updateFilter('showFavorites', e.target.checked)}
+                    className="text-slate-900 focus:ring-yellow-400"
+                  />
+                  Show favorites
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={filters.showNew}
+                    onChange={(e) => updateFilter('showNew', e.target.checked)}
+                    className="text-slate-900 focus:ring-yellow-400"
+                  />
+                  Highlight new tools
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={filters.showPopular}
+                    onChange={(e) => updateFilter('showPopular', e.target.checked)}
+                    className="text-slate-900 focus:ring-yellow-400"
+                  />
+                  Highlight popular tools
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
+              <button
+                onClick={() => {
+                  clearFilters();
+                  setShowFilters(false);
+                }}
+                className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition text-sm font-medium"
+              >
+                Clear All
+              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="px-4 py-2 rounded-lg bg-slate-900 text-yellow-300 hover:bg-slate-800 transition text-sm font-medium"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Calculator Modal */}
       {selectedTool && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tool-modal-title"
+        >
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
             <div className="p-6 border-b border-gray-200">
@@ -1130,7 +1345,9 @@ const ResearchToolsPage: React.FC = () => {
                     <selectedTool.icon className={`w-6 h-6 text-${selectedTool.color}-600`} />
                                     </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">{selectedTool.name}</h2>
+                    <h2 id="tool-modal-title" className="text-2xl font-bold text-gray-900">
+                      {selectedTool.name}
+                    </h2>
                     <p className="text-gray-600">{selectedTool.description}</p>
                   </div>
                 </div>

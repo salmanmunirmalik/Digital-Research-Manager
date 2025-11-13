@@ -275,7 +275,7 @@ const PlateEditor: React.FC<PlateEditorProps> = ({
         data-placeholder={placeholder}
       />
 
-      <style jsx>{`
+      <style>{`
         .plate-editor [contenteditable]:empty:before {
           content: attr(data-placeholder);
           color: #9ca3af;

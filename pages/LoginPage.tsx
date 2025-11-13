@@ -33,7 +33,7 @@ const LoginPage: React.FC = () => {
 
     try {
       await login(email, password);
-      navigate('/dashboard');
+      navigate('/lab-notebook', { replace: true });
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
@@ -112,7 +112,7 @@ const LoginPage: React.FC = () => {
 
               {/* Error Message */}
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3" data-testid="login-error">
                   <p className="text-sm text-red-600">{error}</p>
                 </div>
               )}

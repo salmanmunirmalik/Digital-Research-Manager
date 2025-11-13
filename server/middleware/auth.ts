@@ -10,6 +10,8 @@ export interface AuthenticatedUser {
   status?: string;
   first_name?: string;
   last_name?: string;
+  avatar_url?: string;
+  current_institution?: string;
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -26,8 +28,10 @@ const demoUser: AuthenticatedUser = {
   email: 'demo@researchlab.com',
   role: 'student',
   status: 'active',
-  first_name: 'Demo',
-  last_name: 'User'
+  first_name: 'Sarah',
+  last_name: 'Martinez',
+  avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
+  current_institution: 'Stanford University'
 };
 
 export const authenticateToken = async (

@@ -1025,7 +1025,9 @@ const LabNotebookPage: React.FC = () => {
           <div className="space-y-6">
           {/* Header */}
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Lab Notebook Entries</h2>
+            <h2 className="text-2xl font-bold text-gray-900" data-testid="lab-notebook-heading">
+              Lab Notebook Entries
+            </h2>
           </div>
 
             {/* Search and Filters */}

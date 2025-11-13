@@ -205,7 +205,7 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
       </div>
 
       {/* Enhanced Navigation Items */}
-      <nav className="flex-1 p-2 overflow-y-auto">
+      <nav className="flex-1 p-2 overflow-y-auto" data-testid="side-nav">
         <div className="space-y-1">
           {navItems.map((item, itemIndex) => {
             return (

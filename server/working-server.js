@@ -659,9 +659,11 @@ const demoAuth = (req, res, next) => {
     id: '550e8400-e29b-41d4-a716-446655440003',
     email: 'demo@researchlab.com',
     username: 'demo_user',
-    first_name: 'Demo',
-    last_name: 'User',
-    role: 'researcher'
+    first_name: 'Sarah',
+    last_name: 'Martinez',
+    role: 'researcher',
+    avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
+    current_institution: 'Stanford University'
   };
   next();
 };
