@@ -169,7 +169,7 @@ router.post('/train', authenticateToken, async (req: any, res) => {
         [userId]
       ),
       
-      // Lab notebook entries
+      // Personal NoteBook entries
       pool.query(
         `SELECT id, title, content, methodology, results, conclusions
          FROM lab_notebook_entries 

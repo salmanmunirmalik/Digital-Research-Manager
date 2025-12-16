@@ -5,7 +5,7 @@ describe('API Endpoints Tests', () => {
     await global.apiHelpers.authenticate();
   });
 
-  describe('Lab Notebook API', () => {
+  describe('Personal NoteBook API', () => {
     test('GET /api/lab-notebook should return entries', async () => {
       const response = await global.apiClient.get(endpoints.labNotebook);
       expect(response.status).toBe(200);

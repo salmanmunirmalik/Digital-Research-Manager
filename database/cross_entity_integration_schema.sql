@@ -35,10 +35,10 @@ CREATE TABLE IF NOT EXISTS data_sync_log (
 );
 
 -- ==============================================
--- ENHANCED LAB NOTEBOOK WITH CROSS-REFERENCES
+-- ENHANCED Personal NoteBook WITH CROSS-REFERENCES
 -- ==============================================
 
--- Enhanced Lab Notebook Entries with cross-entity support
+-- Enhanced Personal NoteBook Entries with cross-entity support
 ALTER TABLE lab_notebook_entries ADD COLUMN IF NOT EXISTS 
     related_protocols UUID[] DEFAULT '{}';
 

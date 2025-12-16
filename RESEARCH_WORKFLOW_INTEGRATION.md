@@ -8,22 +8,22 @@ Research workflow is **NOT** separate pages, but rather the **integration and fl
 
 ### **Phase 1: Research Planning & Preparation**
 ```
-Dashboard → Protocols → Lab Notebook → Calculator Hub
+Dashboard → Protocols → Personal NoteBook → Calculator Hub
 ```
 
 **Flow:**
 1. **Dashboard** - Overview of active projects and deadlines
 2. **Protocols** - Create/select experimental protocols
-3. **Lab Notebook** - Plan experiments and document objectives
+3. **Personal NoteBook** - Plan experiments and document objectives
 4. **Calculator Hub** - Calculate concentrations, dilutions, etc.
 
 ### **Phase 2: Experiment Execution**
 ```
-Lab Notebook → Inventory → Instrument Booking → Data Collection
+Personal NoteBook → Inventory → Instrument Booking → Data Collection
 ```
 
 **Flow:**
-1. **Lab Notebook** - Document experiment setup and procedures
+1. **Personal NoteBook** - Document experiment setup and procedures
 2. **Inventory** - Check and reserve required reagents/supplies
 3. **Instrument Booking** - Schedule equipment usage
 4. **Data Collection** - Record experimental data and observations
@@ -51,22 +51,22 @@ Resource Exchange → Help Forum → Conference News → Researcher Portfolio
 
 ## 🔗 **Cross-Feature Integration Points**
 
-### **1. Lab Notebook ↔ Protocols**
+### **1. Personal NoteBook ↔ Protocols**
 - **Integration**: Link protocols to notebook entries
 - **Benefit**: Ensures experiments follow established procedures
 - **Implementation**: Protocol selection dropdown in notebook entries
 
-### **2. Lab Notebook ↔ Inventory**
+### **2. Personal NoteBook ↔ Inventory**
 - **Integration**: Auto-check reagent availability when planning experiments
 - **Benefit**: Prevents experiment delays due to missing supplies
 - **Implementation**: Inventory status indicators in notebook
 
-### **3. Lab Notebook ↔ Instrument Booking**
+### **3. Personal NoteBook ↔ Instrument Booking**
 - **Integration**: Schedule equipment directly from notebook entries
 - **Benefit**: Seamless experiment scheduling
 - **Implementation**: "Book Instrument" button in notebook entries
 
-### **4. Data & Results ↔ Lab Notebook**
+### **4. Data & Results ↔ Personal NoteBook**
 - **Integration**: Link results back to original experiments
 - **Benefit**: Complete experimental traceability
 - **Implementation**: Result references in notebook entries
@@ -97,14 +97,14 @@ The main dashboard shows workflow progress across all phases:
 
 ### **Student Workflow**
 ```
-Dashboard → Lab Notebook → Data & Results → Help Forum
+Dashboard → Personal NoteBook → Data & Results → Help Forum
 ```
 - Focus on learning and following established protocols
 - Limited to viewing and basic data entry
 
 ### **Researcher Workflow**
 ```
-Dashboard → Protocols → Lab Notebook → Inventory → Instrument Booking → Data & Results → Research Assistant
+Dashboard → Protocols → Personal NoteBook → Inventory → Instrument Booking → Data & Results → Research Assistant
 ```
 - Full experimental workflow access
 - Can create protocols and manage resources

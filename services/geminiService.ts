@@ -119,7 +119,7 @@ export const getCommunityHelpAdvice = async (
 };
 
 /**
- * Generates an end-of-day summary for a lab notebook entry.
+ * Generates an end-of-day summary for a Personal NoteBook entry.
  * @param entryContent A string containing the collated text from the notebook entry.
  * @returns A structured summary string.
  */
@@ -130,7 +130,7 @@ export const generateNotebookSummary = async (entryContent: string): Promise<str
 
     const model = 'gemini-2.5-flash';
 
-    const systemInstruction = `You are a scientific research assistant. Your task is to summarize a day's lab notebook entry.
+    const systemInstruction = `You are a scientific research assistant. Your task is to summarize a day's Personal NoteBook entry.
     Your tone must be professional and concise.
     Structure the output into three sections with these exact titles:
     1. Objective
@@ -139,7 +139,7 @@ export const generateNotebookSummary = async (entryContent: string): Promise<str
     Use bullet points within the sections where appropriate for clarity. Do not use markdown formatting like \`\`\` or **.`;
 
     const prompt = `
-        Please summarize the following lab notebook entry:
+        Please summarize the following Personal NoteBook entry:
         ---
         ${entryContent}
         ---

@@ -125,7 +125,7 @@ Transform the Digital Research Manager into the **world's first comprehensive re
    - Experiments conducted
    - Challenges & solutions
    - Next steps & resource needs
-   - Linked lab notebook entries
+   - Linked Personal NoteBook entries
    - Auto-generated presentation format
 
 **Impact:**
@@ -209,7 +209,7 @@ Transform the Digital Research Manager into the **world's first comprehensive re
 
 ### 8. **Personalized AI Research Assistant**
 **Planned Features:**
-- Train on user's lab notebook entries
+- Train on user's Personal NoteBook entries
 - Train on user's publications
 - Train on user's protocols
 - Personalized paper recommendations

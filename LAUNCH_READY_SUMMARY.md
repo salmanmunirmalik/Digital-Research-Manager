@@ -67,7 +67,7 @@ Production Build:      ✅ PASSED
 ## 📦 What Was Tested
 
 ### Core Features
-- ✅ Lab Notebook
+- ✅ Personal NoteBook
 - ✅ Lab Management
 - ✅ Protocols
 - ✅ Data & Results

@@ -1,12 +1,12 @@
 // Platform Activity Integration Hooks
 // Automatically track user activities for reference generation
 
-import pool from '../../database/config.js';
+import pool from "../../database/config.js";
 
 // Activity tracking service
 export class ActivityTracker {
   
-  // Track lab notebook entry
+  // Track Personal NoteBook entry
   static async trackLabNotebookEntry(userId: string, entryData: any) {
     try {
       const activityData = {
@@ -28,15 +28,15 @@ export class ActivityTracker {
       `, [
         userId,
         'lab_notebook_entry',
-        entryData.title || 'Lab Notebook Entry',
-        `Lab notebook entry with ${activityData.wordCount} words`,
+        entryData.title || 'Personal NoteBook Entry',
+        `Personal NoteBook entry with ${activityData.wordCount} words`,
         JSON.stringify(activityData),
         skillsDemonstrated
       ]);
       
-      console.log(`Tracked lab notebook entry for user ${userId}`);
+      console.log(`Tracked Personal NoteBook entry for user ${userId}`);
     } catch (error) {
-      console.error('Error tracking lab notebook entry:', error);
+      console.error('Error tracking Personal NoteBook entry:', error);
     }
   }
   

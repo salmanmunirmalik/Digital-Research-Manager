@@ -262,7 +262,7 @@ CREATE TABLE IF NOT EXISTS member_progress_reports (
     data_files_urls TEXT[],
     figures_urls TEXT[],
     presentations_urls TEXT[],
-    notebook_entry_ids TEXT[], -- Links to lab notebook entries
+    notebook_entry_ids TEXT[], -- Links to Personal NoteBook entries
     
     -- Status
     submission_status VARCHAR(50) DEFAULT 'draft', -- 'draft', 'submitted', 'under_review', 'revision_requested', 'approved', 'archived'

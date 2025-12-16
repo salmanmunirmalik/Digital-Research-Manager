@@ -110,7 +110,7 @@ Research Workflow:
 
 ### **Automated Presentations**
 - **AI Generation**: Automatic slide creation
-- **Data Integration**: Connects with lab notebook and results
+- **Data Integration**: Connects with Personal NoteBook and results
 - **Multiple Templates**: Various presentation formats
 - **Smart Insights**: AI-generated content and analysis
 

@@ -226,7 +226,7 @@
 
 ### **Main Sidebar (Updated):**
 1. Lab Management
-2. Lab Notebook
+2. Personal NoteBook
 3. Protocols
 4. Data & Results
 5. Research Tools

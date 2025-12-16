@@ -142,7 +142,7 @@ Collaboration (Header):
 - **User Profile**: Profile dropdown with settings and logout
 
 ### **Sidebar Navigation**
-- **Research Workflow**: Lab Notebook, Protocols, Data & Results
+- **Research Workflow**: Personal NoteBook, Protocols, Data & Results
 - **Lab Management**: Lab Management, Inventory, Instruments, Resource Exchange
 - **Tools & Calculators**: Calculator Hub, Research Assistant, Automated Presentations, Bioinformatics Tools, Molecular Biology
 - **System**: Profile, Settings

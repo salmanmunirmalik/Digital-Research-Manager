@@ -90,7 +90,7 @@
 ```
 🏠 WORKSPACE
 ├── Dashboard
-├── Lab Notebook
+├── Personal NoteBook
 ├── Lab Management (enhanced with team tree!)
 
 📋 RESEARCH WORKFLOW

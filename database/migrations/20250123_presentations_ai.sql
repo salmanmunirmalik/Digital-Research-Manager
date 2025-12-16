@@ -1,7 +1,21 @@
 -- AI Presentation System Migration
 -- Based on presentation-ai repository structure
 
--- Create presentations table
+-- Create presentation themes table FIRST (before presentations references it)
+CREATE TABLE IF NOT EXISTS presentation_themes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    logo_url TEXT,
+    is_public BOOLEAN DEFAULT false,
+    is_system BOOLEAN DEFAULT false,
+    theme_data JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Create presentations table (after themes table)
 CREATE TABLE IF NOT EXISTS presentations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -15,20 +29,6 @@ CREATE TABLE IF NOT EXISTS presentations (
     template_id VARCHAR(100),
     custom_theme_id UUID REFERENCES presentation_themes(id),
     is_public BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Create presentation themes table
-CREATE TABLE IF NOT EXISTS presentation_themes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    logo_url TEXT,
-    is_public BOOLEAN DEFAULT false,
-    is_system BOOLEAN DEFAULT false,
-    theme_data JSONB NOT NULL DEFAULT '{}',
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );

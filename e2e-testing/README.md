@@ -115,7 +115,7 @@ npm run test:api
 
 Tests database operations and data integrity:
 
-- **Lab Notebook**: Entry creation, updates, deletion
+- **Personal NoteBook**: Entry creation, updates, deletion
 - **Protocols**: Protocol management and versioning
 - **Data Results**: Result storage and retrieval
 - **Data Integrity**: Foreign keys and constraints

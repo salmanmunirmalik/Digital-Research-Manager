@@ -251,7 +251,7 @@ getNodeInputData(node, connections, results, dataSets) {
 - Statistical analysis integration
 - Result sharing and collaboration
 
-### Lab Notebook
+### Personal NoteBook
 - Workflow documentation
 - Analysis result storage
 - Research process tracking

@@ -5,10 +5,10 @@ describe('Data Flow Integration Tests', () => {
     await global.integrationHelpers.waitForAllServices();
   });
 
-  test('Should handle complete lab notebook workflow', async () => {
-    console.log('🔄 Testing complete lab notebook workflow...');
+  test('Should handle complete Personal NoteBook workflow', async () => {
+    console.log('🔄 Testing complete Personal NoteBook workflow...');
     
-    // Step 1: Create lab notebook entry via API
+    // Step 1: Create Personal NoteBook entry via API
     const entryData = {
       title: 'Integration Test Entry',
       content: 'This is an integration test entry',
@@ -69,7 +69,7 @@ describe('Data Flow Integration Tests', () => {
       expect(error.message).toContain('not found');
     }
 
-    console.log('✅ Lab notebook workflow completed successfully');
+    console.log('✅ Personal NoteBook workflow completed successfully');
   });
 
   test('Should handle statistical analysis data flow', async () => {

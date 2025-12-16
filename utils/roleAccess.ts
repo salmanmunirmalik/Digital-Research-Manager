@@ -102,7 +102,6 @@ export const getRolePermissions = (role: string): RolePermissions => {
 // Route access control
 export const ROUTE_ACCESS = {
   '/dashboard': { minRole: 'student' },
-  '/lab-management': { minRole: 'student' }, // Everyone can access lab management now
   '/lab-notebook': { minRole: 'student' },
   '/protocols': { minRole: 'student' },
   '/data-results': { minRole: 'student' },

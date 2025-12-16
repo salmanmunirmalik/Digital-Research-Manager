@@ -74,9 +74,9 @@ CREATE TABLE databank_organizations (
 );
 
 -- Data offers table
-CREATE TABLE databank_data_offers (
+CREATE TABLE IF NOT EXISTS databank_data_offers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    organization_id UUID NOT NULL REFERENCES databank_organizations(id) ON DELETE CASCADE,
+    organization_id UUID REFERENCES databank_organizations(id) ON DELETE CASCADE, -- Made nullable for sample data
     title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
     data_type databank_data_type NOT NULL,

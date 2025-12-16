@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express';
-import pool from '../../database/config.js';
+import pool from "../../database/config.js";
 
 const router: Router = Router();
 
@@ -117,6 +117,89 @@ router.get('/projects/:projectId', async (req, res) => {
   } catch (error: any) {
     console.error('Error fetching project details:', error);
     res.status(500).json({ error: 'Failed to fetch project details' });
+  }
+});
+
+// Update a research project
+router.put('/projects/:projectId', async (req: any, res) => {
+  try {
+    const { projectId } = req.params;
+    const {
+      project_code, project_title, project_description,
+      principal_investigator_id, project_type, research_field,
+      total_budget, planned_start_date, planned_end_date,
+      status, overall_progress_percentage
+    } = req.body;
+    
+    const result = await pool.query(`
+      UPDATE research_projects SET
+        project_code = COALESCE($1, project_code),
+        project_title = COALESCE($2, project_title),
+        project_description = COALESCE($3, project_description),
+        principal_investigator_id = COALESCE($4, principal_investigator_id),
+        project_type = COALESCE($5, project_type),
+        research_field = COALESCE($6, research_field),
+        total_budget = COALESCE($7, total_budget),
+        planned_start_date = COALESCE($8, planned_start_date),
+        planned_end_date = COALESCE($9, planned_end_date),
+        status = COALESCE($10, status),
+        overall_progress_percentage = COALESCE($11, overall_progress_percentage),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $12
+      RETURNING *
+    `, [project_code, project_title, project_description,
+        principal_investigator_id, project_type, research_field,
+        total_budget, planned_start_date, planned_end_date,
+        status, overall_progress_percentage, projectId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error: any) {
+    console.error('Error updating project:', error);
+    res.status(500).json({ error: 'Failed to update project' });
+  }
+});
+
+// Delete a research project
+router.delete('/projects/:projectId', async (req: any, res) => {
+  try {
+    const { projectId } = req.params;
+    
+    // Check if project exists
+    const projectCheck = await pool.query(
+      `SELECT id FROM research_projects WHERE id = $1`,
+      [projectId]
+    );
+    
+    if (projectCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    // Check for active work packages
+    const workPackagesCheck = await pool.query(
+      `SELECT id FROM project_work_packages WHERE project_id = $1 AND status NOT IN ('completed', 'cancelled')`,
+      [projectId]
+    );
+    
+    if (workPackagesCheck.rows.length > 0) {
+      return res.status(400).json({ 
+        error: 'Cannot delete project with active work packages. Please complete or cancel work packages first.' 
+      });
+    }
+    
+    // Delete project (CASCADE will handle related records)
+    await pool.query(
+      `DELETE FROM research_projects WHERE id = $1`,
+      [projectId]
+    );
+    
+    res.json({ message: 'Project deleted successfully' });
+  } catch (error: any) {
+    console.error('Error deleting project:', error);
+    res.status(500).json({ error: 'Failed to delete project' });
   }
 });
 

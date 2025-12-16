@@ -1,38 +1,66 @@
 -- Migration: Add lab_notebook_entries table
 -- Date: 2025-01-17
--- Description: Add lab_notebook_entries table for Lab Notebook functionality
+-- Description: Add lab_notebook_entries table for Personal NoteBook functionality
 
--- Lab Notebook Entries table
-CREATE TABLE IF NOT EXISTS lab_notebook_entries (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    lab_id UUID REFERENCES labs(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    content TEXT,
-    entry_type VARCHAR(50) NOT NULL, -- 'experiment', 'observation', 'protocol', 'note', 'sample_management'
-    status VARCHAR(20) DEFAULT 'draft', -- 'draft', 'completed', 'archived'
-    priority VARCHAR(20) DEFAULT 'medium', -- 'low', 'medium', 'high', 'urgent'
-    objectives TEXT,
-    methodology TEXT,
-    results TEXT,
-    conclusions TEXT,
-    next_steps TEXT,
-    tags TEXT[], -- Array of tags
-    privacy_level VARCHAR(20) DEFAULT 'lab', -- 'personal', 'team', 'lab', 'institution', 'global'
-    estimated_duration INTEGER, -- in minutes
-    actual_duration INTEGER, -- in minutes
-    cost DECIMAL(10,2) DEFAULT 0,
-    equipment_used TEXT[],
-    materials_used TEXT[],
-    safety_notes TEXT,
-    reference_list TEXT[], -- Renamed from 'references' to avoid reserved keyword
-    collaborators TEXT[],
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- Personal NoteBook Entries table
+-- Note: Table may already exist from base schema with author_id column
+-- This migration adds missing columns and indexes if they don't exist
 
--- Lab Notebook Entries indexes
+-- Add missing columns if they don't exist
+DO $$
+BEGIN
+    -- Add user_id as alias for author_id if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'lab_notebook_entries' AND column_name = 'user_id') THEN
+        ALTER TABLE lab_notebook_entries ADD COLUMN user_id UUID REFERENCES users(id) ON DELETE CASCADE;
+        -- Copy author_id to user_id for existing rows
+        UPDATE lab_notebook_entries SET user_id = author_id WHERE user_id IS NULL;
+    END IF;
+    
+    -- Add other missing columns
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'lab_notebook_entries' AND column_name = 'priority') THEN
+        ALTER TABLE lab_notebook_entries ADD COLUMN priority VARCHAR(20) DEFAULT 'medium';
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'lab_notebook_entries' AND column_name = 'objectives') THEN
+        ALTER TABLE lab_notebook_entries ADD COLUMN objectives TEXT;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'lab_notebook_entries' AND column_name = 'methodology') THEN
+        ALTER TABLE lab_notebook_entries ADD COLUMN methodology TEXT;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'lab_notebook_entries' AND column_name = 'estimated_duration') THEN
+        ALTER TABLE lab_notebook_entries ADD COLUMN estimated_duration INTEGER;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'lab_notebook_entries' AND column_name = 'actual_duration') THEN
+        ALTER TABLE lab_notebook_entries ADD COLUMN actual_duration INTEGER;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'lab_notebook_entries' AND column_name = 'cost') THEN
+        ALTER TABLE lab_notebook_entries ADD COLUMN cost DECIMAL(10,2) DEFAULT 0;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'lab_notebook_entries' AND column_name = 'equipment_used') THEN
+        ALTER TABLE lab_notebook_entries ADD COLUMN equipment_used TEXT[];
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'lab_notebook_entries' AND column_name = 'materials_used') THEN
+        ALTER TABLE lab_notebook_entries ADD COLUMN materials_used TEXT[];
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'lab_notebook_entries' AND column_name = 'reference_list') THEN
+        ALTER TABLE lab_notebook_entries ADD COLUMN reference_list TEXT[];
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'lab_notebook_entries' AND column_name = 'collaborators') THEN
+        ALTER TABLE lab_notebook_entries ADD COLUMN collaborators TEXT[];
+    END IF;
+END $$;
+
+-- Personal NoteBook Entries indexes
 CREATE INDEX IF NOT EXISTS idx_lab_notebook_entries_user_id ON lab_notebook_entries(user_id);
+CREATE INDEX IF NOT EXISTS idx_lab_notebook_entries_author_id ON lab_notebook_entries(author_id);
 CREATE INDEX IF NOT EXISTS idx_lab_notebook_entries_lab_id ON lab_notebook_entries(lab_id);
 CREATE INDEX IF NOT EXISTS idx_lab_notebook_entries_type ON lab_notebook_entries(entry_type);
 CREATE INDEX IF NOT EXISTS idx_lab_notebook_entries_status ON lab_notebook_entries(status);

@@ -29,7 +29,7 @@ Implemented five endpoints:
 
 #### `/api/ai-training/train` (POST)
 - Trains AI with user's existing data
-- Processes papers, lab notebook entries, protocols, and research data
+- Processes papers, Personal NoteBook entries, protocols, and research data
 - Generates embeddings for each document
 - Returns count of processed documents
 
@@ -74,7 +74,7 @@ Added:
 ### 1. Data Collection
 The system automatically collects data from:
 - **Papers**: Title, abstract, AI summary
-- **Lab Notebook Entries**: Content, methodology, results, conclusions
+- **Personal NoteBook Entries**: Content, methodology, results, conclusions
 - **Protocols**: Title, description, content
 - **Research Data**: Title, description, methodology, results
 

@@ -37,5 +37,6 @@ CREATE INDEX IF NOT EXISTS idx_quick_notes_created ON quick_notes(created_at);
 CREATE TRIGGER update_calendar_events_updated_at BEFORE UPDATE ON calendar_events
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_quick_notes_updated_at ON quick_notes;
 CREATE TRIGGER update_quick_notes_updated_at BEFORE UPDATE ON quick_notes
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

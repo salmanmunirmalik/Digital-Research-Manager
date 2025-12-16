@@ -7,7 +7,7 @@
 1. **Enhanced API Endpoint** (`server/routes/aiTraining.ts`)
    - Added `negative_results` to training status
    - Now tracks all 5 content types:
-     - Lab notebook entries
+     - Personal NoteBook entries
      - Papers
      - Protocols
      - Research data
@@ -28,7 +28,7 @@
 - **Learning Status**: Green dot when AI has learned, gray when not
 
 #### Document Types Tracked
-1. **Lab Entries** (Blue) - Lab notebook entries
+1. **Lab Entries** (Blue) - Personal NoteBook entries
 2. **Papers** (Purple) - Saved papers
 3. **Protocols** (Green) - Published protocols
 4. **Data** (Orange) - Research data

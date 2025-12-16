@@ -455,7 +455,7 @@ CREATE INDEX IF NOT EXISTS idx_research_data_status ON research_data(status);
 CREATE INDEX IF NOT EXISTS idx_research_data_created_at ON research_data(created_at);
 CREATE INDEX IF NOT EXISTS idx_research_data_tags ON research_data USING GIN(tags);
 
--- Lab Notebook Entries table
+-- Personal NoteBook Entries table
 CREATE TABLE IF NOT EXISTS lab_notebook_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -484,7 +484,7 @@ CREATE TABLE IF NOT EXISTS lab_notebook_entries (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Lab Notebook Entries indexes
+-- Personal NoteBook Entries indexes
 CREATE INDEX IF NOT EXISTS idx_lab_notebook_entries_user_id ON lab_notebook_entries(user_id);
 CREATE INDEX IF NOT EXISTS idx_lab_notebook_entries_lab_id ON lab_notebook_entries(lab_id);
 CREATE INDEX IF NOT EXISTS idx_lab_notebook_entries_type ON lab_notebook_entries(entry_type);

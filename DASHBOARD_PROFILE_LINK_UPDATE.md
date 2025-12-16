@@ -44,7 +44,7 @@
 ## User Experience
 
 ### Before
-- Clicked "My Research" → Went to Lab Notebook
+- Clicked "My Research" → Went to Personal NoteBook
 - Description: "Lab notes and experiments"
 - Orange color scheme
 

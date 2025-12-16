@@ -4,7 +4,7 @@
 
 ### Added Auto-Indexing to All Content Types
 
-1. ✅ **Lab Notebook Entries** (`server/index.ts`)
+1. ✅ **Personal NoteBook Entries** (`server/index.ts`)
    - Auto-indexes when entries are created
    - Extracts: title, content, objectives, methodology, results, conclusions
 
@@ -28,7 +28,7 @@
 ### Automatic Learning Flow
 
 1. **User Creates Content**
-   - Creates lab notebook entry ✅
+   - Creates Personal NoteBook entry ✅
    - Adds protocol ✅
    - Saves paper ✅
    - Creates research data ✅
@@ -78,7 +78,7 @@
 ## Summary
 
 ✅ **Auto-indexing** implemented for:
-- Lab notebook entries
+- Personal NoteBook entries
 - Protocols
 - Papers
 - Research data

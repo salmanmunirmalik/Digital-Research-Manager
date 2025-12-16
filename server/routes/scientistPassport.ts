@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express';
-import pool from '../../database/config.js';
+import pool from "../../database/config.js";
 
 const router: Router = Router();
 
@@ -15,6 +15,11 @@ const router: Router = Router();
 // Get user's technical skills
 router.get('/skills', async (req: any, res) => {
   try {
+    // Safety check for req.user
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     const userId = req.user.id;
     
     const result = await pool.query(`
@@ -30,7 +35,12 @@ router.get('/skills', async (req: any, res) => {
     res.json(result.rows);
   } catch (error: any) {
     console.error('Error fetching technical skills:', error);
-    res.status(500).json({ error: 'Failed to fetch technical skills' });
+    if (error.code) console.error('Database error code:', error.code);
+    if (error.message) console.error('Error message:', error.message);
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Failed to fetch technical skills' 
+      : error.message || 'Failed to fetch technical skills';
+    res.status(500).json({ error: errorMessage });
   }
 });
 

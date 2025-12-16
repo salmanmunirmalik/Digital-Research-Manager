@@ -1111,7 +1111,7 @@ Presentation-ready progress reports with PI review cycle and notifications.
 - Next steps & milestones
 - Resource needs
 - Hours worked
-- Linked lab notebook entries
+- Linked Personal NoteBook entries
 
 #### **PI Can:**
 - Review reports with detailed feedback

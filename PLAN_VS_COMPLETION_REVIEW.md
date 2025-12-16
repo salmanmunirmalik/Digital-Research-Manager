@@ -116,7 +116,7 @@
 
 **What We Built:**
 - ✅ Database schema for research history
-- ✅ Lab notebook entries tracking
+- ✅ Personal NoteBook entries tracking
 - ✅ Publications tracking capability
 - ✅ User profile comprehensive data
 - ⏳ **Not Built:** OpenAI integration
@@ -346,7 +346,7 @@
 
 **What We Built (Pre-existing):**
 - ✅ Global Data Sharing page
-- ✅ Lab notebook sharing
+- ✅ Personal NoteBook sharing
 - ✅ Protocol sharing
 - ✅ Access control & permissions
 

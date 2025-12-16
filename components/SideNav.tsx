@@ -29,7 +29,9 @@ import {
   DnaIcon,
   PackageIcon,
   BriefcaseIcon,
-  FireIcon
+  FireIcon,
+  KeyIcon,
+  Squares2X2Icon
 } from './icons';
 import { getUserDisplayName, getRoleDisplayName, getRolePermissions } from '../utils/roleAccess';
 
@@ -77,7 +79,7 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
         )
       },
       { 
-        name: 'Lab Notebook', 
+        name: 'Personal NoteBook', 
         to: '/lab-notebook', 
         icon: BookOpenIcon, 
         description: 'Experiment workspace and detailed documentation',
@@ -125,50 +127,34 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
         )
       },
       { 
-        name: 'Research Assistant', 
-        to: '/research-assistant', 
-        icon: LightbulbIcon, 
-        description: 'AI-powered research help, literature search, and paper library',
-        color: 'from-yellow-500 to-yellow-600',
-        bgColor: 'bg-yellow-50',
-        textColor: 'text-yellow-700',
-        iconColor: 'text-yellow-600',
-        iconBg: 'bg-yellow-100',
+        name: 'Lab Workspace', 
+        to: '/lab-workspace', 
+        icon: Squares2X2Icon, 
+        description: 'ClickUp-inspired task management for your lab',
+        color: 'from-teal-500 to-cyan-600',
+        bgColor: 'bg-teal-50',
+        textColor: 'text-teal-700',
+        iconColor: 'text-teal-600',
+        iconBg: 'bg-teal-100',
         iconSvg: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
           </svg>
         )
       },
       { 
-        name: 'Smart Tools', 
-        to: '/research-tools', 
-        icon: CalculatorIcon, 
-        description: 'Scientific calculators and unit conversion',
-        color: 'from-indigo-500 to-indigo-600',
-        bgColor: 'bg-indigo-50',
-        textColor: 'text-indigo-700',
-        iconColor: 'text-indigo-600',
-        iconBg: 'bg-indigo-100',
+        name: 'AI Research Agent', 
+        to: '/ai-research-agent', 
+        icon: SparklesIcon, 
+        description: 'Intelligent research assistant - find papers, write abstracts, generate ideas',
+        color: 'from-blue-500 to-indigo-600',
+        bgColor: 'bg-blue-50',
+        textColor: 'text-blue-700',
+        iconColor: 'text-blue-600',
+        iconBg: 'bg-blue-100',
         iconSvg: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-        )
-      },
-      { 
-        name: 'Lab Management', 
-        to: '/lab-management', 
-        icon: BuildingOfficeIcon, 
-        description: 'Manage lab resources and operations',
-        color: 'from-orange-500 to-orange-600',
-        bgColor: 'bg-orange-50',
-        textColor: 'text-orange-700',
-        iconColor: 'text-orange-600',
-        iconBg: 'bg-orange-100',
-        iconSvg: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
         )
       },
@@ -198,8 +184,8 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
             <span className="text-white font-bold text-lg">DR</span>
           </Link>
           <div className="text-center">
-            <h1 className="text-sm font-bold text-gray-900 transition-all duration-300 hover:text-blue-600">Research Manager</h1>
-            <p className="text-xs text-gray-500 transition-all duration-300 hover:text-gray-700">Digital Lab Platform</p>
+            <h1 className="text-sm font-bold text-gray-900 transition-all duration-300 hover:text-blue-600">Digital Research Manager</h1>
+            <p className="text-xs text-gray-500 transition-all duration-300 hover:text-gray-700">Research Lab Platform</p>
           </div>
         </div>
       </div>

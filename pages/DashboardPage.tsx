@@ -25,6 +25,7 @@ import {
   XMarkIcon,
   UserIcon
 } from '@heroicons/react/24/outline';
+import RecommendationsWidget from '../components/RecommendationsWidget';
 
 interface DashboardStats {
   protocols: number;
@@ -308,6 +309,24 @@ const DashboardPage: React.FC = () => {
           </div>
         ) : (
           <>
+            {/* Personalized Recommendations */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <RecommendationsWidget
+                itemType="protocols"
+                title="Recommended Protocols"
+                limit={3}
+                showFeedback={true}
+                onItemClick={(itemId) => navigate(`/protocols?id=${itemId}`)}
+              />
+              <RecommendationsWidget
+                itemType="papers"
+                title="Recommended Papers"
+                limit={3}
+                showFeedback={true}
+                onItemClick={(itemId) => navigate(`/reference-library?paper=${itemId}`)}
+              />
+            </div>
+
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
               {/* Quick Actions */}

@@ -94,7 +94,7 @@ const UnifiedReferenceSystem: React.FC = () => {
         {
           id: '2',
           type: 'platform',
-          title: 'Lab Notebook Analysis',
+          title: 'Personal NoteBook Analysis',
           description: 'Consistent high-quality experimental work and documentation',
           skills: ['Experimental Design', 'Data Analysis', 'Documentation'],
           context: 'Platform Activity',

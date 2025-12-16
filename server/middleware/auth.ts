@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import pool from '../../database/config.js';
+import pool from "../../database/config.js";
 
 export interface AuthenticatedUser {
   id: string;

@@ -186,7 +186,7 @@ const ScientistPassportPage: React.FC = () => {
           { category: 'Negative Results Shared', count: 52, points: 260, impact: '247 people helped' },
           { category: 'Protocols Published', count: 28, points: 420, impact: '1,420 downloads' },
           { category: 'Data Shared Globally', count: 18, points: 450, impact: '89 citations' },
-          { category: 'Experiments Completed', count: 156, points: 468, impact: 'Lab notebook entries' },
+          { category: 'Experiments Completed', count: 156, points: 468, impact: 'Personal NoteBook entries' },
           { category: 'Help Forum Answers', count: 87, points: 435, impact: '234 helpful votes' },
           { category: 'Collaborations', count: 24, points: 480, impact: '24 successful projects' },
           { category: 'Publications', count: 12, points: 900, impact: 'Peer-reviewed papers' },

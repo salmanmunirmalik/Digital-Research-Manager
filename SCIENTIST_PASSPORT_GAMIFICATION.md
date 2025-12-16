@@ -62,7 +62,7 @@ Seven categories tracked:
 1. **Negative Results Shared** - Failed experiments documented
 2. **Protocols Published** - Research methods shared
 3. **Data Shared Globally** - Data made publicly available
-4. **Experiments Completed** - Lab notebook entries
+4. **Experiments Completed** - Personal NoteBook entries
 5. **Help Forum Answers** - Community support provided
 6. **Collaborations** - Successful partnerships
 7. **Publications** - Peer-reviewed papers

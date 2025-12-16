@@ -8,15 +8,18 @@ import { getUserDisplayName, getRoleDisplayName } from './utils/roleAccess';
 // Import all pages
 import LabNotebookPage from './pages/LabNotebookPage';
 import DashboardPage from './pages/DashboardPage';
-import LabManagementPage from './pages/LabManagementPage';
-import ProfessionalProtocolsPage from './pages/ProfessionalProtocolsPage'; // Professional protocols page with video support
+import ProtocolsPageRefactored from './pages/ProtocolsPageRefactored'; // AI-first protocol generation and management ecosystem
 import DataResultsPage from './pages/DataResultsPage'; // Includes global sharing tab
 import ResearchDataBankPage from './pages/ResearchDataBankPage';
 import HelpForumPage from './pages/HelpForumPage';
 import ConferenceNewsPage from './pages/ConferenceNewsPage';
 import ResearchToolsPage from './pages/ResearchToolsPage';
 import MarketplacePage from './pages/MarketplacePage';
+import AIResearchAgentPage from './pages/AIResearchAgentPage';
 import ResearchAssistantPage from './pages/ResearchAssistantPage';
+import AIAgentsCapabilitiesPage from './pages/AIAgentsCapabilitiesPage';
+import WorkflowBuilderPage from './pages/WorkflowBuilderPage';
+import LabWorkspacePage from './pages/LabWorkspacePage';
 import NegativeResultsPage from './pages/NegativeResultsPage';
 import ProjectManagementPage from './pages/ProjectManagementPage';
 import PIReviewDashboardPage from './pages/PIReviewDashboardPage';
@@ -258,16 +261,14 @@ const AppContent: React.FC = () => {
         } 
       />
       
-      {/* Lab Management - All authenticated users */}
       <Route 
-        path="/lab-management" 
+        path="/lab-workspace" 
         element={
           <ProtectedRoute>
-            <DemoLayout><LabManagementPage /></DemoLayout>
+            <DemoLayout><LabWorkspacePage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
-      
       
       {/* Experiment Tracker - All authenticated users */}
       <Route 
@@ -284,7 +285,7 @@ const AppContent: React.FC = () => {
         path="/protocols" 
         element={
           <ProtectedRoute>
-            <DemoLayout><ProfessionalProtocolsPage /></DemoLayout>
+            <DemoLayout><ProtocolsPageRefactored /></DemoLayout>
           </ProtectedRoute>
         }
       />
@@ -372,7 +373,7 @@ const AppContent: React.FC = () => {
         path="/paper-library" 
         element={
           <ProtectedRoute>
-            <DemoLayout><ResearchAssistantPage /></DemoLayout>
+            <DemoLayout><AIResearchAgentPage /></DemoLayout>
           </ProtectedRoute>
         }
       />
@@ -396,7 +397,7 @@ const AppContent: React.FC = () => {
         path="/reference-library" 
         element={
           <ProtectedRoute>
-            <DemoLayout><ResearchAssistantPage /></DemoLayout>
+            <DemoLayout><AIResearchAgentPage /></DemoLayout>
           </ProtectedRoute>
         } 
       />
@@ -417,12 +418,36 @@ const AppContent: React.FC = () => {
         } 
       />
       <Route 
-        path="/research-assistant" 
+        path="/ai-research-agent"
+        element={
+          <ProtectedRoute>
+            <DemoLayout><AIResearchAgentPage /></DemoLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route 
+        path="/ai-agents-capabilities"
+        element={
+          <ProtectedRoute>
+            <DemoLayout><AIAgentsCapabilitiesPage /></DemoLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route 
+        path="/research-assistant"
         element={
           <ProtectedRoute>
             <DemoLayout><ResearchAssistantPage /></DemoLayout>
           </ProtectedRoute>
-        } 
+        }
+      />
+      <Route 
+        path="/workflow-builder/:id?"
+        element={
+          <ProtectedRoute>
+            <DemoLayout><WorkflowBuilderPage /></DemoLayout>
+          </ProtectedRoute>
+        }
       />
       <Route 
         path="/molecular-biology" 

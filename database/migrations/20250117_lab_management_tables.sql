@@ -1,6 +1,15 @@
 -- Migration: Lab Management Quick Actions Tables
 -- Add tables for meetings, issues, and achievements
 
+-- Skip sample data inserts if no users exist
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM users LIMIT 1) THEN
+        RAISE NOTICE 'No users found, skipping sample data inserts';
+        RETURN;
+    END IF;
+END $$;
+
 -- Meetings table for lab management
 CREATE TABLE IF NOT EXISTS meetings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -51,12 +60,29 @@ CREATE TABLE IF NOT EXISTS achievements (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Insert sample data
-INSERT INTO meetings (title, description, scheduled_date, scheduled_time, duration_minutes, attendees, location, agenda, lab_id, created_by) VALUES
-('Weekly Lab Meeting', 'Regular team sync and project updates', '2024-01-20', '10:00:00', 60, ARRAY['Dr. Sarah Johnson', 'John Doe', 'Jane Smith'], 'Conference Room A', '1. Project updates\n2. Equipment issues\n3. Next week planning', 'demo-lab-id', '4fd07593-fdfd-46ca-890c-f7875e3c47fb');
-
-INSERT INTO issues (title, description, priority, category, assigned_to, status, lab_id, created_by) VALUES
-('PCR Machine Calibration', 'PCR machine needs calibration before next experiment', 'high', 'equipment', '4fd07593-fdfd-46ca-890c-f7875e3c47fb', 'open', 'demo-lab-id', '550e8400-e29b-41d4-a716-446655440003');
-
-INSERT INTO achievements (title, description, category, impact_level, tags, lab_id, created_by) VALUES
-('Successful Gene Editing Experiment', 'Successfully edited target gene in cell line with 95% efficiency', 'research', 'high', ARRAY['gene_editing', 'CRISPR', 'cell_biology'], 'demo-lab-id', '4fd07593-fdfd-46ca-890c-f7875e3c47fb');
+-- Insert sample data (only if users exist)
+DO $$
+DECLARE
+    user_exists BOOLEAN;
+BEGIN
+    SELECT EXISTS (SELECT 1 FROM users LIMIT 1) INTO user_exists;
+    
+    IF user_exists THEN
+        -- Only insert if the specific user IDs exist
+        IF EXISTS (SELECT 1 FROM users WHERE id = '4fd07593-fdfd-46ca-890c-f7875e3c47fb') THEN
+            INSERT INTO meetings (title, description, scheduled_date, scheduled_time, duration_minutes, attendees, location, agenda, lab_id, created_by) VALUES
+            ('Weekly Lab Meeting', 'Regular team sync and project updates', '2024-01-20', '10:00:00', 60, ARRAY['Dr. Sarah Johnson', 'John Doe', 'Jane Smith'], 'Conference Room A', '1. Project updates\n2. Equipment issues\n3. Next week planning', 'demo-lab-id', '4fd07593-fdfd-46ca-890c-f7875e3c47fb')
+            ON CONFLICT DO NOTHING;
+        END IF;
+        
+        IF EXISTS (SELECT 1 FROM users WHERE id IN ('4fd07593-fdfd-46ca-890c-f7875e3c47fb', '550e8400-e29b-41d4-a716-446655440003')) THEN
+            INSERT INTO issues (title, description, priority, category, assigned_to, status, lab_id, created_by) VALUES
+            ('PCR Machine Calibration', 'PCR machine needs calibration before next experiment', 'high', 'equipment', '4fd07593-fdfd-46ca-890c-f7875e3c47fb', 'open', 'demo-lab-id', '550e8400-e29b-41d4-a716-446655440003')
+            ON CONFLICT DO NOTHING;
+            
+            INSERT INTO achievements (title, description, category, impact_level, tags, lab_id, created_by) VALUES
+            ('Successful Gene Editing Experiment', 'Successfully edited target gene in cell line with 95% efficiency', 'research', 'high', ARRAY['gene_editing', 'CRISPR', 'cell_biology'], 'demo-lab-id', '4fd07593-fdfd-46ca-890c-f7875e3c47fb')
+            ON CONFLICT DO NOTHING;
+        END IF;
+    END IF;
+END $$;

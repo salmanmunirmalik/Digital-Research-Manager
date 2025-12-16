@@ -13,7 +13,7 @@ A sophisticated, AI-powered reference system that combines peer references with 
    - Relationship duration and working context
 
 2. **Platform References** 🤖
-   - AI-generated references based on lab notebook entries, protocols, experiments
+   - AI-generated references based on Personal NoteBook entries, protocols, experiments
    - Objective analysis of user activities
    - Skills extraction from content analysis
    - Automatic scoring of complexity, innovation, collaboration, documentation
@@ -26,7 +26,7 @@ A sophisticated, AI-powered reference system that combines peer references with 
 
 ### **Automatic Activity Tracking**
 
-- **Lab Notebook Integration**: Tracks entries, analyzes content, extracts skills
+- **Personal NoteBook Integration**: Tracks entries, analyzes content, extracts skills
 - **Protocol Creation**: Monitors protocol development and complexity
 - **Experiment Completion**: Tracks experimental work and outcomes
 - **Collaboration Tracking**: Monitors team interactions and leadership
@@ -71,7 +71,7 @@ The Enhanced Reference System is integrated into the **Researcher Portfolio** pa
 The system automatically tracks user activities:
 
 ```typescript
-// Lab notebook entry tracking
+// Personal NoteBook entry tracking
 await ActivityTracker.trackLabNotebookEntry(userId, {
   id: entryId,
   title: title,
@@ -164,7 +164,7 @@ const response = await fetch('/api/enhanced-references/generate-comprehensive-le
 
 | Activity Type | Description | Skills Extracted |
 |---------------|-------------|------------------|
-| `lab_notebook_entry` | Lab notebook entries | Technical writing, documentation, research methodology |
+| `lab_notebook_entry` | Personal NoteBook entries | Technical writing, documentation, research methodology |
 | `protocol_created` | Protocol creation | Experimental design, methodology, material management |
 | `experiment_completed` | Experiment completion | Data collection, analysis, problem-solving |
 | `collaboration` | Team collaborations | Communication, teamwork, leadership |

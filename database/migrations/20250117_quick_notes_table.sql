@@ -1,6 +1,6 @@
 -- Migration: Add quick_notes table
 -- Date: 2025-01-17
--- Description: Add quick_notes table for Lab Notebook quick notes functionality
+-- Description: Add quick_notes table for Personal NoteBook quick notes functionality
 
 -- Quick Notes table
 CREATE TABLE IF NOT EXISTS quick_notes (

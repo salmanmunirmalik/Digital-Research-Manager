@@ -15,7 +15,7 @@
 
 ### Navigation Items (Updated Order)
 1. **Dashboard** - Overview of research activities
-2. **Lab Notebook** - Experiment workspace and documentation
+2. **Personal NoteBook** - Experiment workspace and documentation
 3. **Protocols** - Research protocols and methods database
 4. **Data & Results** - Research data and analysis
 5. **Research Assistant** - AI-powered research help
@@ -55,7 +55,7 @@
 
 ### Dashboard Enhancement
 - ✅ More useful quick access
-- ✅ My Research provides direct access to lab notebook
+- ✅ My Research provides direct access to Personal NoteBook
 - ✅ Better than generic "Progress Review"
 - ✅ More actionable
 
@@ -69,8 +69,8 @@
 - ✅ Dashboard only
 - ✅ Click "Discussions" card
 
-### Lab Notebook
-- ✅ Sidebar: "Lab Notebook"
+### Personal NoteBook
+- ✅ Sidebar: "Personal NoteBook"
 - ✅ Dashboard: "My Research" card
 
 ## Summary

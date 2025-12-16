@@ -199,7 +199,7 @@ pages=(
     "Journals Directory:http://localhost:5173/journals-directory"
     "AI Presentations:http://localhost:5173/ai-presentations"
     "Statistical Analysis Tools:http://localhost:5173/statistical-analysis-tools"
-    "Lab Notebook:http://localhost:5173/lab-notebook"
+    "Personal NoteBook:http://localhost:5173/lab-notebook"
     "Data Results:http://localhost:5173/data-results"
 )
 

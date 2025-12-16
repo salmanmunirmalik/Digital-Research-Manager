@@ -116,7 +116,7 @@ Your deployment will be successful when:
 
 ### Key Features Ready
 - **Protocol Management**: Create, edit, fork, and share lab protocols
-- **Digital Lab Notebook**: Organize experiments and results
+- **Digital Personal NoteBook**: Organize experiments and results
 - **Inventory Management**: Track lab supplies and reagents
 - **Instrument Booking**: Schedule lab equipment usage
 - **Calculator Hub**: Scientific calculators for lab work

@@ -16,14 +16,14 @@
 ## 📋 **Detailed Role Permissions**
 
 ### **Student Role** (`student`)
-- ✅ **View Access**: All protocols, lab notebook, data results, calculators, inventory
+- ✅ **View Access**: All protocols, Personal NoteBook, data results, calculators, inventory
 - ✅ **Basic Operations**: View instruments, access research tools
 - ✅ **Lab Management**: Access lab management features
 - ❌ **Restricted**: Cannot create/edit protocols or manage inventory
 
 **Available Features:**
 - Dashboard overview
-- View protocols and lab notebook entries
+- View protocols and Personal NoteBook entries
 - View inventory (read-only access)
 - Access calculators and research tools
 - View data results and presentations
@@ -88,7 +88,7 @@
 
 #### **Student+ Access** (All authenticated users)
 - `/dashboard` - Main dashboard
-- `/lab-notebook` - Lab notebook entries
+- `/lab-notebook` - Personal NoteBook entries
 - `/protocols` - Protocol management
 - `/inventory` - Inventory management (view-only for students)
 - `/instruments` - Instrument management

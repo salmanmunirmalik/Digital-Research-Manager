@@ -406,7 +406,7 @@ Result: ✅ Returns []
 ```
 Sidebar (from top to bottom):
 ├─ Dashboard
-├─ Lab Notebook
+├─ Personal NoteBook
 ├─ Lab Management  ← Has Team Tree! 🌳
 ├─ Protocols
 ├─ Data & Results

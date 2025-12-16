@@ -65,7 +65,7 @@ Converted Help Forum from a tab in Research Assistant to a standalone, dedicated
 
 ### New Sidebar Order
 1. Dashboard
-2. Lab Notebook
+2. Personal NoteBook
 3. Protocols
 4. Data & Results
 5. Research Assistant

@@ -388,7 +388,7 @@ const CurrentTrendsPage: React.FC = () => {
               <li className="flex items-start space-x-2">
                 <GlobeAltIcon className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <div className="font-medium text-gray-900 text-sm">Open lab notebooks</div>
+                  <div className="font-medium text-gray-900 text-sm">Open Personal NoteBooks</div>
                 </div>
               </li>
               <li className="flex items-start space-x-2">

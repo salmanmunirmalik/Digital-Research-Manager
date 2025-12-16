@@ -57,7 +57,7 @@ app.get('/api/data/results', authenticateToken, async (req, res) => {
   }
 });
 
-// Lab Notebook API endpoints
+// Personal NoteBook API endpoints
 app.get('/api/lab-notebooks', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM lab_notebook_entries ORDER BY created_at DESC LIMIT 10');

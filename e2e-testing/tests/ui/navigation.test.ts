@@ -9,10 +9,10 @@ describe('UI Navigation Tests', () => {
   test('Should navigate to all main pages', async () => {
     const pages = [
       { name: 'Dashboard', path: '/dashboard' },
-      { name: 'Lab Notebook', path: '/lab-notebook' },
+      { name: 'Personal NoteBook', path: '/lab-notebook' },
       { name: 'Protocols', path: '/protocols' },
       { name: 'Data & Results', path: '/data-results' },
-      { name: 'Lab Management', path: '/lab-management' },
+      { name: 'Lab Workspace', path: '/lab-workspace' },
       { name: 'Research Tools', path: '/research-tools' },
       { name: 'Supplier Marketplace', path: '/supplier-marketplace' },
       { name: 'Journals Directory', path: '/journals-directory' },

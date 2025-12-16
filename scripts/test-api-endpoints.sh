@@ -68,8 +68,8 @@ test_endpoint "GET" "/api/auth/profile" "Get user profile"
 
 # Core Features
 echo ""
-echo "📚 Lab Notebook Endpoints"
-test_endpoint "GET" "/api/lab-notebooks" "Get lab notebook entries"
+echo "📚 Personal NoteBook Endpoints"
+test_endpoint "GET" "/api/lab-notebooks" "Get Personal NoteBook entries"
 test_endpoint "GET" "/api/lab-notebooks/entry-types" "Get entry types"
 
 echo ""

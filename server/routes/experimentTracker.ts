@@ -1,5 +1,5 @@
 import { Request, Response, Router } from 'express';
-import pool from '../../database/config.js';
+import pool from "../../database/config.js";
 import jwt from 'jsonwebtoken';
 
 // Authentication middleware

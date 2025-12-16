@@ -5,7 +5,7 @@
  */
 
 import { Router } from 'express';
-import pool from '../../database/config.js';
+import pool from "../../database/config.js";
 import { paperFetchingService } from '../services/doiIntegration.js';
 import autoIndexing from '../utils/autoIndexing.js';
 

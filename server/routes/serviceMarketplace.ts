@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express';
-import pool from '../../database/config.js';
+import pool from "../../database/config.js";
 
 const router: Router = Router();
 
@@ -18,8 +18,13 @@ router.get('/test', (req, res) => {
 // ==============================================
 
 // Get all service categories
-router.get('/categories', async (req, res) => {
+router.get('/categories', async (req: any, res) => {
   try {
+    // Safety check for req.user (even though middleware should handle it)
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     console.log('🔍 Fetching service categories...');
     const result = await pool.query(`
       SELECT *
@@ -31,8 +36,13 @@ router.get('/categories', async (req, res) => {
     console.log(`✅ Found ${result.rows.length} categories`);
     res.json(result.rows);
   } catch (error: any) {
-    console.error('❌ Error fetching service categories:', error.message);
-    res.status(500).json({ error: 'Failed to fetch service categories', details: error.message });
+    console.error('❌ Error fetching service categories:', error);
+    if (error.code) console.error('Database error code:', error.code);
+    if (error.message) console.error('Error message:', error.message);
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Failed to fetch service categories' 
+      : error.message || 'Failed to fetch service categories';
+    res.status(500).json({ error: errorMessage });
   }
 });
 

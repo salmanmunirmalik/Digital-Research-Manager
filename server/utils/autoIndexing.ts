@@ -134,24 +134,31 @@ function extractContent(data: any, dataType: string): string {
 
 /**
  * Auto-index content for AI learning
+ * Task 14: Enhanced with real-time indexing
+ * Task 16: Real-time embedding updates
  */
 export async function autoIndexContent(
   userId: string,
   sourceType: string,
   sourceId: string,
-  data: any
+  data: any,
+  realTime: boolean = false
 ): Promise<void> {
   try {
-    // Check if already indexed
-    const existing = await pool.query(
-      `SELECT id FROM ai_training_data WHERE user_id = $1 AND source_type = $2 AND source_id = $3`,
+    // Check if already indexed in both tables (user_ai_content and legacy ai_training_data)
+    // This prevents duplicate indexing after migration from ai_training_data to user_ai_content
+    const [existingNew, existingLegacy] = await Promise.all([
+      pool.query(
+      `SELECT id, processed FROM user_ai_content WHERE user_id = $1 AND source_type = $2 AND source_id = $3`,
       [userId, sourceType, sourceId]
-    );
+      ),
+      pool.query(
+        `SELECT id, processed FROM ai_training_data WHERE user_id = $1 AND source_type = $2 AND source_id = $3`,
+        [userId, sourceType, sourceId]
+      )
+    ]);
     
-    if (existing.rows.length > 0) {
-      console.log(`Content already indexed: ${sourceType} ${sourceId}`);
-      return;
-    }
+    const alreadyIndexed = existingNew.rows.length > 0 || existingLegacy.rows.length > 0;
     
     // Extract content
     const content = extractContent(data, sourceType);
@@ -161,26 +168,35 @@ export async function autoIndexContent(
       return;
     }
     
-    // Generate embedding
-    const embedding = await generateEmbedding(content, userId);
-    
-    // Store in database
-    await pool.query(
-      `INSERT INTO ai_training_data (
-        user_id, source_type, source_id, title, content, embedding, processed
-      ) VALUES ($1, $2, $3, $4, $5, $6, true)
-      ON CONFLICT DO NOTHING`,
-      [
+    // Task 16: Real-time embedding updates
+    if (realTime || !alreadyIndexed) {
+      // Use UserAIContentProcessor for real-time processing
+      const { UserAIContentProcessor } = await import('../services/UserAIContentProcessor.js');
+      
+      await UserAIContentProcessor.processContent(
         userId,
         sourceType,
         sourceId,
         data.title || `Untitled ${sourceType}`,
         content,
-        JSON.stringify(embedding)
-      ]
-    );
-    
-    console.log(`✅ Auto-indexed: ${sourceType} ${sourceId}`);
+        { realTime: true, timestamp: new Date() }
+      );
+      
+      // Task 14: Trigger continuous learning event
+      const { ContinuousLearningEngine } = await import('../services/ContinuousLearningEngine.js');
+      await ContinuousLearningEngine.processLearningEvent({
+        type: alreadyIndexed ? 'content_updated' : 'content_created',
+        userId,
+        sourceType,
+        sourceId,
+        data,
+        timestamp: new Date()
+      });
+      
+      console.log(`✅ ${realTime ? 'Real-time' : 'Auto'}-indexed: ${sourceType} ${sourceId}`);
+    } else {
+      console.log(`Content already indexed: ${sourceType} ${sourceId}`);
+    }
   } catch (error) {
     console.error(`Error auto-indexing ${sourceType} ${sourceId}:`, error);
     // Don't throw - just log the error

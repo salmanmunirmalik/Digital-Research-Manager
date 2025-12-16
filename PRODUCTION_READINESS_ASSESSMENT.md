@@ -247,7 +247,7 @@
    - Invalid credentials handling
    - Navigation between pages
 
-2. **Lab Notebook Module Tests**
+2. **Personal NoteBook Module Tests**
    - Page display and functionality
    - Create/edit/delete entries
    - Filtering and search
@@ -266,7 +266,7 @@
 
 5. **API Endpoint Tests**
    - Authentication endpoints
-   - Lab notebook API
+   - Personal NoteBook API
    - Professional protocols API
    - Error handling
 

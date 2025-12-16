@@ -16,7 +16,7 @@ Created a comprehensive architecture document outlining an **automatic learning 
 Instead of manual training, the AI will automatically learn from:
 
 ### Auto-Learning Sources
-1. **Lab Notebook** - Experiment methodologies, results, conclusions
+1. **Personal NoteBook** - Experiment methodologies, results, conclusions
 2. **Protocols** - Published protocols, procedures, equipment
 3. **Research Data** - Datasets, analysis, statistical findings
 4. **Papers & Publications** - Abstracts, summaries, key findings

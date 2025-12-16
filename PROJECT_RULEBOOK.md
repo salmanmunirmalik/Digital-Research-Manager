@@ -220,7 +220,7 @@
 - ✅ Multi-tenant lab management
 - ✅ Role-based access control (Admin, PI, Researcher, Student)
 - ✅ Protocol management with version control
-- ✅ Lab notebook with collaborative editing
+- ✅ Personal NoteBook with collaborative editing
 - ✅ Inventory tracking with low-stock alerts
 - ✅ Instrument booking and management
 - ✅ Data analytics and visualization

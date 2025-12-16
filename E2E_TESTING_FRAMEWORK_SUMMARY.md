@@ -110,7 +110,7 @@ e2e-testing/
 │   │   ├── authentication.test.ts  # Auth flow tests
 │   │   └── endpoints.test.ts       # API endpoint tests
 │   ├── crud/
-│   │   ├── lab-notebook.test.ts    # Lab notebook CRUD
+│   │   ├── lab-notebook.test.ts    # Personal NoteBook CRUD
 │   │   └── protocols.test.ts       # Protocols CRUD
 │   ├── ui/
 │   │   ├── navigation.test.ts      # UI navigation tests

@@ -237,7 +237,7 @@ async function main() {
       { name: 'Journals Directory', url: 'http://localhost:5173/journals-directory' },
       { name: 'AI Presentations', url: 'http://localhost:5173/ai-presentations' },
       { name: 'Statistical Analysis Tools', url: 'http://localhost:5173/statistical-analysis-tools' },
-      { name: 'Lab Notebook', url: 'http://localhost:5173/lab-notebook' },
+      { name: 'Personal NoteBook', url: 'http://localhost:5173/lab-notebook' },
       { name: 'Data Results', url: 'http://localhost:5173/data-results' },
       { name: 'Login Page', url: 'http://localhost:5173/login' },
       { name: 'Register Page', url: 'http://localhost:5173/register' },

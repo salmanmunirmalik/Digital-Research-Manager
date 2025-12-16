@@ -6,7 +6,7 @@ A comprehensive fullstack application for managing research laboratory protocols
 
 ### Frontend (React + TypeScript)
 - **Protocol Management**: Create, edit, fork, and share lab protocols with advanced privacy controls
-- **Digital Lab Notebook**: Organize experiments and results with AI-powered insights and global collaboration
+- **Digital Personal NoteBook**: Organize experiments and results with AI-powered insights and global collaboration
 - **Inventory Management**: Track reagents, antibodies, and lab supplies with smart alerts
 - **Instrument Booking**: Schedule and manage lab equipment usage with conflict resolution
 - **Calculator Hub**: Scientific calculators for common lab calculations with result history
@@ -105,7 +105,7 @@ This will start both the frontend (Vite dev server) and backend (Express server)
 - `DELETE /api/protocols/:id` - Delete protocol
 - `POST /api/protocols/:id/fork` - Fork existing protocol
 
-### Lab Notebook
+### Personal NoteBook
 - `GET /api/notebook/projects` - List user projects
 - `POST /api/notebook/projects` - Create new project
 - `GET /api/notebook/projects/:id` - Get project with experiments
@@ -131,7 +131,7 @@ The application uses SQLite with the following main tables:
 - `protocol_steps` - Individual steps within protocols
 - `projects` - Research projects
 - `experiments` - Experiments within projects
-- `notebook_entries` - Lab notebook entries
+- `notebook_entries` - Personal NoteBook entries
 - `content_blocks` - Rich content within notebook entries
 - `inventory_items` - Lab supplies and reagents
 - `instruments` - Lab equipment

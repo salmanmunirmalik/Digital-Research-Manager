@@ -2,7 +2,7 @@
 // AI-Generated Reference Letters from Collected References
 
 import express, { type Router } from 'express';
-import pool from '../../database/config.js';
+import pool from "../../database/config.js";
 import jwt from 'jsonwebtoken';
 
 // Authentication middleware

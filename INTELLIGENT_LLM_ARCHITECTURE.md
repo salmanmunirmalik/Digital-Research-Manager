@@ -20,7 +20,7 @@ Instead of a manual "Train My AI" tab, implement an intelligent LLM that automat
 
 ## Automatic Learning Sources
 
-### 1. **Lab Notebook** (Auto-learn)
+### 1. **Personal NoteBook** (Auto-learn)
 - Experiment methodologies
 - Results and conclusions
 - Lab notes and observations

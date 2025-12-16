@@ -24,6 +24,7 @@ import {
   LinkIcon,
   BeakerIcon
 } from '../components/icons';
+import RecommendationsWidget from '../components/RecommendationsWidget';
 
 interface Paper {
   id?: string;
@@ -229,6 +230,17 @@ const PaperLibraryPage: React.FC = () => {
         {/* Library View */}
         {view === 'library' && (
           <div>
+            {/* Recommended Papers Section */}
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <RecommendationsWidget
+                itemType="papers"
+                title="Papers You Might Like"
+                limit={10}
+                showFeedback={true}
+                className="mb-6"
+              />
+            </div>
+            
             {loading ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>

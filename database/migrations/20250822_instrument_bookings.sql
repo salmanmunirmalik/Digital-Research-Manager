@@ -41,10 +41,11 @@ CREATE TABLE IF NOT EXISTS instrument_bookings (
 );
 
 -- Link bookings to resource exchange requests (when supplies are needed for the experiment)
+-- Note: resource_exchange_requests table may be created by a later migration
 CREATE TABLE IF NOT EXISTS booking_supply_requests (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   booking_id UUID NOT NULL REFERENCES instrument_bookings(id) ON DELETE CASCADE,
-  exchange_request_id UUID NOT NULL REFERENCES resource_exchange_requests(id) ON DELETE CASCADE,
+  exchange_request_id UUID, -- References resource_exchange_requests if it exists (no FK to avoid dependency)
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(booking_id, exchange_request_id)
 );

@@ -62,7 +62,7 @@ The Current Trends page now uses a cleaner 2x2 grid layout with four main sectio
 
 #### 7. **Community Engagement** 🌐
 - Virtual conferences
-- Open lab notebooks
+- Open Personal NoteBooks
 - Research transparency
 - Peer-to-peer learning
 

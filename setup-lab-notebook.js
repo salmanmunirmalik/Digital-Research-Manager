@@ -7,7 +7,7 @@ const pool = new Pool({
 
 async function setupLabNotebook() {
   try {
-    console.log('🔧 Setting up Lab Notebook database...');
+    console.log('🔧 Setting up Personal NoteBook database...');
 
     // Create lab_notebook_entries table
     await pool.query(`
@@ -99,7 +99,7 @@ async function setupLabNotebook() {
     `);
     console.log('✅ Inserted sample tags');
 
-    // Insert sample lab notebook entries
+    // Insert sample Personal NoteBook entries
     const sampleEntries = [
       {
         title: 'PCR Optimization for Gene X',
@@ -171,12 +171,12 @@ async function setupLabNotebook() {
         entry.estimated_duration, entry.actual_duration, entry.cost
       ]);
     }
-    console.log('✅ Inserted sample lab notebook entries');
+    console.log('✅ Inserted sample Personal NoteBook entries');
 
-    console.log('🎉 Lab Notebook setup completed successfully!');
+    console.log('🎉 Personal NoteBook setup completed successfully!');
     
   } catch (error) {
-    console.error('❌ Error setting up Lab Notebook:', error);
+    console.error('❌ Error setting up Personal NoteBook:', error);
   } finally {
     await pool.end();
   }

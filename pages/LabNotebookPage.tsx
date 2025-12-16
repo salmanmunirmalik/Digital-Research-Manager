@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
 import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
@@ -65,7 +66,7 @@ import {
   FireIcon
 } from '../components/icons';
 
-// Simplified Lab Notebook Entry Interface
+// Simplified Personal NoteBook Entry Interface
 interface LabNotebookEntry {
   id: string;
   title: string;
@@ -148,6 +149,12 @@ const LabNotebookPage: React.FC = () => {
   const [showMeetingForm, setShowMeetingForm] = useState(false);
   const [showProblemForm, setShowProblemForm] = useState(false);
   const [showQuickNoteModal, setShowQuickNoteModal] = useState(false);
+  
+  // Summary generation state
+  const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [summaryType, setSummaryType] = useState<'daily' | 'weekly' | 'project' | null>(null);
+  const [generatedSummary, setGeneratedSummary] = useState<string | null>(null);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
   
   // Simplified entry form
   const [entryForm, setEntryForm] = useState({
@@ -502,7 +509,7 @@ const LabNotebookPage: React.FC = () => {
         return;
       }
       
-      // Convert form data to lab notebook entry format
+      // Convert form data to Personal NoteBook entry format
       const entryData = {
         title: data.title,
         content: data.description || data.content || '',
@@ -596,7 +603,7 @@ const LabNotebookPage: React.FC = () => {
           {
             id: '2',
             type: 'entry_updated',
-            description: 'Updated lab notebook entry',
+            description: 'Updated Personal NoteBook entry',
             user_name: user?.username || 'Current User',
             timestamp: new Date(Date.now() - 3600000).toISOString(),
             icon: PencilIcon,
@@ -721,6 +728,41 @@ const LabNotebookPage: React.FC = () => {
   };
 
   // Load data
+  // Generate notebook summary
+  const generateSummary = async (type: 'daily' | 'weekly' | 'project', projectId?: string) => {
+    try {
+      setGeneratingSummary(true);
+      setSummaryType(type);
+      const token = localStorage.getItem('token');
+      const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api';
+      
+      const response = await axios.post(
+        `${apiUrl}/notebook-summaries/generate`,
+        {
+          summaryType: type,
+          projectId: projectId || undefined,
+          dateRange: type === 'daily' 
+            ? { start: new Date().toISOString().split('T')[0], end: new Date().toISOString().split('T')[0] }
+            : type === 'weekly'
+            ? {
+                start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                end: new Date().toISOString().split('T')[0]
+              }
+            : undefined
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setGeneratedSummary(response.data.summary || response.data.content || 'Summary generated successfully');
+      setShowSummaryModal(true);
+    } catch (error: any) {
+      console.error('Error generating summary:', error);
+      alert(`Error generating summary: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setGeneratingSummary(false);
+    }
+  };
+
   useEffect(() => {
     fetchEntries();
     fetchQuickNotes();
@@ -1021,13 +1063,53 @@ const LabNotebookPage: React.FC = () => {
               </CardContent>
             </Card>
 
-        {/* Lab Notebook Entries */}
+        {/* Personal NoteBook Entries */}
           <div className="space-y-6">
-          {/* Header */}
-          <div>
+          {/* Header with Summary Buttons */}
+          <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900" data-testid="lab-notebook-heading">
-              Lab Notebook Entries
+              Personal NoteBook Entries
             </h2>
+            
+            {/* Summary Generation Buttons */}
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => generateSummary('daily')}
+                disabled={generatingSummary}
+                className="bg-green-600 hover:bg-green-700 text-white"
+                title="Generate daily summary"
+              >
+                {generatingSummary && summaryType === 'daily' ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <DocumentTextIcon className="w-5 h-5 mr-2" />
+                    Daily Summary
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={() => generateSummary('weekly')}
+                disabled={generatingSummary}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+                title="Generate weekly summary"
+              >
+                {generatingSummary && summaryType === 'weekly' ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <DocumentTextIcon className="w-5 h-5 mr-2" />
+                    Weekly Summary
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
             {/* Search and Filters */}
@@ -1111,11 +1193,11 @@ const LabNotebookPage: React.FC = () => {
                               <BeakerIcon className="h-4 w-4" />
                               Protocols
                             </Link>
-                            <Link to="/lab-management" className="flex items-center gap-1 text-green-600 hover:text-green-800">
+                            <Link to="/lab-workspace" className="flex items-center gap-1 text-green-600 hover:text-green-800">
                               <ClipboardListIcon className="h-4 w-4" />
                               Inventory
                             </Link>
-                            <Link to="/lab-management" className="flex items-center gap-1 text-purple-600 hover:text-purple-800">
+                            <Link to="/lab-workspace" className="flex items-center gap-1 text-purple-600 hover:text-purple-800">
                               <CalendarDaysIcon className="h-4 w-4" />
                               Book Equipment
                             </Link>
@@ -1638,6 +1720,46 @@ const LabNotebookPage: React.FC = () => {
                   Save Changes
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Summary Generation Modal */}
+      {showSummaryModal && generatedSummary && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {summaryType === 'daily' && 'Daily Summary'}
+                {summaryType === 'weekly' && 'Weekly Summary'}
+                {summaryType === 'project' && 'Project Summary'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowSummaryModal(false);
+                  setGeneratedSummary(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="prose max-w-none whitespace-pre-wrap text-gray-700">
+                {generatedSummary}
+              </div>
+            </div>
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowSummaryModal(false);
+                  setGeneratedSummary(null);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

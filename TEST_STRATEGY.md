@@ -33,7 +33,7 @@ This document outlines the comprehensive testing strategy for the Digital Resear
 | **Component** | **Test Coverage** | **Priority** |
 |---------------|-------------------|--------------|
 | Authentication Components | 0% | 🔴 High |
-| Lab Notebook Components | 0% | 🔴 High |
+| Personal NoteBook Components | 0% | 🔴 High |
 | Professional Protocols | 0% | 🔴 High |
 | Experiment Tracker | 0% | 🔴 High |
 | UI Components | 0% | 🟡 Medium |
@@ -75,7 +75,7 @@ This document outlines the comprehensive testing strategy for the Digital Resear
 | **E2E Test Suite** | **Status** | **Coverage** |
 |-------------------|------------|--------------|
 | Authentication & Navigation | ✅ Complete | 100% |
-| Lab Notebook Module | ✅ Complete | 100% |
+| Personal NoteBook Module | ✅ Complete | 100% |
 | Professional Protocols | ✅ Complete | 100% |
 | Experiment Tracker | ✅ Complete | 100% |
 | API Endpoints | ✅ Complete | 100% |
@@ -99,10 +99,10 @@ This document outlines the comprehensive testing strategy for the Digital Resear
 ✅ Navigation between pages
 ```
 
-#### **Lab Notebook Module Tests**
+#### **Personal NoteBook Module Tests**
 ```typescript
 ✅ Page display and functionality
-✅ Create new lab notebook entry
+✅ Create new Personal NoteBook entry
 ✅ Edit existing entry
 ✅ Filter entries by type
 ✅ Search entries
@@ -129,7 +129,7 @@ This document outlines the comprehensive testing strategy for the Digital Resear
 #### **API Endpoint Tests**
 ```typescript
 ✅ Authentication endpoints
-✅ Lab notebook API
+✅ Personal NoteBook API
 ✅ Professional protocols API
 ✅ Error handling
 ✅ Token validation

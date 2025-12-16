@@ -14,12 +14,150 @@ BEGIN
 END $$;
 
 -- Apply the research dashboard schema
--- Note: Schema should be applied separately
+-- Create tables for research dashboard functionality
+
+-- Research Deadlines Table
+CREATE TABLE IF NOT EXISTS research_deadlines (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    deadline_type VARCHAR(50) NOT NULL, -- grant, publication, conference, etc.
+    deadline_date DATE NOT NULL,
+    priority VARCHAR(20) DEFAULT 'medium', -- high, medium, low
+    status VARCHAR(50) DEFAULT 'upcoming', -- upcoming, passed, completed
+    related_lab_id UUID REFERENCES labs(id) ON DELETE CASCADE,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Research Insights Table
+CREATE TABLE IF NOT EXISTS research_insights (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    insight_type VARCHAR(50) NOT NULL, -- opportunity, warning, suggestion, achievement
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(100), -- grants, productivity, collaborations, etc.
+    priority VARCHAR(20) DEFAULT 'medium',
+    confidence_score INTEGER DEFAULT 0, -- 0-100
+    lab_id UUID REFERENCES labs(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id),
+    action_label VARCHAR(100),
+    action_route VARCHAR(255),
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Research Activities Table
+CREATE TABLE IF NOT EXISTS research_activities (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    activity_type VARCHAR(50) NOT NULL, -- experiment, publication, collaboration, etc.
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    user_id UUID REFERENCES users(id),
+    lab_id UUID REFERENCES labs(id) ON DELETE CASCADE,
+    impact_level VARCHAR(20) DEFAULT 'medium', -- high, medium, low
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Research Collaborations Table
+CREATE TABLE IF NOT EXISTS research_collaborations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    collaboration_type VARCHAR(50) DEFAULT 'external', -- internal, external
+    status VARCHAR(50) DEFAULT 'active', -- active, completed, on_hold
+    start_date DATE,
+    end_date DATE,
+    lab_id UUID REFERENCES labs(id) ON DELETE CASCADE,
+    lead_researcher_id UUID REFERENCES users(id),
+    funding_amount DECIMAL(15,2),
+    publications_count INTEGER DEFAULT 0,
+    outcomes TEXT[],
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Collaboration Partners Table
+CREATE TABLE IF NOT EXISTS collaboration_partners (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    collaboration_id UUID REFERENCES research_collaborations(id) ON DELETE CASCADE,
+    partner_name VARCHAR(255),
+    institution VARCHAR(255),
+    role VARCHAR(100),
+    contact_email VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Research Trends Table
+CREATE TABLE IF NOT EXISTS research_trends (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(100), -- technology, methodology, funding, etc.
+    impact_level VARCHAR(20) DEFAULT 'medium',
+    timeframe VARCHAR(50), -- short, medium, long
+    relevance_score INTEGER DEFAULT 0, -- 0-100
+    sources TEXT[],
+    recommendations TEXT[],
+    lab_id UUID REFERENCES labs(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Project Milestones Table (if not exists)
+CREATE TABLE IF NOT EXISTS project_milestones (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    due_date DATE,
+    priority VARCHAR(20) DEFAULT 'medium',
+    status VARCHAR(50) DEFAULT 'pending', -- pending, in_progress, completed
+    completed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add progress column to projects if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'projects' AND column_name = 'progress') THEN
+        ALTER TABLE projects ADD COLUMN progress INTEGER DEFAULT 0;
+        ALTER TABLE projects ADD COLUMN publications_count INTEGER DEFAULT 0;
+        ALTER TABLE projects ADD COLUMN citations_count INTEGER DEFAULT 0;
+        ALTER TABLE projects ADD COLUMN funding_amount DECIMAL(15,2);
+    END IF;
+END $$;
 
 -- Insert sample data for testing (only if baseline lab/user data exists)
 DO $SAMPLEDATA$
+DECLARE
+    labs_exist BOOLEAN;
+    users_exist BOOLEAN;
+    labs_has_data BOOLEAN;
+    users_has_data BOOLEAN;
 BEGIN
-    IF EXISTS (SELECT 1 FROM labs) AND EXISTS (SELECT 1 FROM users) THEN
+    -- Check if tables exist
+    SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'labs') INTO labs_exist;
+    SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') INTO users_exist;
+    
+    IF labs_exist AND users_exist THEN
+        -- Check if tables have data (using dynamic SQL to avoid parse errors)
+        BEGIN
+            PERFORM 1 FROM labs LIMIT 1;
+            labs_has_data := FOUND;
+        EXCEPTION WHEN OTHERS THEN
+            labs_has_data := FALSE;
+        END;
+        
+        IF labs_has_data THEN
+            BEGIN
+                PERFORM 1 FROM users LIMIT 1;
+                users_has_data := FOUND;
+            EXCEPTION WHEN OTHERS THEN
+                users_has_data := FALSE;
+            END;
+            
+            IF users_has_data THEN
         INSERT INTO research_deadlines (title, description, deadline_type, deadline_date, priority, related_lab_id, created_by)
         SELECT 'NIH Grant Proposal Submission', 'R01 application for cancer research funding', 'grant', '2024-04-15', 'high', l.id, u.id
         FROM labs l CROSS JOIN users u LIMIT 1;
@@ -67,63 +205,78 @@ BEGIN
         INSERT INTO research_trends (title, description, category, impact_level, timeframe, relevance_score, sources, recommendations, lab_id)
         SELECT 'AI-Driven Research', 'Machine learning approaches are revolutionizing discovery workflows', 'technology', 'high', 'medium', 95, ARRAY['Nature Reviews', 'Science'], ARRAY['Integrate AI tools', 'Explore funding'], l.id
         FROM labs l LIMIT 1;
+            ELSE
+                RAISE NOTICE 'Skipping research dashboard sample data (labs/users tables have no data).';
+            END IF;
+        ELSE
+            RAISE NOTICE 'Skipping research dashboard sample data (labs table has no data).';
+        END IF;
     ELSE
-        RAISE NOTICE 'Skipping research dashboard sample data (labs/users not present).';
+        RAISE NOTICE 'Skipping research dashboard sample data (labs/users tables not present).';
     END IF;
-END
-$SAMPLEDATA$;
+END $SAMPLEDATA$;
 
--- Update existing projects with research-specific fields
-UPDATE projects SET 
-    progress = CASE 
-        WHEN status = 'completed' THEN 100
-        WHEN status = 'active' THEN 75
-        WHEN status = 'on_hold' THEN 50
-        ELSE 25
-    END,
-    priority = CASE 
-        WHEN budget > 100000 THEN 'high'
-        WHEN budget > 50000 THEN 'medium'
-        ELSE 'low'
-    END,
-    publications_count = 0,
-    citations_count = 0,
-    funding_amount = COALESCE(budget, 0)
-WHERE lab_id = 'c8ace470-5e21-4d3b-ab95-da6084311657';
+-- Update existing projects with research-specific fields (if progress column exists)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'projects' AND column_name = 'progress') THEN
+        UPDATE projects SET 
+            progress = CASE
+                WHEN status = 'completed' THEN 100
+                WHEN status = 'active' THEN 75
+                WHEN status = 'on_hold' THEN 50
+                ELSE 25
+            END,
+            priority = CASE 
+                WHEN budget > 100000 THEN 'high'
+                WHEN budget > 50000 THEN 'medium'
+                ELSE 'low'
+            END,
+            publications_count = 0,
+            citations_count = 0,
+            funding_amount = COALESCE(budget, 0)
+        WHERE EXISTS (SELECT 1 FROM labs WHERE labs.id = projects.lab_id);
+    END IF;
+END $$;
 
--- Add some sample milestones to existing projects
-INSERT INTO project_milestones (project_id, title, description, due_date, priority)
-SELECT 
-    p.id,
-    'Initial Research Phase',
-    'Complete literature review and initial experiments',
-    p.start_date + INTERVAL '1 month',
-    'high'
-FROM projects p 
-WHERE p.lab_id = 'c8ace470-5e21-4d3b-ab95-da6084311657'
-LIMIT 3;
+-- Add some sample milestones to existing projects (if table exists)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'project_milestones') THEN
+        INSERT INTO project_milestones (project_id, title, description, due_date, priority)
+        SELECT 
+            p.id,
+            'Initial Research Phase',
+            'Complete literature review and initial experiments',
+            p.start_date + INTERVAL '1 month',
+            'high'
+        FROM projects p 
+        WHERE EXISTS (SELECT 1 FROM labs WHERE labs.id = p.lab_id)
+        LIMIT 3;
 
-INSERT INTO project_milestones (project_id, title, description, due_date, priority)
-SELECT 
-    p.id,
-    'Data Analysis Phase',
-    'Complete data collection and preliminary analysis',
-    p.start_date + INTERVAL '3 months',
-    'medium'
-FROM projects p 
-WHERE p.lab_id = 'c8ace470-5e21-4d3b-ab95-da6084311657'
-LIMIT 3;
+        INSERT INTO project_milestones (project_id, title, description, due_date, priority)
+        SELECT 
+            p.id,
+            'Data Analysis Phase',
+            'Complete data collection and preliminary analysis',
+            p.start_date + INTERVAL '3 months',
+            'medium'
+        FROM projects p 
+        WHERE EXISTS (SELECT 1 FROM labs WHERE labs.id = p.lab_id)
+        LIMIT 3;
 
-INSERT INTO project_milestones (project_id, title, description, due_date, priority)
-SELECT 
-    p.id,
-    'Publication Phase',
-    'Prepare manuscript for publication',
-    p.end_date - INTERVAL '1 month',
-    'high'
-FROM projects p 
-WHERE p.lab_id = 'c8ace470-5e21-4d3b-ab95-da6084311657'
-LIMIT 3;
+        INSERT INTO project_milestones (project_id, title, description, due_date, priority)
+        SELECT 
+            p.id,
+            'Publication Phase',
+            'Prepare manuscript for publication',
+            p.end_date - INTERVAL '1 month',
+            'high'
+        FROM projects p 
+        WHERE EXISTS (SELECT 1 FROM labs WHERE labs.id = p.lab_id)
+        LIMIT 3;
+    END IF;
+END $$;
 
 -- Create a function to calculate research metrics
 CREATE OR REPLACE FUNCTION calculate_research_metrics(p_lab_id UUID)

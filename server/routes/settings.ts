@@ -19,6 +19,11 @@ const pool = new Pool({
 // Get user settings
 router.get('/', authenticateToken, async (req: any, res) => {
   try {
+    // Safety check for req.user
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     const userId = req.user.id;
     
     // Get user from database

@@ -106,49 +106,53 @@ router.get('/providers', authenticateToken, async (req: any, res) => {
 router.post('/keys', authenticateToken, async (req: any, res) => {
   try {
     const userId = req.user.id;
-    const { provider, apiKey } = req.body;
+    const { provider, provider_name, apiKey } = req.body;
     
     if (!provider || !apiKey) {
       return res.status(400).json({ error: 'Provider and API key are required' });
     }
     
-    // Verify provider exists
-    const providerCheck = await pool.query(
-      'SELECT provider_name FROM ai_provider_configs WHERE provider = $1 AND is_active = true',
+    // Check if provider config exists, if not create a basic one
+    const configCheck = await pool.query(
+      'SELECT provider_name FROM ai_provider_configs WHERE provider = $1',
       [provider]
     );
     
-    if (providerCheck.rows.length === 0) {
-      return res.status(400).json({ error: 'Invalid provider' });
+    let finalProviderName = provider_name;
+    if (configCheck.rows.length === 0) {
+      // Provider not in config, insert a basic config
+      await pool.query(
+        `INSERT INTO ai_provider_configs (provider, provider_name, supports_embeddings, supports_chat, max_context_length)
+         VALUES ($1, $2, true, true, 4096)
+         ON CONFLICT (provider) DO NOTHING`,
+        [provider, provider_name || provider]
+      );
+      finalProviderName = provider_name || provider;
+    } else {
+      finalProviderName = configCheck.rows[0].provider_name || provider_name || provider;
     }
-    
-    const providerName = providerCheck.rows[0].provider_name;
     
     // Encrypt API key
     const encryptedKey = encryptApiKey(apiKey);
     
-    // Insert or update
+    // Insert or update API key (UPSERT to handle UNIQUE constraint)
     const result = await pool.query(
-      `INSERT INTO ai_provider_keys (
-        user_id, provider, provider_name, encrypted_api_key, is_active
-      ) VALUES ($1, $2, $3, $4, true)
-      ON CONFLICT (user_id, provider) 
-      DO UPDATE SET 
-        encrypted_api_key = EXCLUDED.encrypted_api_key,
-        is_active = true,
-        updated_at = CURRENT_TIMESTAMP
-      RETURNING id, provider, provider_name, is_active`,
-      [userId, provider, providerName, encryptedKey]
+      `INSERT INTO ai_provider_keys (user_id, provider, provider_name, encrypted_api_key, is_active)
+       VALUES ($1, $2, $3, $4, true)
+       ON CONFLICT (user_id, provider) 
+       DO UPDATE SET 
+         encrypted_api_key = EXCLUDED.encrypted_api_key,
+         provider_name = EXCLUDED.provider_name,
+         is_active = true,
+         updated_at = CURRENT_TIMESTAMP
+       RETURNING id, provider, provider_name, is_active, created_at`,
+      [userId, provider, finalProviderName, encryptedKey]
     );
     
-    res.json({ 
-      success: true,
-      key: result.rows[0],
-      message: 'API key added successfully'
-    });
-  } catch (error) {
+    res.status(201).json({ key: result.rows[0] });
+  } catch (error: any) {
     console.error('Error adding API key:', error);
-    res.status(500).json({ error: 'Failed to add API key' });
+    res.status(500).json({ error: 'Failed to add API key', details: error.message });
   }
 });
 

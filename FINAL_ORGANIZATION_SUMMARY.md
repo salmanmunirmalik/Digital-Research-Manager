@@ -18,13 +18,13 @@
 
 ### **2. ✅ PI Review Integration**
 **Changed:**
-- ❌ Removed "Meeting Notes" from Lab Notebook quick actions
+- ❌ Removed "Meeting Notes" from Personal NoteBook quick actions
 - ✅ Added "Progress Review" in its place
 - ✅ Links directly to PI Review Dashboard
 
 **User Flow:**
 ```
-Lab Notebook → Click "Progress Review" → PI Review Dashboard
+Personal NoteBook → Click "Progress Review" → PI Review Dashboard
 ```
 
 **Benefits:**
@@ -76,7 +76,7 @@ Lab Notebook → Click "Progress Review" → PI Review Dashboard
 ```
 🏠 WORKSPACE
 ├── Dashboard
-├── Lab Notebook
+├── Personal NoteBook
 │   └── Progress Review (integrated!) ✨
 ├── Lab Management
     └── Team Members (with phylogenetic tree!) 🌳
@@ -112,7 +112,7 @@ Lab Notebook → Click "Progress Review" → PI Review Dashboard
 
 **Hidden (accessible via URL):**
 - Project Management (/project-management)
-- PI Review Dashboard (/pi-review-dashboard - accessible via Lab Notebook)
+- PI Review Dashboard (/pi-review-dashboard - accessible via Personal NoteBook)
 
 ---
 
@@ -124,7 +124,7 @@ Lab Notebook → Click "Progress Review" → PI Review Dashboard
 ### **2. Remove Data Sharing buttons**
 ✅ **DONE** - Data Sharing button removed from Data & Results
 
-### **3. PI Review replaces Meeting Notes in Lab Notebook**
+### **3. PI Review replaces Meeting Notes in Personal NoteBook**
 ✅ **DONE** - "Progress Review" quick action added, links to PI Review Dashboard
 
 ### **4. Remove Project Management page**
@@ -149,7 +149,7 @@ Lab Notebook → Click "Progress Review" → PI Review Dashboard
 
 ---
 
-### **Lab Notebook Quick Actions:**
+### **Personal NoteBook Quick Actions:**
 **Before:**
 - Meeting (document notes) ❌
 
@@ -168,7 +168,7 @@ Lab Notebook → Click "Progress Review" → PI Review Dashboard
 **After:**
 - Scientist Passport ✅ (one profile)
 - (Project Management accessible via Lab Management)
-- (PI Review via Lab Notebook)
+- (PI Review via Personal NoteBook)
 
 ---
 
@@ -180,7 +180,7 @@ Lab Notebook → Click "Progress Review" → PI Review Dashboard
 
 ### **2. Integrated Workflow:**
 **Before:** PI Review is separate page  
-**After:** Progress Review in Lab Notebook → seamless! ✅
+**After:** Progress Review in Personal NoteBook → seamless! ✅
 
 ### **3. Less Clutter:**
 **Before:** 3 buttons in Data & Results  

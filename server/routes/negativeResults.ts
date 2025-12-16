@@ -5,7 +5,7 @@
  */
 
 import { Router } from 'express';
-import pool from '../../database/config.js';
+import pool from "../../database/config.js";
 import jwt from 'jsonwebtoken';
 import autoIndexing from '../utils/autoIndexing.js';
 
@@ -66,8 +66,13 @@ const authenticateToken = async (req: any, res: any, next: any) => {
 // ==============================================
 
 // Browse/search negative results - PUBLIC
-router.get('/', async (req, res) => {
+router.get('/', async (req: any, res) => {
   try {
+    // Safety check for req.user (even though middleware should handle it)
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     const {
       research_field, sharing_status = 'public', search,
       sort_by = 'recent', limit = 50
@@ -134,9 +139,14 @@ router.get('/', async (req, res) => {
     console.log(`✅ Found ${result.rows.length} negative results`);
     res.json(result.rows);
   } catch (error: any) {
-    console.error('❌ Error fetching negative results:', error.message);
-    console.error('Stack:', error.stack);
-    res.status(500).json({ error: 'Failed to fetch negative results', details: error.message });
+    console.error('❌ Error fetching negative results:', error);
+    if (error.code) console.error('Database error code:', error.code);
+    if (error.message) console.error('Error message:', error.message);
+    if (error.detail) console.error('Error detail:', error.detail);
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Failed to fetch negative results' 
+      : error.message || 'Failed to fetch negative results';
+    res.status(500).json({ error: errorMessage });
   }
 });
 

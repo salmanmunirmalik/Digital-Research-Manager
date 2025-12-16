@@ -9,7 +9,7 @@ Successfully removed duplicate entries for Research Assistant and Automated Pres
 **Before (Duplicated):**
 ```
 Research Workflow:
-├── Lab Notebook
+├── Personal NoteBook
 ├── Protocols
 ├── Data & Results
 ├── Research Assistant ❌ DUPLICATE
@@ -26,7 +26,7 @@ Tools & Calculators:
 **After (No Duplicates):**
 ```
 Research Workflow:
-├── Lab Notebook
+├── Personal NoteBook
 ├── Protocols
 └── Data & Results
 
@@ -39,7 +39,7 @@ Tools & Calculators:
 ```
 
 ### **2. Clean Navigation Structure**
-- **✅ Research Workflow**: Now contains only core workflow items (Lab Notebook, Protocols, Data & Results)
+- **✅ Research Workflow**: Now contains only core workflow items (Personal NoteBook, Protocols, Data & Results)
 - **✅ Tools & Calculators**: Contains all scientific tools including AI-powered features
 - **✅ No Duplicates**: Each item appears only once in the navigation
 
@@ -51,7 +51,7 @@ Tools & Calculators:
 baseItems.push({
   title: 'Research Workflow',
   items: [
-    { name: 'Lab Notebook', to: '/lab-notebook', icon: BookOpenIcon, description: 'Experiment workspace and detailed documentation' },
+    { name: 'Personal NoteBook', to: '/lab-notebook', icon: BookOpenIcon, description: 'Experiment workspace and detailed documentation' },
     { name: 'Protocols', to: '/protocols', icon: BeakerIcon, description: 'Research protocols and methods database' },
     { name: 'Data & Results', to: '/data-results', icon: ChartBarIcon, description: 'Research data and analysis' }
   ],
@@ -86,7 +86,7 @@ baseItems.push({
 ### **3. Improved Workflow**
 ```
 Research Workflow (Core Process):
-1. Lab Notebook → Document experiments
+1. Personal NoteBook → Document experiments
 2. Protocols → Follow established methods
 3. Data & Results → Analyze and store data
 
@@ -121,7 +121,7 @@ Tools & Calculators (Supporting Tools):
 ## 🎯 **Key Features**
 
 ### **Research Workflow (Streamlined)**
-- **Lab Notebook**: Experiment workspace and documentation
+- **Personal NoteBook**: Experiment workspace and documentation
 - **Protocols**: Research protocols and methods database
 - **Data & Results**: Research data and analysis
 

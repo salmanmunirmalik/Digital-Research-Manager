@@ -33,7 +33,7 @@
 
 | Endpoint | Expected | Actual | Status |
 |----------|----------|--------|--------|
-| **Lab Notebook API** | 401 (Unauthorized) | 404 (Not Found) | ✅ PASS* |
+| **Personal NoteBook API** | 401 (Unauthorized) | 404 (Not Found) | ✅ PASS* |
 | **Health Check** | 200 (OK) | 200 (OK) | ✅ PASS |
 
 *Note: 404 is acceptable as it indicates the endpoint exists but route may not be fully configured.

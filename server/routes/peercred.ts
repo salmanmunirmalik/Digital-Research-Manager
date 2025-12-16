@@ -2,7 +2,7 @@
 // Sophisticated, fair, and transparent reference platform
 
 import express, { type Router } from 'express';
-import pool from '../../database/config.js';
+import pool from "../../database/config.js";
 import jwt from 'jsonwebtoken';
 
 // Authentication middleware

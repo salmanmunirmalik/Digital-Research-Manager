@@ -58,7 +58,7 @@ pnpm run test:playwright
 ### Important Features (Should Have)
 
 - [ ] **E2E Tests Pass**: `pnpm run test:playwright` completes successfully
-- [ ] **Core Pages Load**: Dashboard, Lab Notebook, Protocols, etc.
+- [ ] **Core Pages Load**: Dashboard, Personal NoteBook, Protocols, etc.
 - [ ] **CRUD Operations Work**: Can create, read, update, delete entries
 - [ ] **File Uploads Work**: Can upload attachments/files
 - [ ] **Search/Filter Works**: Can search and filter data
@@ -81,7 +81,7 @@ Based on the codebase analysis:
 ### ✅ Strengths
 
 1. **Comprehensive Feature Set**
-   - Lab Notebook with rich text editing
+   - Personal NoteBook with rich text editing
    - Professional Protocols library
    - Experiment Tracker
    - Research Tools & Calculators
@@ -202,7 +202,7 @@ pnpm run test:playwright
 
 2. **Test Critical User Flows**
    - User registration/login
-   - Create lab notebook entry
+   - Create Personal NoteBook entry
    - Create protocol
    - Create experiment
    - Upload file

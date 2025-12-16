@@ -158,7 +158,7 @@ class QuickHealthChecker {
       { name: 'Statistical Analysis Tools', url: 'http://localhost:5173/statistical-analysis-tools' },
       { name: 'Supplier Marketplace', url: 'http://localhost:5173/supplier-marketplace' },
       { name: 'Journals Directory', url: 'http://localhost:5173/journals-directory' },
-      { name: 'Lab Notebook', url: 'http://localhost:5173/lab-notebook' },
+      { name: 'Personal NoteBook', url: 'http://localhost:5173/lab-notebook' },
       { name: 'Data Results', url: 'http://localhost:5173/data-results' },
     ];
 

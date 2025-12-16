@@ -26,10 +26,10 @@ const LandingPage: React.FC = () => {
   const features = [
     {
       icon: BeakerIcon,
-      title: 'Lab Management',
-      description: 'Streamline your research operations with comprehensive lab management tools.',
+      title: 'Lab Workspace',
+      description: 'ClickUp-inspired task management and lab operations in one place.',
       color: 'from-blue-500 to-blue-600',
-      link: '/lab-management'
+      link: '/lab-workspace'
     },
     {
       icon: DocumentTextIcon,

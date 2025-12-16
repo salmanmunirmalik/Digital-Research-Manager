@@ -18,6 +18,21 @@ import aiProviderKeysRoutes from './routes/aiProviderKeys.js';
 import settingsRoutes from './routes/settings.js';
 import communicationsRoutes from './routes/communications.js';
 import scientistFirstRoutes from './routes/scientistFirst.js';
+import aiResearchAgentRoutes from './routes/aiResearchAgent.js';
+import apiTaskAssignmentsRoutes from './routes/apiTaskAssignments.js';
+import workflowRoutes from './routes/workflows.js';
+import agentsRoutes from './routes/agents.js';
+import orchestratorRoutes from './routes/orchestrator.js';
+import labWorkspaceRoutes from './routes/labWorkspace.js';
+import protocolExecutionRoutes from './routes/protocolExecution.js';
+import protocolCollaborationRoutes from './routes/protocolCollaboration.js';
+import protocolSemanticSearchRoutes from './routes/protocolSemanticSearch.js';
+import protocolAIRoutes from './routes/protocolAI.js';
+import protocolComparisonRoutes from './routes/protocolComparison.js';
+import experimentTrackerRoutes from './routes/experimentTracker.js';
+import projectManagementRoutes from './routes/projectManagement.js';
+import recommendationsRoutes from './routes/recommendations.js';
+import notebookSummariesRoutes from './routes/notebookSummaries.js';
 import autoIndexing from './utils/autoIndexing.js';
 
 // Note: Exports moved to separate files to avoid circular dependencies
@@ -140,9 +155,23 @@ app.post('/api/auth/register', async (req, res) => {
       token
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    // Log detailed error for debugging
+    if (error.code) {
+      console.error('Database error code:', error.code);
+    }
+    if (error.message) {
+      console.error('Error message:', error.message);
+    }
+    if (error.detail) {
+      console.error('Error detail:', error.detail);
+    }
+    // Return more specific error message in development
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : error.message || 'Internal server error';
+    res.status(500).json({ error: errorMessage });
   }
 });
 
@@ -173,11 +202,18 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
 
-    // Find user
-    const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1 OR username = $1',
-      [email]
-    );
+    // Find user - handle database errors separately
+    let result;
+    try {
+      result = await pool.query(
+        'SELECT * FROM users WHERE email = $1 OR username = $1',
+        [email]
+      );
+    } catch (dbError: any) {
+      console.error('💥 Database error in login:', dbError);
+      // Database errors should return 500, not 401
+      return res.status(500).json({ error: 'Internal server error' });
+    }
 
     if (result.rows.length === 0) {
       console.log('❌ Login failed: User not found');
@@ -231,9 +267,16 @@ app.post('/api/auth/login', async (req, res) => {
       token
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('💥 Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    // Only return 500 for unexpected errors, not authentication failures
+    // Authentication failures should have already returned 401 above
+    if (error.code) console.error('Database error code:', error.code);
+    if (error.message) console.error('Error message:', error.message);
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : error.message || 'Internal server error';
+    res.status(500).json({ error: errorMessage });
   }
 });
 
@@ -266,9 +309,20 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 // Profile endpoints
 app.get('/api/auth/profile', authenticateToken, async (req, res) => {
   try {
+    // Safety check for req.user
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     return res.json({ user: req.user });
-  } catch (error) {
-    return res.status(500).json({ error: 'Internal server error' });
+  } catch (error: any) {
+    console.error('💥 Get profile error:', error);
+    if (error.code) console.error('Database error code:', error.code);
+    if (error.message) console.error('Error message:', error.message);
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : error.message || 'Internal server error';
+    return res.status(500).json({ error: errorMessage });
   }
 });
 
@@ -396,6 +450,11 @@ app.post('/api/labs', authenticateToken, async (req, res) => {
 
 app.get('/api/labs', authenticateToken, async (req, res) => {
   try {
+    // Safety check for req.user
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     // Demo mode - show all labs
     const query = `
       SELECT l.*, u.first_name, u.last_name, u.username as pi_name,
@@ -408,8 +467,56 @@ app.get('/api/labs', authenticateToken, async (req, res) => {
     const result = await pool.query(query);
 
     res.json({ labs: result.rows });
-  } catch (error) {
+  } catch (error: any) {
     console.error('💥 Get labs error:', error);
+    if (error.code) console.error('Database error code:', error.code);
+    if (error.message) console.error('Error message:', error.message);
+    if (error.detail) console.error('Error detail:', error.detail);
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : error.message || 'Internal server error';
+    res.status(500).json({ error: errorMessage });
+  }
+});
+
+// Get lab members (for current user's lab)
+app.get('/api/labs/members', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Get user's lab
+    const labResult = await pool.query(`
+      SELECT lab_id FROM lab_members WHERE user_id = $1 AND is_active = true LIMIT 1
+    `, [userId]);
+
+    if (labResult.rows.length === 0) {
+      return res.json({ members: [] });
+    }
+
+    const labId = labResult.rows[0].lab_id;
+
+    // Get lab members
+    const membersResult = await pool.query(`
+      SELECT 
+        lm.*, 
+        u.id as user_id,
+        u.first_name, 
+        u.last_name, 
+        u.username, 
+        u.email, 
+        u.role as user_role,
+        u.avatar_url,
+        u.status as user_status
+      FROM lab_members lm
+      JOIN users u ON lm.user_id = u.id
+      WHERE lm.lab_id = $1
+      ORDER BY lm.joined_at ASC
+    `, [labId]);
+
+    res.json({ members: membersResult.rows });
+
+  } catch (error) {
+    console.error('💥 Get lab members error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -732,12 +839,17 @@ app.post('/api/protocols', authenticateToken, async (req, res) => {
 
 app.get('/api/protocols', authenticateToken, async (req, res) => {
   try {
+    // Safety check for req.user
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     const { lab_id, category, difficulty, search, privacy } = req.query;
     
     let query = `
       SELECT p.*, u.first_name, u.last_name, u.username as creator_name,
              l.name as lab_name, l.institution,
-             (SELECT COUNT(*) FROM protocol_sharing WHERE protocol_id = p.id) as share_count
+             0 as share_count
       FROM protocols p
       JOIN users u ON p.author_id = u.id
       LEFT JOIN labs l ON p.lab_id = l.id
@@ -796,9 +908,15 @@ app.get('/api/protocols', authenticateToken, async (req, res) => {
     const result = await pool.query(query, params);
 
     res.json({ protocols: result.rows });
-  } catch (error) {
+  } catch (error: any) {
     console.error('💥 Get protocols error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    if (error.code) console.error('Database error code:', error.code);
+    if (error.message) console.error('Error message:', error.message);
+    if (error.detail) console.error('Error detail:', error.detail);
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : error.message || 'Internal server error';
+    res.status(500).json({ error: errorMessage });
   }
 });
 
@@ -1028,7 +1146,7 @@ app.get('/api/protocols/categories', authenticateToken, async (req, res) => {
   }
 });
 
-// Lab Notebook Management Routes
+// Personal NoteBook Management Routes
 app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
   try {
     const { 
@@ -1056,7 +1174,7 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
     const defaultLabId = '550e8400-e29b-41d4-a716-446655440000'; // Default lab UUID
     const finalLabId = lab_id || defaultLabId;
 
-    // Create lab notebook entry - include all fields from the form
+    // Create Personal NoteBook entry - include all fields from the form
     const result = await pool.query(`
       INSERT INTO lab_notebook_entries (
         title, content, entry_type, status, priority, objectives, methodology, 
@@ -1093,7 +1211,7 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
 
     const entry = result.rows[0];
 
-    console.log('📓 Lab notebook entry created:', { entryId: entry.id, title: entry.title, creator: req.user.username });
+    console.log('📓 Personal NoteBook entry created:', { entryId: entry.id, title: entry.title, creator: req.user.username });
 
     // Auto-index for AI learning (non-blocking)
     autoIndexing.autoIndexContent(
@@ -1101,21 +1219,26 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
       'lab_notebook_entry',
       entry.id,
       entry
-    ).catch(err => console.error('Error auto-indexing lab notebook:', err));
+    ).catch(err => console.error('Error auto-indexing Personal NoteBook:', err));
 
     res.status(201).json({
-      message: 'Lab notebook entry created successfully',
+      message: 'Personal NoteBook entry created successfully',
       entry
     });
 
   } catch (error) {
-    console.error('💥 Lab notebook creation error:', error);
+    console.error('💥 Personal NoteBook creation error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 app.get('/api/lab-notebooks', authenticateToken, async (req, res) => {
   try {
+    // Safety check for req.user
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     const { lab_id, project_id, entry_type, search, tags, privacy } = req.query;
     
     let query = `
@@ -1162,28 +1285,34 @@ app.get('/api/lab-notebooks', authenticateToken, async (req, res) => {
 
     query += ' ORDER BY e.created_at DESC';
 
-    console.log('🔍 Lab notebook query:', query);
-    console.log('🔍 Lab notebook params:', params);
+    console.log('🔍 Personal NoteBook query:', query);
+    console.log('🔍 Personal NoteBook params:', params);
 
     const result = await pool.query(query, params);
 
     res.json({ entries: result.rows });
-  } catch (error) {
-    console.error('💥 Get lab notebooks error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  } catch (error: any) {
+    console.error('💥 Get Personal NoteBooks error:', error);
+    if (error.code) console.error('Database error code:', error.code);
+    if (error.message) console.error('Error message:', error.message);
+    if (error.detail) console.error('Error detail:', error.detail);
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : error.message || 'Internal server error';
+    res.status(500).json({ error: errorMessage });
   }
 });
 
-// Get recent activity for lab notebook
+// Get recent activity for Personal NoteBook
 app.get('/api/lab-notebooks/activity', authenticateToken, async (req, res) => {
   try {
     const { limit = 10 } = req.query;
     
-    // Get recent activities from lab notebook entries
+    // Get recent activities from Personal NoteBook entries
     const activities = await pool.query(`
       SELECT 
         'entry_created' as type,
-        'Created lab notebook entry: ' || e.title as description,
+        'Created Personal NoteBook entry: ' || e.title as description,
         u.username as user_name,
         e.created_at as timestamp,
         'entry' as category
@@ -1213,7 +1342,7 @@ app.get('/api/lab-notebooks/activity', authenticateToken, async (req, res) => {
   }
 });
 
-// Get smart suggestions for lab notebook
+// Get smart suggestions for Personal NoteBook
 app.get('/api/lab-notebooks/suggestions', authenticateToken, async (req, res) => {
   try {
     const suggestions = [];
@@ -1311,7 +1440,7 @@ app.get('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
     `, [id]);
 
     if (entryResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Lab notebook entry not found' });
+      return res.status(404).json({ error: 'Personal NoteBook entry not found' });
     }
 
     const entry = entryResult.rows[0];
@@ -1333,7 +1462,7 @@ app.get('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('💥 Get lab notebook error:', error);
+    console.error('💥 Get Personal NoteBook error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1352,7 +1481,7 @@ app.put('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
     `, [id]);
 
     if (currentEntry.rows.length === 0) {
-      return res.status(404).json({ error: 'Lab notebook entry not found' });
+      return res.status(404).json({ error: 'Personal NoteBook entry not found' });
     }
 
     const entry = currentEntry.rows[0];
@@ -1387,20 +1516,20 @@ app.put('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
       req.body.safety_notes || '', req.body.references || [], req.body.collaborators || [], id
     ]);
 
-    console.log('📓 Lab notebook entry updated:', { entryId: id, title, updatedBy: req.user.username });
+    console.log('📓 Personal NoteBook entry updated:', { entryId: id, title, updatedBy: req.user.username });
 
     res.json({
-      message: 'Lab notebook entry updated successfully',
+      message: 'Personal NoteBook entry updated successfully',
       entry: result.rows[0]
     });
 
   } catch (error) {
-    console.error('💥 Update lab notebook error:', error);
+    console.error('💥 Update Personal NoteBook error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Delete lab notebook entry
+// Delete Personal NoteBook entry
 app.delete('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -1411,7 +1540,7 @@ app.delete('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
     `, [id]);
 
     if (currentEntry.rows.length === 0) {
-      return res.status(404).json({ error: 'Lab notebook entry not found' });
+      return res.status(404).json({ error: 'Personal NoteBook entry not found' });
     }
 
     const entry = currentEntry.rows[0];
@@ -1433,19 +1562,19 @@ app.delete('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
       DELETE FROM lab_notebook_entries WHERE id = $1
     `, [id]);
 
-    console.log('📓 Lab notebook entry deleted:', { entryId: id, deletedBy: req.user.username });
+    console.log('📓 Personal NoteBook entry deleted:', { entryId: id, deletedBy: req.user.username });
 
     res.json({
-      message: 'Lab notebook entry deleted successfully'
+      message: 'Personal NoteBook entry deleted successfully'
     });
 
   } catch (error) {
-    console.error('💥 Delete lab notebook error:', error);
+    console.error('💥 Delete Personal NoteBook error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Share lab notebook entry with individual users
+// Share Personal NoteBook entry with individual users
 app.post('/api/lab-notebooks/:id/share', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -1457,7 +1586,7 @@ app.post('/api/lab-notebooks/:id/share', authenticateToken, async (req, res) => 
     `, [id]);
 
     if (entryResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Lab notebook entry not found' });
+      return res.status(404).json({ error: 'Personal NoteBook entry not found' });
     }
 
     const entry = entryResult.rows[0];
@@ -1496,7 +1625,7 @@ app.post('/api/lab-notebooks/:id/share', authenticateToken, async (req, res) => 
 
     const userName = userResult.rows[0]?.username || 'Unknown User';
 
-    console.log('🔗 Lab notebook entry shared:', { 
+    console.log('🔗 Personal NoteBook entry shared:', { 
       entryId: id, 
       userId: user_id, 
       userName: userName,
@@ -1511,7 +1640,7 @@ app.post('/api/lab-notebooks/:id/share', authenticateToken, async (req, res) => 
     });
 
   } catch (error) {
-    console.error('💥 Share lab notebook error:', error);
+    console.error('💥 Share Personal NoteBook error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1589,7 +1718,7 @@ app.post('/api/lab-notebooks/:id/comments', authenticateToken, async (req, res) 
     `, [entryId]);
 
     if (entryAccess.rows.length === 0) {
-      return res.status(404).json({ error: 'Lab notebook entry not found' });
+      return res.status(404).json({ error: 'Personal NoteBook entry not found' });
     }
 
     const entry = entryAccess.rows[0];
@@ -1614,7 +1743,7 @@ app.post('/api/lab-notebooks/:id/comments', authenticateToken, async (req, res) 
       RETURNING *
     `, [entryId, req.user.id, comment_text, parent_comment_id || null]);
 
-    console.log('💬 Comment added to lab notebook:', { entryId, commentId: result.rows[0].id, user: req.user.username });
+    console.log('💬 Comment added to Personal NoteBook:', { entryId, commentId: result.rows[0].id, user: req.user.username });
 
     res.status(201).json({
       message: 'Comment added successfully',
@@ -1983,6 +2112,11 @@ app.post('/api/inventory', authenticateToken, async (req, res) => {
 
 app.get('/api/inventory', authenticateToken, async (req, res) => {
   try {
+    // Safety check for req.user
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     const { lab_id, category, search, low_stock, expired } = req.query;
     
     let query = `
@@ -2040,9 +2174,15 @@ app.get('/api/inventory', authenticateToken, async (req, res) => {
     const result = await pool.query(query, params);
 
     res.json({ items: result.rows });
-  } catch (error) {
+  } catch (error: any) {
     console.error('💥 Get inventory error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    if (error.code) console.error('Database error code:', error.code);
+    if (error.message) console.error('Error message:', error.message);
+    if (error.detail) console.error('Error detail:', error.detail);
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : error.message || 'Internal server error';
+    res.status(500).json({ error: errorMessage });
   }
 });
 
@@ -2341,9 +2481,15 @@ app.get('/api/instruments', authenticateToken, async (req, res) => {
     const result = await pool.query(query, params);
 
     res.json({ instruments: result.rows });
-  } catch (error) {
+  } catch (error: any) {
     console.error('💥 Get instruments error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    if (error.code) console.error('Database error code:', error.code);
+    if (error.message) console.error('Error message:', error.message);
+    if (error.detail) console.error('Error detail:', error.detail);
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : error.message || 'Internal server error';
+    res.status(500).json({ error: errorMessage });
   }
 });
 
@@ -2463,6 +2609,240 @@ app.get('/api/instruments/categories', authenticateToken, async (req, res) => {
     res.json({ categories: result.rows.map(row => row.category) });
   } catch (error) {
     console.error('💥 Get instrument categories error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Schedule instrument maintenance
+app.post('/api/instruments/:id/maintenance', authenticateToken, async (req, res) => {
+  try {
+    const { id: instrumentId } = req.params;
+    const {
+      type, title, description, scheduled_date, priority,
+      assigned_to, estimated_duration, cost, parts_used, notes, checklist
+    } = req.body;
+
+    // Validation
+    if (!type || !title || !scheduled_date) {
+      return res.status(400).json({ error: 'Type, title, and scheduled date are required' });
+    }
+
+    // Check if instrument exists
+    const instrument = await pool.query(`
+      SELECT * FROM instruments WHERE id = $1
+    `, [instrumentId]);
+
+    if (instrument.rows.length === 0) {
+      return res.status(404).json({ error: 'Instrument not found' });
+    }
+
+    // Check permissions
+    if (req.user.role !== 'admin') {
+      const labAccess = await pool.query(`
+        SELECT role FROM lab_members 
+        WHERE lab_id = $1 AND user_id = $2
+      `, [instrument.rows[0].lab_id, req.user.id]);
+
+      if (labAccess.rows.length === 0) {
+        return res.status(403).json({ error: 'Insufficient permissions to schedule maintenance' });
+      }
+    }
+
+    // Create maintenance record
+    const result = await pool.query(`
+      INSERT INTO instrument_maintenance (
+        instrument_id, type, title, description, scheduled_date, priority,
+        assigned_to, estimated_duration, cost, parts_used, notes, checklist,
+        created_by, status
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'scheduled')
+      RETURNING *
+    `, [
+      instrumentId, type, title, description, scheduled_date, priority,
+      assigned_to || null, estimated_duration || 60, cost || 0,
+      parts_used || [], notes || '', JSON.stringify(checklist || []), req.user.id
+    ]);
+
+    // Update instrument status if critical maintenance
+    if (priority === 'critical' || priority === 'high') {
+      await pool.query(`
+        UPDATE instruments SET status = 'maintenance', updated_at = CURRENT_TIMESTAMP WHERE id = $1
+      `, [instrumentId]);
+    }
+
+    console.log('🔧 Maintenance scheduled:', { 
+      instrumentId, maintenanceId: result.rows[0].id, type, scheduledBy: req.user.username 
+    });
+
+    res.status(201).json({
+      message: 'Maintenance scheduled successfully',
+      maintenance: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('💥 Schedule maintenance error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get instrument maintenance records
+app.get('/api/instruments/:id/maintenance', authenticateToken, async (req, res) => {
+  try {
+    const { id: instrumentId } = req.params;
+    const { status, limit = 50 } = req.query;
+
+    let query = `
+      SELECT 
+        m.*,
+        u.first_name || ' ' || u.last_name as assigned_to_name,
+        creator.first_name || ' ' || creator.last_name as created_by_name
+      FROM instrument_maintenance m
+      LEFT JOIN users u ON m.assigned_to = u.id
+      LEFT JOIN users creator ON m.created_by = creator.id
+      WHERE m.instrument_id = $1
+    `;
+
+    const params: any[] = [instrumentId];
+    let paramCount = 1;
+
+    if (status) {
+      paramCount++;
+      query += ` AND m.status = $${paramCount}`;
+      params.push(status);
+    }
+
+    query += ` ORDER BY m.scheduled_date DESC LIMIT $${paramCount + 1}`;
+    params.push(limit);
+
+    const result = await pool.query(query, params);
+
+    res.json({ maintenance: result.rows });
+  } catch (error) {
+    console.error('💥 Get maintenance records error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update instrument
+app.put('/api/instruments/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      name, description, category, model, serial_number,
+      location, status, manufacturer, purchase_date, warranty_expiry,
+      calibration_due_date, maintenance_notes, user_manual_url
+    } = req.body;
+
+    // Get current instrument
+    const currentInstrument = await pool.query(`
+      SELECT * FROM instruments WHERE id = $1
+    `, [id]);
+
+    if (currentInstrument.rows.length === 0) {
+      return res.status(404).json({ error: 'Instrument not found' });
+    }
+
+    const instrument = currentInstrument.rows[0];
+
+    // Check permissions (lab member or admin)
+    if (req.user.role !== 'admin') {
+      const labAccess = await pool.query(`
+        SELECT role FROM lab_members 
+        WHERE lab_id = $1 AND user_id = $2
+      `, [instrument.lab_id, req.user.id]);
+
+      if (labAccess.rows.length === 0) {
+        return res.status(403).json({ error: 'Insufficient permissions to edit this instrument' });
+      }
+    }
+
+    // Update instrument
+    const result = await pool.query(`
+      UPDATE instruments 
+      SET name = COALESCE($1, name),
+          description = COALESCE($2, description),
+          category = COALESCE($3, category),
+          model = COALESCE($4, model),
+          serial_number = COALESCE($5, serial_number),
+          location = COALESCE($6, location),
+          status = COALESCE($7, status),
+          manufacturer = COALESCE($8, manufacturer),
+          purchase_date = COALESCE($9, purchase_date),
+          warranty_expiry = COALESCE($10, warranty_expiry),
+          calibration_due_date = COALESCE($11, calibration_due_date),
+          maintenance_notes = COALESCE($12, maintenance_notes),
+          user_manual_url = COALESCE($13, user_manual_url),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $14
+      RETURNING *
+    `, [
+      name, description, category, model, serial_number,
+      location, status, manufacturer, purchase_date, warranty_expiry,
+      calibration_due_date, maintenance_notes, user_manual_url, id
+    ]);
+
+    console.log('🔬 Instrument updated:', { instrumentId: id, name, updatedBy: req.user.username });
+
+    res.json({
+      message: 'Instrument updated successfully',
+      instrument: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('💥 Update instrument error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete instrument
+app.delete('/api/instruments/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get instrument
+    const instrument = await pool.query(`
+      SELECT * FROM instruments WHERE id = $1
+    `, [id]);
+
+    if (instrument.rows.length === 0) {
+      return res.status(404).json({ error: 'Instrument not found' });
+    }
+
+    // Check permissions (lab PI or admin)
+    if (req.user.role !== 'admin') {
+      const labAccess = await pool.query(`
+        SELECT role FROM lab_members 
+        WHERE lab_id = $1 AND user_id = $2 AND role = 'principal_researcher'
+      `, [instrument.rows[0].lab_id, req.user.id]);
+
+      if (labAccess.rows.length === 0) {
+        return res.status(403).json({ error: 'Insufficient permissions to delete this instrument' });
+      }
+    }
+
+    // Check for active bookings
+    const activeBookings = await pool.query(`
+      SELECT id FROM instrument_bookings 
+      WHERE instrument_id = $1 AND status IN ('pending', 'approved')
+    `, [id]);
+
+    if (activeBookings.rows.length > 0) {
+      return res.status(400).json({ 
+        error: 'Cannot delete instrument with active bookings. Please cancel bookings first.' 
+      });
+    }
+
+    // Hard delete
+    await pool.query(`
+      DELETE FROM instruments WHERE id = $1
+    `, [id]);
+
+    console.log('🔬 Instrument deleted:', { instrumentId: id, deletedBy: req.user.username });
+
+    res.json({ message: 'Instrument deleted successfully' });
+
+  } catch (error) {
+    console.error('💥 Delete instrument error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -2894,9 +3274,9 @@ app.get('/api/bookings/my', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-// ===== LAB NOTEBOOK ROUTES =====
+// ===== Personal NoteBook ROUTES =====
 
-// Get all lab notebook entries with filters
+// Get all Personal NoteBook entries with filters
 app.get('/api/lab-notebooks', authenticateToken, async (req, res) => {
   try {
     const {
@@ -2981,12 +3361,12 @@ app.get('/api/lab-notebooks', authenticateToken, async (req, res) => {
     
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching lab notebook entries:', error);
+    console.error('Error fetching Personal NoteBook entries:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Get a specific lab notebook entry
+// Get a specific Personal NoteBook entry
 app.get('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -3049,12 +3429,12 @@ app.get('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
 
     res.json(entry);
   } catch (error) {
-    console.error('Error fetching lab notebook entry:', error);
+    console.error('Error fetching Personal NoteBook entry:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Create a new lab notebook entry
+// Create a new Personal NoteBook entry
 app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
   try {
     const {
@@ -3130,18 +3510,18 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
         attachments: [] // Could be enhanced to track actual attachments
       });
     } catch (activityError) {
-      console.error('Error tracking lab notebook activity:', activityError);
+      console.error('Error tracking Personal NoteBook activity:', activityError);
       // Don't fail the main request if activity tracking fails
     }
     
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Error creating lab notebook entry:', error);
+    console.error('Error creating Personal NoteBook entry:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Update a lab notebook entry
+// Update a Personal NoteBook entry
 app.put('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -3229,12 +3609,12 @@ app.put('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
     
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error updating lab notebook entry:', error);
+    console.error('Error updating Personal NoteBook entry:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Delete a lab notebook entry
+// Delete a Personal NoteBook entry
 app.delete('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -3262,12 +3642,12 @@ app.delete('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
 
     res.json({ message: 'Entry deleted successfully' });
   } catch (error) {
-    console.error('Error deleting lab notebook entry:', error);
+    console.error('Error deleting Personal NoteBook entry:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Get labs for the lab notebook
+// Get labs for the Personal NoteBook
 app.get('/api/labs', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -4103,6 +4483,11 @@ const advancedStatsService = new AdvancedStatisticalService();
 // Get all results for a lab
 app.get('/api/data/results', authenticateToken, async (req, res) => {
   try {
+    // Safety check for req.user
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     const { lab_id, data_type, search, tags, date_from, date_to } = req.query;
     const userId = (req as any).user.id;
 
@@ -4158,9 +4543,15 @@ app.get('/api/data/results', authenticateToken, async (req, res) => {
 
     const result = await pool.query(query, queryParams);
     res.json({ results: result.rows });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching results:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    if (error.code) console.error('Database error code:', error.code);
+    if (error.message) console.error('Error message:', error.message);
+    if (error.detail) console.error('Error detail:', error.detail);
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : error.message || 'Internal server error';
+    res.status(500).json({ error: errorMessage });
   }
 });
 
@@ -4838,7 +5229,12 @@ app.get('/api/conversations/:id/messages', authenticateToken, async (req, res) =
     }
 
     const result = await pool.query(`
-      SELECT m.*, u.username as sender_name
+      SELECT 
+        m.*,
+        u.username as sender_name,
+        u.first_name as sender_first_name,
+        u.last_name as sender_last_name,
+        u.avatar_url as sender_avatar
       FROM messages m
       JOIN users u ON m.sender_id = u.id
       WHERE m.conversation_id = $1
@@ -4869,12 +5265,119 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
       RETURNING *
     `, [id, req.user.id, content]);
 
+    // Update conversation updated_at
+    await pool.query(`
+      UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1
+    `, [id]);
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('💥 Send message error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// Create a new conversation (direct or group)
+app.post('/api/conversations', authenticateToken, async (req, res) => {
+  try {
+    const { type, name, participant_ids } = req.body;
+    
+    if (!type || (type !== 'direct' && type !== 'group')) {
+      return res.status(400).json({ error: 'Invalid conversation type' });
+    }
+
+    if (type === 'direct' && (!participant_ids || participant_ids.length !== 1)) {
+      return res.status(400).json({ error: 'Direct conversation requires exactly one participant' });
+    }
+
+    // Check if direct conversation already exists
+    if (type === 'direct') {
+      const existingConv = await pool.query(`
+        SELECT c.id
+        FROM conversations c
+        JOIN conversation_participants cp1 ON c.id = cp1.conversation_id AND cp1.user_id = $1
+        JOIN conversation_participants cp2 ON c.id = cp2.conversation_id AND cp2.user_id = $2
+        WHERE c.type = 'direct'
+        GROUP BY c.id
+        HAVING COUNT(DISTINCT cp1.user_id) = 1 AND COUNT(DISTINCT cp2.user_id) = 1
+        LIMIT 1
+      `, [req.user.id, participant_ids[0]]);
+
+      if (existingConv.rows.length > 0) {
+        return res.json(existingConv.rows[0]);
+      }
+    }
+
+    // Create conversation
+    const convResult = await pool.query(`
+      INSERT INTO conversations (type, name, created_by)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `, [type, name || null, req.user.id]);
+
+    const conversationId = convResult.rows[0].id;
+
+    // Add current user as participant
+    await pool.query(`
+      INSERT INTO conversation_participants (conversation_id, user_id, is_admin)
+      VALUES ($1, $2, true)
+    `, [conversationId, req.user.id]);
+
+    // Add other participants
+    if (participant_ids && participant_ids.length > 0) {
+      for (const participantId of participant_ids) {
+        await pool.query(`
+          INSERT INTO conversation_participants (conversation_id, user_id)
+          VALUES ($1, $2)
+          ON CONFLICT (conversation_id, user_id) DO NOTHING
+        `, [conversationId, participantId]);
+      }
+    }
+
+    res.status(201).json(convResult.rows[0]);
+  } catch (error) {
+    console.error('💥 Create conversation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get conversation participants
+app.get('/api/conversations/:id/participants', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if user is a participant
+    const participant = await pool.query(`
+      SELECT * FROM conversation_participants 
+      WHERE conversation_id = $1 AND user_id = $2
+    `, [id, req.user.id]);
+    
+    if (participant.rows.length === 0) {
+      return res.status(403).json({ error: 'Not a participant' });
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        cp.*,
+        u.id as user_id,
+        u.username,
+        u.first_name,
+        u.last_name,
+        u.email,
+        u.avatar_url
+      FROM conversation_participants cp
+      JOIN users u ON cp.user_id = u.id
+      WHERE cp.conversation_id = $1
+      ORDER BY cp.joined_at ASC
+    `, [id]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('💥 Get participants error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 // =================================
 // REVOLUTIONARY FEATURES API ROUTES
@@ -4890,6 +5393,108 @@ app.use('/api/ai-providers', authenticateToken, aiProviderKeysRoutes);
 app.use('/api/settings', authenticateToken, settingsRoutes);
 app.use('/api/communications', authenticateToken, communicationsRoutes);
 app.use('/api/scientist-first', scientistFirstRoutes);
+app.use('/api/ai-research-agent', authenticateToken, aiResearchAgentRoutes);
+app.use('/api/api-task-assignments', authenticateToken, apiTaskAssignmentsRoutes);
+app.use('/api/workflows', authenticateToken, workflowRoutes);
+app.use('/api/agents', authenticateToken, agentsRoutes);
+app.use('/api/orchestrator', authenticateToken, orchestratorRoutes);
+app.use('/api/lab-workspace', authenticateToken, labWorkspaceRoutes);
+app.use('/api/protocol-execution', authenticateToken, protocolExecutionRoutes);
+app.use('/api/protocol-collaboration', authenticateToken, protocolCollaborationRoutes);
+app.use('/api/protocol-search', authenticateToken, protocolSemanticSearchRoutes);
+app.use('/api/protocol-ai', authenticateToken, protocolAIRoutes);
+app.use('/api/protocol-comparison', authenticateToken, protocolComparisonRoutes);
+app.use('/api/experiment-tracker', authenticateToken, experimentTrackerRoutes);
+app.use('/api/project-management', authenticateToken, projectManagementRoutes);
+app.use('/api/recommendations', recommendationsRoutes);
+app.use('/api/notebook-summaries', notebookSummariesRoutes);
+
+// Alias route for data-results (frontend uses hyphen, backend uses slash)
+app.get('/api/data-results', authenticateToken, async (req, res) => {
+  try {
+    // Safety check for req.user
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { lab_id, data_type, search, tags, date_from, date_to } = req.query;
+    const userId = (req as any).user.id;
+
+    let query = `
+      SELECT r.*, u.username, u.first_name, u.last_name, l.name as lab_name
+      FROM research_data r
+      JOIN users u ON r.user_id = u.id
+      LEFT JOIN labs l ON r.lab_id = l.id
+      WHERE 1=1
+    `;
+    
+    const queryParams: any[] = [];
+    let paramCount = 0;
+
+    // Filter by lab_id if provided
+    if (lab_id) {
+      paramCount++;
+      query += ` AND r.lab_id = $${paramCount}`;
+      queryParams.push(lab_id);
+    } else {
+      // If no lab_id, show user's own data or data from labs they're a member of
+      paramCount++;
+      query += ` AND (r.user_id = $${paramCount} OR r.lab_id IN (
+        SELECT lab_id FROM lab_members WHERE user_id = $${paramCount}
+      ))`;
+      queryParams.push(userId);
+    }
+
+    // Filter by data_type
+    if (data_type) {
+      paramCount++;
+      query += ` AND r.data_type = $${paramCount}`;
+      queryParams.push(data_type);
+    }
+
+    // Search in title and description
+    if (search) {
+      paramCount++;
+      query += ` AND (r.title ILIKE $${paramCount} OR r.description ILIKE $${paramCount})`;
+      queryParams.push(`%${search}%`);
+    }
+
+    // Filter by tags
+    if (tags) {
+      const tagArray = Array.isArray(tags) ? tags : [tags];
+      paramCount++;
+      query += ` AND r.tags && $${paramCount}`;
+      queryParams.push(tagArray);
+    }
+
+    // Date range filters
+    if (date_from) {
+      paramCount++;
+      query += ` AND r.created_at >= $${paramCount}`;
+      queryParams.push(date_from);
+    }
+
+    if (date_to) {
+      paramCount++;
+      query += ` AND r.created_at <= $${paramCount}`;
+      queryParams.push(date_to);
+    }
+
+    query += ' ORDER BY r.created_at DESC LIMIT 100';
+
+    const result = await pool.query(query, queryParams);
+
+    res.json({ results: result.rows });
+  } catch (error: any) {
+    console.error('💥 Get data results error:', error);
+    if (error.code) console.error('Database error code:', error.code);
+    if (error.message) console.error('Error message:', error.message);
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : error.message || 'Internal server error';
+    res.status(500).json({ error: errorMessage });
+  }
+});
 
 console.log('✨ Revolutionary features API routes registered:');
 console.log('   - /api/scientist-passport (Enhanced profiles & skills)');
@@ -4897,8 +5502,15 @@ console.log('   - /api/services (Service marketplace)');
 console.log('   - /api/negative-results (Failed experiments database)');
 console.log('   - /api/ai-training (Personalized AI training)');
 console.log('   - /api/ai-providers (API key management)');
+console.log('   - /api/ai-research-agent (Intelligent research assistant)');
+console.log('   - /api/api-task-assignments (API task assignments)');
+console.log('   - /api/workflows (Visual Workflow Builder)');
+console.log('   - /api/agents (Individual Task Agents)');
+console.log('   - /api/orchestrator (Multi-Agent Workflow Orchestration)');
+console.log('   - /api/lab-workspace (ClickUp-inspired task management)');
 console.log('   - /api/settings (User settings & preferences)');
 console.log('   - /api/communications (Unified communications hub)');
+console.log('   - /api/recommendations (Intelligent recommendations system)');
 
 // Start server
     app.listen(PORT, () => {

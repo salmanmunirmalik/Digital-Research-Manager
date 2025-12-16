@@ -16,16 +16,16 @@ Features:
 - Smart content filtering (only indexes content > 50 chars)
 
 Supported data types:
-- Lab notebook entries
+- Personal NoteBook entries
 - Protocols
 - Papers
 - Research data
 - Negative results
 
-### 3. Integrated Auto-Indexing into Lab Notebook ✅
+### 3. Integrated Auto-Indexing into Personal NoteBook ✅
 **File:** `server/index.ts`
 
-Added auto-indexing hook to lab notebook creation:
+Added auto-indexing hook to Personal NoteBook creation:
 ```typescript
 // Auto-index for AI learning (non-blocking)
 autoIndexing.autoIndexContent(
@@ -33,7 +33,7 @@ autoIndexing.autoIndexContent(
   'lab_notebook_entry',
   entry.id,
   entry
-).catch(err => console.error('Error auto-indexing lab notebook:', err));
+).catch(err => console.error('Error auto-indexing Personal NoteBook:', err));
 ```
 
 ## How It Works
@@ -41,7 +41,7 @@ autoIndexing.autoIndexContent(
 ### Automatic Learning Flow
 
 1. **User Creates Content**
-   - Creates lab notebook entry
+   - Creates Personal NoteBook entry
    - Adds protocol
    - Saves paper
    - etc.
@@ -78,7 +78,7 @@ autoIndexing.autoIndexContent(
 ## Next Steps
 
 ### Add More Auto-Indexing Hooks
-- ✅ Lab notebook entries
+- ✅ Personal NoteBook entries
 - ⏳ Protocols
 - ⏳ Papers
 - ⏳ Research data
@@ -120,7 +120,7 @@ autoIndexContent(userId, sourceType, sourceId, data)
 
 ### Content Extraction
 Different extraction logic for each data type:
-- Lab notebook: title + content + objectives + methodology + results + conclusions
+- Personal NoteBook: title + content + objectives + methodology + results + conclusions
 - Protocol: title + description + content
 - Paper: title + abstract + ai_summary
 - Research data: title + description + methodology + results
@@ -129,10 +129,10 @@ Different extraction logic for each data type:
 
 ✅ **Removed** manual training tab  
 ✅ **Created** auto-indexing utility  
-✅ **Integrated** into lab notebook  
+✅ **Integrated** into Personal NoteBook  
 ✅ **Automatic** learning from user content  
 
-**The AI now learns automatically from lab notebook entries!** 🧠✨
+**The AI now learns automatically from Personal NoteBook entries!** 🧠✨
 
 Next: Add more auto-indexing hooks and AI learning status indicator.
 

@@ -137,7 +137,7 @@ app.use(cors({
 ### Functional Testing
 - [ ] **User Authentication**: Login/logout working
 - [ ] **Protocol Management**: CRUD operations working
-- [ ] **Lab Notebook**: All features functional
+- [ ] **Personal NoteBook**: All features functional
 - [ ] **Inventory Management**: Item tracking working
 - [ ] **Instrument Booking**: Booking system functional
 - [ ] **Calculator Tools**: All calculators working

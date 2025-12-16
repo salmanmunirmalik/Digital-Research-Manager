@@ -22,6 +22,8 @@
     "clean": "rm -rf dist node_modules package-lock.json",
     "reinstall": "pnpm run clean && pnpm install",
     "db:seed": "tsx database/seed.ts",
+    "db:seed:workspace": "tsx database/seed-lab-workspace.ts",
+    "db:seed:protocols": "tsx database/seed_dummy_protocols.ts",
     "db:migrate": "tsx database/migrate.ts",
     "db:reset": "psql -d digital_research_manager -c \"DROP SCHEMA public CASCADE; CREATE SCHEMA public;\" && pnpm run db:seed",
     "test": "jest",

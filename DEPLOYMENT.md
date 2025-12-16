@@ -233,7 +233,7 @@ app.use(cors({
 1. **Test All Features**
    - User authentication
    - Protocol management
-   - Lab notebook functionality
+   - Personal NoteBook functionality
    - Inventory management
    - Calculator tools
 

@@ -1,13 +1,13 @@
 import { testData } from '../setup/test-config';
 
-describe('Lab Notebook CRUD Tests', () => {
+describe('Personal NoteBook CRUD Tests', () => {
   let testEntryId: string;
 
   beforeEach(async () => {
     await global.crudHelpers.resetTestData();
   });
 
-  test('CREATE: Should create new lab notebook entry', async () => {
+  test('CREATE: Should create new Personal NoteBook entry', async () => {
     const entryData = {
       title: `Test Entry ${Date.now()}`,
       content: 'This is a test entry content',
@@ -29,7 +29,7 @@ describe('Lab Notebook CRUD Tests', () => {
     testEntryId = result.id;
   });
 
-  test('READ: Should read lab notebook entry', async () => {
+  test('READ: Should read Personal NoteBook entry', async () => {
     // First create an entry
     const entryData = {
       title: `Test Entry ${Date.now()}`,
@@ -52,7 +52,7 @@ describe('Lab Notebook CRUD Tests', () => {
     expect(readEntry.content).toBe(entryData.content);
   });
 
-  test('UPDATE: Should update lab notebook entry', async () => {
+  test('UPDATE: Should update Personal NoteBook entry', async () => {
     // First create an entry
     const entryData = {
       title: `Test Entry ${Date.now()}`,
@@ -81,7 +81,7 @@ describe('Lab Notebook CRUD Tests', () => {
     expect(updatedEntry.content).toBe(updateData.content);
   });
 
-  test('DELETE: Should delete lab notebook entry', async () => {
+  test('DELETE: Should delete Personal NoteBook entry', async () => {
     // First create an entry
     const entryData = {
       title: `Test Entry ${Date.now()}`,

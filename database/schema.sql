@@ -155,7 +155,7 @@ CREATE TABLE protocol_sharing (
     expires_at TIMESTAMP WITH TIME ZONE
 );
 
--- Lab Notebook Entries Table
+-- Personal NoteBook Entries Table
 CREATE TABLE lab_notebook_entries (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title VARCHAR(255) NOT NULL,
@@ -321,7 +321,7 @@ CREATE TABLE experiment_updates (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
-    experiment_id UUID, -- Reference to lab notebook entry
+    experiment_id UUID, -- Reference to Personal NoteBook entry
     lab_id UUID REFERENCES labs(id) ON DELETE SET NULL,
     project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
     update_type VARCHAR(50) DEFAULT 'progress',

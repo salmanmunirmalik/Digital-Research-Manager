@@ -27,6 +27,7 @@ import {
   EyeIcon,
   PencilIcon
 } from '../components/icons';
+import RecommendationsWidget from '../components/RecommendationsWidget';
 
 interface ServiceListing {
   id: string;
@@ -221,6 +222,24 @@ const ServiceMarketplacePage: React.FC = () => {
         {/* Browse Services View */}
         {view === 'browse' && (
           <div>
+            {/* Service Recommendations */}
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <RecommendationsWidget
+                itemType="services"
+                title="Services You Might Need"
+                limit={5}
+                showFeedback={true}
+                onItemClick={(itemId) => {
+                  const service = services.find(s => s.id === itemId);
+                  if (service) {
+                    setSelectedService(service);
+                    setShowServiceDetail(true);
+                  }
+                }}
+                className="mb-6"
+              />
+            </div>
+            
             {/* Filters & Search */}
             <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

@@ -12,7 +12,7 @@ import {
   TrashIcon,
   PlusIcon,
   CheckCircleIcon,
-  XCircleIcon,
+  XMarkIcon,
   InformationCircleIcon
 } from '@heroicons/react/24/outline';
 
@@ -38,16 +38,58 @@ interface Provider {
 const SettingsPage: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'privacy' | 'security' | 'api-keys' | 'data'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'privacy' | 'security' | 'api-management' | 'data'>('profile');
   
-  // API Keys state
+  // API Management state (consolidated)
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loadingApiKeys, setLoadingApiKeys] = useState(false);
   const [showAddKeyModal, setShowAddKeyModal] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState('');
-  const [apiKeyValue, setApiKeyValue] = useState('');
+  const [formData, setFormData] = useState({
+    provider: '',
+    providerName: '',
+    apiKey: '',
+    selectedTasks: [] as string[]
+  });
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [taskAssignments, setTaskAssignments] = useState<any[]>([]);
+  const [workflows, setWorkflows] = useState<any[]>([]);
+  const [usageStats, setUsageStats] = useState<any>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  
+  // Top AI Providers List (30 providers)
+  const topProviders = [
+    { provider: 'openai', name: 'OpenAI (GPT-4, GPT-3.5)', category: 'General Purpose' },
+    { provider: 'google_gemini', name: 'Google Gemini', category: 'General Purpose' },
+    { provider: 'anthropic_claude', name: 'Anthropic Claude', category: 'General Purpose' },
+    { provider: 'azure_copilot', name: 'Microsoft Azure OpenAI', category: 'Enterprise' },
+    { provider: 'perplexity', name: 'Perplexity AI', category: 'Search & Research' },
+    { provider: 'cohere', name: 'Cohere', category: 'NLP & Embeddings' },
+    { provider: 'huggingface', name: 'Hugging Face', category: 'Open Source' },
+    { provider: 'mistral', name: 'Mistral AI', category: 'General Purpose' },
+    { provider: 'groq', name: 'Groq', category: 'Fast Inference' },
+    { provider: 'together', name: 'Together AI', category: 'Open Source' },
+    { provider: 'replicate', name: 'Replicate', category: 'Model Hosting' },
+    { provider: 'stability', name: 'Stability AI', category: 'Image Generation' },
+    { provider: 'midjourney', name: 'Midjourney', category: 'Image Generation' },
+    { provider: 'dalle', name: 'DALL-E (OpenAI)', category: 'Image Generation' },
+    { provider: 'fireworks', name: 'Fireworks AI', category: 'Fast Inference' },
+    { provider: 'anyscale', name: 'Anyscale', category: 'Scalable Inference' },
+    { provider: 'openrouter', name: 'OpenRouter', category: 'Model Aggregator' },
+    { provider: 'deepseek', name: 'DeepSeek', category: 'General Purpose' },
+    { provider: 'qwen', name: 'Qwen (Alibaba)', category: 'Multilingual' },
+    { provider: 'yi', name: 'Yi (01.AI)', category: 'General Purpose' },
+    { provider: 'llama', name: 'Llama (Meta)', category: 'Open Source' },
+    { provider: 'palm', name: 'PaLM (Google)', category: 'General Purpose' },
+    { provider: 'bedrock', name: 'AWS Bedrock', category: 'Enterprise' },
+    { provider: 'vertex', name: 'Google Vertex AI', category: 'Enterprise' },
+    { provider: 'watson', name: 'IBM Watson', category: 'Enterprise' },
+    { provider: 'jina', name: 'Jina AI', category: 'Embeddings' },
+    { provider: 'voyage', name: 'Voyage AI', category: 'Embeddings' },
+    { provider: 'openai_compatible', name: 'OpenAI Compatible API', category: 'Compatible' },
+    { provider: 'local_llm', name: 'Local LLM (Ollama)', category: 'Self-Hosted' },
+    { provider: 'custom', name: 'Custom API Endpoint', category: 'Custom' }
+  ];
 
   // Settings state
   const [loading, setLoading] = useState(false);
@@ -87,9 +129,13 @@ const SettingsPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'api-keys') {
+    if (activeTab === 'api-management') {
       fetchApiKeys();
       fetchProviders();
+      fetchTasks();
+      fetchTaskAssignments();
+      fetchWorkflows();
+      fetchUsageStats();
     }
   }, [activeTab]);
 
@@ -170,26 +216,109 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const fetchTasks = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/api-task-assignments/tasks', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTasks(response.data.tasks || []);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    }
+  };
+
+  const fetchTaskAssignments = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/api-task-assignments/assignments', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTaskAssignments(response.data.assignments || []);
+    } catch (error) {
+      console.error('Error fetching task assignments:', error);
+    }
+  };
+
+  const fetchWorkflows = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/workflows', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setWorkflows(response.data.workflows || []);
+    } catch (error) {
+      console.error('Error fetching workflows:', error);
+    }
+  };
+
+  const fetchUsageStats = async () => {
+    try {
+      // TODO: Implement real usage stats endpoint
+      setUsageStats({
+        total_requests: 1247,
+        total_tokens: 245000,
+        total_cost: 12.45
+      });
+    } catch (error) {
+      console.error('Error fetching usage stats:', error);
+    }
+  };
+
   const handleAddApiKey = async () => {
-    if (!selectedProvider || !apiKeyValue.trim()) {
+    if (!formData.provider || !formData.apiKey.trim()) {
       setMessage({ type: 'error', text: 'Please select a provider and enter an API key' });
       return;
     }
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('/api/ai-providers/keys', {
-        provider: selectedProvider,
-        apiKey: apiKeyValue
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const headers = { Authorization: `Bearer ${token}` };
 
-      setMessage({ type: 'success', text: 'API key added successfully!' });
+      // Step 1: Add API key
+      const selectedProvider = topProviders.find(p => p.provider === formData.provider);
+      const keyResponse = await axios.post('/api/ai-providers/keys', {
+        provider: formData.provider,
+        provider_name: selectedProvider?.name || formData.providerName || formData.provider,
+        apiKey: formData.apiKey
+      }, { headers });
+
+      const newApiKeyId = keyResponse.data.key.id;
+
+      // Step 2: Assign tasks if selected
+      // If task assignments fail, rollback by deleting the API key to prevent orphaned data
+      try {
+      if (formData.selectedTasks.length > 0) {
+        const assignmentPromises = formData.selectedTasks.map((taskType, index) => {
+          const task = tasks.find(t => t.type === taskType);
+          return axios.post('/api/api-task-assignments/assignments', {
+            api_key_id: newApiKeyId,
+            task_type: taskType,
+            task_name: task?.name || taskType,
+            priority: index + 1
+          }, { headers });
+        });
+        
+        await Promise.all(assignmentPromises);
+      }
+
+      setMessage({ 
+        type: 'success', 
+        text: `API key added successfully!${formData.selectedTasks.length > 0 ? ` Assigned to ${formData.selectedTasks.length} task(s).` : ''}` 
+      });
       setShowAddKeyModal(false);
-      setSelectedProvider('');
-      setApiKeyValue('');
+      setFormData({ provider: '', providerName: '', apiKey: '', selectedTasks: [] });
       fetchApiKeys();
+      fetchTaskAssignments();
+      } catch (assignmentError: any) {
+        // Rollback: Delete the API key if task assignments failed
+        try {
+          await axios.delete(`/api/ai-providers/keys/${newApiKeyId}`, { headers });
+        } catch (deleteError) {
+          console.error('Failed to rollback API key after assignment failure:', deleteError);
+        }
+        throw assignmentError; // Re-throw to be caught by outer catch
+      }
     } catch (error: any) {
       setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to add API key' });
     }
@@ -404,7 +533,7 @@ const SettingsPage: React.FC = () => {
                   { id: 'notifications', label: 'Notifications', icon: BellIcon },
                   { id: 'privacy', label: 'Privacy', icon: GlobeAltIcon },
                   { id: 'security', label: 'Security', icon: ShieldCheckIcon },
-                  { id: 'api-keys', label: 'AI API Keys', icon: KeyIcon },
+                  { id: 'api-management', label: 'API Management', icon: KeyIcon },
                   { id: 'data', label: 'Data Management', icon: CogIcon }
                 ].map((tab) => (
                   <button
@@ -542,13 +671,14 @@ const SettingsPage: React.FC = () => {
                 </div>
               )}
 
-              {/* API Keys Tab */}
-              {activeTab === 'api-keys' && (
+              {/* API Management Tab - Complete */}
+              {activeTab === 'api-management' && (
                 <div className="space-y-6">
+                  {/* Header */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-xl font-semibold text-gray-900">AI Provider API Keys</h2>
-                      <p className="text-sm text-gray-600 mt-1">Add your own API keys to reduce platform costs and unlock premium features</p>
+                      <h2 className="text-xl font-semibold text-gray-900">API Management</h2>
+                      <p className="text-sm text-gray-600 mt-1">Manage your AI provider keys, task assignments, and workflows</p>
                     </div>
                     <button
                       onClick={() => setShowAddKeyModal(true)}
@@ -557,11 +687,11 @@ const SettingsPage: React.FC = () => {
                       <PlusIcon className="w-5 h-5" />
                       <span>Add API Key</span>
                     </button>
-              </div>
+                  </div>
 
                   {/* Benefits Info */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start space-x-3">
-                    <InformationCircleIcon className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <InformationCircleIcon className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                     <div className="text-sm text-blue-800">
                       <p className="font-medium mb-1">Why add your own API keys?</p>
                       <ul className="list-disc list-inside space-y-1 text-blue-700">
@@ -571,99 +701,228 @@ const SettingsPage: React.FC = () => {
                         <li>Better rate limits with higher-tier accounts</li>
                         <li>Enhanced privacy and control</li>
                       </ul>
-            </div>
-          </div>
-
-                  {/* API Keys List */}
-                  {loadingApiKeys ? (
-                    <div className="text-center py-12">
-                      <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-                      <p className="text-gray-600 mt-4">Loading API keys...</p>
                     </div>
-                  ) : apiKeys.length === 0 ? (
-                    <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-                      <KeyIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No API keys added</h3>
-                      <p className="text-gray-600 mb-4">Add your first API key to get started</p>
+                  </div>
+
+                  {/* Quick Stats */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                      <p className="text-sm text-gray-600 mb-1">API Keys</p>
+                      <p className="text-2xl font-bold text-gray-900">{apiKeys.length}</p>
+                      <p className="text-xs text-gray-500 mt-1">{apiKeys.filter(k => k.is_active).length} active</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                      <p className="text-sm text-gray-600 mb-1">Task Assignments</p>
+                      <p className="text-2xl font-bold text-gray-900">{taskAssignments.length}</p>
+                      <p className="text-xs text-gray-500 mt-1">{taskAssignments.filter(a => a.is_active).length} active</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                      <p className="text-sm text-gray-600 mb-1">Workflows</p>
+                      <p className="text-2xl font-bold text-gray-900">{workflows.length}</p>
+                      <p className="text-xs text-gray-500 mt-1">{workflows.filter(w => w.is_active).length} active</p>
+                    </div>
+                  </div>
+
+                  {/* API Keys Section */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Your API Keys</h3>
                       <button
                         onClick={() => setShowAddKeyModal(true)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                        className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                       >
-                        Add API Key
+                        <PlusIcon className="w-4 h-4" />
+                        <span>Add Key</span>
                       </button>
                     </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {apiKeys.map((key) => (
-                        <div key={key.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <KeyIcon className="w-6 h-6 text-blue-600" />
-              </div>
-                <div>
-                                <h4 className="font-medium text-gray-900">{key.provider_name}</h4>
-                                <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-                                  <span className={`px-2 py-1 rounded ${key.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                                    {key.is_active ? 'Active' : 'Inactive'}
-                                  </span>
-                                  {key.last_used_at && (
-                                    <span>Last used: {new Date(key.last_used_at).toLocaleDateString()}</span>
-                                  )}
+                    {loadingApiKeys ? (
+                      <div className="text-center py-12">
+                        <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+                        <p className="text-gray-600 mt-4">Loading API keys...</p>
+                      </div>
+                    ) : apiKeys.length === 0 ? (
+                      <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
+                        <KeyIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No API keys added</h3>
+                        <p className="text-gray-600 mb-4">Add your first API key to get started with AI features</p>
+                        <button
+                          onClick={() => setShowAddKeyModal(true)}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          Add API Key
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {apiKeys.map((key) => {
+                          const keyAssignments = taskAssignments.filter(a => a.api_key_id === key.id);
+                          return (
+                            <div key={key.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-sm transition-all">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-center space-x-3 flex-1">
+                                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                    key.is_active ? 'bg-blue-100' : 'bg-gray-100'
+                                  }`}>
+                                    <KeyIcon className={`w-6 h-6 ${key.is_active ? 'text-blue-600' : 'text-gray-400'}`} />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-gray-900 truncate">{key.provider_name}</h4>
+                                    <div className="flex items-center space-x-2 mt-1">
+                                      <span className={`px-2 py-0.5 rounded text-xs ${
+                                        key.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                                      }`}>
+                                        {key.is_active ? 'Active' : 'Inactive'}
+                                      </span>
+                                      {key.last_used_at && (
+                                        <span className="text-xs text-gray-500">
+                                          Used {new Date(key.last_used_at).toLocaleDateString()}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
+                              {/* Show assigned tasks */}
+                              {keyAssignments.length > 0 ? (
+                                <div className="mt-3 pt-3 border-t border-gray-200">
+                                  <p className="text-xs font-medium text-gray-700 mb-2">Assigned Tasks:</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {keyAssignments.slice(0, 3).map((assignment) => (
+                                      <span
+                                        key={assignment.id}
+                                        className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs"
+                                      >
+                                        {assignment.task_name}
+                                      </span>
+                                    ))}
+                                    {keyAssignments.length > 3 && (
+                                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
+                                        +{keyAssignments.length - 3} more
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="mt-3 pt-3 border-t border-gray-200">
+                                  <p className="text-xs text-gray-500 italic">No tasks assigned</p>
+                                </div>
+                              )}
+                              <div className="flex items-center space-x-2 mt-4 pt-4 border-t border-gray-200">
+                                <button
+                                  onClick={() => handleToggleApiKey(key.id, key.is_active)}
+                                  className={`flex-1 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                                    key.is_active 
+                                      ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+                                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  }`}
+                                >
+                                  {key.is_active ? 'Disable' : 'Enable'}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteApiKey(key.id)}
+                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Delete API key"
+                                >
+                                  <TrashIcon className="w-5 h-5" />
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => handleToggleApiKey(key.id, key.is_active)}
-                                className={`px-3 py-1 rounded text-sm ${
-                                  key.is_active ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
-                                }`}
-                              >
-                                {key.is_active ? 'Deactivate' : 'Activate'}
-                              </button>
-                              <button
-                                onClick={() => handleDeleteApiKey(key.id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              >
-                                <TrashIcon className="w-5 h-5" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
-                  {/* Providers Info */}
-                  <div className="mt-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Supported Providers</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {providers.map((provider) => (
-                        <div key={provider.provider} className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium text-gray-900">{provider.provider_name}</h4>
-                            <div className="flex space-x-1">
-                              {provider.supports_embeddings && (
-                                <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">Embeddings</span>
-                              )}
-                              {provider.supports_chat && (
-                                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">Chat</span>
-                              )}
+                  {/* Task Assignments Section */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Task Assignments</h3>
+                    {taskAssignments.length === 0 ? (
+                      <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
+                        <p className="text-gray-600 mb-2">No task assignments configured</p>
+                        <p className="text-sm text-gray-500">Assign tasks to your API keys when adding them</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {taskAssignments.map((assignment) => {
+                          const apiKey = apiKeys.find(k => k.id === assignment.api_key_id);
+                          return (
+                            <div key={assignment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-900">{assignment.task_name}</p>
+                                <p className="text-sm text-gray-600">
+                                  API: {apiKey?.provider_name || 'Unknown'} • Priority: {assignment.priority}
+                                </p>
+                              </div>
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                assignment.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                              }`}>
+                                {assignment.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Workflows Section */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Workflows</h3>
+                      <button
+                        onClick={() => window.location.href = '/workflow-builder'}
+                        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                      >
+                        <PlusIcon className="w-4 h-4" />
+                        <span>New Workflow</span>
+                      </button>
+                    </div>
+                    {workflows.length === 0 ? (
+                      <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
+                        <p className="text-gray-600 mb-3">No workflows created yet</p>
+                        <p className="text-sm text-gray-500 mb-4">Create automated AI workflows to streamline your research</p>
+                        <button
+                          onClick={() => window.location.href = '/workflow-builder'}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                        >
+                          Create Workflow
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {workflows.slice(0, 5).map((workflow) => (
+                          <div
+                            key={workflow.id}
+                            onClick={() => window.location.href = `/workflow-builder/${workflow.id}`}
+                            className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                          >
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900">{workflow.name}</p>
+                              <p className="text-sm text-gray-600">
+                                {workflow.execution_count || 0} executions • {workflow.success_count || 0} successful
+                                {workflow.description && ` • ${workflow.description.substring(0, 50)}${workflow.description.length > 50 ? '...' : ''}`}
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-2 h-2 rounded-full ${workflow.is_active ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                              <span className="text-xs text-gray-500">
+                                {new Date(workflow.updated_at || workflow.created_at).toLocaleDateString()}
+                              </span>
                             </div>
                           </div>
-                          <div className="text-sm text-gray-600 space-y-1">
-                            <p>Context: {provider.max_context_length.toLocaleString()} tokens</p>
-                            {provider.embedding_price_per_million > 0 && (
-                              <p>Embeddings: ${provider.embedding_price_per_million}/1M</p>
-                            )}
-                            {provider.chat_price_per_million > 0 && (
-                              <p>Chat: ${provider.chat_price_per_million}/1M</p>
-                            )}
+                        ))}
+                        {workflows.length > 5 && (
+                          <div className="text-center pt-2">
+                            <button
+                              onClick={() => window.location.href = '/workflow-builder'}
+                              className="text-sm text-blue-600 hover:text-blue-700"
+                            >
+                              View all {workflows.length} workflows →
+                            </button>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -933,57 +1192,157 @@ const SettingsPage: React.FC = () => {
       {/* Add API Key Modal */}
       {showAddKeyModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Add API Key</h3>
-              <button onClick={() => setShowAddKeyModal(false)} className="text-gray-400 hover:text-gray-600">
-                <XCircleIcon className="w-6 h-6" />
+              <button 
+                onClick={() => {
+                  setShowAddKeyModal(false);
+                  setFormData({ provider: '', providerName: '', apiKey: '', selectedTasks: [] });
+                }} 
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="w-6 h-6" />
               </button>
               </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Provider</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  AI Provider <span className="text-red-500">*</span>
+                </label>
                 <select
-                  value={selectedProvider}
-                  onChange={(e) => setSelectedProvider(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={formData.provider}
+                  onChange={(e) => {
+                    const selected = topProviders.find(p => p.provider === e.target.value);
+                    setFormData({ 
+                      ...formData, 
+                      provider: e.target.value,
+                      providerName: selected?.name || ''
+                    });
+                  }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">Select a provider</option>
-                  {providers.map((provider) => (
-                    <option key={provider.provider} value={provider.provider}>
-                      {provider.provider_name}
-                    </option>
+                  <option value="">Select a provider...</option>
+                  {Object.entries(
+                    topProviders.reduce((acc, p) => {
+                      if (!acc[p.category]) acc[p.category] = [];
+                      acc[p.category].push(p);
+                      return acc;
+                    }, {} as Record<string, typeof topProviders>)
+                  ).map(([category, categoryProviders]) => (
+                    <optgroup key={category} label={category}>
+                      {categoryProviders.map((provider) => (
+                        <option key={provider.provider} value={provider.provider}>
+                          {provider.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
+                {formData.provider && formData.provider === 'custom' && (
+                  <input
+                    type="text"
+                    value={formData.providerName}
+                    onChange={(e) => setFormData({ ...formData, providerName: e.target.value })}
+                    placeholder="Enter custom provider name"
+                    className="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                )}
               </div>
 
-                <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  API Key <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="password"
-                  value={apiKeyValue}
-                  onChange={(e) => setApiKeyValue(e.target.value)}
+                  value={formData.apiKey}
+                  onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
                   placeholder="Enter your API key"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 mt-2">
                   Your API key is encrypted and stored securely. We never store it in plain text.
                 </p>
-          </div>
+              </div>
 
-              <div className="flex space-x-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Assign Tasks (Optional)
+                </label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Select which tasks this API should handle. You can change this later.
+                </p>
+                <div className="relative">
+                  <select
+                    multiple
+                    value={formData.selectedTasks}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, option => option.value);
+                      setFormData({ ...formData, selectedTasks: selected });
+                    }}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[200px]"
+                    size={tasks.length > 0 ? Math.min(tasks.length, 8) : 4}
+                  >
+                    {tasks.map((task) => (
+                      <option key={task.type} value={task.type}>
+                        {task.name} - {task.description}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Hold Ctrl/Cmd to select multiple tasks
+                  </p>
+                </div>
+                {formData.selectedTasks.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      Selected Tasks ({formData.selectedTasks.length}):
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.selectedTasks.map((taskType) => {
+                        const task = tasks.find(t => t.type === taskType);
+                        return (
+                          <span
+                            key={taskType}
+                            className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs flex items-center space-x-1"
+                          >
+                            <span>{task?.name || taskType}</span>
+                            <button
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  selectedTasks: formData.selectedTasks.filter(t => t !== taskType)
+                                });
+                              }}
+                              className="ml-1 hover:text-blue-900"
+                            >
+                              <XMarkIcon className="w-3 h-3" />
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex space-x-3 pt-4 border-t border-gray-200">
                 <button
-                  onClick={() => setShowAddKeyModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  onClick={() => {
+                    setShowAddKeyModal(false);
+                    setFormData({ provider: '', providerName: '', apiKey: '', selectedTasks: [] });
+                  }}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAddApiKey}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                 >
-                  Add Key
+                  Add API Key{formData.selectedTasks.length > 0 ? ` & Assign ${formData.selectedTasks.length} Task(s)` : ''}
                 </button>
               </div>
             </div>

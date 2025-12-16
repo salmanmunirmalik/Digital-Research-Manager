@@ -1,7 +1,7 @@
--- Lab Notebook Database Schema
+-- Personal NoteBook Database Schema
 -- This schema supports comprehensive research documentation with full CRUD operations
 
--- Lab Notebook Entries Table
+-- Personal NoteBook Entries Table
 CREATE TABLE IF NOT EXISTS lab_notebook_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR(255) NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS lab_notebook_entries (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Lab Notebook Comments Table
+-- Personal NoteBook Comments Table
 CREATE TABLE IF NOT EXISTS lab_notebook_comments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entry_id UUID NOT NULL REFERENCES lab_notebook_entries(id) ON DELETE CASCADE,
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS lab_notebook_comments (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Lab Notebook Milestones Table
+-- Personal NoteBook Milestones Table
 CREATE TABLE IF NOT EXISTS lab_notebook_milestones (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entry_id UUID NOT NULL REFERENCES lab_notebook_entries(id) ON DELETE CASCADE,
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS lab_notebook_milestones (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Lab Notebook Attachments Table
+-- Personal NoteBook Attachments Table
 CREATE TABLE IF NOT EXISTS lab_notebook_attachments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entry_id UUID NOT NULL REFERENCES lab_notebook_entries(id) ON DELETE CASCADE,
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS lab_notebook_attachments (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Lab Notebook Tags Table (for better tag management)
+-- Personal NoteBook Tags Table (for better tag management)
 CREATE TABLE IF NOT EXISTS lab_notebook_tags (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) UNIQUE NOT NULL,
@@ -77,14 +77,14 @@ CREATE TABLE IF NOT EXISTS lab_notebook_tags (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Lab Notebook Entry Tags Junction Table
+-- Personal NoteBook Entry Tags Junction Table
 CREATE TABLE IF NOT EXISTS lab_notebook_entry_tags (
     entry_id UUID NOT NULL REFERENCES lab_notebook_entries(id) ON DELETE CASCADE,
     tag_id UUID NOT NULL REFERENCES lab_notebook_tags(id) ON DELETE CASCADE,
     PRIMARY KEY (entry_id, tag_id)
 );
 
--- Lab Notebook Templates Table
+-- Personal NoteBook Templates Table
 CREATE TABLE IF NOT EXISTS lab_notebook_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS lab_notebook_templates (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Lab Notebook Sharing Table
+-- Personal NoteBook Sharing Table
 CREATE TABLE IF NOT EXISTS lab_notebook_sharing (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entry_id UUID NOT NULL REFERENCES lab_notebook_entries(id) ON DELETE CASCADE,
@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS lab_notebook_sharing (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Lab Notebook Activity Log Table
+-- Personal NoteBook Activity Log Table
 CREATE TABLE IF NOT EXISTS lab_notebook_activity_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entry_id UUID NOT NULL REFERENCES lab_notebook_entries(id) ON DELETE CASCADE,

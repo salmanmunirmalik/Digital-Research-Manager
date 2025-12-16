@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS lab_communications (
 -- Event-Based Communications
 CREATE TABLE IF NOT EXISTS event_communications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    event_id UUID REFERENCES networking_events(id) ON DELETE CASCADE,
+    event_id UUID, -- References networking_events if it exists (no FK constraint to avoid dependency)
     from_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     to_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     

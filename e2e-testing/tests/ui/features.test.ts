@@ -6,8 +6,8 @@ describe('UI Features Tests', () => {
     await global.uiHelpers.login(config.testUser.email, config.testUser.password);
   });
 
-  describe('Lab Notebook Features', () => {
-    test('Should create new lab notebook entry', async () => {
+  describe('Personal NoteBook Features', () => {
+    test('Should create new Personal NoteBook entry', async () => {
       await global.uiHelpers.navigateTo(`${config.baseUrl}/lab-notebook`);
       
       // Click create new entry button
@@ -28,7 +28,7 @@ describe('UI Features Tests', () => {
       expect(pageContent).toContain('Test Entry');
     });
 
-    test('Should edit existing lab notebook entry', async () => {
+    test('Should edit existing Personal NoteBook entry', async () => {
       await global.uiHelpers.navigateTo(`${config.baseUrl}/lab-notebook`);
       
       // Click on first entry

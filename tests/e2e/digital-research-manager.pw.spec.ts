@@ -37,8 +37,8 @@ test.describe('Navigation', () => {
     await loginAsDemo(page);
   });
 
-  test('opens lab notebook from sidebar', async ({ page }) => {
-    await page.getByTestId('side-nav').getByRole('link', { name: 'Lab Notebook' }).click();
+  test('opens Personal NoteBook from sidebar', async ({ page }) => {
+    await page.getByTestId('side-nav').getByRole('link', { name: 'Personal NoteBook' }).click();
     await expect(page.getByTestId('lab-notebook-heading')).toBeVisible();
   });
 

@@ -4,6 +4,10 @@ import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
+import ProtocolAIAssistant from '../components/ProtocolAIAssistant';
+import ProtocolExecutionMode from '../components/ProtocolExecutionMode';
+import ProtocolExecutionModeMobile from '../components/ProtocolExecutionModeMobile';
+import ProtocolCollaborationPanel from '../components/ProtocolCollaborationPanel';
 import { 
   ClockIcon, 
   CheckCircleIcon, 
@@ -22,8 +26,11 @@ import {
   ShareIcon,
   BookmarkIcon,
   ArrowDownTrayIcon,
-  PrinterIcon
+  PrinterIcon,
+  SparklesIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
+import { XMarkIcon, RocketLaunchIcon, LanguageIcon } from '../components/icons';
 
 interface Protocol {
   id: string;
@@ -77,11 +84,21 @@ const ProtocolsPage: React.FC = () => {
   const [selectedProtocol, setSelectedProtocol] = useState<Protocol | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [showExecutionMode, setShowExecutionMode] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showCollaboration, setShowCollaboration] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'timeline'>('grid');
+  const [language, setLanguage] = useState('en');
+  const [searchResults, setSearchResults] = useState<Protocol[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [recommendations, setRecommendations] = useState<Protocol[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Mock protocols with realistic data
   const mockProtocols: Protocol[] = [
@@ -324,13 +341,16 @@ const ProtocolsPage: React.FC = () => {
     setProtocols(mockProtocols);
   }, []);
 
-  const filteredProtocols = protocols.filter(protocol => {
-    const matchesSearch = protocol.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         protocol.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         protocol.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesCategory = !filterCategory || protocol.category === filterCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredProtocols = searchTerm.trim() && searchResults.length > 0
+    ? searchResults.filter(protocol => !filterCategory || protocol.category === filterCategory)
+    : protocols.filter(protocol => {
+        const matchesSearch = !searchTerm || 
+          protocol.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          protocol.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          protocol.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesCategory = !filterCategory || protocol.category === filterCategory;
+        return matchesSearch && matchesCategory;
+      });
 
   const toggleStepComplete = (stepId: number) => {
     const newCompleted = new Set(completedSteps);
@@ -396,20 +416,26 @@ const ProtocolsPage: React.FC = () => {
           </Button>
       </div>
 
-          {/* Search and Filters */}
+          {/* Enhanced Search and Filters */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Search</label>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <MagnifyingGlassIcon className="w-4 h-4 inline mr-1" />
+                  Smart Search (AI-powered semantic search)
+                </label>
                 <div className="relative">
                   <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
+                  <Input
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search protocols..."
+                    placeholder="Search by intent, technique, or goal... (e.g., 'detect proteins', 'amplify DNA')"
                     className="pl-10"
-              />
-            </div>
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  💡 Try: "protein detection methods" or "DNA amplification techniques"
+                </p>
             </div>
             <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
@@ -425,19 +451,61 @@ const ProtocolsPage: React.FC = () => {
               />
             </div>
             <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Quick Stats</label>
-                <div className="flex items-center space-x-4 h-10">
-                  <div className="flex items-center space-x-2">
-                    <UserGroupIcon className="w-5 h-5 text-blue-600" />
-                    <span className="text-sm font-medium text-gray-700">{protocols.length} protocols</span>
-            </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircleIcon className="w-5 h-5 text-emerald-600" />
-                    <span className="text-sm font-medium text-gray-700">
-                      {(protocols.reduce((acc, p) => acc + p.success_rate, 0) / protocols.length).toFixed(1)}% avg success
-                    </span>
-          </div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">View Mode</label>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Grid
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    List
+                  </button>
                 </div>
+            </div>
+            </div>
+            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+              <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-2">
+                  <UserGroupIcon className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm font-medium text-gray-700">{protocols.length} protocols</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircleIcon className="w-5 h-5 text-emerald-600" />
+                  <span className="text-sm font-medium text-gray-700">
+                    {protocols.length > 0 ? (protocols.reduce((acc, p) => acc + p.success_rate, 0) / protocols.length).toFixed(1) : '0'}% avg success
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowAnalytics(true)}
+                  className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-700"
+                >
+                  <ChartBarIcon className="w-4 h-4" />
+                  <span>Analytics</span>
+                </button>
+              </div>
+              <div className="flex items-center space-x-2">
+                <LanguageIcon className="w-4 h-4 text-gray-400" />
+                <Select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  options={[
+                    { value: 'en', label: 'English' },
+                    { value: 'es', label: 'Español' },
+                    { value: 'fr', label: 'Français' },
+                    { value: 'de', label: 'Deutsch' },
+                    { value: 'zh', label: '中文' }
+                  ]}
+                  className="w-32"
+                />
               </div>
             </div>
           </div>
@@ -506,17 +574,30 @@ const ProtocolsPage: React.FC = () => {
                   </span>
                 </div>
 
-                  <Button
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                    onClick={() => {
-                      setSelectedProtocol(protocol);
-                      setShowDetails(true);
-                      setActiveStep(0);
-                      setCompletedSteps(new Set());
-                    }}
-                  >
-                    View Protocol
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button
+                      className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                      onClick={() => {
+                        setSelectedProtocol(protocol);
+                        setShowDetails(true);
+                        setActiveStep(0);
+                        setCompletedSteps(new Set());
+                      }}
+                    >
+                      View Protocol
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedProtocol(protocol);
+                        setShowExecutionMode(true);
+                      }}
+                      className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+                      title="Start execution mode"
+                    >
+                      <RocketLaunchIcon className="w-4 h-4" />
+                    </Button>
+                  </div>
               </div>
             </CardContent>
           </Card>
@@ -962,8 +1043,25 @@ const ProtocolsPage: React.FC = () => {
                   <Button variant="outline" onClick={() => setShowDetails(false)}>
                     Close
                   </Button>
-                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-                    Use This Protocol
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowAIAssistant(true);
+                    }}
+                    className="border-purple-600 text-purple-600 hover:bg-purple-50"
+                  >
+                    <SparklesIcon className="w-4 h-4 mr-2" />
+                    AI Optimize
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowDetails(false);
+                      setShowExecutionMode(true);
+                    }}
+                    className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700"
+                  >
+                    <RocketLaunchIcon className="w-4 h-4 mr-2" />
+                    Start Execution
                   </Button>
                 </div>
               </div>
@@ -1225,6 +1323,121 @@ const ProtocolsPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* AI Assistant Modal */}
+      {showAIAssistant && (
+        <ProtocolAIAssistant
+          protocol={selectedProtocol ? {
+            id: selectedProtocol.id,
+            title: selectedProtocol.title,
+            description: selectedProtocol.description,
+            steps: selectedProtocol.procedure,
+            materials: selectedProtocol.materials,
+            equipment: selectedProtocol.equipment
+          } : undefined}
+          onOptimized={(optimized) => {
+            // Handle optimized protocol
+            console.log('Optimized protocol:', optimized);
+            setShowAIAssistant(false);
+          }}
+          onClose={() => setShowAIAssistant(false)}
+        />
+      )}
+
+      {/* Execution Mode - Desktop or Mobile */}
+      {showExecutionMode && selectedProtocol && (
+        isMobile ? (
+          <ProtocolExecutionModeMobile
+            protocol={{
+              title: selectedProtocol.title,
+              procedure: selectedProtocol.procedure
+            }}
+            onComplete={(executionData) => {
+              console.log('Execution completed:', executionData);
+              setShowExecutionMode(false);
+            }}
+            onExit={() => setShowExecutionMode(false)}
+          />
+        ) : (
+          <ProtocolExecutionMode
+            protocol={{
+              title: selectedProtocol.title,
+              procedure: selectedProtocol.procedure
+            }}
+            onComplete={(executionData) => {
+              console.log('Execution completed:', executionData);
+              setShowExecutionMode(false);
+            }}
+            onExit={() => setShowExecutionMode(false)}
+          />
+        )
+      )}
+
+      {/* Analytics Modal */}
+      {showAnalytics && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <ChartBarIcon className="w-6 h-6" />
+                  <CardTitle className="text-white">Protocol Analytics</CardTitle>
+                </div>
+                <button
+                  onClick={() => setShowAnalytics(false)}
+                  className="text-white hover:text-gray-200 transition-colors"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h4 className="font-semibold text-gray-900 mb-2">Total Protocols</h4>
+                  <p className="text-3xl font-bold text-blue-600">{protocols.length}</p>
+                </div>
+                <div className="p-4 bg-emerald-50 rounded-lg">
+                  <h4 className="font-semibold text-gray-900 mb-2">Avg Success Rate</h4>
+                  <p className="text-3xl font-bold text-emerald-600">
+                    {protocols.length > 0 ? (protocols.reduce((acc, p) => acc + p.success_rate, 0) / protocols.length).toFixed(1) : '0'}%
+                  </p>
+                </div>
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <h4 className="font-semibold text-gray-900 mb-2">Total Usage</h4>
+                  <p className="text-3xl font-bold text-purple-600">
+                    {protocols.reduce((acc, p) => acc + p.usage_count, 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <h4 className="font-bold text-gray-900">Top Protocols by Success Rate</h4>
+                <div className="space-y-2">
+                  {[...protocols]
+                    .sort((a, b) => b.success_rate - a.success_rate)
+                    .slice(0, 5)
+                    .map((protocol) => (
+                      <div key={protocol.id} className="p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-900">{protocol.title}</span>
+                          <span className="text-emerald-600 font-bold">{protocol.success_rate}%</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Collaboration Panel */}
+      {showCollaboration && selectedProtocol && (
+        <ProtocolCollaborationPanel
+          protocolId={selectedProtocol.id}
+          onClose={() => setShowCollaboration(false)}
+        />
       )}
     </div>
   );

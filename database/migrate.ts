@@ -1,6 +1,34 @@
-import pool from './config';
 import fs from 'fs';
 import path from 'path';
+import { Pool } from 'pg';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
+// Create a fresh pool for migrations to avoid cached config issues
+function createMigrationPool(): Pool {
+  if (process.env.DATABASE_URL) {
+    return new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000
+    });
+  }
+  
+  return new Pool({
+    host: process.env.DB_HOST || '127.0.0.1',
+    port: parseInt(process.env.DB_PORT || '5432'),
+    database: process.env.DB_NAME || 'digital_research_manager',
+    user: process.env.DB_USER || 'postgres',
+    password: String(process.env.DB_PASSWORD || ''),
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000
+  });
+}
+
+const pool = createMigrationPool();
 
 interface Migration {
   id: string;
@@ -136,14 +164,13 @@ const migrator = new DatabaseMigrator();
 migrator.runMigrations()
   .then(() => {
     console.log('🚀 Migration script completed successfully');
+    pool.end();
     process.exit(0);
   })
   .catch((error) => {
     console.error('💥 Migration script failed:', error);
+    pool.end();
     process.exit(1);
-  })
-  .finally(async () => {
-    await migrator.close();
   });
 
 export default DatabaseMigrator;

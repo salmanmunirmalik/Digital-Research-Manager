@@ -1,0 +1,51 @@
+# ============================================
+# Database Configuration
+# ============================================
+# Replace YOUR_PASSWORD_HERE with your actual PostgreSQL password
+
+# Option 1: Use DATABASE_URL (Recommended)
+DATABASE_URL=postgres://postgres:YOUR_PASSWORD_HERE@localhost:5432/digital_research_manager
+
+# Option 2: Or use individual variables (alternative approach)
+# Uncomment these if you prefer individual variables instead of DATABASE_URL
+# DB_HOST=localhost
+# DB_PORT=5432
+# DB_NAME=digital_research_manager
+# DB_USER=postgres
+# DB_PASSWORD=YOUR_PASSWORD_HERE
+
+# ============================================
+# Application Settings
+# ============================================
+PORT=5002
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
+ENABLE_DEMO_AUTH=true
+
+# JWT Secret (for authentication)
+JWT_SECRET=your_jwt_secret_here
+
+# Demo Auth Token (for development)
+DEMO_AUTH_TOKEN=demo-token-123
+
+# Encryption Key (for API key encryption - should be 64 character hex)
+ENCRYPTION_KEY=your-64-character-hex-encryption-key-here
+
+# ============================================
+# AI Provider Keys (Optional - for AI features)
+# ============================================
+# OPENAI_API_KEY=your_openai_key_here
+# ANTHROPIC_API_KEY=your_anthropic_key_here
+# GOOGLE_AI_API_KEY=your_google_key_here
+
+# ============================================
+# Database SSL Configuration (for production)
+# ============================================
+# DB_SSL=false
+
+# ============================================
+# Database Pool Settings (Optional)
+# ============================================
+# DB_POOL_MAX=20
+# DB_IDLE_TIMEOUT=30000
+# DB_CONNECTION_TIMEOUT=2000

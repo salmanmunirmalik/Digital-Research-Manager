@@ -117,8 +117,8 @@ run_specific_tests() {
             npx playwright test --grep "Authentication"
             ;;
         "lab-notebook")
-            print_status "Running lab notebook tests..."
-            npx playwright test --grep "Lab Notebook"
+            print_status "Running Personal NoteBook tests..."
+            npx playwright test --grep "Personal NoteBook"
             ;;
         "protocols")
             print_status "Running professional protocols tests..."
