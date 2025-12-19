@@ -1,3 +1,8 @@
+// Load environment variables from .env.local first, then .env
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' }); // Load .env.local first
+dotenv.config(); // Then load .env (will not override .env.local values)
+
 import express, { type Application } from 'express';
 import cors from 'cors';
 import bcrypt from 'bcrypt';

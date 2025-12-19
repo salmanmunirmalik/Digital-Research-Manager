@@ -139,6 +139,12 @@ const AIResearchAgentPage: React.FC = () => {
 
     try {
       const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Please log in to use the AI Research Agent');
+      }
+
+      // Use non-streaming for now (can add streaming later with EventSource)
       const response = await axios.post(
         '/api/ai-research-agent/chat',
         {
@@ -146,20 +152,21 @@ const AIResearchAgentPage: React.FC = () => {
           conversation_history: messages.map(m => ({
             role: m.role,
             content: m.content
-          }))
+          })),
+          stream: false // Use non-streaming for now
         },
         {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: abortControllerRef.current.signal,
-          responseType: 'stream' // For streaming support
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          signal: abortControllerRef.current.signal
         }
       );
 
       // Handle response
       if (response.data) {
-        const content = typeof response.data === 'string' 
-          ? response.data 
-          : response.data.content || response.data.message || 'I received your message. Processing...';
+        const content = response.data.content || response.data.message || 'I received your message. Processing...';
         
         // Extract API info from response if available
         const apiUsed = response.data.apiUsed || response.data.provider || null;
@@ -215,6 +222,103 @@ const AIResearchAgentPage: React.FC = () => {
 
   const handleExampleClick = (prompt: string) => {
     setInput(prompt);
+  };
+
+  // Handle quick action buttons - sends message directly to chat endpoint
+  const handleQuickAction = async (message: string) => {
+    if (isLoading || isExecutingWorkflow) return;
+    
+    if (apiKeys.length === 0) {
+      navigate('/settings?tab=api-management');
+      return;
+    }
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: message,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+    setIsStreaming(true);
+
+    // Create abort controller for cancellation
+    abortControllerRef.current = new AbortController();
+
+    // Create assistant message for streaming
+    const assistantMessageId = (Date.now() + 1).toString();
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      isStreaming: true
+    };
+
+    setMessages(prev => [...prev, assistantMessage]);
+
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Please log in to use the AI Research Agent');
+      }
+
+      const response = await axios.post(
+        '/api/ai-research-agent/chat',
+        {
+          message: message,
+          conversation_history: messages.map(m => ({
+            role: m.role,
+            content: m.content
+          })),
+          stream: false
+        },
+        {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          signal: abortControllerRef.current.signal
+        }
+      );
+
+      // Handle response
+      if (response.data) {
+        const content = typeof response.data === 'string' 
+          ? response.data 
+          : response.data.content || response.data.message || 'I received your message. Processing...';
+        
+        // Extract API info from response if available
+        const apiUsed = response.data.apiUsed || response.data.provider || null;
+        
+        setMessages(prev => prev.map(msg => 
+          msg.id === assistantMessageId 
+            ? { ...msg, content, isStreaming: false, apiUsed }
+            : msg
+        ));
+      }
+    } catch (error: any) {
+      if (axios.isCancel(error)) {
+        // Request was cancelled
+        setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
+        return;
+      }
+
+      const errorMessage = error.response?.data?.error || 'Sorry, I encountered an error. Please try again.';
+      
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessageId 
+          ? { ...msg, content: `❌ ${errorMessage}`, isStreaming: false }
+          : msg
+      ));
+    } finally {
+      setIsLoading(false);
+      setIsStreaming(false);
+      abortControllerRef.current = null;
+    }
   };
 
   // Handle workflow execution
@@ -558,13 +662,13 @@ const AIResearchAgentPage: React.FC = () => {
                 <p className="text-xs text-orange-600 mb-2">⚠️ Add API keys in Settings to use these features</p>
               )}
               <div className="flex flex-wrap gap-2">
-                {/* Individual Agents */}
+                {/* Individual Agents - Use chat endpoint instead of workflow endpoints */}
                 <button
                   onClick={() => {
                     if (apiKeys.length === 0) {
                       navigate('/settings?tab=api-management');
                     } else {
-                      handleWorkflowClick('paper_finding', { query: 'research papers', maxResults: 5 });
+                      handleQuickAction('Find papers on my research topic');
                     }
                   }}
                   disabled={isLoading || isExecutingWorkflow}
@@ -574,7 +678,13 @@ const AIResearchAgentPage: React.FC = () => {
                   <span>Find Papers</span>
                 </button>
                 <button
-                  onClick={() => handleWorkflowClick('abstract_writing', { content: 'Research experiment data', wordLimit: 250 })}
+                  onClick={() => {
+                    if (apiKeys.length === 0) {
+                      navigate('/settings?tab=api-management');
+                    } else {
+                      handleQuickAction('Write an abstract for my experiment');
+                    }
+                  }}
                   disabled={isLoading || isExecutingWorkflow}
                   className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all text-xs font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -582,7 +692,13 @@ const AIResearchAgentPage: React.FC = () => {
                   <span>Write Abstract</span>
                 </button>
                 <button
-                  onClick={() => handleWorkflowClick('idea_generation', { numberOfIdeas: 5 })}
+                  onClick={() => {
+                    if (apiKeys.length === 0) {
+                      navigate('/settings?tab=api-management');
+                    } else {
+                      handleQuickAction('Generate research ideas for my field');
+                    }
+                  }}
                   disabled={isLoading || isExecutingWorkflow}
                   className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all text-xs font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -590,7 +706,13 @@ const AIResearchAgentPage: React.FC = () => {
                   <span>Generate Ideas</span>
                 </button>
                 <button
-                  onClick={() => handleWorkflowClick('proposal_writing', { title: 'Research Proposal', wordLimit: 2000 })}
+                  onClick={() => {
+                    if (apiKeys.length === 0) {
+                      navigate('/settings?tab=api-management');
+                    } else {
+                      handleQuickAction('Write a research proposal for grant funding');
+                    }
+                  }}
                   disabled={isLoading || isExecutingWorkflow}
                   className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all text-xs font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -598,7 +720,13 @@ const AIResearchAgentPage: React.FC = () => {
                   <span>Write Proposal</span>
                 </button>
                 <button
-                  onClick={() => handleWorkflowClick('literature_review', { topic: 'research topic', maxPapers: 10 })}
+                  onClick={() => {
+                    if (apiKeys.length === 0) {
+                      navigate('/settings?tab=api-management');
+                    } else {
+                      handleQuickAction('Create a literature review on my research topic');
+                    }
+                  }}
                   disabled={isLoading || isExecutingWorkflow}
                   className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all text-xs font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -606,7 +734,13 @@ const AIResearchAgentPage: React.FC = () => {
                   <span>Literature Review</span>
                 </button>
                 <button
-                  onClick={() => handleWorkflowClick('experiment_design', { researchQuestion: 'Research question', type: 'laboratory' })}
+                  onClick={() => {
+                    if (apiKeys.length === 0) {
+                      navigate('/settings?tab=api-management');
+                    } else {
+                      handleQuickAction('Design an experiment for my research question');
+                    }
+                  }}
                   disabled={isLoading || isExecutingWorkflow}
                   className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all text-xs font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -614,7 +748,13 @@ const AIResearchAgentPage: React.FC = () => {
                   <span>Design Experiment</span>
                 </button>
                 <button
-                  onClick={() => handleWorkflowClick('data_analysis', { data: 'Experimental data', analysisType: 'descriptive' })}
+                  onClick={() => {
+                    if (apiKeys.length === 0) {
+                      navigate('/settings?tab=api-management');
+                    } else {
+                      handleQuickAction('Analyze my experimental data and provide insights');
+                    }
+                  }}
                   disabled={isLoading || isExecutingWorkflow}
                   className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all text-xs font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >

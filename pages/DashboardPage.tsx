@@ -302,6 +302,235 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Calendar Section */}
+        {!loading && (
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100 mt-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-2">
+                <CalendarDaysIcon className="h-5 w-5 text-blue-600" />
+                <h2 className="text-lg font-semibold text-gray-900">Calendar</h2>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button 
+                  onClick={() => navigateMonth('prev')}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <span className="text-sm font-medium text-gray-700">
+                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </span>
+                <button 
+                  onClick={() => navigateMonth('next')}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Calendar Grid */}
+              <div className="lg:col-span-2">
+                <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40 rounded-2xl p-4 shadow-xl border border-blue-100/50 backdrop-blur-sm">
+                  {/* Day Headers */}
+                  <div className="grid grid-cols-7 gap-1 mb-3">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                      <div key={day} className="text-center text-xs font-semibold text-blue-700 py-2 bg-white/90 rounded-lg backdrop-blur-sm shadow-sm border border-blue-100/50">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Calendar Dates */}
+                  <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: 35 }, (_, i) => {
+                      const date = i - 6 + 1;
+                      const isCurrentMonth = date > 0 && date <= 31;
+                      const isToday = date === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear();
+                      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+                      const dayEvents = getEventsForDate(dateStr);
+                      const hasEvent = dayEvents.length > 0;
+                      const isPast = new Date(dateStr) < new Date(new Date().setHours(0, 0, 0, 0));
+                      const isWeekend = i % 7 === 0 || i % 7 === 6;
+                      
+                      return (
+                        <div
+                          key={i}
+                          onClick={() => isCurrentMonth && handleDateClick(date)}
+                          className={`
+                            relative aspect-square flex flex-col items-center justify-center text-xs font-medium rounded-lg cursor-pointer transition-all duration-300 group
+                            ${isCurrentMonth 
+                              ? isToday 
+                                ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/30 scale-105 ring-2 ring-blue-400' 
+                                : hasEvent 
+                                  ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-900 hover:from-blue-200 hover:to-blue-300 hover:shadow-md hover:scale-105 border border-blue-300/50' 
+                                  : isPast
+                                    ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 hover:shadow-sm'
+                                    : isWeekend
+                                      ? 'text-blue-600 hover:bg-white hover:shadow-md hover:scale-105 bg-white/60'
+                                      : 'text-blue-700 hover:bg-white hover:shadow-md hover:scale-105 bg-white/80'
+                              : 'text-slate-300 hover:text-slate-400'
+                            }
+                          `}
+                        >
+                          {isCurrentMonth && (
+                            <>
+                              <span className="relative z-10">{date}</span>
+                              {/* Event List */}
+                              {dayEvents.length > 0 && (
+                                <div className="absolute bottom-0 left-0 right-0 p-1 space-y-0.5">
+                                  {dayEvents.slice(0, 2).map((event) => (
+                                    <div
+                                      key={event.id}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEventClick(event);
+                                      }}
+                                      className={`text-xs px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80 ${
+                                        event.color === 'blue' ? 'bg-blue-500 text-white' :
+                                        event.color === 'green' ? 'bg-green-500 text-white' :
+                                        event.color === 'red' ? 'bg-red-500 text-white' :
+                                        event.color === 'yellow' ? 'bg-yellow-500 text-black' :
+                                        'bg-blue-500 text-white'
+                                      }`}
+                                      title={event.title}
+                                    >
+                                      {event.title}
+                                    </div>
+                                  ))}
+                                  {dayEvents.length > 2 && (
+                                    <div className="text-xs text-blue-600 font-medium">
+                                      +{dayEvents.length - 2} more
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          )}
+                          
+                          {/* Hover Effect */}
+                          <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          
+                          {/* Today's Glow Effect */}
+                          {isToday && (
+                            <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-blue-400/20 to-blue-500/20 animate-pulse"></div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Calendar Footer */}
+                  <div className="mt-3 flex items-center justify-between text-xs text-blue-600">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                        <span>Today</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        <span>Events</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Today's Schedule */}
+              <div className="space-y-3">
+                <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+                  <h3 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                    Today's Schedule
+                  </h3>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center space-x-2 p-1.5 bg-blue-50 rounded-lg">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-blue-900">Team Standup</p>
+                        <p className="text-xs text-blue-700">9:00 AM - 9:30 AM</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 p-1.5 bg-green-50 rounded-lg">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-green-900">Lab Session</p>
+                        <p className="text-xs text-green-700">2:00 PM - 4:00 PM</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Notes */}
+                <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+                  <h3 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <svg className="w-3 h-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Quick Notes
+                  </h3>
+                  <div className="space-y-1.5">
+                    <div className="p-1.5 bg-purple-50 rounded-lg">
+                      <p className="text-xs font-medium text-purple-900">Lab meeting notes</p>
+                      <p className="text-xs text-purple-700">Review experiment results</p>
+                    </div>
+                    <div className="p-1.5 bg-blue-50 rounded-lg">
+                      <p className="text-xs font-medium text-blue-900">Equipment check</p>
+                      <p className="text-xs text-blue-700">Calibrate pH meter</p>
+                    </div>
+                    <button className="w-full p-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-left">
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span className="text-xs font-medium text-gray-700">Add Note</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Recent Activity */}
+                <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+                  <h3 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <svg className="w-3 h-3 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Recent Activity
+                  </h3>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center space-x-2 p-1.5 bg-green-50 rounded-lg">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-green-900">Experiment completed</p>
+                        <p className="text-xs text-green-700">2 hours ago</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 p-1.5 bg-blue-50 rounded-lg">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-blue-900">Equipment booked</p>
+                        <p className="text-xs text-blue-700">4 hours ago</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 p-1.5 bg-purple-50 rounded-lg">
+                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-purple-900">Note added</p>
+                        <p className="text-xs text-purple-700">1 day ago</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
@@ -456,233 +685,6 @@ const DashboardPage: React.FC = () => {
                 <h3 className="text-sm font-medium text-gray-900 mb-1">Journal</h3>
                 <p className="text-xs text-gray-600">Science For All Journal - Open access</p>
               </button>
-            </div>
-
-            {/* Calendar Section */}
-            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100 mt-8">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-2">
-                  <CalendarDaysIcon className="h-5 w-5 text-blue-600" />
-                  <h2 className="text-lg font-semibold text-gray-900">Calendar</h2>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button 
-                    onClick={() => navigateMonth('prev')}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <span className="text-sm font-medium text-gray-700">
-                    {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                  </span>
-                  <button 
-                    onClick={() => navigateMonth('next')}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Calendar Grid */}
-                <div className="lg:col-span-2">
-                  <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40 rounded-2xl p-4 shadow-xl border border-blue-100/50 backdrop-blur-sm">
-                    {/* Day Headers */}
-                    <div className="grid grid-cols-7 gap-1 mb-3">
-                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                        <div key={day} className="text-center text-xs font-semibold text-blue-700 py-2 bg-white/90 rounded-lg backdrop-blur-sm shadow-sm border border-blue-100/50">
-                          {day}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Calendar Dates */}
-                    <div className="grid grid-cols-7 gap-1">
-                      {Array.from({ length: 35 }, (_, i) => {
-                        const date = i - 6 + 1;
-                        const isCurrentMonth = date > 0 && date <= 31;
-                        const isToday = date === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear();
-                        const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
-                        const dayEvents = getEventsForDate(dateStr);
-                        const hasEvent = dayEvents.length > 0;
-                        const isPast = new Date(dateStr) < new Date(new Date().setHours(0, 0, 0, 0));
-                        const isWeekend = i % 7 === 0 || i % 7 === 6;
-                        
-                        return (
-                          <div
-                            key={i}
-                            onClick={() => isCurrentMonth && handleDateClick(date)}
-                            className={`
-                              relative aspect-square flex flex-col items-center justify-center text-xs font-medium rounded-lg cursor-pointer transition-all duration-300 group
-                              ${isCurrentMonth 
-                                ? isToday 
-                                  ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/30 scale-105 ring-2 ring-blue-400' 
-                                  : hasEvent 
-                                    ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-900 hover:from-blue-200 hover:to-blue-300 hover:shadow-md hover:scale-105 border border-blue-300/50' 
-                                    : isPast
-                                      ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 hover:shadow-sm'
-                                      : isWeekend
-                                        ? 'text-blue-600 hover:bg-white hover:shadow-md hover:scale-105 bg-white/60'
-                                        : 'text-blue-700 hover:bg-white hover:shadow-md hover:scale-105 bg-white/80'
-                                : 'text-slate-300 hover:text-slate-400'
-                              }
-                            `}
-                          >
-                            {isCurrentMonth && (
-                              <>
-                                <span className="relative z-10">{date}</span>
-                                {/* Event List */}
-                                {dayEvents.length > 0 && (
-                                  <div className="absolute bottom-0 left-0 right-0 p-1 space-y-0.5">
-                                    {dayEvents.slice(0, 2).map((event) => (
-                                      <div
-                                        key={event.id}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleEventClick(event);
-                                        }}
-                                        className={`text-xs px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80 ${
-                                          event.color === 'blue' ? 'bg-blue-500 text-white' :
-                                          event.color === 'green' ? 'bg-green-500 text-white' :
-                                          event.color === 'red' ? 'bg-red-500 text-white' :
-                                          event.color === 'yellow' ? 'bg-yellow-500 text-black' :
-                                          'bg-blue-500 text-white'
-                                        }`}
-                                        title={event.title}
-                                      >
-                                        {event.title}
-                                      </div>
-                                    ))}
-                                    {dayEvents.length > 2 && (
-                                      <div className="text-xs text-blue-600 font-medium">
-                                        +{dayEvents.length - 2} more
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </>
-                            )}
-                            
-                            {/* Hover Effect */}
-                            <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                            
-                            {/* Today's Glow Effect */}
-                            {isToday && (
-                              <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-blue-400/20 to-blue-500/20 animate-pulse"></div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    
-                    {/* Calendar Footer */}
-                    <div className="mt-3 flex items-center justify-between text-xs text-blue-600">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center space-x-1">
-                          <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
-                          <span>Today</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                          <span>Events</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Today's Schedule */}
-                <div className="space-y-3">
-                  <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
-                    <h3 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                      Today's Schedule
-                    </h3>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center space-x-2 p-1.5 bg-blue-50 rounded-lg">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                        <div className="flex-1">
-                          <p className="text-xs font-medium text-blue-900">Team Standup</p>
-                          <p className="text-xs text-blue-700">9:00 AM - 9:30 AM</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2 p-1.5 bg-green-50 rounded-lg">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <div className="flex-1">
-                          <p className="text-xs font-medium text-green-900">Lab Session</p>
-                          <p className="text-xs text-green-700">2:00 PM - 4:00 PM</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Quick Notes */}
-                  <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
-                    <h3 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                      <svg className="w-3 h-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      Quick Notes
-                    </h3>
-                    <div className="space-y-1.5">
-                      <div className="p-1.5 bg-purple-50 rounded-lg">
-                        <p className="text-xs font-medium text-purple-900">Lab meeting notes</p>
-                        <p className="text-xs text-purple-700">Review experiment results</p>
-                      </div>
-                      <div className="p-1.5 bg-blue-50 rounded-lg">
-                        <p className="text-xs font-medium text-blue-900">Equipment check</p>
-                        <p className="text-xs text-blue-700">Calibrate pH meter</p>
-                      </div>
-                      <button className="w-full p-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-left">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
-                          <span className="text-xs font-medium text-gray-700">Add Note</span>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Recent Activity */}
-                  <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
-                    <h3 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                      <svg className="w-3 h-3 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Recent Activity
-                    </h3>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center space-x-2 p-1.5 bg-green-50 rounded-lg">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <div className="flex-1">
-                          <p className="text-xs font-medium text-green-900">Experiment completed</p>
-                          <p className="text-xs text-green-700">2 hours ago</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2 p-1.5 bg-blue-50 rounded-lg">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                        <div className="flex-1">
-                          <p className="text-xs font-medium text-blue-900">Equipment booked</p>
-                          <p className="text-xs text-blue-700">4 hours ago</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2 p-1.5 bg-purple-50 rounded-lg">
-                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
-                        <div className="flex-1">
-                          <p className="text-xs font-medium text-purple-900">Note added</p>
-                          <p className="text-xs text-purple-700">1 day ago</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </>
         )}

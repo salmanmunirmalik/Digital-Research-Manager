@@ -8,7 +8,7 @@
  * - Protocols used by similar users (collaborative filtering)
  */
 
-import { pool } from '../../database/config';
+import pool from '../../../database/config.js';
 import { RecommendationEngine, Recommendation, RecommendationContext } from './RecommendationEngine';
 
 export class ProtocolRecommender {

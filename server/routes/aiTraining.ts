@@ -7,7 +7,7 @@ import express, { type Router } from 'express';
 import { Pool } from 'pg';
 import { authenticateToken } from '../middleware/auth.js';
 import axios from 'axios';
-import { getUserApiKey, getUserDefaultProvider } from './aiProviderKeys.js';
+import { getUserApiKey, getUserDefaultProvider, getApiKeyWithFallback, getPlatformGeminiKey } from './aiProviderKeys.js';
 
 const router: Router = express.Router();
 
@@ -29,33 +29,56 @@ interface OpenAIEmbeddingResponse {
   }>;
 }
 
-// Generate embedding using OpenAI or user's provider
+// Generate embedding using Gemini (platform default) or user's provider
 async function generateEmbedding(text: string, userId?: string): Promise<number[]> {
   try {
-    // Check if user has their own API key
-    let apiKey = process.env.OPENAI_API_KEY;
-    let endpoint = 'https://api.openai.com/v1/embeddings';
-    let model = 'text-embedding-3-small';
-    let defaultProvider = 'openai';
-    let userApiKey: string | null = null;
+    // Default to Gemini for basic features
+    let defaultProvider = 'google_gemini';
+    let apiKey: string | null = null;
+    let endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent';
+    let model = 'embedding-001';
     
     if (userId) {
-      defaultProvider = await getUserDefaultProvider(userId, 'embedding');
-      userApiKey = await getUserApiKey(userId, defaultProvider);
+      defaultProvider = await getUserDefaultProvider(userId, 'embedding') || 'google_gemini';
+      // Use fallback: user key → platform Gemini key
+      apiKey = await getApiKeyWithFallback(userId, defaultProvider, true);
       
-      if (userApiKey) {
-        apiKey = userApiKey;
-        
-        // Set provider-specific endpoints
-        if (defaultProvider === 'google_gemini') {
-          endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent';
-          model = 'embedding-001';
-        }
+      if (apiKey && defaultProvider === 'google_gemini') {
+        endpoint = `https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key=${apiKey}`;
+        model = 'embedding-001';
+      } else if (apiKey && defaultProvider === 'openai') {
+        endpoint = 'https://api.openai.com/v1/embeddings';
+        model = 'text-embedding-3-small';
       }
+    } else {
+      // No user ID, use platform Gemini key
+      apiKey = getPlatformGeminiKey();
     }
     
-    // For OpenAI
-    if (defaultProvider === 'openai' || !userApiKey) {
+    if (!apiKey) {
+      throw new Error('No API key available. Please configure GEMINI_API_KEY or add your own API key.');
+    }
+    
+    // For Google Gemini (default for basic features)
+    if (defaultProvider === 'google_gemini' || !defaultProvider) {
+      const response = await axios.post(
+        endpoint,
+        {
+          model: model,
+          content: { parts: [{ text: text }] }
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      return response.data.embedding.values;
+    }
+    
+    // For OpenAI (if user has their own key)
+    if (defaultProvider === 'openai') {
       const response = await axios.post(
         endpoint,
         {
@@ -71,25 +94,6 @@ async function generateEmbedding(text: string, userId?: string): Promise<number[
       );
       
       return response.data.data[0].embedding;
-    }
-    
-    // For Google Gemini
-    if (defaultProvider === 'google_gemini') {
-      const response = await axios.post(
-        endpoint,
-        {
-          model: model,
-          content: { parts: [{ text: text }] }
-        },
-        {
-          headers: {
-            'x-goog-api-key': apiKey,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      
-      return response.data.embedding.values;
     }
     
     throw new Error('Unsupported provider');
@@ -149,11 +153,11 @@ router.post('/train', authenticateToken, async (req: any, res) => {
   try {
     const userId = req.user.id;
     
-    // Get user's API key preference
+    // Get user's API key preference with fallback to platform Gemini
     const defaultProvider = await getUserDefaultProvider(userId, 'embedding');
-    const userApiKey = await getUserApiKey(userId, defaultProvider);
+    const apiKey = await getApiKeyWithFallback(userId, defaultProvider, true);
     
-    if (!userApiKey && !process.env.OPENAI_API_KEY) {
+    if (!apiKey) {
       return res.status(400).json({ 
         error: 'No API key available. Please add your API key in settings.' 
       });

@@ -8,7 +8,7 @@
 
 import pool from "../../database/config.js";
 import { AIProviderFactory } from './AIProviderFactory.js';
-import { getUserDefaultProvider, getUserApiKey } from '../routes/aiProviderKeys.js';
+import { getUserDefaultProvider, getUserApiKey, getApiKeyWithFallback, getPlatformGeminiKey } from '../routes/aiProviderKeys.js';
 
 export interface ProcessedContent {
   id: string;
@@ -130,9 +130,9 @@ export class UserAIContentProcessor {
     userId: string
   ): Promise<string | null> {
     try {
-      // Get user's default provider for content writing
-      const provider = await getUserDefaultProvider(userId, 'content_writing') || 'openai';
-      const apiKey = await getUserApiKey(userId, provider) || process.env.OPENAI_API_KEY;
+      // Get user's default provider for content writing (default to Gemini for basic features)
+      const provider = await getUserDefaultProvider(userId, 'chat') || 'google_gemini';
+      const apiKey = await getApiKeyWithFallback(userId, provider, true);
       
       if (!apiKey) return null;
       
@@ -142,7 +142,7 @@ export class UserAIContentProcessor {
       
       const response = await aiProvider.chat([
         { role: 'user', content: summaryPrompt }
-      ], { maxTokens: 200 });
+      ], { apiKey: apiKey, maxTokens: 200 });
       
       return response.content;
     } catch (error) {
@@ -195,9 +195,9 @@ export class UserAIContentProcessor {
     userId: string
   ): Promise<number[]> {
     try {
-      // Get user's default embedding provider
-      const provider = await getUserDefaultProvider(userId, 'embedding') || 'openai';
-      const apiKey = await getUserApiKey(userId, provider) || process.env.OPENAI_API_KEY;
+      // Get user's default embedding provider (default to Gemini for basic features)
+      const provider = await getUserDefaultProvider(userId, 'embedding') || 'google_gemini';
+      const apiKey = await getApiKeyWithFallback(userId, provider, true);
       
       if (!apiKey) {
         throw new Error('No API key available for embeddings');

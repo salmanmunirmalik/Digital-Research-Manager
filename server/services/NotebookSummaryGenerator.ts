@@ -8,7 +8,7 @@
  * - Publication-ready sections
  */
 
-import { pool } from '../../database/config.js';
+import pool from '../../database/config.js';
 import { AIProviderFactory } from './AIProviderFactory.js';
 import { getApiForTask } from '../routes/apiTaskAssignments.js';
 

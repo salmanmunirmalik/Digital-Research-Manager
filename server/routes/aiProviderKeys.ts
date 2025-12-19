@@ -291,23 +291,82 @@ router.put('/preferences', authenticateToken, async (req: any, res) => {
   }
 });
 
-// Get user's API key for a specific provider
-export async function getUserApiKey(userId: string, provider: string): Promise<string | null> {
+/**
+ * Get platform's default Gemini API key
+ * This is used for basic features when users don't have their own keys
+ */
+export function getPlatformGeminiKey(): string | null {
+  return process.env.GEMINI_API_KEY || null;
+}
+
+/**
+ * Get user's API key for a specific provider
+ * @param userId User ID
+ * @param provider Provider identifier
+ * @param allowPlatformFallback If true, fallback to platform Gemini key for basic features
+ * @returns API key or null
+ */
+export async function getUserApiKey(
+  userId: string, 
+  provider: string, 
+  allowPlatformFallback: boolean = true
+): Promise<string | null> {
   try {
     const result = await pool.query(
       'SELECT encrypted_api_key FROM ai_provider_keys WHERE user_id = $1 AND provider = $2 AND is_active = true',
       [userId, provider]
     );
     
-    if (result.rows.length === 0) {
-      return null;
+    if (result.rows.length > 0) {
+      return decryptApiKey(result.rows[0].encrypted_api_key);
     }
     
-    return decryptApiKey(result.rows[0].encrypted_api_key);
+    // If no user key and fallback is allowed, use platform Gemini key for basic features
+    if (allowPlatformFallback && provider === 'google_gemini') {
+      const platformKey = getPlatformGeminiKey();
+      if (platformKey) {
+        return platformKey;
+      }
+    }
+    
+    return null;
   } catch (error) {
     console.error('Error getting user API key:', error);
     return null;
   }
+}
+
+/**
+ * Get API key with smart fallback strategy:
+ * 1. User's API key for the provider (if exists)
+ * 2. Platform's Gemini key (for basic features)
+ * 3. null (if no fallback available)
+ * 
+ * @param userId User ID
+ * @param provider Provider identifier
+ * @param usePlatformDefaultForBasic If true, use platform Gemini for basic features when user has no key
+ * @returns API key or null
+ */
+export async function getApiKeyWithFallback(
+  userId: string,
+  provider: string,
+  usePlatformDefaultForBasic: boolean = true
+): Promise<string | null> {
+  // First, try to get user's API key
+  const userKey = await getUserApiKey(userId, provider, false);
+  if (userKey) {
+    return userKey;
+  }
+  
+  // For basic features, fallback to platform Gemini key
+  if (usePlatformDefaultForBasic && provider === 'google_gemini') {
+    const platformKey = getPlatformGeminiKey();
+    if (platformKey) {
+      return platformKey;
+    }
+  }
+  
+  return null;
 }
 
 // Get user's default provider
@@ -323,7 +382,7 @@ export async function getUserDefaultProvider(userId: string, type: 'embedding' |
     );
     
     if (result.rows.length === 0) {
-      return 'openai'; // Default to OpenAI
+      return 'google_gemini'; // Default to Gemini (platform default)
     }
     
     const preferences = result.rows[0];
@@ -336,13 +395,13 @@ export async function getUserDefaultProvider(userId: string, type: 'embedding' |
     );
     
     if (hasKey.rows.length === 0 && preferences.use_platform_default_if_no_key) {
-      return 'openai'; // Fallback to platform default
+      return 'google_gemini'; // Fallback to platform default (Gemini)
     }
     
     return provider;
   } catch (error) {
     console.error('Error getting user default provider:', error);
-    return 'openai';
+    return 'google_gemini'; // Default to Gemini
   }
 }
 

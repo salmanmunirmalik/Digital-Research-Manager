@@ -9,7 +9,7 @@
  * - AI agent query patterns
  */
 
-import { pool } from '../../database/config';
+import pool from '../../../database/config.js';
 import { RecommendationEngine, Recommendation, RecommendationContext } from './RecommendationEngine';
 
 export class PaperRecommender {

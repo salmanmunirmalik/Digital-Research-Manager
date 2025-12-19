@@ -188,6 +188,13 @@ const LabNotebookPage: React.FC = () => {
     color: 'yellow' as const
   });
 
+  // #region agent log
+  // H1: Missing state declarations - verify if quickNotes, recentActivity, smartSuggestions are declared
+  const [quickNotes, setQuickNotes] = useState<QuickNote[]>([]);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [smartSuggestions, setSmartSuggestions] = useState<SmartSuggestion[]>([]);
+  // #endregion
+
   // Entry type options
   const entryTypes = [
     { 
@@ -341,7 +348,11 @@ const LabNotebookPage: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks`, {
+      // #region agent log
+      const apiUrlEntries2 = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api';
+      fetch('http://127.0.0.1:7243/ingest/d8d74533-e1f5-4bba-aa87-ed01b5b636d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LabNotebookPage.tsx:351',message:'fetchEntries API call',data:{apiUrl:apiUrlEntries2},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      const response = await fetch(`${apiUrlEntries2}/lab-notebooks`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -426,6 +437,9 @@ const LabNotebookPage: React.FC = () => {
 
   // Fetch quick notes from API
   const fetchQuickNotes = async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/d8d74533-e1f5-4bba-aa87-ed01b5b636d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LabNotebookPage.tsx:428',message:'fetchQuickNotes called',data:{hasSetQuickNotes:typeof setQuickNotes},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
     try {
       const token = localStorage.getItem('authToken');
       console.log('🔍 Fetching quick notes, token:', token ? 'exists' : 'missing');
@@ -446,11 +460,18 @@ const LabNotebookPage: React.FC = () => {
             created_at: new Date(Date.now() - 86400000).toISOString()
           }
         ];
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/d8d74533-e1f5-4bba-aa87-ed01b5b636d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LabNotebookPage.tsx:449',message:'About to call setQuickNotes',data:{mockNotesCount:mockQuickNotes.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
         setQuickNotes(mockQuickNotes);
         return;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/quick-notes`, {
+      // #region agent log
+      const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api';
+      fetch('http://127.0.0.1:7243/ingest/d8d74533-e1f5-4bba-aa87-ed01b5b636d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LabNotebookPage.tsx:453',message:'Checking import.meta.env',data:{apiUrl,hasEnv:!!(import.meta as any).env,hasViteApiUrl:!!(import.meta as any).env?.VITE_API_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      const response = await fetch(`${apiUrl}/quick-notes`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -534,7 +555,11 @@ const LabNotebookPage: React.FC = () => {
         collaborators: data.collaborators || []
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks`, {
+      // #region agent log
+      const apiUrlCreate = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api';
+      fetch('http://127.0.0.1:7243/ingest/d8d74533-e1f5-4bba-aa87-ed01b5b636d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LabNotebookPage.tsx:554',message:'createEntry API call',data:{apiUrl:apiUrlCreate},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      const response = await fetch(`${apiUrlCreate}/lab-notebooks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -614,7 +639,11 @@ const LabNotebookPage: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks/activity`, {
+      // #region agent log
+      const apiUrlActivity = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api';
+      fetch('http://127.0.0.1:7243/ingest/d8d74533-e1f5-4bba-aa87-ed01b5b636d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LabNotebookPage.tsx:617',message:'fetchRecentActivity checking import.meta.env',data:{apiUrl:apiUrlActivity,hasSetRecentActivity:typeof setRecentActivity},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H2'})}).catch(()=>{});
+      // #endregion
+      const response = await fetch(`${apiUrlActivity}/lab-notebooks/activity`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -686,7 +715,11 @@ const LabNotebookPage: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks/suggestions`, {
+      // #region agent log
+      const apiUrlSuggestions = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api';
+      fetch('http://127.0.0.1:7243/ingest/d8d74533-e1f5-4bba-aa87-ed01b5b636d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LabNotebookPage.tsx:689',message:'fetchSmartSuggestions checking import.meta.env',data:{apiUrl:apiUrlSuggestions,hasSetSmartSuggestions:typeof setSmartSuggestions},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H2'})}).catch(()=>{});
+      // #endregion
+      const response = await fetch(`${apiUrlSuggestions}/lab-notebooks/suggestions`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -795,7 +828,11 @@ const LabNotebookPage: React.FC = () => {
           return;
         }
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks/${entryId}`, {
+        // #region agent log
+        const apiUrlDelete = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api';
+        fetch('http://127.0.0.1:7243/ingest/d8d74533-e1f5-4bba-aa87-ed01b5b636d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LabNotebookPage.tsx:823',message:'deleteEntry API call',data:{apiUrl:apiUrlDelete,entryId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
+        const response = await fetch(`${apiUrlDelete}/lab-notebooks/${entryId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -825,7 +862,11 @@ const LabNotebookPage: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/lab-notebooks/${entryId}`, {
+      // #region agent log
+      const apiUrlUpdate = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api';
+      fetch('http://127.0.0.1:7243/ingest/d8d74533-e1f5-4bba-aa87-ed01b5b636d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LabNotebookPage.tsx:853',message:'updateEntry API call',data:{apiUrl:apiUrlUpdate,entryId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      const response = await fetch(`${apiUrlUpdate}/lab-notebooks/${entryId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -981,7 +1022,11 @@ const LabNotebookPage: React.FC = () => {
           return;
         }
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/quick-notes`, {
+        // #region agent log
+        const apiUrlQuickNote = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api';
+        fetch('http://127.0.0.1:7243/ingest/d8d74533-e1f5-4bba-aa87-ed01b5b636d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LabNotebookPage.tsx:1009',message:'createQuickNote API call',data:{apiUrl:apiUrlQuickNote},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
+        const response = await fetch(`${apiUrlQuickNote}/quick-notes`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1640,23 +1685,37 @@ const LabNotebookPage: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
                     <Select
                       value={selectedEntry.status}
-                      onChange={(e) => setSelectedEntry(prev => prev ? { ...prev, status: e.target.value } : null)}
+                      onChange={(e) => {
+                        // #region agent log
+                        const newStatus = e.target.value;
+                        fetch('http://127.0.0.1:7243/ingest/d8d74533-e1f5-4bba-aa87-ed01b5b636d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LabNotebookPage.tsx:1693',message:'Status update attempt',data:{newStatus,currentStatus:selectedEntry?.status,isValidStatus:['planning','in_progress','completed','on_hold','failed'].includes(newStatus)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+                        // #endregion
+                        setSelectedEntry(prev => prev ? { ...prev, status: newStatus as 'planning' | 'in_progress' | 'completed' | 'on_hold' | 'failed' } : null);
+                      }}
                     >
-                      <option value="draft">Draft</option>
+                      <option value="planning">Planning</option>
+                      <option value="in_progress">In Progress</option>
                       <option value="completed">Completed</option>
-                      <option value="archived">Archived</option>
+                      <option value="on_hold">On Hold</option>
+                      <option value="failed">Failed</option>
                     </Select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
                     <Select
                       value={selectedEntry.priority}
-                      onChange={(e) => setSelectedEntry(prev => prev ? { ...prev, priority: e.target.value } : null)}
+                      onChange={(e) => {
+                        // #region agent log
+                        const newPriority = e.target.value;
+                        fetch('http://127.0.0.1:7243/ingest/d8d74533-e1f5-4bba-aa87-ed01b5b636d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LabNotebookPage.tsx:1710',message:'Priority update attempt',data:{newPriority,currentPriority:selectedEntry?.priority,isValidPriority:['low','medium','high','critical'].includes(newPriority)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4'})}).catch(()=>{});
+                        // #endregion
+                        setSelectedEntry(prev => prev ? { ...prev, priority: newPriority as 'low' | 'medium' | 'high' | 'critical' } : null);
+                      }}
                     >
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
                       <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
+                      <option value="critical">Critical</option>
                     </Select>
                   </div>
                 </div>

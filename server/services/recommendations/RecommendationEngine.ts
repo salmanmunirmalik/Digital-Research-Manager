@@ -5,7 +5,7 @@
  * using collaborative filtering, content-based filtering, and hybrid approaches.
  */
 
-import { pool } from '../../database/config';
+import pool from '../../../database/config.js';
 
 export interface RecommendationContext {
   currentItemId?: string;

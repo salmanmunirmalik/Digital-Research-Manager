@@ -5,41 +5,68 @@
 
 import { Pool } from 'pg';
 import axios from 'axios';
-import { getUserApiKey, getUserDefaultProvider } from '../routes/aiProviderKeys.js';
+import { getUserApiKey, getUserDefaultProvider, getApiKeyWithFallback, getPlatformGeminiKey } from '../routes/aiProviderKeys.js';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Generate embedding using OpenAI or user's provider
+// Generate embedding using Gemini (platform default) or user's provider
 async function generateEmbedding(text: string, userId?: string): Promise<number[]> {
   try {
-    let apiKey = process.env.OPENAI_API_KEY;
-    let endpoint = 'https://api.openai.com/v1/embeddings';
-    let model = 'text-embedding-3-small';
-    let defaultProvider = 'openai';
+    // Default to Gemini for basic features
+    let defaultProvider = 'google_gemini';
+    let apiKey: string | null = null;
+    let endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent';
+    let model = 'embedding-001';
     
     if (userId) {
       try {
-        defaultProvider = await getUserDefaultProvider(userId, 'embedding') || 'openai';
-        const userApiKey = await getUserApiKey(userId, defaultProvider);
+        defaultProvider = await getUserDefaultProvider(userId, 'embedding') || 'google_gemini';
+        // Use fallback: user key → platform Gemini key
+        apiKey = await getApiKeyWithFallback(userId, defaultProvider, true);
         
-        if (userApiKey) {
-          apiKey = userApiKey;
-          
-          if (defaultProvider === 'google_gemini') {
-            endpoint = `https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key=${apiKey}`;
-            model = 'embedding-001';
-          }
+        if (apiKey && defaultProvider === 'google_gemini') {
+          endpoint = `https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key=${apiKey}`;
+          model = 'embedding-001';
+        } else if (apiKey && defaultProvider === 'openai') {
+          endpoint = 'https://api.openai.com/v1/embeddings';
+          model = 'text-embedding-3-small';
         }
       } catch (error) {
-        console.log('Using default embedding provider');
+        console.log('Using platform default embedding provider (Gemini)');
+        apiKey = getPlatformGeminiKey();
       }
+    } else {
+      // No user ID, use platform Gemini key
+      apiKey = getPlatformGeminiKey();
     }
     
-    // For OpenAI
-    if (defaultProvider === 'openai' || defaultProvider === null) {
+    if (!apiKey) {
+      throw new Error('No API key available. Please configure GEMINI_API_KEY or add your own API key.');
+    }
+    
+    // For Google Gemini (default for basic features)
+    if (defaultProvider === 'google_gemini' || !defaultProvider) {
+      const response = await axios.post(
+        endpoint,
+        {
+          model: model,
+          content: { parts: [{ text: text }] }
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      return response.data.embedding.values;
+    }
+    
+    // For OpenAI (if user has their own key)
+    if (defaultProvider === 'openai') {
       const response = await axios.post(
         endpoint,
         {
@@ -55,24 +82,6 @@ async function generateEmbedding(text: string, userId?: string): Promise<number[
       );
       
       return response.data.data[0].embedding;
-    }
-    
-    // For Google Gemini
-    if (defaultProvider === 'google_gemini') {
-      const response = await axios.post(
-        endpoint,
-        {
-          model: model,
-          content: { parts: [{ text: text }] }
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      
-      return response.data.embedding.values;
     }
     
     throw new Error('Unsupported provider');

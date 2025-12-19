@@ -131,23 +131,26 @@ export class UserContextRetriever {
   ): Promise<number[] | null> {
     try {
       // Get user's default embedding provider
-      const { getUserDefaultProvider, getUserApiKey } = await import('../routes/aiProviderKeys.js');
+      const { getUserDefaultProvider, getApiKeyWithFallback, getPlatformGeminiKey } = await import('../routes/aiProviderKeys.js');
       
-      let provider = 'openai';
+      let provider = 'google_gemini';
       let apiKey: string | null = null;
       
       if (userId) {
         try {
-          provider = await getUserDefaultProvider(userId, 'embedding') || 'openai';
-          apiKey = await getUserApiKey(userId, provider);
+          provider = await getUserDefaultProvider(userId, 'embedding') || 'google_gemini';
+          apiKey = await getApiKeyWithFallback(userId, provider, true);
         } catch (error) {
-          console.log('Using default embedding provider');
+          console.log('Using platform default embedding provider (Gemini)');
+          apiKey = getPlatformGeminiKey();
         }
+      } else {
+        // No user ID, use platform Gemini key
+        apiKey = getPlatformGeminiKey();
       }
       
       if (!apiKey) {
-        apiKey = process.env.OPENAI_API_KEY || null;
-        if (!apiKey) return null;
+        return null;
       }
       
       const aiProvider = AIProviderFactory.createProvider(provider, apiKey);
