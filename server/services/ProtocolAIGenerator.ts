@@ -76,7 +76,7 @@ export class ProtocolAIGenerator {
       const aiProvider = AIProviderFactory.createProvider(apiAssignment.provider, apiAssignment.apiKey);
 
       // Create detailed prompt for protocol generation
-      const prompt = this.buildGenerationPrompt(request);
+      const prompt = await this.buildGenerationPrompt(request);
 
       // Generate protocol using AI
       const messages = [

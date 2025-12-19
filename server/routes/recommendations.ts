@@ -5,7 +5,7 @@
 
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth.js';
-import { RecommendationEngine } from '../services/recommendations/RecommendationEngine.js';
+import { RecommendationEngine, Recommendation } from '../services/recommendations/RecommendationEngine.js';
 import pool from '../../database/config.js';
 import { ProtocolRecommender } from '../services/recommendations/ProtocolRecommender.js';
 import { PaperRecommender } from '../services/recommendations/PaperRecommender.js';

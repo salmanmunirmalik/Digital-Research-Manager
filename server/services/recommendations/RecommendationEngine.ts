@@ -232,7 +232,7 @@ export class RecommendationEngine {
 
           if (commonUsers >= minCommonUsers) {
             // Calculate Jaccard similarity (simple but effective)
-            const similarity = this.calculateJaccardSimilarity(
+            const similarity = await this.calculateJaccardSimilarity(
               itemType,
               item1,
               item2,

@@ -112,10 +112,10 @@ export interface PaperGenerationPipelineResult {
 }
 
 export class PaperGenerationPipeline {
-  private orchestrator: ResearchOrchestrator;
+  private orchestrator?: ResearchOrchestrator;
   
   constructor() {
-    this.orchestrator = new ResearchOrchestrator();
+    // Orchestrator will be created when needed with proper workflow definition
   }
   
   /**
@@ -224,7 +224,7 @@ export class PaperGenerationPipeline {
             step: 'Write Paper',
             agent: 'PaperWritingAgent',
             status: 'completed',
-            duration: Date.now() - stepStart
+            duration: Date.now() - step2Start
           });
         } else {
           throw new Error(result.error || 'Failed to write paper');
@@ -234,7 +234,7 @@ export class PaperGenerationPipeline {
           step: 'Write Paper',
           agent: 'PaperWritingAgent',
           status: 'failed',
-          duration: Date.now() - stepStart
+          duration: Date.now() - step2Start
         });
         throw error;
       }
@@ -418,7 +418,7 @@ export class PaperGenerationPipeline {
             step: 'Compile Draft',
             agent: 'DraftCompilationAgent',
             status: 'completed',
-            duration: Date.now() - stepStart
+            duration: Date.now() - step5Start
           });
         } else {
           throw new Error(result.error || 'Failed to compile draft');
@@ -428,7 +428,7 @@ export class PaperGenerationPipeline {
           step: 'Compile Draft',
           agent: 'DraftCompilationAgent',
           status: 'failed',
-          duration: Date.now() - stepStart
+          duration: Date.now() - step5Start
         });
         throw error;
       }

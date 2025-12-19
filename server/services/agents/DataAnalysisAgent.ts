@@ -11,6 +11,7 @@ import { TaskAnalysis } from '../TaskAnalysisEngine.js';
 import { UserContext } from '../UserContextRetriever.js';
 import { getApiForTask } from '../../routes/apiTaskAssignments.js';
 import { getUserApiKey } from '../../routes/aiProviderKeys.js';
+import { VisualizationRecommender } from '../VisualizationRecommender.js';
 
 export interface DataAnalysisInput {
   data: any; // Can be structured data, CSV text, JSON, or description
@@ -188,7 +189,7 @@ export class DataAnalysisAgent extends BaseAgent implements Agent {
           // Merge with AI-generated visualizations
           if (analysisResult.analysis.visualizations) {
             analysisResult.analysis.visualizations = [
-              ...vizRecommendations.map(viz => ({
+              ...vizRecommendations.map((viz: any) => ({
                 type: viz.chartType,
                 description: viz.description,
                 variables: viz.variables,
@@ -198,7 +199,7 @@ export class DataAnalysisAgent extends BaseAgent implements Agent {
               ...analysisResult.analysis.visualizations
             ];
           } else {
-            analysisResult.analysis.visualizations = vizRecommendations.map(viz => ({
+            analysisResult.analysis.visualizations = vizRecommendations.map((viz: any) => ({
               type: viz.chartType,
               description: viz.description,
               variables: viz.variables,

@@ -37,6 +37,7 @@ export interface WorkflowResult {
     agentsUsed: string[];
     totalTokens?: number;
     estimatedCost?: number;
+    error?: string;
   };
 }
 
@@ -168,6 +169,7 @@ export class ResearchOrchestrator {
         synthesizedResult: null,
         totalDuration: Date.now() - startTime,
         metadata: {
+          agentsUsed: [],
           error: error.message
         }
       };

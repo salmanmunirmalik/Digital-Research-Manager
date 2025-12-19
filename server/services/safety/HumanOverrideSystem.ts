@@ -11,9 +11,10 @@
 
 import { EventEmitter } from 'events';
 import { ActionValidationResult, ActionValidationRequest } from './ActionValidationSystem.js';
-import { ApprovalGateSystem } from './ApprovalGateSystem.js';
-import { AuditLoggingSystem } from './AuditLoggingSystem.js';
-import { RollbackSystem } from './RollbackSystem.js';
+import { ApprovalGateSystem, approvalGateSystem } from './ApprovalGateSystem.js';
+import { AuditLoggingSystem, auditLoggingSystem } from './AuditLoggingSystem.js';
+import { RollbackSystem, rollbackSystem } from './RollbackSystem.js';
+import pool from '../../../database/config.js';
 
 export type OverrideType = 
   | 'safety_check'

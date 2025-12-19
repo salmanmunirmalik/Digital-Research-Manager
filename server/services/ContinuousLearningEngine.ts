@@ -43,7 +43,7 @@ export class ContinuousLearningEngine {
         case 'content_updated':
           // Process content for AI-ready format
           const content = this.extractContentFromEvent(event);
-          if (content && content.length > 50) {
+          if (content && content.text && content.text.length > 50) {
             await UserAIContentProcessor.processContent(
               event.userId,
               event.sourceType,

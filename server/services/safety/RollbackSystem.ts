@@ -11,7 +11,7 @@
 
 import { EventEmitter } from 'events';
 import pool from "../../../database/config.js";
-import { AuditLoggingSystem } from './AuditLoggingSystem.js';
+import { AuditLoggingSystem, auditLoggingSystem } from './AuditLoggingSystem.js';
 
 export type RollbackType = 'action' | 'state' | 'transaction' | 'full';
 export type RollbackStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
@@ -156,7 +156,7 @@ export class RollbackSystem extends EventEmitter {
     reason: string
   ): Promise<RollbackResult> {
     const startTime = Date.now();
-    const snapshot = this.snapshots.get(snapshotId);
+    let snapshot = this.snapshots.get(snapshotId);
     
     if (!snapshot) {
       // Try to load from database
@@ -165,6 +165,11 @@ export class RollbackSystem extends EventEmitter {
         throw new Error(`Snapshot ${snapshotId} not found`);
       }
       this.snapshots.set(snapshotId, dbSnapshot);
+      snapshot = dbSnapshot;
+    }
+    
+    if (!snapshot) {
+      throw new Error(`Snapshot ${snapshotId} not found`);
     }
     
     const rollbackId = `rollback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

@@ -502,7 +502,7 @@ Format as JSON:
       if (paper.journal) {
         // Extract domain from journal name (simplified)
         const journalWords = paper.journal.toLowerCase().split(/\s+/);
-        journalWords.forEach(word => {
+        journalWords.forEach((word: string) => {
           if (word.length > 4 && !['journal', 'review', 'research'].includes(word)) {
             domains.add(word);
           }

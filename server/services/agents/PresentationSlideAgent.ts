@@ -142,6 +142,14 @@ export class PresentationSlideAgent extends BaseAgent implements Agent {
       // Generate presentation structure
       const structure = input.structure || this.getDefaultStructure(input.presentationType);
       
+      if (!structure) {
+        return {
+          success: false,
+          error: 'Failed to generate presentation structure',
+          content: null
+        };
+      }
+      
       // Generate slides
       const slides = await this.generateSlides(
         sourceContent,

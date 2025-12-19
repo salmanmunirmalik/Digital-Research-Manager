@@ -152,7 +152,7 @@ export class AISafetyFramework extends EventEmitter {
     // Check if passed
     const passed = safetyLevel !== 'unsafe' && 
                   safetyLevel !== 'high_risk' &&
-                  (strictMode ? safetyLevel === 'safe' : safetyLevel !== 'unsafe');
+                  (strictMode ? safetyLevel === 'safe' : true);
     
     const result: SafetyCheckResult = {
       safetyLevel,

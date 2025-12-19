@@ -9,7 +9,7 @@
  * - Critical actions require approval
  */
 
-import { AISafetyFramework, SafetyCheckResult } from './AISafetyFramework.js';
+import { AISafetyFramework, SafetyCheckResult, aiSafetyFramework } from './AISafetyFramework.js';
 import { EventEmitter } from 'events';
 
 export type ActionType = 

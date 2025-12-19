@@ -291,7 +291,7 @@ export class PaperRecommender {
       // Extract topics from AI queries
       const topics: string[] = [];
       aiQueries.forEach(query => {
-        const words = query.query.toLowerCase().split(/\s+/).filter(w => w.length > 4);
+        const words = query.query.toLowerCase().split(/\s+/).filter((w: string) => w.length > 4);
         topics.push(...words.slice(0, 5));
       });
 

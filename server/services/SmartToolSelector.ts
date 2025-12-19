@@ -71,7 +71,7 @@ export class SmartToolSelector {
         if (score > 0) {
           recommendations.push({
             provider,
-            providerName: capabilities.providerName,
+            providerName: capabilities.provider,
             score,
             reasons: this.generateReasons(capabilities, requirements),
             estimatedCost: this.estimateCost(capabilities, requirements),
@@ -94,7 +94,7 @@ export class SmartToolSelector {
         if (capabilities) {
           return {
             provider: fallbackProvider,
-            providerName: capabilities.providerName,
+            providerName: capabilities.provider,
             score: 50, // Default score
             reasons: ['Fallback to registry recommendation'],
             estimatedSpeed: capabilities.speed,
@@ -150,16 +150,22 @@ export class SmartToolSelector {
     }
     
     // Feature requirements
-    if (requirements.requiresEmbeddings && capabilities.supportsEmbeddings) {
-      score += 10;
-    } else if (requirements.requiresEmbeddings && !capabilities.supportsEmbeddings) {
-      score -= 20; // Can't fulfill requirement
+    if (requirements.requiresEmbeddings) {
+      const provider = AIProviderFactory.createProvider(capabilities.provider, '');
+      if (provider.supportsEmbeddings()) {
+        score += 10;
+      } else {
+        score -= 20; // Can't fulfill requirement
+      }
     }
     
-    if (requirements.requiresImageGeneration && capabilities.supportsImageGeneration) {
-      score += 10;
-    } else if (requirements.requiresImageGeneration && !capabilities.supportsImageGeneration) {
-      score -= 20;
+    if (requirements.requiresImageGeneration) {
+      const provider = AIProviderFactory.createProvider(capabilities.provider, '');
+      if (provider.supportsImageGeneration()) {
+        score += 10;
+      } else {
+        score -= 20;
+      }
     }
     
     // Strength alignment
@@ -281,11 +287,11 @@ export class SmartToolSelector {
     const contextTokens = requirements.contextLength || 0;
     const totalTokens = baseTokens + contextTokens;
     
-    if (capabilities.chat_price_per_million) {
-      return (totalTokens / 1_000_000) * capabilities.chat_price_per_million;
-    }
+    // Rough cost estimation based on provider cost level
+    const costPerMillion = capabilities.cost === 'low' ? 0.5 :
+                          capabilities.cost === 'medium' ? 2.0 : 5.0;
     
-    return undefined;
+    return (totalTokens / 1_000_000) * costPerMillion;
   }
   
   /**

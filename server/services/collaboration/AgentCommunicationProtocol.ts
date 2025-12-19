@@ -66,7 +66,7 @@ export class AgentCommunicationProtocol extends EventEmitter {
   }> = new Map();
   
   private subscribers: Map<string, Set<string>> = new Map(); // topic -> agent types
-  private messageHandlers: Map<CommunicationPattern, (message: ProtocolMessage) => Promise<void>> = new Map();
+  private messageHandlers: Map<CommunicationPattern, (message: ProtocolMessage) => Promise<ProtocolMessage | void>> = new Map();
   
   constructor() {
     super();
@@ -77,11 +77,21 @@ export class AgentCommunicationProtocol extends EventEmitter {
    * Initialize protocol handlers
    */
   private initializeHandlers(): void {
-    this.messageHandlers.set('request-response', this.handleRequestResponse.bind(this));
-    this.messageHandlers.set('publish-subscribe', this.handlePublishSubscribe.bind(this));
-    this.messageHandlers.set('broadcast', this.handleBroadcast.bind(this));
-    this.messageHandlers.set('direct', this.handleDirect.bind(this));
-    this.messageHandlers.set('routed', this.handleRouted.bind(this));
+    this.messageHandlers.set('request-response', async (msg: ProtocolMessage) => {
+      await this.handleRequestResponse(msg as RequestResponseMessage);
+    });
+    this.messageHandlers.set('publish-subscribe', async (msg: ProtocolMessage) => {
+      await this.handlePublishSubscribe(msg as PublishSubscribeMessage);
+    });
+    this.messageHandlers.set('broadcast', async (msg: ProtocolMessage) => {
+      await this.handleBroadcast(msg as BroadcastMessage);
+    });
+    this.messageHandlers.set('direct', async (msg: ProtocolMessage) => {
+      await this.handleDirect(msg);
+    });
+    this.messageHandlers.set('routed', async (msg: ProtocolMessage) => {
+      await this.handleRouted(msg as RoutedMessage);
+    });
   }
   
   /**
