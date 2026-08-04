@@ -97,7 +97,7 @@ Generated: Wed Nov 12 21:21:01 CET 2025
 
 ✅ **PASS**: README.md exists
 
-✅ **PASS**: Render deployment config exists
+✅ **PASS**: Deployment config check (CI/CD present)
 
 ✅ **PASS**: Dockerfile exists
 

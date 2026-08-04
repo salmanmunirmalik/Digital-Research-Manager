@@ -269,7 +269,7 @@ Time:        4.001 s
 - Response: Fast (<200ms)
 
 **Production Deployment:**
-- URL: `https://digital-research-manager.onrender.com`
+- URL: `https://your-production-domain.com`
 - Status: ✅ Live
 - Performance: Excellent (0.2s load time)
 - Security: HTTPS with proper headers

@@ -307,16 +307,16 @@ else
 fi
 
 # Check deployment config
-if [ -f "render.yaml" ]; then
-    log_result "PASS" "Render deployment config exists"
-else
-    log_result "WARN" "render.yaml not found" "May not be deploying to Render"
-fi
-
 if [ -f "Dockerfile" ]; then
     log_result "PASS" "Dockerfile exists"
 else
     log_result "WARN" "Dockerfile not found" "May not be using Docker"
+fi
+
+if [ -f ".github/workflows/ci-cd.yml" ]; then
+    log_result "PASS" "CI/CD workflow exists"
+else
+    log_result "WARN" "CI/CD workflow not found"
 fi
 
 # Check package.json scripts

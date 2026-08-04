@@ -108,7 +108,6 @@
 - ✅ Stripe CLI for payment processing
 - ✅ Google Cloud CLI for cloud services
 - ✅ GitHub CLI for repository management
-- ✅ Render CLI for deployment
 - ✅ PostgreSQL CLI tools
 - ✅ Docker for containerization
 

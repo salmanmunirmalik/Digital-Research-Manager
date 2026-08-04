@@ -499,9 +499,9 @@ Utilities:
 ### **Deployment Steps:**
 
 1. **GitHub:** ✅ All code pushed
-2. **Render:** Auto-deploy will trigger
+2. **Production:** Deploy via your hosting CI/CD
 3. **Database:** Migrations already run locally
-4. **Production:** Need to run migrations on Render's PostgreSQL
+4. **Production:** Need to run migrations on production PostgreSQL
 
 ### **Post-Deployment:**
 

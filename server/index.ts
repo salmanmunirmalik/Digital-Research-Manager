@@ -93,14 +93,14 @@ declare global {
   }
 }
 
-// Trust proxy when behind Render/nginx so rate limits use real client IPs
+// Trust proxy when behind a reverse proxy so rate limits use real client IPs
 if (process.env.TRUST_PROXY === 'true' || process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 
 app.use(securityHeaders);
 
-// --- CORS Setup for localhost + Render ---
+// --- CORS Setup ---
 const allowedOrigins: string[] = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(',').map((o) => o.trim()).filter(Boolean)
   : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'];
@@ -3763,7 +3763,7 @@ app.get('/api/lab-notebooks', authenticateToken, async (req, res) => {
   }
 });
 
-// Health check endpoint for Render
+// Health check endpoint
 app.get('/api/health', async (req, res) => {
   try {
     // Test database connection

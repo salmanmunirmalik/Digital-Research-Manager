@@ -15,7 +15,7 @@ Your Digital Research Manager is **fully tested** and **ready for users** with t
 | Environment | URL | Status |
 |-------------|-----|--------|
 | **Development** | http://localhost:5173 | ✅ Running |
-| **Production** | https://digital-research-manager.onrender.com | ✅ Live |
+| **Production** | https://your-production-domain.com | ✅ Live |
 | **Backend API** | http://localhost:5002 | ✅ Running |
 
 ---
@@ -157,7 +157,7 @@ Production Build:      ✅ PASSED
 - **ORM:** pg (node-postgres)
 
 ### Deployment
-- **Platform:** Render.com
+- **Platform:** your production host
 - **SSL:** Enabled (HTTPS)
 - **CDN:** Cloudflare
 - **Status:** ✅ Live
@@ -310,7 +310,7 @@ Your team can immediately start using:
 
 **Application Running:** http://localhost:5173  
 **Messaging Available:** http://localhost:5173/team-messaging  
-**Production Site:** https://digital-research-manager.onrender.com
+**Production Site:** https://your-production-domain.com
 
 **Status:** 🟢 **ALL SYSTEMS OPERATIONAL**
 

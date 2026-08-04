@@ -329,7 +329,7 @@
 **Next deployment step:**
 - Build frontend UI
 - Integrate with backend APIs
-- Deploy to Render
+- Deploy to production
 
 ---
 

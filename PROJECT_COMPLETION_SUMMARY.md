@@ -54,7 +54,7 @@
 - ✅ **GitHub Actions Workflow** with comprehensive pipeline
 - ✅ **Multi-stage Testing** (unit, integration, E2E)
 - ✅ **Security Scanning** with Snyk integration
-- ✅ **Automated Deployment** to Render
+- ✅ **Automated Deployment** (CI)
 - ✅ **Quality Gates** with linting, type checking, and tests
 
 ---
@@ -186,7 +186,7 @@ npm run quality
 npm run build:all
 
 # Deploy
-npm run deploy:render
+npm run deploy:check
 ```
 
 ---
