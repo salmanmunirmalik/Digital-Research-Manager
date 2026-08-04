@@ -73,7 +73,7 @@ cat > "$DEPLOYMENT_DIR/DEPLOYMENT_INSTRUCTIONS.md" << 'EOF'
 
 ## Prerequisites
 - Node.js 18+ installed
-- PostgreSQL database running
+- MySQL database running
 - pnpm installed (`npm install -g pnpm`)
 
 ## Steps
@@ -97,7 +97,7 @@ cat > "$DEPLOYMENT_DIR/DEPLOYMENT_INSTRUCTIONS.md" << 'EOF'
 
 4. **Run database migrations**
    ```bash
-   # Make sure PostgreSQL is running and database exists
+   # Make sure MySQL is running and database exists
    ./scripts/run-migration-with-password.sh
    ```
 

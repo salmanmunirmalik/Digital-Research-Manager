@@ -13,7 +13,7 @@ echo ""
 if [ ! -f .env ]; then
     echo "⚠️ .env file not found. Creating from template..."
     cat > .env << 'EOF'
-DATABASE_URL=postgres://msalman:Salman%40123pak1@localhost:5432/researchlab_db
+MYSQL_URL=mysql://root:your_password@localhost:3306/researchlab_db
 PORT=5002
 NODE_ENV=development
 ENABLE_DEMO_AUTH=true
@@ -22,7 +22,7 @@ DEMO_AUTH_PASSWORD=researcher123
 DEMO_AUTH_TOKEN=demo-token-123
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 FRONTEND_URL=http://localhost:5173
-DB_SSL=false
+MYSQL_SSL=false
 DB_POOL_MAX=20
 DB_IDLE_TIMEOUT=30000
 DB_CONNECTION_TIMEOUT=2000
@@ -34,16 +34,16 @@ fi
 export $(grep -v '^#' .env | xargs)
 
 echo "📋 Database Configuration:"
-echo "  DATABASE_URL: ${DATABASE_URL:0:30}..."
-echo "  DB_NAME: ${DB_NAME:-not set}"
+echo "  MYSQL_URL: ${MYSQL_URL:0:30}..."
+echo "  MYSQL_DB: ${MYSQL_DB:-not set}"
 echo ""
 
 # Test database connection
 echo "🧪 Testing database connection..."
-if PGPASSWORD="${DB_PASSWORD:-Salman@123pak1}" psql -h localhost -U "${DB_USER:-msalman}" -d "${DB_NAME:-researchlab_db}" -c "SELECT 1;" > /dev/null 2>&1; then
+if mysql -h "${MYSQL_HOST:-localhost}" -P "${MYSQL_PORT:-3306}" -u "${MYSQL_USER:-root}" ${MYSQL_PASSWORD:+-p"${MYSQL_PASSWORD}"} "${MYSQL_DB:-researchlab_db}" -e "SELECT 1;" > /dev/null 2>&1; then
     echo "✅ Database connection successful"
 else
-    echo "⚠️ Database connection test failed (may still work with DATABASE_URL)"
+    echo "⚠️ Database connection test failed (may still work with MYSQL_URL)"
 fi
 
 echo ""

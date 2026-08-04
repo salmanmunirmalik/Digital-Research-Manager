@@ -128,5 +128,5 @@ export const requireRole = (roles: string[]) => {
   };
 };
 
-/** @deprecated Use authenticateToken — kept as an alias for older route wiring */
+/** @deprecated Use authenticateToken - kept as an alias for older route wiring */
 export const demoAuth = authenticateToken;

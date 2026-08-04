@@ -1,37 +1,48 @@
 /**
- * Refactored Protocols Page
- * AI-First Protocol Generation and Management Ecosystem
- * Simple, attractive design with automatic AI generation
+ * Protocol library - browse, write, compare, and execute SOPs
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import ProtocolAIAssistant from '../components/ProtocolAIAssistant';
 import ProtocolExecutionMode from '../components/ProtocolExecutionMode';
 import ProtocolExecutionModeMobile from '../components/ProtocolExecutionModeMobile';
 import ProtocolCollaborationPanel from '../components/ProtocolCollaborationPanel';
 import ProtocolComparisonView from '../components/ProtocolComparisonView';
 import RecommendationsWidget from '../components/RecommendationsWidget';
+import ProtocolForm, { ProtocolFormValues } from '../components/ProtocolForm';
+import ProtocolImportModal from '../components/ProtocolImportModal';
+import Input from '../components/ui/Input';
+import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import Button from '../components/ui/Button';
 import {
-  SparklesIcon,
   MagnifyingGlassIcon,
   PlusIcon,
   RocketLaunchIcon,
   UserGroupIcon,
-  ChartBarIcon,
-  LightBulbIcon,
   ClockIcon,
-  CheckCircleIcon,
   StarIcon,
   PlayIcon,
+  ShieldCheckIcon,
+  BeakerIcon,
   BookOpenIcon,
-  ShieldCheckIcon
+  DocumentArrowUpIcon,
+  PencilSquareIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import { XMarkIcon } from '../components/icons';
 import axios from 'axios';
+import { useEntityDeepLink } from '../hooks/useEntityDeepLink';
+import { protocolToFormValues } from '../utils/protocolImport';
+
+const API_BASE = (
+  import.meta.env.VITE_API_URL || 'http://localhost:5002/api'
+).replace(/\/$/, '');
+
+const apiUrl = (path: string) => {
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${API_BASE}${p.startsWith('/api/') ? p.slice(4) : p}`;
+};
 
 interface Protocol {
   id: string;
@@ -40,6 +51,7 @@ interface Protocol {
   category: string;
   version: string;
   author: string;
+  author_id?: string;
   usage_count: number;
   success_rate: number;
   rating: number;
@@ -51,11 +63,14 @@ interface Protocol {
   equipment: any[];
   safety_notes: string[];
   procedure: ProtocolStep[];
+  content?: string;
   expected_results: string;
   troubleshooting: { issue: string; solution: string }[];
   references: string[];
   tags: string[];
-  wasGenerated?: boolean;
+  difficulty_level?: string;
+  estimated_duration?: number;
+  privacy_level?: string;
 }
 
 interface ProtocolStep {
@@ -71,10 +86,10 @@ interface ProtocolStep {
 
 const ProtocolsPageRefactored: React.FC = () => {
   const { user, token } = useAuth();
+  const navigate = useNavigate();
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [selectedProtocol, setSelectedProtocol] = useState<Protocol | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [showExecutionMode, setShowExecutionMode] = useState(false);
   const [showCollaboration, setShowCollaboration] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
@@ -82,13 +97,21 @@ const ProtocolsPageRefactored: React.FC = () => {
   const [similarProtocols, setSimilarProtocols] = useState<Protocol[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [filterCategory, setFilterCategory] = useState('');
   const [isMobile, setIsMobile] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [generateQuery, setGenerateQuery] = useState('');
-  const [generateCategory, setGenerateCategory] = useState('');
+  const [showProtocolForm, setShowProtocolForm] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [isSavingProtocol, setIsSavingProtocol] = useState(false);
+  const [protocolFormMode, setProtocolFormMode] = useState<'create' | 'edit'>('create');
+  const [editingProtocolId, setEditingProtocolId] = useState<string | null>(null);
+  const [protocolFormInitial, setProtocolFormInitial] = useState<Partial<ProtocolFormValues> | undefined>();
+
+  const openHighlightedProtocol = useCallback((protocol: Protocol) => {
+    setSelectedProtocol(protocol);
+    setShowDetails(true);
+  }, []);
+  const { focusedId } = useEntityDeepLink(protocols, openHighlightedProtocol);
 
   useEffect(() => {
     fetchProtocols();
@@ -108,38 +131,195 @@ const ProtocolsPageRefactored: React.FC = () => {
 
   const fetchProtocols = async () => {
     try {
-      const authToken = token || localStorage.getItem('authToken') || (user ? 'demo-token-123' : null);
-      const response = await axios.get('/api/protocols', {
+      const authToken = token || localStorage.getItem('authToken');
+      const response = await axios.get(apiUrl('/protocols'), {
         headers: { Authorization: `Bearer ${authToken}` }
       });
-      // Transform protocol data to match our interface
-      const transformedProtocols = (response.data.protocols || []).map((p: any) => ({
-        ...p,
-        procedure: p.procedure || (p.content ? JSON.parse(p.content) : []),
-        materials: p.materials || [],
-        equipment: p.equipment || [],
-        safety_notes: p.safety_notes ? (Array.isArray(p.safety_notes) ? p.safety_notes : [p.safety_notes]) : [],
-        troubleshooting: p.troubleshooting || [],
-        references: p.references || [],
-        tags: p.tags || [],
-        objective: p.objective || p.description || '',
-        background: p.background || '',
-        expected_results: p.expected_results || '',
-        author: p.creator_name || p.author || 'Unknown',
-        usage_count: p.usage_count || 0,
-        success_rate: p.success_rate || 0,
-        rating: p.average_rating || 0,
-        total_ratings: p.total_ratings || 0
-      }));
+      const parseMaybeJson = (value: unknown, fallback: unknown) => {
+        if (value == null || value === '') return fallback;
+        if (typeof value !== 'string') return value;
+        try {
+          return JSON.parse(value);
+        } catch {
+          return fallback;
+        }
+      };
+
+      const transformedProtocols = (response.data.protocols || []).map((p: any) => {
+        const parsedContent = parseMaybeJson(p.content, null);
+        const procedure = Array.isArray(p.procedure)
+          ? p.procedure
+          : Array.isArray(parsedContent)
+            ? parsedContent
+            : [];
+        const materials = parseMaybeJson(p.materials, []);
+        const tags = parseMaybeJson(p.tags, []);
+
+        return {
+          ...p,
+          author_id: p.author_id,
+          procedure,
+          materials: Array.isArray(materials) ? materials : [],
+          equipment: Array.isArray(p.equipment) ? p.equipment : [],
+          safety_notes: p.safety_notes
+            ? (Array.isArray(p.safety_notes) ? p.safety_notes : [p.safety_notes])
+            : [],
+          troubleshooting: p.troubleshooting || [],
+          references: p.references || [],
+          tags: Array.isArray(tags) ? tags : [],
+          objective: p.objective || p.description || '',
+          background: p.background || '',
+          expected_results: p.expected_results || '',
+          author: p.creator_name || p.author || 'Unknown',
+          usage_count: p.usage_count || 0,
+          success_rate: p.success_rate || 0,
+          rating: p.average_rating || 0,
+          total_ratings: p.total_ratings || 0,
+        };
+      });
       setProtocols(transformedProtocols);
     } catch (error) {
       console.error('Error fetching protocols:', error);
-      // Fallback to empty array
       setProtocols([]);
     }
   };
 
-  const handleSmartSearch = async () => {
+  const openWriteProtocol = () => {
+    setProtocolFormMode('create');
+    setEditingProtocolId(null);
+    setProtocolFormInitial(undefined);
+    setShowProtocolForm(true);
+  };
+
+  const openImportProtocol = () => {
+    setShowImportModal(true);
+  };
+
+  const handleImportParsed = (values: Partial<ProtocolFormValues>) => {
+    setShowImportModal(false);
+    setProtocolFormMode('create');
+    setEditingProtocolId(null);
+    setProtocolFormInitial(values);
+    setShowProtocolForm(true);
+  };
+
+  const openEditProtocol = (protocol: Protocol) => {
+    setProtocolFormMode('edit');
+    setEditingProtocolId(protocol.id);
+    setProtocolFormInitial(protocolToFormValues(protocol));
+    setShowDetails(false);
+    setShowProtocolForm(true);
+  };
+
+  const canManageProtocol = (protocol: Protocol | null) => {
+    if (!protocol || !user) return false;
+    if (user.role === 'admin') return true;
+    return protocol.author_id === user.id;
+  };
+
+  const handleSaveProtocol = async (
+    form: ProtocolFormValues & { content: string }
+  ) => {
+    setIsSavingProtocol(true);
+    try {
+      const authToken = token || localStorage.getItem('authToken');
+      const payload = {
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        difficulty_level: form.difficulty_level,
+        estimated_duration: form.estimated_duration,
+        materials: form.materials,
+        content: form.content,
+        safety_notes: form.safety_notes,
+        tags: form.tags,
+        privacy_level: form.privacy_level,
+        version: form.version,
+      };
+
+      let saved: any;
+      if (protocolFormMode === 'edit' && editingProtocolId) {
+        const response = await axios.put(
+          apiUrl(`/protocols/${editingProtocolId}`),
+          payload,
+          { headers: { Authorization: `Bearer ${authToken}` } }
+        );
+        saved = response.data.protocol || response.data;
+      } else {
+        const response = await axios.post(apiUrl('/protocols'), payload, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        saved = response.data.protocol || response.data;
+      }
+
+      setShowProtocolForm(false);
+      setEditingProtocolId(null);
+      setProtocolFormInitial(undefined);
+      await fetchProtocols();
+
+      const id = saved?.id || editingProtocolId;
+      if (id) {
+        const refreshed = (await axios.get(apiUrl('/protocols'), {
+          headers: { Authorization: `Bearer ${authToken}` },
+        })).data.protocols?.find((p: any) => p.id === id);
+
+        const base = refreshed || saved;
+        setSelectedProtocol({
+          ...base,
+          procedure: Array.isArray(base.procedure) ? base.procedure : [],
+          materials: form.materials,
+          equipment: form.equipment,
+          safety_notes: form.safety_notes ? [form.safety_notes] : [],
+          troubleshooting: [],
+          references: form.references,
+          tags: form.tags,
+          objective: form.objective,
+          background: form.background,
+          expected_results: form.expected_results,
+          content: form.content,
+          author: base.creator_name || user?.username || 'You',
+          author_id: base.author_id || user?.id,
+          usage_count: base.usage_count || 0,
+          success_rate: base.success_rate || 0,
+          rating: base.average_rating || 0,
+          total_ratings: base.total_ratings || 0,
+          version: form.version || '1.0',
+        });
+        setShowDetails(true);
+      }
+    } catch (error: any) {
+      console.error('Error saving protocol:', error);
+      alert(error?.response?.data?.error || error?.message || 'Failed to save protocol');
+    } finally {
+      setIsSavingProtocol(false);
+    }
+  };
+
+  const handleDeleteProtocol = async (protocol: Protocol) => {
+    if (
+      !confirm(
+        `Delete “${protocol.title}”? It will be removed from the library.`
+      )
+    ) {
+      return;
+    }
+    try {
+      const authToken = token || localStorage.getItem('authToken');
+      await axios.delete(apiUrl(`/protocols/${protocol.id}`), {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      setShowDetails(false);
+      setSelectedProtocol(null);
+      await fetchProtocols();
+    } catch (error: any) {
+      console.error('Error deleting protocol:', error);
+      alert(error?.response?.data?.error || 'Failed to delete protocol');
+    }
+  };
+
+  const handleCreateProtocol = handleSaveProtocol;
+
+  const handleSearch = async () => {
     if (!searchQuery.trim()) {
       fetchProtocols();
       return;
@@ -147,11 +327,9 @@ const ProtocolsPageRefactored: React.FC = () => {
 
     setIsSearching(true);
     try {
-      const authToken = token || localStorage.getItem('authToken') || (user ? 'demo-token-123' : null);
-      
-      // First try semantic search
+      const authToken = token || localStorage.getItem('authToken');
       const searchResponse = await axios.post(
-        '/api/protocol-search/semantic',
+        apiUrl('/protocol-search/semantic'),
         {
           query: searchQuery,
           limit: 20,
@@ -162,75 +340,44 @@ const ProtocolsPageRefactored: React.FC = () => {
 
       if (searchResponse.data.results && searchResponse.data.results.length > 0) {
         setProtocols(searchResponse.data.results);
-        setIsSearching(false);
         return;
       }
 
-      // If no results, auto-generate using AI
-      setIsGenerating(true);
-      const generateResponse = await axios.post(
-        '/api/protocol-ai/get-or-generate',
-        {
-          query: searchQuery,
-          category: filterCategory,
-          generateIfNotFound: true
-        },
-        { headers: { Authorization: `Bearer ${authToken}` } }
+      const listResponse = await axios.get(apiUrl('/protocols'), {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      const query = searchQuery.toLowerCase();
+      const all = (listResponse.data.protocols || []) as Protocol[];
+      setProtocols(
+        all.filter(
+          (p) =>
+            p.title?.toLowerCase().includes(query) ||
+            p.description?.toLowerCase().includes(query) ||
+            p.category?.toLowerCase().includes(query) ||
+            (Array.isArray(p.tags) && p.tags.some((tag) => String(tag).toLowerCase().includes(query)))
+        )
       );
-
-      if (generateResponse.data.protocol) {
-        // Convert generated protocol to display format
-        const generatedProtocol = generateResponse.data.protocol;
-        const transformedProtocol: Protocol = {
-          id: generatedProtocol.id || `generated-${Date.now()}`,
-          title: generatedProtocol.title,
-          description: generatedProtocol.description,
-          category: generatedProtocol.category,
-          version: generatedProtocol.version || '1.0',
-          author: user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : 'You',
-          usage_count: 0,
-          success_rate: 0,
-          rating: 0,
-          total_ratings: 0,
-          objective: generatedProtocol.objective || generatedProtocol.description,
-          background: generatedProtocol.background || '',
-          materials: generatedProtocol.materials || [],
-          equipment: generatedProtocol.equipment || [],
-          safety_notes: generatedProtocol.safety_notes || [],
-          procedure: generatedProtocol.procedure || [],
-          expected_results: generatedProtocol.expected_results || '',
-          troubleshooting: generatedProtocol.troubleshooting || [],
-          references: generatedProtocol.references || [],
-          tags: generatedProtocol.tags || [],
-          wasGenerated: generateResponse.data.wasGenerated
-        };
-        setProtocols([transformedProtocol]);
-        if (generateResponse.data.wasGenerated) {
-          // Show success message with AI availability info
-          const message = generateResponse.data.aiAvailable === false
-            ? `✨ Basic protocol "${transformedProtocol.title}" created.\n\n💡 Configure AI API keys in Settings → API Management for enhanced AI generation.`
-            : `✨ AI generated a new protocol: "${transformedProtocol.title}"`;
-          setTimeout(() => {
-            alert(message);
-          }, 500);
-        }
-      }
     } catch (error: any) {
-      console.error('Error in smart search:', error);
-      const errorMessage = error.response?.data?.error || 'Failed to search/generate protocol';
-      const suggestion = error.response?.data?.suggestion || '';
-      alert(`${errorMessage}\n\n${suggestion}`);
+      console.error('Error searching protocols:', error);
+      const query = searchQuery.toLowerCase();
+      setProtocols((current) =>
+        current.filter(
+          (p) =>
+            p.title?.toLowerCase().includes(query) ||
+            p.description?.toLowerCase().includes(query) ||
+            p.category?.toLowerCase().includes(query)
+        )
+      );
     } finally {
       setIsSearching(false);
-      setIsGenerating(false);
     }
   };
 
   const fetchSimilarProtocols = async (protocolId: string) => {
     try {
-      const authToken = token || localStorage.getItem('authToken') || (user ? 'demo-token-123' : null);
+      const authToken = token || localStorage.getItem('authToken');
       const response = await axios.get(
-        `/api/protocol-comparison/${protocolId}/similar?limit=5`,
+        apiUrl(`/protocol-comparison/${protocolId}/similar?limit=5`),
         { headers: { Authorization: `Bearer ${authToken}` } }
       );
       setSimilarProtocols(response.data.similarProtocols || []);
@@ -246,58 +393,14 @@ const ProtocolsPageRefactored: React.FC = () => {
     }
   };
 
-  const handleQuickGenerate = () => {
-    setShowGenerateModal(true);
-    setGenerateQuery('');
-    setGenerateCategory('');
-  };
-
-  const handleGenerateSubmit = async () => {
-    if (!generateQuery.trim()) {
-      alert('Please enter a protocol name or description');
-      return;
-    }
-
-    setShowGenerateModal(false);
-    setIsGenerating(true);
-    try {
-      const authToken = token || localStorage.getItem('authToken') || (user ? 'demo-token-123' : null);
-      const response = await axios.post(
-        '/api/protocol-ai/generate',
-        { 
-          query: generateQuery,
-          category: generateCategory
-        },
-        { headers: { Authorization: `Bearer ${authToken}` } }
-      );
-
-      if (response.data.protocol) {
-        await fetchProtocols();
-        const protocol = response.data.protocol;
-        setSelectedProtocol(protocol);
-        setShowDetails(true);
-        const message = response.data.aiAvailable === false
-          ? `✨ Basic protocol "${protocol.title}" created.\n\n💡 Configure AI API keys in Settings → API Management for enhanced AI generation.`
-          : `✨ Protocol "${protocol.title}" generated successfully!`;
-        alert(message);
-      }
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.error || 'Failed to generate protocol';
-      const suggestion = error.response?.data?.suggestion || '';
-      alert(`${errorMessage}\n\n${suggestion}`);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   const filteredProtocols = protocols.filter(p => 
     !filterCategory || p.category === filterCategory
   );
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Recommended Protocols Sidebar */}
+    <>
+      <div className="max-w-7xl mx-auto">
+        {/* Recommended Protocols */}
         <div className="mb-6">
           <RecommendationsWidget
             itemType="protocols"
@@ -314,100 +417,68 @@ const ProtocolsPageRefactored: React.FC = () => {
             className="mb-6"
           />
         </div>
-        {/* Simplified Header */}
+        {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                Protocol Library
+              <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
+                Protocol library
               </h1>
-              <p className="text-gray-600 text-lg">
-                AI-powered protocol generation and management
+              <p className="mt-1.5 text-[14px] text-slate-600">
+                Reusable methods and SOPs - write, search, compare, and execute
               </p>
             </div>
-            <div className="flex items-center space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowAIAssistant(true)}
-                className="border-purple-600 text-purple-600 hover:bg-purple-50"
+            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+              <button
+                type="button"
+                onClick={openImportProtocol}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-slate-800 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
               >
-                <SparklesIcon className="w-5 h-5 mr-2" />
-                AI Assistant
-              </Button>
-              <Button
-                onClick={handleQuickGenerate}
-                disabled={isGenerating}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                <DocumentArrowUpIcon className="w-4 h-4" />
+                Import
+              </button>
+              <button
+                type="button"
+                onClick={openWriteProtocol}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
               >
-                {isGenerating ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <SparklesIcon className="w-5 h-5 mr-2" />
-                    Generate Protocol
-                  </>
-                )}
-              </Button>
+                <PlusIcon className="w-4 h-4" />
+                Write protocol
+              </button>
             </div>
           </div>
 
-          {/* Simplified Search - AI-First */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-            <div className="flex items-center space-x-4">
+          {/* Search */}
+          <div className="bg-white rounded-xl border border-slate-200/80 p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="flex-1 relative">
-                <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSmartSearch()}
-                  placeholder="Search or describe a protocol... AI will generate it if not found"
-                  className="pl-12 pr-4 py-3 text-lg"
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder="Search protocols by name, category, or keyword"
+                  className="pl-10 pr-4 py-2.5 text-[14px]"
                 />
-                {isGenerating && (
-                  <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center space-x-2 text-blue-600">
-                    <SparklesIcon className="w-5 h-5 animate-pulse" />
-                    <span className="text-sm font-medium">AI Generating...</span>
-                  </div>
-                )}
               </div>
-              <Button
-                onClick={handleSmartSearch}
-                disabled={isSearching || isGenerating}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-8 py-3"
+              <button
+                type="button"
+                onClick={handleSearch}
+                disabled={isSearching}
+                className="inline-flex items-center justify-center px-3.5 py-2.5 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors disabled:opacity-60"
               >
-                {isSearching ? 'Searching...' : 'Search / Generate'}
-              </Button>
+                {isSearching ? 'Searching…' : 'Search'}
+              </button>
             </div>
-            <p className="text-sm text-gray-500 mt-3 ml-12">
-              💡 Try: "PCR amplification", "protein purification", or "cell culture protocol"
+            <p className="text-[12px] text-slate-500 mt-3">
+              Try: “PCR amplification”, “protein purification”, or “cell culture protocol”
             </p>
           </div>
         </div>
 
-        {/* Recommended Protocols Section */}
-        <div className="mb-8">
-          <RecommendationsWidget
-            itemType="protocols"
-            title="Recommended Protocols for You"
-            limit={5}
-            showFeedback={true}
-            onItemClick={(itemId) => {
-              const protocol = protocols.find(p => p.id === itemId);
-              if (protocol) {
-                setSelectedProtocol(protocol);
-                setShowDetails(true);
-              }
-            }}
-            className="mb-6"
-          />
-        </div>
-
-        {/* Protocol Cards - Simplified Design */}
+        {/* Protocol Cards */}
         {filteredProtocols.length > 0 ? (
-          <div className={`grid gap-6 ${
+          <div className={`grid gap-4 ${
             viewMode === 'grid' 
               ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' 
               : 'grid-cols-1'
@@ -415,130 +486,130 @@ const ProtocolsPageRefactored: React.FC = () => {
             {filteredProtocols.map((protocol) => (
               <Card
                 key={protocol.id}
-                className="hover:shadow-xl transition-all duration-300 cursor-pointer group border border-gray-200 bg-white"
+                data-entity-id={protocol.id}
+                className={`hover:border-slate-300 transition-colors cursor-pointer group border bg-white rounded-xl shadow-none ${
+                  focusedId === protocol.id
+                    ? 'border-sky-400 ring-2 ring-sky-200'
+                    : 'border-slate-200/80'
+                }`}
                 onClick={() => {
                   setSelectedProtocol(protocol);
                   setShowDetails(true);
                 }}
               >
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 pr-4">
-                      <CardTitle className="text-xl font-bold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between mb-2 gap-3">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-[15px] font-semibold text-slate-900 line-clamp-2 group-hover:text-slate-700 transition-colors mb-1.5">
                         {protocol.title}
                       </CardTitle>
-                      <p className="text-sm text-gray-600 line-clamp-2">
+                      <p className="text-[13px] text-slate-500 line-clamp-2">
                         {protocol.description}
                       </p>
                     </div>
-                    {protocol.wasGenerated && (
-                      <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold flex-shrink-0">
-                        ✨ AI
-                      </span>
-                    )}
                   </div>
                   
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md text-[11px] font-medium">
                       {protocol.category}
                     </span>
-                    <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-medium flex items-center">
-                      <ShieldCheckIcon className="w-3 h-3 mr-1" />
+                    <span className="px-2 py-0.5 bg-slate-50 text-slate-600 rounded-md text-[11px] font-medium inline-flex items-center gap-1">
+                      <ShieldCheckIcon className="w-3 h-3" />
                       {protocol.success_rate}% success
                     </span>
                   </div>
                 </CardHeader>
 
                 <CardContent className="pt-0">
-                  <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-                    <div className="flex items-center space-x-4">
-                      <span className="flex items-center">
-                        <ClockIcon className="w-4 h-4 mr-1" />
+                  <div className="flex items-center justify-between text-[12px] text-slate-500 mb-3">
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex items-center gap-1">
+                        <ClockIcon className="w-3.5 h-3.5" />
                         {protocol.procedure?.reduce((acc, s) => acc + s.duration, 0) || 0}m
                       </span>
-                      <span className="flex items-center">
-                        <UserGroupIcon className="w-4 h-4 mr-1" />
+                      <span className="inline-flex items-center gap-1">
+                        <UserGroupIcon className="w-3.5 h-3.5" />
                         {protocol.usage_count} uses
                       </span>
                     </div>
-                    <div className="flex items-center">
-                      <StarIcon className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-1" />
+                    <div className="inline-flex items-center gap-1">
+                      <StarIcon className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                       <span>{protocol.rating?.toFixed(1) || 'N/A'}</span>
                     </div>
                   </div>
 
-                  <div className="flex space-x-2">
-                    <Button
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="flex-1 inline-flex items-center justify-center px-3 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedProtocol(protocol);
                         setShowDetails(true);
                       }}
                     >
-                      View
-                    </Button>
-                    <Button
-                      variant="outline"
+                      Open
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center px-3 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedProtocol(protocol);
                         setShowExecutionMode(true);
                       }}
-                      className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
                     >
-                      <RocketLaunchIcon className="w-4 h-4" />
-                    </Button>
+                      <PlayIcon className="w-4 h-4" />
+                    </button>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : (
-          <Card className="text-center py-12">
-            <CardContent>
-              <SparklesIcon className="w-16 h-16 text-blue-400 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                {isGenerating ? 'AI is generating your protocol...' : 'No protocols found'}
+          <div className="bg-white rounded-xl border border-slate-200/80 text-center py-12 px-6">
+              <BookOpenIcon className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+              <h3 className="text-[15px] font-semibold text-slate-900 mb-1">
+                No protocols found
               </h3>
-              <p className="text-gray-600 mb-6">
-                {isGenerating 
-                  ? 'This may take a moment. The AI is creating a complete protocol for you.'
-                  : 'Try searching for a protocol or click "Generate Protocol" to create one with AI.'}
+              <p className="text-[13px] text-slate-500 mb-5 max-w-md mx-auto">
+                Write a structured SOP to build your protocol library.
               </p>
-              {!isGenerating && (
-                <Button
-                  onClick={handleQuickGenerate}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={openImportProtocol}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-slate-800 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
                 >
-                  <SparklesIcon className="w-5 h-5 mr-2" />
-                  Generate Protocol with AI
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+                  <DocumentArrowUpIcon className="w-4 h-4" />
+                  Import Word / paste
+                </button>
+                <button
+                  type="button"
+                  onClick={openWriteProtocol}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  Write protocol
+                </button>
+              </div>
+          </div>
         )}
       </div>
 
-      {/* Simplified Protocol Detail Modal */}
+      {/* Protocol Detail Modal */}
       {showDetails && selectedProtocol && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden shadow-2xl my-8">
-            {/* Simplified Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[95vh] overflow-hidden border border-slate-200 my-8">
+            <div className="bg-slate-900 p-6 text-white">
               <div className="flex items-start justify-between">
                 <div className="flex-1 pr-8">
-                  {selectedProtocol.wasGenerated && (
-                    <span className="inline-flex items-center px-3 py-1 bg-purple-500 rounded-full text-xs font-bold mb-3">
-                      ✨ AI Generated
-                    </span>
-                  )}
-                  <h2 className="text-3xl font-bold mb-2">{selectedProtocol.title}</h2>
-                  <div className="flex items-center space-x-4 text-sm opacity-90">
+                  <h2 className="text-2xl font-semibold mb-2 tracking-tight">{selectedProtocol.title}</h2>
+                  <div className="flex items-center gap-2 text-[13px] text-slate-300">
                     <span>{selectedProtocol.category}</span>
-                    <span>•</span>
+                    <span>·</span>
                     <span>{selectedProtocol.success_rate}% success</span>
-                    <span>•</span>
+                    <span>·</span>
                     <span>{selectedProtocol.usage_count} uses</span>
                   </div>
                 </div>
@@ -582,32 +653,48 @@ const ProtocolsPageRefactored: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Procedure Steps - Simplified */}
+                {/* Procedure */}
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-4">Procedure</h3>
-                  <div className="space-y-3">
-                    {selectedProtocol.procedure?.map((step) => (
-                      <div
-                        key={step.id}
-                        className="p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500"
-                      >
-                        <div className="flex items-start space-x-3">
-                          <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
-                            {step.id}
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-bold text-gray-900 mb-1">{step.title}</h4>
-                            <p className="text-gray-700 text-sm">{step.description}</p>
-                            {step.duration && (
-                              <div className="mt-2 text-xs text-gray-500">
-                                ⏱ {step.duration} minutes
-                              </div>
-                            )}
+                  <h3 className="text-[13px] font-semibold text-slate-900 uppercase tracking-wide mb-3">
+                    Method
+                  </h3>
+                  {selectedProtocol.procedure?.length > 0 ? (
+                    <div className="space-y-2.5">
+                      {selectedProtocol.procedure.map((step) => (
+                        <div
+                          key={step.id}
+                          className="p-4 bg-slate-50 rounded-lg border border-slate-200"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-7 h-7 bg-slate-900 text-white rounded-md flex items-center justify-center text-[12px] font-semibold flex-shrink-0">
+                              {step.id}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-slate-900 text-[14px] mb-1">
+                                {step.title}
+                              </h4>
+                              <p className="text-slate-600 text-[13px] leading-relaxed">
+                                {step.description}
+                              </p>
+                              {step.duration ? (
+                                <div className="mt-2 text-[12px] text-slate-500">
+                                  {step.duration} min
+                                </div>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : selectedProtocol.content ? (
+                    <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
+                      <pre className="whitespace-pre-wrap text-[13px] text-slate-700 leading-relaxed font-sans">
+                        {selectedProtocol.content}
+                      </pre>
+                    </div>
+                  ) : (
+                    <p className="text-[13px] text-slate-500">No procedure documented yet.</p>
+                  )}
                 </div>
               </div>
 
@@ -678,7 +765,26 @@ const ProtocolsPageRefactored: React.FC = () => {
                     {selectedProtocol.rating?.toFixed(1) || 'N/A'} ({selectedProtocol.total_ratings || 0} reviews)
                   </span>
                 </div>
-                <div className="flex space-x-3">
+                <div className="flex space-x-3 flex-wrap justify-end gap-y-2">
+                  {canManageProtocol(selectedProtocol) ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => openEditProtocol(selectedProtocol)}
+                      >
+                        <PencilSquareIcon className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => void handleDeleteProtocol(selectedProtocol)}
+                        className="text-red-700 border-red-200 hover:bg-red-50"
+                      >
+                        <TrashIcon className="w-4 h-4 mr-2" />
+                        Delete
+                      </Button>
+                    </>
+                  ) : null}
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -688,6 +794,15 @@ const ProtocolsPageRefactored: React.FC = () => {
                   >
                     <UserGroupIcon className="w-4 h-4 mr-2" />
                     Collaborate
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      navigate(`/experiment-tracker?protocolId=${encodeURIComponent(selectedProtocol.id)}&title=${encodeURIComponent(selectedProtocol.title)}`);
+                    }}
+                  >
+                    <BeakerIcon className="w-4 h-4 mr-2" />
+                    Track experiment
                   </Button>
                   <Button
                     onClick={() => {
@@ -704,25 +819,6 @@ const ProtocolsPageRefactored: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* AI Assistant */}
-      {showAIAssistant && (
-        <ProtocolAIAssistant
-          protocol={selectedProtocol ? {
-            id: selectedProtocol.id,
-            title: selectedProtocol.title,
-            description: selectedProtocol.description,
-            steps: selectedProtocol.procedure,
-            materials: selectedProtocol.materials,
-            equipment: selectedProtocol.equipment
-          } : undefined}
-          onOptimized={(optimized) => {
-            console.log('Optimized protocol:', optimized);
-            setShowAIAssistant(false);
-          }}
-          onClose={() => setShowAIAssistant(false)}
-        />
       )}
 
       {/* Execution Mode */}
@@ -774,99 +870,28 @@ const ProtocolsPageRefactored: React.FC = () => {
         />
       )}
 
-      {/* Generate Protocol Modal */}
-      {showGenerateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl">
-            <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <SparklesIcon className="w-6 h-6" />
-                  <CardTitle className="text-white text-xl">Generate Protocol with AI</CardTitle>
-                </div>
-                <button
-                  onClick={() => setShowGenerateModal(false)}
-                  className="text-white hover:text-gray-200 transition-colors"
-                >
-                  <XMarkIcon className="w-6 h-6" />
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Protocol Name or Description *
-                  </label>
-                  <Input
-                    value={generateQuery}
-                    onChange={(e) => setGenerateQuery(e.target.value)}
-                    placeholder='e.g., "PCR amplification", "Western blot", "Cell culture", "ELISA"'
-                    className="w-full"
-                    onKeyPress={(e) => e.key === 'Enter' && handleGenerateSubmit()}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Describe what protocol you want to generate
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Category (Optional)
-                  </label>
-                  <Input
-                    value={generateCategory}
-                    onChange={(e) => setGenerateCategory(e.target.value)}
-                    placeholder="e.g., Molecular Biology, Protein Analysis, Cell Culture"
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-2">
-                    <LightBulbIcon className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-blue-800">
-                      <p className="font-semibold mb-1">💡 Tips for best results:</p>
-                      <ul className="list-disc list-inside space-y-1 text-blue-700">
-                        <li>Be specific about the technique or method</li>
-                        <li>Include the type of analysis (e.g., "quantitative PCR", "protein detection")</li>
-                        <li>Mention any special requirements if needed</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end space-x-3 pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowGenerateModal(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleGenerateSubmit}
-                    disabled={!generateQuery.trim() || isGenerating}
-                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <SparklesIcon className="w-5 h-5 mr-2" />
-                        Generate Protocol
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      {showImportModal && (
+        <ProtocolImportModal
+          onCancel={() => setShowImportModal(false)}
+          onParsed={handleImportParsed}
+        />
       )}
-    </div>
+
+      {showProtocolForm && (
+        <ProtocolForm
+          key={editingProtocolId || `create-${protocolFormInitial?.title || 'blank'}`}
+          mode={protocolFormMode}
+          initialData={protocolFormInitial}
+          isSubmitting={isSavingProtocol}
+          onCancel={() => {
+            setShowProtocolForm(false);
+            setEditingProtocolId(null);
+            setProtocolFormInitial(undefined);
+          }}
+          onSubmit={handleSaveProtocol}
+        />
+      )}
+    </>
   );
 };
 

@@ -41,11 +41,11 @@ check_prerequisites() {
     
     echo -e "${GREEN}✅ npm $(npm --version) is installed${NC}"
     
-    # Check PostgreSQL
-    if ! command -v psql &> /dev/null; then
-        echo -e "${YELLOW}⚠️  PostgreSQL is not installed. Some tests may fail.${NC}"
+    # Check MySQL
+    if ! command -v mysql &> /dev/null; then
+        echo -e "${YELLOW}⚠️  MySQL is not installed. Some tests may fail.${NC}"
     else
-        echo -e "${GREEN}✅ PostgreSQL is available${NC}"
+        echo -e "${GREEN}✅ MySQL is available${NC}"
     fi
     
     # Check curl
@@ -88,11 +88,11 @@ BACKEND_URL=http://localhost:5002
 STATS_SERVICE_URL=http://localhost:5003
 
 # Database
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=researchlab
-DB_USER=postgres
-DB_PASSWORD=password
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DB=researchlab
+MYSQL_USER=root
+MYSQL_PASSWORD=password
 
 # Test User
 TEST_USER_EMAIL=test@example.com

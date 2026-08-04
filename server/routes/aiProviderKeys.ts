@@ -4,18 +4,13 @@
  */
 
 import express, { type Router } from 'express';
-import { Pool } from 'pg';
+import pool from '../../database/config.js';
 import { authenticateToken } from '../middleware/auth.js';
 import crypto from 'crypto';
 
 const router: Router = express.Router();
 
 // Initialize database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
-
 // Encryption key (should be in environment variables)
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
 const ALGORITHM = 'aes-256-gcm';

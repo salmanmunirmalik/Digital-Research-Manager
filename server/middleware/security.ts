@@ -17,14 +17,16 @@ export const createRateLimit = (windowMs: number, max: number, message: string) 
   });
 };
 
-// General API rate limiting
+// General API rate limiting (strict in production; high ceiling locally so Playwright/E2E can run)
 export const apiRateLimit = createRateLimit(
   15 * 60 * 1000, // 15 minutes
-  100, // limit each IP to 100 requests per windowMs
+  process.env.NODE_ENV === 'production'
+    ? Number(process.env.API_RATE_LIMIT_MAX || 100)
+    : Number(process.env.API_RATE_LIMIT_MAX || 2000),
   'Too many requests from this IP, please try again later.'
 );
 
-// Helmet security configuration (API server — CSP less critical than HSTS/frame guards)
+// Helmet security configuration (API server - CSP less critical than HSTS/frame guards)
 export const securityHeaders = helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,

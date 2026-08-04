@@ -33,6 +33,9 @@ export interface Experiment {
   conclusions?: string;
   nextSteps?: string;
   attachments: string[];
+  /** Linked Protocol library SOP */
+  protocolId?: string | null;
+  notebookEntryId?: string | null;
   milestones: Milestone[];
   risks: Risk[];
   progressPercentage: number;
@@ -75,6 +78,8 @@ export interface ExperimentTemplate {
   reagents: string[];
   safetyRequirements: string[];
   milestones: Omit<Milestone, 'id' | 'status' | 'completedAt'>[];
+  /** Prefer linking a Protocol library SOP instead of inlining full procedure text */
+  protocolId?: string;
 }
 
 export interface CreateExperimentData {
@@ -98,6 +103,8 @@ export interface CreateExperimentData {
   tags: string[];
   notes: string;
   templateId?: string;
+  /** Optional link to Protocol library SOP - do not duplicate procedure text */
+  protocolId?: string;
   milestones: Omit<Milestone, 'id' | 'status' | 'completedAt'>[];
   risks: Omit<Risk, 'id' | 'status'>[];
 }
@@ -134,6 +141,14 @@ export interface ExperimentAnalytics {
 class ExperimentService {
   private baseUrl = '/api/experiments';
 
+  private asArray<T>(payload: unknown): T[] {
+    if (Array.isArray(payload)) return payload as T[];
+    if (payload && typeof payload === 'object' && Array.isArray((payload as { data?: unknown }).data)) {
+      return (payload as { data: T[] }).data;
+    }
+    return [];
+  }
+
   // Get all experiments with optional filters
   async getExperiments(filters: ExperimentFilters = {}): Promise<Experiment[]> {
     const params = new URLSearchParams();
@@ -144,7 +159,7 @@ class ExperimentService {
     });
 
     const response = await apiService.get(`${this.baseUrl}?${params.toString()}`);
-    return response.data;
+    return this.asArray<Experiment>(response.data);
   }
 
   // Get a single experiment by ID
@@ -180,7 +195,7 @@ class ExperimentService {
     });
 
     const response = await apiService.get(`${this.baseUrl}/templates?${params.toString()}`);
-    return response.data;
+    return this.asArray<ExperimentTemplate>(response.data);
   }
 
   // Create experiment template
@@ -234,7 +249,19 @@ class ExperimentService {
   // Get experiment analytics
   async getAnalytics(timeframe: number = 30): Promise<ExperimentAnalytics> {
     const response = await apiService.get(`${this.baseUrl}/analytics?timeframe=${timeframe}`);
-    return response.data;
+    const raw =
+      response.data && typeof response.data === 'object' && 'data' in response.data && !('total_experiments' in response.data) && !('totalExperiments' in response.data)
+        ? (response.data as { data: Record<string, unknown> }).data || {}
+        : (response.data || {});
+    return {
+      totalExperiments: Number(raw.totalExperiments ?? raw.total_experiments ?? 0),
+      completedExperiments: Number(raw.completedExperiments ?? raw.completed_experiments ?? 0),
+      runningExperiments: Number(raw.runningExperiments ?? raw.running_experiments ?? 0),
+      failedExperiments: Number(raw.failedExperiments ?? raw.failed_experiments ?? 0),
+      avgDuration: Number(raw.avgDuration ?? raw.avg_duration ?? 0),
+      avgCost: Number(raw.avgCost ?? raw.avg_cost ?? 0),
+      overdueExperiments: Number(raw.overdueExperiments ?? raw.overdue_experiments ?? 0),
+    };
   }
 
   // Start experiment

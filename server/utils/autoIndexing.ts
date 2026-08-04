@@ -3,14 +3,9 @@
  * Automatically indexes user content for AI training
  */
 
-import { Pool } from 'pg';
+import pool from '../../database/config.js';
 import axios from 'axios';
 import { getUserApiKey, getUserDefaultProvider, getApiKeyWithFallback, getPlatformGeminiKey } from '../routes/aiProviderKeys.js';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
 
 // Generate embedding using Gemini (platform default) or user's provider
 async function generateEmbedding(text: string, userId?: string): Promise<number[]> {

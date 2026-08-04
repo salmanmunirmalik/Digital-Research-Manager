@@ -15,6 +15,12 @@ API_URL="${API_URL:-http://localhost:5002}"
 TEST_EMAIL="test@researchlab.com"
 TEST_PASSWORD="testpass123"
 AUTH_TOKEN=""
+MYSQL_SOCKET_OPT=""
+if [ -n "$MYSQL_SOCKET" ]; then
+    MYSQL_SOCKET_OPT="--socket=${MYSQL_SOCKET}"
+fi
+MYSQL_BIN="${MYSQL_BIN:-mysql}"
+MYSQL_DB_NAME="${MYSQL_DB:-researchlab}"
 
 echo -e "${YELLOW}🧪 Starting Comprehensive System Tests...${NC}\n"
 
@@ -193,7 +199,7 @@ echo -e "${YELLOW}16. Database Integration Tests${NC}"
 
 # Test database connection
 echo -n "Testing Database Connection... "
-if psql -U postgres -d digital_research_manager -c "SELECT 1;" > /dev/null 2>&1; then
+if "$MYSQL_BIN" -u "${MYSQL_USER:-root}" ${MYSQL_PASSWORD:+-p"${MYSQL_PASSWORD}"} ${MYSQL_SOCKET_OPT} -D "${MYSQL_DB_NAME}" -e "SELECT 1;" > /dev/null 2>&1; then
     echo -e "${GREEN}✓ PASS${NC}"
     ((TESTS_PASSED++))
 else
@@ -206,7 +212,7 @@ echo -n "Testing Safety Systems Tables... "
 tables=("approval_requests" "audit_logs" "action_snapshots" "rollback_requests")
 all_tables_exist=true
 for table in "${tables[@]}"; do
-    if ! psql -U postgres -d digital_research_manager -c "\d $table" > /dev/null 2>&1; then
+    if ! "$MYSQL_BIN" -u "${MYSQL_USER:-root}" ${MYSQL_PASSWORD:+-p"${MYSQL_PASSWORD}"} ${MYSQL_SOCKET_OPT} -D "${MYSQL_DB_NAME}" -e "SHOW TABLES LIKE '$table';" | grep -q "$table"; then
         all_tables_exist=false
         break
     fi
@@ -225,7 +231,7 @@ echo -n "Testing Core Tables... "
 core_tables=("users" "lab_notebook_entries" "protocols" "experiments")
 all_core_exist=true
 for table in "${core_tables[@]}"; do
-    if ! psql -U postgres -d digital_research_manager -c "\d $table" > /dev/null 2>&1; then
+    if ! "$MYSQL_BIN" -u "${MYSQL_USER:-root}" ${MYSQL_PASSWORD:+-p"${MYSQL_PASSWORD}"} ${MYSQL_SOCKET_OPT} -D "${MYSQL_DB_NAME}" -e "SHOW TABLES LIKE '$table';" | grep -q "$table"; then
         all_core_exist=false
         break
     fi

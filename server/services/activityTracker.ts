@@ -1,6 +1,7 @@
 // Platform Activity Integration Hooks
 // Automatically track user activities for reference generation
 
+import crypto from 'crypto';
 import pool from "../../database/config.js";
 
 // Activity tracking service
@@ -22,16 +23,17 @@ export class ActivityTracker {
       
       await pool.query(`
         INSERT INTO platform_activities (
-          user_id, activity_type, activity_title, activity_description,
+          id, user_id, activity_type, activity_title, activity_description,
           activity_data, skills_demonstrated
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       `, [
+        crypto.randomUUID(),
         userId,
         'lab_notebook_entry',
         entryData.title || 'Personal NoteBook Entry',
         `Personal NoteBook entry with ${activityData.wordCount} words`,
         JSON.stringify(activityData),
-        skillsDemonstrated
+        JSON.stringify(skillsDemonstrated)
       ]);
       
       console.log(`Tracked Personal NoteBook entry for user ${userId}`);
@@ -55,16 +57,17 @@ export class ActivityTracker {
       
       await pool.query(`
         INSERT INTO platform_activities (
-          user_id, activity_type, activity_title, activity_description,
+          id, user_id, activity_type, activity_title, activity_description,
           activity_data, skills_demonstrated
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       `, [
+        crypto.randomUUID(),
         userId,
         'protocol_created',
         protocolData.title || 'Protocol Creation',
         `Created protocol with ${activityData.steps} steps and ${activityData.materials} materials`,
         JSON.stringify(activityData),
-        skillsDemonstrated
+        JSON.stringify(skillsDemonstrated)
       ]);
       
       console.log(`Tracked protocol creation for user ${userId}`);
@@ -88,16 +91,17 @@ export class ActivityTracker {
       
       await pool.query(`
         INSERT INTO platform_activities (
-          user_id, activity_type, activity_title, activity_description,
+          id, user_id, activity_type, activity_title, activity_description,
           activity_data, skills_demonstrated
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       `, [
+        crypto.randomUUID(),
         userId,
         'experiment_completed',
         experimentData.title || 'Experiment Completion',
         `Completed experiment with ${experimentData.success ? 'successful' : 'unsuccessful'} results`,
         JSON.stringify(activityData),
-        skillsDemonstrated
+        JSON.stringify(skillsDemonstrated)
       ]);
       
       console.log(`Tracked experiment completion for user ${userId}`);
@@ -121,16 +125,17 @@ export class ActivityTracker {
       
       await pool.query(`
         INSERT INTO platform_activities (
-          user_id, activity_type, activity_title, activity_description,
+          id, user_id, activity_type, activity_title, activity_description,
           activity_data, skills_demonstrated
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       `, [
+        crypto.randomUUID(),
         userId,
         'collaboration',
         collaborationData.title || 'Collaboration Activity',
         `Collaborated with ${activityData.participants} participants`,
         JSON.stringify(activityData),
-        skillsDemonstrated
+        JSON.stringify(skillsDemonstrated)
       ]);
       
       console.log(`Tracked collaboration for user ${userId}`);
@@ -155,16 +160,17 @@ export class ActivityTracker {
       
       await pool.query(`
         INSERT INTO platform_activities (
-          user_id, activity_type, activity_title, activity_description,
+          id, user_id, activity_type, activity_title, activity_description,
           activity_data, skills_demonstrated
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       `, [
+        crypto.randomUUID(),
         userId,
         'paper_published',
         publicationData.title || 'Research Publication',
         `Published paper in ${publicationData.journal || 'journal'}`,
         JSON.stringify(activityData),
-        skillsDemonstrated
+        JSON.stringify(skillsDemonstrated)
       ]);
       
       console.log(`Tracked publication for user ${userId}`);

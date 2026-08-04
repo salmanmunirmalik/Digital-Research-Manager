@@ -1,279 +1,370 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { 
-  BeakerIcon, 
-  ChartBarIcon, 
-  UsersIcon, 
-  DocumentTextIcon,
-  CogIcon,
-  ShieldCheckIcon,
-  RocketLaunchIcon,
-  StarIcon,
-  CheckCircleIcon,
-  ArrowRightIcon
-} from '@heroicons/react/24/outline';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import LegalFooterLinks from '../components/LegalFooterLinks';
 
-const LandingPage: React.FC = () => {
-  const { demoLogin } = useAuth();
-  const navigate = useNavigate();
+const SECTION_REVEAL_THRESHOLD = 0.15;
 
-  const handleDemoMode = () => {
-    demoLogin();
-    navigate('/dashboard');
-  };
+const capabilities = [
+  {
+    title: 'Lab Workspace',
+    description:
+      'Projects, experiments, inventory, instruments, and team messaging in one operational hub.',
+  },
+  {
+    title: 'AI Protocols',
+    description:
+      'Generate, search, compare, and execute protocols with desktop and mobile-ready workflows.',
+  },
+  {
+    title: 'Lab Notebook',
+    description:
+      'Structured entries that keep methods, observations, and decisions audit-ready.',
+  },
+  {
+    title: 'Research Data Bank',
+    description:
+      'Organize results, negative findings, and reusable datasets across your lab.',
+  },
+  {
+    title: 'Research Network',
+    description:
+      'Grants, collaboration, events, help forums, and field trends in one place.',
+  },
+  {
+    title: 'Marketplace',
+    description:
+      'Connect with suppliers and service providers without leaving your research workflow.',
+  },
+] as const;
 
-  const features = [
-    {
-      icon: BeakerIcon,
-      title: 'Lab Workspace',
-      description: 'ClickUp-inspired task management and lab operations in one place.',
-      color: 'from-blue-500 to-blue-600',
-      link: '/lab-workspace'
-    },
-    {
-      icon: DocumentTextIcon,
-      title: 'Protocol Management',
-      description: 'Create, organize, and share research protocols with your team.',
-      color: 'from-green-500 to-green-600',
-      link: '/protocols'
-    },
-    {
-      icon: ChartBarIcon,
-      title: 'Data Analytics',
-      description: 'Advanced data analysis tools for research insights and visualization.',
-      color: 'from-purple-500 to-purple-600',
-      link: '/data-analytics'
-    },
-    {
-      icon: UsersIcon,
-      title: 'Team Collaboration',
-      description: 'Foster collaboration with real-time sharing and communication tools.',
-      color: 'from-orange-500 to-orange-600',
-      link: '/help-forum'
-    },
-    {
-      icon: CogIcon,
-      title: 'Research Tools',
-      description: 'Access to specialized tools for molecular biology and bioinformatics.',
-      color: 'from-red-500 to-red-600',
-      link: '/calculator-hub'
-    },
-    {
-      icon: ShieldCheckIcon,
-      title: 'Secure & Compliant',
-      description: 'Enterprise-grade security with role-based access control.',
-      color: 'from-indigo-500 to-indigo-600',
-      link: '/dashboard'
+const workflow = [
+  {
+    step: '01',
+    title: 'Set up your lab',
+    description:
+      'Create a workspace, invite your team, and define how projects move from idea to result.',
+  },
+  {
+    step: '02',
+    title: 'Run the science',
+    description:
+      'Use notebooks, AI protocols, experiments, and instruments as a single operational layer.',
+  },
+  {
+    step: '03',
+    title: 'Share and grow',
+    description:
+      'Publish findings, find funding, and collaborate across labs with clear attribution.',
+  },
+] as const;
+
+function useInView(threshold: number): {
+  ref: React.RefObject<HTMLElement | null>;
+  visible: boolean;
+} {
+  const ref = useRef<HTMLElement | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (node === null) {
+      return;
     }
-  ];
 
-  const stats = [
-    { number: '1000+', label: 'Research Protocols' },
-    { number: '500+', label: 'Lab Members' },
-    { number: '50+', label: 'Research Institutions' },
-    { number: '99.9%', label: 'Uptime' }
-  ];
+    const observer = new IntersectionObserver(
+      (entries: IntersectionObserverEntry[]) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting === true) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold }
+    );
+
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+    };
+  }, [threshold]);
+
+  return { ref, visible };
+}
+
+function LandingPage(): React.ReactElement {
+  const [heroReady, setHeroReady] = useState(false);
+  const { ref: capabilitiesRef, visible: capabilitiesVisible } = useInView(
+    SECTION_REVEAL_THRESHOLD
+  );
+  const { ref: workflowRef, visible: workflowVisible } = useInView(
+    SECTION_REVEAL_THRESHOLD
+  );
+
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => {
+      setHeroReady(true);
+    });
+    return () => {
+      window.cancelAnimationFrame(id);
+    };
+  }, []);
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-lg">DR</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Research Lab</h1>
-                <p className="text-xs text-gray-500 -mt-1">Digital Research Manager</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/login"
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Sign In
-              </Link>
-              <Link
-                to="/register"
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
-              >
-                Sign Up
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-20 lg:py-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              Transform Your
-              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent"> Research Lab</span>
-            </h1>
-            <p className="text-xl lg:text-2xl text-gray-600 mb-8 leading-relaxed">
-              The comprehensive digital platform that streamlines lab operations, 
-              enhances collaboration, and accelerates scientific discovery.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link
-                to="/register"
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 inline-flex items-center"
-              >
-                Sign Up
-                <ArrowRightIcon className="w-5 h-5 ml-2" />
-              </Link>
-              <Link
-                to="/login"
-                className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-xl text-lg font-semibold hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 inline-flex items-center"
-              >
-                Sign In
-                <RocketLaunchIcon className="w-5 h-5 ml-2" />
-              </Link>
-              <button
-                onClick={handleDemoMode}
-                className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 inline-flex items-center"
-              >
-                Demo Mode
-                <StarIcon className="w-5 h-5 ml-2" />
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        {/* Floating Elements */}
-        <div className="absolute top-20 left-10 w-20 h-20 bg-blue-200 rounded-full opacity-20 animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-16 h-16 bg-indigo-200 rounded-full opacity-20 animate-pulse delay-1000"></div>
-        <div className="absolute bottom-20 left-20 w-12 h-12 bg-purple-200 rounded-full opacity-20 animate-pulse delay-2000"></div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-12 text-center">
-            Expected Target 2026
-          </h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">{stat.number}</div>
-                <div className="text-gray-600">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Everything You Need for Modern Research
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              From protocol management to data analysis, our platform provides the tools 
-              researchers need to work efficiently and collaboratively.
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <Link
-                key={index}
-                to={feature.link}
-                className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-2 block"
-              >
-                <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center mb-6`}>
-                  <feature.icon className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">{feature.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-indigo-700">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
-            Ready to Transform Your Research Lab?
-          </h2>
-          <p className="text-xl text-blue-100 mb-8">
-            Join thousands of researchers who are already using our platform 
-            to accelerate their scientific discoveries.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+    <div className="landing-page min-h-screen bg-[#F7F8F6] text-slate-900 antialiased">
+      <header className="absolute inset-x-0 top-0 z-30">
+        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-6 lg:px-8">
+          <Link to="/" className="flex items-center gap-3 text-white">
+            <span className="flex h-9 w-9 items-center justify-center bg-white text-sm font-semibold tracking-tight text-slate-900">
+              DR
+            </span>
+            <span className="landing-serif hidden text-lg tracking-tight sm:block">
+              Digital Research Manager
+            </span>
+          </Link>
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link
-              to="/register"
-              className="bg-white text-blue-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-100 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 inline-flex items-center justify-center"
+              to="/support"
+              className="hidden px-3 py-2 text-sm font-medium text-white/85 transition-colors hover:text-white sm:inline-flex"
             >
-              Sign Up Now
-              <ArrowRightIcon className="w-5 h-5 ml-2" />
+              Support us
             </Link>
             <Link
               to="/login"
-              className="border-2 border-white text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-white hover:text-blue-600 transition-all duration-200 inline-flex items-center justify-center"
+              className="px-3 py-2 text-sm font-medium text-white/85 transition-colors hover:text-white"
             >
-              Sign In
+              Sign in
+            </Link>
+            <Link
+              to="/register"
+              className="bg-white px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-100"
+            >
+              Get started
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <section className="relative min-h-[100svh] overflow-hidden">
+        <div className="absolute inset-0">
+          <img
+            src="https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&w=2400&q=80"
+            alt=""
+            className={`h-full w-full object-cover ${heroReady ? 'landing-ken' : ''}`}
+          />
+          <div className="absolute inset-0 bg-slate-950/65" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(15,118,110,0.22),transparent_60%)]" />
+        </div>
+
+        <div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col items-center justify-center px-6 pb-20 pt-28 text-center lg:px-8 lg:pb-24 lg:pt-24">
+          <div className="mx-auto w-full max-w-3xl">
+            <p
+              className={`landing-serif text-4xl leading-none tracking-tight text-white sm:text-5xl lg:text-6xl ${
+                heroReady ? 'landing-rise landing-rise-delay-1' : 'opacity-0'
+              }`}
+            >
+              Digital Research Manager
+            </p>
+            <h1
+              className={`mx-auto mt-6 max-w-2xl text-xl font-medium leading-snug text-white/95 sm:text-2xl ${
+                heroReady ? 'landing-rise landing-rise-delay-2' : 'opacity-0'
+              }`}
+            >
+              One operating system for modern research labs.
+            </h1>
+            <p
+              className={`mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/70 sm:text-lg ${
+                heroReady ? 'landing-rise landing-rise-delay-3' : 'opacity-0'
+              }`}
+            >
+              Run experiments, protocols, data, and collaboration from a single professional workspace.
+            </p>
+            <div
+              className={`mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row ${
+                heroReady ? 'landing-rise landing-rise-delay-4' : 'opacity-0'
+              }`}
+            >
+              <Link
+                to="/register"
+                className="inline-flex items-center justify-center bg-teal-700 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-teal-600"
+              >
+                Start free
+              </Link>
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center border border-white/35 px-6 py-3 text-sm font-medium text-white transition-colors hover:border-white/70 hover:bg-white/5"
+              >
+                Sign in
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200/80 bg-[#F7F8F6]">
+        <div className="mx-auto max-w-6xl px-6 py-20 lg:px-8 lg:py-28">
+          <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-20">
+            <h2 className="landing-serif text-3xl leading-tight tracking-tight text-slate-900 sm:text-4xl">
+              Built for the full research lifecycle
+            </h2>
+            <p className="max-w-xl text-lg leading-relaxed text-slate-600">
+              Digital Research Manager connects lab operations with AI-assisted protocols,
+              structured notebooks, shared data, funding discovery, and a research network-
+              so your team spends less time coordinating tools and more time doing science.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section
+        ref={capabilitiesRef}
+        className="border-b border-slate-200/80 bg-white"
+      >
+        <div
+          className={`landing-reveal mx-auto max-w-6xl px-6 py-20 lg:px-8 lg:py-28 ${
+            capabilitiesVisible ? 'is-visible' : ''
+          }`}
+        >
+          <div className="mb-14 max-w-2xl">
+            <h2 className="landing-serif text-3xl tracking-tight text-slate-900 sm:text-4xl">
+              What you can run today
+            </h2>
+            <p className="mt-4 text-lg text-slate-600">
+              The current platform covers daily lab work and the broader research ecosystem.
+            </p>
+          </div>
+
+          <ul className="divide-y divide-slate-200">
+            {capabilities.map((item) => (
+              <li
+                key={item.title}
+                className="grid gap-2 py-8 first:pt-0 last:pb-0 sm:grid-cols-[220px_1fr] sm:gap-10"
+              >
+                <h3 className="text-base font-semibold tracking-tight text-slate-900">
+                  {item.title}
+                </h3>
+                <p className="text-base leading-relaxed text-slate-600">{item.description}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section ref={workflowRef} className="bg-[#F7F8F6]">
+        <div
+          className={`landing-reveal mx-auto max-w-6xl px-6 py-20 lg:px-8 lg:py-28 ${
+            workflowVisible ? 'is-visible' : ''
+          }`}
+        >
+          <div className="mb-14 max-w-2xl">
+            <h2 className="landing-serif text-3xl tracking-tight text-slate-900 sm:text-4xl">
+              How labs get started
+            </h2>
+            <p className="mt-4 text-lg text-slate-600">
+              A clear path from workspace setup to shared discovery.
+            </p>
+          </div>
+
+          <ol className="grid gap-12 md:grid-cols-3 md:gap-8">
+            {workflow.map((item) => (
+              <li key={item.step}>
+                <p className="text-xs font-semibold tracking-[0.18em] text-teal-800">
+                  {item.step}
+                </p>
+                <h3 className="landing-serif mt-3 text-2xl tracking-tight text-slate-900">
+                  {item.title}
+                </h3>
+                <p className="mt-3 text-base leading-relaxed text-slate-600">
+                  {item.description}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className="border-t border-slate-200 bg-white">
+        <div className="mx-auto max-w-6xl px-6 py-20 lg:px-8 lg:py-24">
+          <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-end lg:gap-16">
+            <div>
+              <p className="text-xs font-semibold tracking-[0.18em] text-teal-800">FREE FOR ALL</p>
+              <h2 className="landing-serif mt-3 text-3xl tracking-tight text-slate-900 sm:text-4xl">
+                Help keep Digital Research Manager running
+              </h2>
+              <p className="mt-4 max-w-xl text-lg leading-relaxed text-slate-600">
+                The platform stays free for researchers and labs. Contributions fund hosting,
+                security, AI tools, and ongoing product innovation.
+              </p>
+            </div>
+            <div>
+              <Link
+                to="/support"
+                className="inline-flex items-center justify-center bg-teal-700 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-teal-600"
+              >
+                Support us
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-slate-200 bg-slate-900">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-8 px-6 py-20 sm:flex-row sm:items-end lg:px-8 lg:py-24">
+          <div className="max-w-xl">
+            <h2 className="landing-serif text-3xl tracking-tight text-white sm:text-4xl">
+              Bring your lab onto one platform
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-slate-300">
+              Create an account and open your workspace in minutes.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link
+              to="/register"
+              className="inline-flex items-center justify-center bg-teal-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-teal-500"
+            >
+              Create account
+            </Link>
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center border border-white/25 px-6 py-3 text-sm font-medium text-white transition-colors hover:border-white/50"
+            >
+              Sign in
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">DR</span>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold">Research Lab</h3>
-                  <p className="text-sm text-gray-400">Digital Research Manager</p>
-                </div>
+      <footer className="border-t border-slate-800 bg-slate-950">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-12 lg:px-8">
+          <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-start">
+            <div>
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 items-center justify-center bg-white text-xs font-semibold text-slate-900">
+                  DR
+                </span>
+                <span className="landing-serif text-lg text-white">Digital Research Manager</span>
               </div>
-              <p className="text-gray-400 mb-4 max-w-md">
-                Empowering researchers with the tools they need to accelerate 
-                scientific discovery and collaboration.
+              <p className="mt-3 max-w-sm text-sm leading-relaxed text-slate-400">
+                Professional infrastructure for research labs, teams, and scientific collaboration.
               </p>
             </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4">Platform</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link to="/dashboard" className="hover:text-white transition-colors">Features</Link></li>
-                <li><Link to="/login" className="hover:text-white transition-colors">Get Started</Link></li>
-                <li><Link to="/help-forum" className="hover:text-white transition-colors">Community</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link to="/help-forum" className="hover:text-white transition-colors">Help Forum</Link></li>
-                <li><Link to="/dashboard" className="hover:text-white transition-colors">Dashboard</Link></li>
-                <li><Link to="/protocols" className="hover:text-white transition-colors">Protocols</Link></li>
-              </ul>
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-slate-400">
+              <Link to="/support" className="transition-colors hover:text-white">
+                Support us
+              </Link>
+              <LegalFooterLinks variant="dark" className="text-sm" />
+              <Link to="/login" className="transition-colors hover:text-white">
+                Sign in
+              </Link>
             </div>
           </div>
-          
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 Digital Research Manager. All rights reserved.</p>
-          </div>
+          <p className="text-sm text-slate-500">
+            © {new Date().getFullYear()} Digital Research Manager
+          </p>
         </div>
       </footer>
     </div>
   );
-};
+}
 
 export default LandingPage;

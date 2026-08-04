@@ -1,43 +1,28 @@
-import { Pool, PoolClient, PoolConfig } from 'pg';
+import mysql from 'mysql2/promise';
 import { cacheService } from './cacheService';
 
 // Enhanced database configuration with connection pooling
-const dbConfig: PoolConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'digital_research_manager',
-  user: process.env.DB_USER || 'm.salmanmalik',
-  password: process.env.DB_PASSWORD || '',
+const dbConfig = {
+  host: process.env.MYSQL_HOST || 'localhost',
+  port: parseInt(process.env.MYSQL_PORT || '3306'),
+  database: process.env.MYSQL_DB || 'digital_research_manager',
+  user: process.env.MYSQL_USER || 'root',
+  password: process.env.MYSQL_PASSWORD || '',
+  socketPath: process.env.MYSQL_SOCKET || undefined,
   
   // Connection pool settings
-  max: parseInt(process.env.DB_POOL_MAX || '20'), // Maximum number of clients in the pool
-  min: parseInt(process.env.DB_POOL_MIN || '5'), // Minimum number of clients in the pool
-  idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'), // Close idle clients after 30 seconds
-  connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '2000'), // Return an error after 2 seconds if connection could not be established
+  waitForConnections: true,
+  connectionLimit: parseInt(process.env.DB_POOL_MAX || '20'),
+  queueLimit: 0,
+  connectTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT || '2000'),
   
-  // Additional performance settings
-  statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000'), // 30 seconds
-  query_timeout: parseInt(process.env.DB_QUERY_TIMEOUT || '30000'), // 30 seconds
-  
-  // SSL configuration for production
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // SSL configuration for production (optional, depending on MySQL host)
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
 };
 
-// Create connection pool
-const pool = new Pool(dbConfig);
+const pool = mysql.createPool(dbConfig);
 
-// Pool event handlers
-pool.on('connect', (client: PoolClient) => {
-  console.log('✅ New database client connected');
-});
-
-pool.on('error', (err: Error, client: PoolClient) => {
-  console.error('❌ Database pool error:', err);
-});
-
-pool.on('remove', (client: PoolClient) => {
-  console.log('🔄 Database client removed from pool');
-});
+const normalizeQuery = (text: string) => text.replace(/\$\d+/g, '?');
 
 // Query execution with caching and performance monitoring
 class DatabaseService {
@@ -75,14 +60,13 @@ class DatabaseService {
         }
       }
 
-      // Execute query with timeout
-      const client = await pool.connect();
+      const client = await pool.getConnection();
       try {
-        const result = await client.query({
-          text,
-          values: params,
-          rowMode: 'array' // For better performance with large datasets
+        const [rows] = await client.query({
+          sql: normalizeQuery(text),
+          values: params
         });
+        const result = { rows };
 
         const executionTime = Date.now() - startTime;
         
@@ -108,10 +92,10 @@ class DatabaseService {
   }
 
   // Execute transaction
-  async transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
-    const client = await pool.connect();
+  async transaction<T>(callback: (client: mysql.PoolConnection) => Promise<T>): Promise<T> {
+    const client = await pool.getConnection();
     try {
-      await client.query('BEGIN');
+      await client.query('START TRANSACTION');
       const result = await callback(client);
       await client.query('COMMIT');
       return result;

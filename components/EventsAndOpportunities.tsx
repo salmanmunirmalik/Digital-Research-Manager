@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import EventForm, { EventFormValues } from './EventForm';
+import PostedBy from './PostedBy';
 import {
   CalendarIcon,
   MapPinIcon,
@@ -23,11 +26,21 @@ import {
   LinkIcon,
   EyeIcon,
   CheckIcon,
-  XMarkIcon
+  XMarkIcon,
+  TrashIcon
 } from '../components/icons';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
+
+const authHeaders = (): HeadersInit => ({
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token') || ''}`,
+});
 
 interface Event {
   id: string;
+  createdBy?: string;
+  postedByName?: string;
   title: string;
   type: 'research_exchange' | 'conference' | 'summer_school' | 'workshop' | 'symposium' | 'internship';
   description: string;
@@ -61,6 +74,8 @@ const EventsAndOpportunities: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'research_exchange' | 'conferences' | 'summer_schools'>('all');
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilters, setSelectedFilters] = useState({
     location: '',
@@ -69,38 +84,93 @@ const EventsAndOpportunities: React.FC = () => {
     type: ''
   });
 
-  useEffect(() => {
-    loadEvents();
-  }, []);
-
   const loadEvents = async () => {
     setLoading(true);
     try {
-      // No mock data - start with empty array
-      setEvents([]);
+      const response = await fetch(`${API_BASE}/research-events`, {
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        setEvents([]);
+        return;
+      }
+      const data = await response.json();
+      setEvents(data.events || []);
     } catch (error) {
       console.error('Error loading events:', error);
+      setEvents([]);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    void loadEvents();
+  }, []);
+
+  const handleCreateEvent = async (formData: EventFormValues) => {
+    setSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE}/research-events`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(formData),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to create event');
+      }
+      setShowCreateForm(false);
+      await loadEvents();
+    } catch (error) {
+      console.error('Error creating event:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string, title: string) => {
+    if (!confirm(`Delete “${title}”? This cannot be undone.`)) return;
+    try {
+      const response = await fetch(`${API_BASE}/research-events/${eventId}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to delete');
+      }
+      await loadEvents();
+    } catch (error: any) {
+      console.error('Error deleting event:', error);
+      alert(error.message || 'Could not delete event');
+    }
+  };
+
   const handleEventAction = async (eventId: string, action: 'apply' | 'bookmark' | 'unbookmark') => {
     try {
+      const endpoint =
+        action === 'apply'
+          ? `${API_BASE}/research-events/${eventId}/apply`
+          : `${API_BASE}/research-events/${eventId}/bookmark`;
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to ${action}`);
+      }
+      const data = await response.json();
       setEvents(prev => prev.map(event => {
-        if (event.id === eventId) {
-          switch (action) {
-            case 'apply':
-              return { ...event, isApplied: true, currentParticipants: event.currentParticipants + 1 };
-            case 'bookmark':
-              return { ...event, isBookmarked: true };
-            case 'unbookmark':
-              return { ...event, isBookmarked: false };
-            default:
-              return event;
-          }
+        if (event.id !== eventId) return event;
+        if (action === 'apply') {
+          return {
+            ...event,
+            isApplied: true,
+            currentParticipants: event.isApplied ? event.currentParticipants : event.currentParticipants + 1,
+          };
         }
-        return event;
+        const bookmarked = data.bookmarked ?? action === 'bookmark';
+        return { ...event, isBookmarked: bookmarked };
       }));
     } catch (error) {
       console.error('Error performing event action:', error);
@@ -151,7 +221,11 @@ const EventsAndOpportunities: React.FC = () => {
                          event.organizer.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          event.location.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesTab = activeTab === 'all' || event.type === activeTab;
+    const matchesTab =
+      activeTab === 'all' ||
+      event.type === activeTab ||
+      (activeTab === 'conferences' && event.type === 'conference') ||
+      (activeTab === 'summer_schools' && event.type === 'summer_school');
     
     const matchesFilters = (!selectedFilters.location || event.location.includes(selectedFilters.location)) &&
                           (!selectedFilters.cost || (selectedFilters.cost === 'free' && event.cost === 0) || 
@@ -180,22 +254,33 @@ const EventsAndOpportunities: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Events & Opportunities</h2>
-          <p className="text-gray-600">Discover research exchanges, conferences, summer schools, and more</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">Events</h1>
+          <p className="mt-1.5 text-[14px] text-slate-600">
+            Conferences, workshops, research exchanges, and summer schools.{' '}
+            <Link to="/grants-fundings" className="font-medium text-slate-800 hover:text-slate-950 underline-offset-2 hover:underline">
+              Looking for research grants?
+            </Link>
+          </p>
         </div>
-        <div className="flex space-x-3">
-          <Button variant="primary" className="flex items-center">
-            <PlusIcon className="w-5 h-5 mr-2" />
-            Create Event
-          </Button>
-          <Button variant="secondary" className="flex items-center">
-            <ShareIcon className="w-5 h-5 mr-2" />
-            Share Event
-          </Button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowCreateForm(true)}
+          className="inline-flex items-center gap-2 self-start px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+        >
+          <PlusIcon className="w-4 h-4" />
+          Create Event
+        </button>
       </div>
+
+      {showCreateForm && (
+        <EventForm
+          onSubmit={handleCreateEvent}
+          onCancel={() => setShowCreateForm(false)}
+          isSubmitting={submitting}
+        />
+      )}
 
       {/* Search and Filters */}
       <Card>
@@ -239,9 +324,9 @@ const EventsAndOpportunities: React.FC = () => {
                 onChange={(e) => setSelectedFilters(prev => ({ ...prev, funding: e.target.value }))}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">All Funding</option>
-                <option value="funded">Funded</option>
-                <option value="unfunded">No Funding</option>
+                <option value="">Any stipend</option>
+                <option value="funded">Stipend available</option>
+                <option value="unfunded">No stipend</option>
               </select>
               <Button variant="ghost" className="flex items-center">
                 <FunnelIcon className="w-5 h-5 mr-2" />
@@ -292,11 +377,12 @@ const EventsAndOpportunities: React.FC = () => {
                         </span>
                         {event.funding && (
                           <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                            Funded
+                            Stipend available
                           </span>
                         )}
                       </div>
                       <p className="text-gray-600 mb-2">{event.description}</p>
+                      <PostedBy name={event.postedByName} className="mb-2" />
                       <div className="flex items-center space-x-4 text-sm text-gray-500 mb-3">
                         <span className="flex items-center">
                           <BuildingOfficeIcon className="w-4 h-4 mr-1" />
@@ -316,7 +402,7 @@ const EventsAndOpportunities: React.FC = () => {
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {event.skillsRequired.map((skill, index) => (
+                        {(event.skillsRequired || []).map((skill, index) => (
                           <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
                             {skill}
                           </span>
@@ -337,7 +423,7 @@ const EventsAndOpportunities: React.FC = () => {
                         )}
                         {event.fundingAmount && (
                           <span className="text-green-600 font-medium">
-                            Funding: {event.fundingAmount} {event.currency}
+                            Stipend: {event.fundingAmount} {event.currency}
                           </span>
                         )}
                       </div>
@@ -386,6 +472,16 @@ const EventsAndOpportunities: React.FC = () => {
                       <ShareIcon className="w-4 h-4 mr-2" />
                       Share
                     </Button>
+                    {user?.id && event.createdBy === user.id && (
+                      <Button
+                        variant="ghost"
+                        className="flex items-center text-red-600 hover:text-red-700"
+                        onClick={() => void handleDeleteEvent(event.id, event.title)}
+                      >
+                        <TrashIcon className="w-4 h-4 mr-2" />
+                        Delete
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -397,9 +493,33 @@ const EventsAndOpportunities: React.FC = () => {
       {filteredEvents.length === 0 && (
         <Card>
           <div className="p-12 text-center">
-            <CalendarIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No events found</h3>
-            <p className="text-gray-600">Try adjusting your search criteria or filters</p>
+            <CalendarIcon className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">
+              {events.length === 0 ? 'No events yet' : 'No events match your filters'}
+            </h3>
+            <p className="text-slate-600 mb-4 max-w-md mx-auto">
+              {events.length === 0
+                ? 'Publish a conference, workshop, or research exchange to get started. Funding calls live in Grants & funding.'
+                : 'Try adjusting your search criteria or filters.'}
+            </p>
+            {events.length === 0 && (
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateForm(true)}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  Create Event
+                </button>
+                <Link
+                  to="/grants-fundings"
+                  className="text-[13px] font-medium text-slate-700 hover:text-slate-900 underline-offset-2 hover:underline"
+                >
+                  Browse grants
+                </Link>
+              </div>
+            )}
           </div>
         </Card>
       )}

@@ -64,18 +64,18 @@ jobs:
     needs: [setup, install]
     runs-on: ubuntu-latest
     services:
-      postgres:
-        image: postgres:15
+      mysql:
+        image: mysql:8
         env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: researchlab
+          MYSQL_ROOT_PASSWORD: mysql
+          MYSQL_DATABASE: researchlab
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -p${MYSQL_ROOT_PASSWORD}"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 5432:5432
+          - 3306:3306
 
     steps:
       - name: Checkout code
@@ -155,18 +155,18 @@ jobs:
     needs: [setup, install, start-services]
     runs-on: ubuntu-latest
     services:
-      postgres:
-        image: postgres:15
+      mysql:
+        image: mysql:8
         env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: researchlab
+          MYSQL_ROOT_PASSWORD: mysql
+          MYSQL_DATABASE: researchlab
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -p${MYSQL_ROOT_PASSWORD}"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 5432:5432
+          - 3306:3306
 
     steps:
       - name: Checkout code
@@ -188,11 +188,11 @@ jobs:
           npm run test:crud
         env:
           NODE_ENV: test
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_NAME: researchlab
-          DB_USER: postgres
-          DB_PASSWORD: postgres
+          MYSQL_HOST: localhost
+          MYSQL_PORT: 3306
+          MYSQL_DB: researchlab
+          MYSQL_USER: root
+          MYSQL_PASSWORD: mysql
 
       - name: Upload CRUD test results
         uses: actions/upload-artifact@v3

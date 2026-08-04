@@ -1,5 +1,5 @@
 // Digital Research Manager - TypeScript Types
-// Based on PostgreSQL database schema
+// Based on MySQL database schema
 
 export type UserRole = 'admin' | 'principal_researcher' | 'co_supervisor' | 'researcher' | 'student';
 export type UserStatus = 'active' | 'inactive' | 'suspended' | 'pending_verification';
@@ -105,16 +105,33 @@ export interface HelpRequest {
   title: string;
   description: string;
   category: string;
-  status: 'open' | 'resolved' | 'closed';
-  created_at: string;
+  urgency?: string;
+  visibility?: string;
+  status: string;
+  tags?: string[];
+  authorId?: string;
+  authorName?: string;
+  upvotes?: number;
+  views?: number;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  resolvedAt?: string | Date;
+  responses?: HelpResponse[];
+  created_at?: string;
 }
 
 export interface HelpResponse {
   id: string;
-  request_id: string;
+  requestId?: string;
+  request_id?: string;
   content: string;
-  author_id: string;
-  created_at: string;
+  authorId?: string;
+  author_id?: string;
+  authorName?: string;
+  isSolution?: boolean;
+  upvotes?: number;
+  createdAt?: string | Date;
+  created_at?: string;
 }
 
 export interface HelpCategory {

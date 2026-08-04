@@ -53,7 +53,6 @@ const SettingsPage: React.FC = () => {
   });
   const [tasks, setTasks] = useState<any[]>([]);
   const [taskAssignments, setTaskAssignments] = useState<any[]>([]);
-  const [workflows, setWorkflows] = useState<any[]>([]);
   const [usageStats, setUsageStats] = useState<any>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
@@ -118,6 +117,8 @@ const SettingsPage: React.FC = () => {
       showPhone: false,
     showLocation: true
   });
+  const [privacyPolicyConsent, setPrivacyPolicyConsent] = useState<boolean | null>(null);
+  const [privacyConsentLoading, setPrivacyConsentLoading] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
     new_password: '',
@@ -129,12 +130,17 @@ const SettingsPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (userProfile?.id) {
+      fetchPrivacyPolicyConsent(userProfile.id);
+    }
+  }, [userProfile?.id]);
+
+  useEffect(() => {
     if (activeTab === 'api-management') {
       fetchApiKeys();
       fetchProviders();
       fetchTasks();
       fetchTaskAssignments();
-      fetchWorkflows();
       fetchUsageStats();
     }
   }, [activeTab]);
@@ -189,6 +195,54 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const fetchPrivacyPolicyConsent = async (userId: string) => {
+    try {
+      setPrivacyConsentLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`/api/compliance/consent/${userId}?policyType=privacy`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const consent = response.data?.consents?.essential;
+      setPrivacyPolicyConsent(consent?.granted ?? false);
+    } catch (error) {
+      console.error('Error fetching privacy consent:', error);
+    } finally {
+      setPrivacyConsentLoading(false);
+    }
+  };
+
+  const handlePrivacyPolicyConsent = async (granted: boolean) => {
+    if (!userProfile?.id) return;
+    try {
+      setPrivacyConsentLoading(true);
+      const token = localStorage.getItem('token');
+      if (granted) {
+        await axios.post('/api/compliance/consent', {
+          type: 'essential',
+          granted: true,
+          source: 'account_settings',
+          policyType: 'privacy',
+          purposes: ['policy_ack']
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        await axios.post('/api/compliance/consent/withdraw', {
+          types: ['essential'],
+          source: 'account_settings',
+          policyType: 'privacy'
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+      setPrivacyPolicyConsent(granted);
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to update privacy consent' });
+    } finally {
+      setPrivacyConsentLoading(false);
+    }
+  };
+
   const fetchApiKeys = async () => {
     try {
       setLoadingApiKeys(true);
@@ -237,18 +291,6 @@ const SettingsPage: React.FC = () => {
       setTaskAssignments(response.data.assignments || []);
     } catch (error) {
       console.error('Error fetching task assignments:', error);
-    }
-  };
-
-  const fetchWorkflows = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/workflows', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setWorkflows(response.data.workflows || []);
-    } catch (error) {
-      console.error('Error fetching workflows:', error);
     }
   };
 
@@ -678,7 +720,7 @@ const SettingsPage: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="text-xl font-semibold text-gray-900">API Management</h2>
-                      <p className="text-sm text-gray-600 mt-1">Manage your AI provider keys, task assignments, and workflows</p>
+                      <p className="text-sm text-gray-600 mt-1">Manage your AI provider keys and task assignments</p>
                     </div>
                     <button
                       onClick={() => setShowAddKeyModal(true)}
@@ -705,7 +747,7 @@ const SettingsPage: React.FC = () => {
                   </div>
 
                   {/* Quick Stats */}
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
                       <p className="text-sm text-gray-600 mb-1">API Keys</p>
                       <p className="text-2xl font-bold text-gray-900">{apiKeys.length}</p>
@@ -715,11 +757,6 @@ const SettingsPage: React.FC = () => {
                       <p className="text-sm text-gray-600 mb-1">Task Assignments</p>
                       <p className="text-2xl font-bold text-gray-900">{taskAssignments.length}</p>
                       <p className="text-xs text-gray-500 mt-1">{taskAssignments.filter(a => a.is_active).length} active</p>
-                    </div>
-                    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                      <p className="text-sm text-gray-600 mb-1">Workflows</p>
-                      <p className="text-2xl font-bold text-gray-900">{workflows.length}</p>
-                      <p className="text-xs text-gray-500 mt-1">{workflows.filter(w => w.is_active).length} active</p>
                     </div>
                   </div>
 
@@ -861,66 +898,6 @@ const SettingsPage: React.FC = () => {
                             </div>
                           );
                         })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Workflows Section */}
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">Workflows</h3>
-                      <button
-                        onClick={() => window.location.href = '/workflow-builder'}
-                        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                      >
-                        <PlusIcon className="w-4 h-4" />
-                        <span>New Workflow</span>
-                      </button>
-                    </div>
-                    {workflows.length === 0 ? (
-                      <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
-                        <p className="text-gray-600 mb-3">No workflows created yet</p>
-                        <p className="text-sm text-gray-500 mb-4">Create automated AI workflows to streamline your research</p>
-                        <button
-                          onClick={() => window.location.href = '/workflow-builder'}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                        >
-                          Create Workflow
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {workflows.slice(0, 5).map((workflow) => (
-                          <div
-                            key={workflow.id}
-                            onClick={() => window.location.href = `/workflow-builder/${workflow.id}`}
-                            className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                          >
-                            <div className="flex-1">
-                              <p className="font-medium text-gray-900">{workflow.name}</p>
-                              <p className="text-sm text-gray-600">
-                                {workflow.execution_count || 0} executions • {workflow.success_count || 0} successful
-                                {workflow.description && ` • ${workflow.description.substring(0, 50)}${workflow.description.length > 50 ? '...' : ''}`}
-                              </p>
-                            </div>
-                            <div className="flex items-center space-x-3">
-                              <div className={`w-2 h-2 rounded-full ${workflow.is_active ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                              <span className="text-xs text-gray-500">
-                                {new Date(workflow.updated_at || workflow.created_at).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                        {workflows.length > 5 && (
-                          <div className="text-center pt-2">
-                            <button
-                              onClick={() => window.location.href = '/workflow-builder'}
-                              className="text-sm text-blue-600 hover:text-blue-700"
-                            >
-                              View all {workflows.length} workflows →
-                            </button>
-                          </div>
-                        )}
                       </div>
                     )}
                   </div>
@@ -1091,6 +1068,43 @@ const SettingsPage: React.FC = () => {
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
+                  </div>
+
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <h3 className="font-medium text-gray-900">Cookie Preferences</h3>
+                    <p className="text-sm text-gray-600">
+                      Review and update your consent choices at any time.
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-3 text-sm">
+                      <Link to="/cookie-preferences" className="text-blue-600 hover:underline">
+                        Manage cookies
+                      </Link>
+                      <Link to="/privacy" className="text-blue-600 hover:underline">
+                        Privacy
+                      </Link>
+                      <Link to="/privacy-rights" className="text-blue-600 hover:underline">
+                        Privacy rights
+                      </Link>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <h3 className="font-medium text-gray-900">Privacy Policy Consent</h3>
+                      <p className="text-sm text-gray-600">
+                        Record or withdraw your consent to the privacy policy.
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={privacyPolicyConsent ?? false}
+                        onChange={(e) => handlePrivacyPolicyConsent(e.target.checked)}
+                        disabled={privacyConsentLoading}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
+                    </label>
                   </div>
 
                   <div className="flex justify-end">

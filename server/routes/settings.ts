@@ -4,17 +4,12 @@
  */
 
 import express, { type Router } from 'express';
-import { Pool } from 'pg';
+import crypto from 'crypto';
+import pool from '../../database/config.js';
 import { authenticateToken } from '../middleware/auth.js';
 import bcrypt from 'bcrypt';
 
 const router: Router = express.Router();
-
-// Initialize database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
 
 // Get user settings
 router.get('/', authenticateToken, async (req: any, res) => {
@@ -77,7 +72,7 @@ router.put('/profile', authenticateToken, async (req: any, res) => {
     const userId = req.user.id;
     const { first_name, last_name, phone, department, specialization, bio, location, timezone } = req.body;
     
-    const result = await pool.query(
+    await pool.query(
       `UPDATE users SET
         first_name = COALESCE($1, first_name),
         last_name = COALESCE($2, last_name),
@@ -89,13 +84,19 @@ router.put('/profile', authenticateToken, async (req: any, res) => {
         timezone = COALESCE($8, timezone),
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $9
-      RETURNING id, email, first_name, last_name, username, role, phone, department, specialization, bio, location, timezone`,
+      `,
       [first_name, last_name, phone, department, specialization, bio, location, timezone, userId]
     );
-    
+
+    const profileResult = await pool.query(
+      `SELECT id, email, first_name, last_name, username, role, phone, department, specialization, bio, location, timezone
+       FROM users WHERE id = $1`,
+      [userId]
+    );
+
     res.json({ 
       success: true,
-      profile: result.rows[0],
+      profile: profileResult.rows[0],
       message: 'Profile updated successfully'
     });
   } catch (error) {
@@ -121,35 +122,39 @@ router.put('/preferences', authenticateToken, async (req: any, res) => {
     } = req.body;
     
     // Insert or update preferences
-    const result = await pool.query(
+    const preferencesId = crypto.randomUUID();
+    await pool.query(
       `INSERT INTO user_preferences (
-        user_id, notifications_email, notifications_push,
+        id, user_id, notifications_email, notifications_push,
         notifications_research_updates, notifications_lab_updates,
         notifications_conference_updates, theme, language, date_format, currency
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      ON CONFLICT (user_id)
-      DO UPDATE SET
-        notifications_email = COALESCE($2, user_preferences.notifications_email),
-        notifications_push = COALESCE($3, user_preferences.notifications_push),
-        notifications_research_updates = COALESCE($4, user_preferences.notifications_research_updates),
-        notifications_lab_updates = COALESCE($5, user_preferences.notifications_lab_updates),
-        notifications_conference_updates = COALESCE($6, user_preferences.notifications_conference_updates),
-        theme = COALESCE($7, user_preferences.theme),
-        language = COALESCE($8, user_preferences.language),
-        date_format = COALESCE($9, user_preferences.date_format),
-        currency = COALESCE($10, user_preferences.currency),
-        updated_at = CURRENT_TIMESTAMP
-      RETURNING *`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ON DUPLICATE KEY UPDATE
+        notifications_email = COALESCE($3, notifications_email),
+        notifications_push = COALESCE($4, notifications_push),
+        notifications_research_updates = COALESCE($5, notifications_research_updates),
+        notifications_lab_updates = COALESCE($6, notifications_lab_updates),
+        notifications_conference_updates = COALESCE($7, notifications_conference_updates),
+        theme = COALESCE($8, theme),
+        language = COALESCE($9, language),
+        date_format = COALESCE($10, date_format),
+        currency = COALESCE($11, currency),
+        updated_at = CURRENT_TIMESTAMP`,
       [
-        userId, notifications_email, notifications_push,
+        preferencesId, userId, notifications_email, notifications_push,
         notifications_research_updates, notifications_lab_updates,
         notifications_conference_updates, theme, language, date_format, currency
       ]
     );
+
+    const preferencesResult = await pool.query(
+      'SELECT * FROM user_preferences WHERE user_id = $1',
+      [userId]
+    );
     
     res.json({ 
       success: true,
-      preferences: result.rows[0],
+      preferences: preferencesResult.rows[0],
       message: 'Preferences updated successfully'
     });
   } catch (error) {
@@ -164,7 +169,7 @@ router.put('/privacy', authenticateToken, async (req: any, res) => {
     const userId = req.user.id;
     const { profile_visibility, show_email, show_phone, show_location } = req.body;
     
-    const result = await pool.query(
+    await pool.query(
       `UPDATE users SET
         profile_visibility = COALESCE($1, profile_visibility),
         show_email = COALESCE($2, show_email),
@@ -172,13 +177,19 @@ router.put('/privacy', authenticateToken, async (req: any, res) => {
         show_location = COALESCE($4, show_location),
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $5
-      RETURNING profile_visibility, show_email, show_phone, show_location`,
+      `,
       [profile_visibility, show_email, show_phone, show_location, userId]
+    );
+
+    const privacyResult = await pool.query(
+      `SELECT profile_visibility, show_email, show_phone, show_location
+       FROM users WHERE id = $1`,
+      [userId]
     );
     
     res.json({ 
       success: true,
-      privacy: result.rows[0],
+      privacy: privacyResult.rows[0],
       message: 'Privacy settings updated successfully'
     });
   } catch (error) {

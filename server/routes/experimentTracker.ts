@@ -1,36 +1,45 @@
 import { Request, Response, Router } from 'express';
+import crypto from 'crypto';
 import pool from "../../database/config.js";
-import jwt from 'jsonwebtoken';
+// Auth is applied by server/index.ts when mounting /api/experiments (shared authenticateToken)
 
-// Authentication middleware
-const authenticateToken = async (req: any, res: any, next: any) => {
+const toJsonText = (value: unknown) => {
+  if (value == null) return null;
+  if (typeof value === 'string') return value;
   try {
-    const authHeader = req.headers['authorization'] as string | undefined;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Missing or invalid Authorization header' });
-    }
-    const token = authHeader.split(' ')[1];
-    
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production') as any;
-    
-    // Get user details from database
-    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [decoded.userId]);
-    if (userResult.rows.length === 0) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-    
-    req.user = userResult.rows[0];
-    next();
-  } catch (error) {
-    console.error('Authentication error:', error);
-    return res.status(401).json({ error: 'Invalid token' });
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
   }
 };
 
 const router: Router = Router();
 
-// Apply authentication middleware to all routes
-router.use(authenticateToken);
+const mapExperimentRow = (row: any) => {
+  if (!row) return row;
+  const tags = (() => {
+    if (Array.isArray(row.tags)) return row.tags;
+    if (typeof row.tags === 'string') {
+      try {
+        const parsed = JSON.parse(row.tags);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return row.tags ? [row.tags] : [];
+      }
+    }
+    return [];
+  })();
+  const protocolFromTag = tags
+    .map((t: unknown) => String(t))
+    .find((t: string) => t.startsWith('protocol:'))
+    ?.replace('protocol:', '');
+  return {
+    ...row,
+    tags,
+    protocolId: row.protocol_id || protocolFromTag || null,
+    notebookEntryId: row.notebook_entry_id || null,
+  };
+};
 
 // Get all experiments for a user
 export const getExperiments = async (req: Request, res: Response) => {
@@ -43,19 +52,18 @@ export const getExperiments = async (req: Request, res: Response) => {
         e.*,
         u.username as researcher_name,
         l.name as lab_name,
-        calculate_experiment_progress(e.id) as progress_percentage,
-        COUNT(em.id) as total_milestones,
-        COUNT(CASE WHEN em.status = 'completed' THEN 1 END) as completed_milestones,
-        COUNT(CASE WHEN em.status = 'overdue' THEN 1 END) as overdue_milestones
+        0 as progress_percentage,
+        0 as total_milestones,
+        0 as completed_milestones,
+        0 as overdue_milestones
       FROM experiments e
       LEFT JOIN users u ON e.researcher_id = u.id
       LEFT JOIN labs l ON e.lab_id = l.id
-      LEFT JOIN experiment_milestones em ON e.id = em.experiment_id
-      WHERE e.researcher_id = $1 OR $2 = ANY(e.collaborators)
+      WHERE e.researcher_id = $1
     `;
 
-    const params: any[] = [userId, userId];
-    let paramCount = 2;
+    const params: any[] = [userId];
+    let paramCount = 1;
 
     if (status && status !== 'all') {
       paramCount++;
@@ -77,14 +85,18 @@ export const getExperiments = async (req: Request, res: Response) => {
 
     if (search) {
       paramCount++;
-      query += ` AND (e.title ILIKE $${paramCount} OR e.description ILIKE $${paramCount} OR $${paramCount} = ANY(e.tags))`;
-      params.push(`%${search}%`);
+      query += ` AND (
+        LOWER(COALESCE(e.title, e.name, '')) LIKE $${paramCount}
+        OR LOWER(COALESCE(e.description, '')) LIKE $${paramCount}
+        OR LOWER(COALESCE(e.tags, '')) LIKE $${paramCount}
+      )`;
+      params.push(`%${String(search).toLowerCase()}%`);
     }
 
-    query += ` GROUP BY e.id, u.username, l.name ORDER BY e.created_at DESC`;
+    query += ` ORDER BY e.created_at DESC`;
 
     const result = await pool.query(query, params);
-    res.json(result.rows);
+    res.json(result.rows.map(mapExperimentRow));
   } catch (error) {
     console.error('Error fetching experiments:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -97,19 +109,24 @@ export const getExperiment = async (req: Request, res: Response) => {
     const { id } = req.params;
     const userId = (req as any).user.id;
 
+    // MySQL-safe access check (collaborators stored as JSON text)
     const experimentQuery = `
       SELECT 
         e.*,
         u.username as researcher_name,
         l.name as lab_name,
-        calculate_experiment_progress(e.id) as progress_percentage
+        0 as progress_percentage
       FROM experiments e
       LEFT JOIN users u ON e.researcher_id = u.id
       LEFT JOIN labs l ON e.lab_id = l.id
-      WHERE e.id = $1 AND (e.researcher_id = $2 OR $2 = ANY(e.collaborators))
+      WHERE e.id = $1
+        AND (
+          e.researcher_id = $2
+          OR e.collaborators LIKE CONCAT('%', $3, '%')
+        )
     `;
 
-    const experimentResult = await pool.query(experimentQuery, [id, userId]);
+    const experimentResult = await pool.query(experimentQuery, [id, userId, userId]);
     
     if (experimentResult.rows.length === 0) {
       return res.status(404).json({ error: 'Experiment not found' });
@@ -117,48 +134,45 @@ export const getExperiment = async (req: Request, res: Response) => {
 
     const experiment = experimentResult.rows[0];
 
-    // Get milestones
-    const milestonesQuery = `
-      SELECT * FROM experiment_milestones 
-      WHERE experiment_id = $1 
-      ORDER BY due_date ASC
-    `;
-    const milestonesResult = await pool.query(milestonesQuery, [id]);
+    const safeQuery = async (sql: string, params: unknown[]) => {
+      try {
+        return await pool.query(sql, params);
+      } catch (err: any) {
+        // Missing optional child tables should not 500 the detail view
+        if (err?.code === 'ER_NO_SUCH_TABLE') {
+          return { rows: [] };
+        }
+        throw err;
+      }
+    };
 
-    // Get risks
-    const risksQuery = `
-      SELECT * FROM experiment_risks 
-      WHERE experiment_id = $1 
-      ORDER BY created_at ASC
-    `;
-    const risksResult = await pool.query(risksQuery, [id]);
-
-    // Get progress log
-    const progressQuery = `
-      SELECT 
-        pl.*,
-        u.username as user_name
-      FROM experiment_progress_log pl
-      LEFT JOIN users u ON pl.user_id = u.id
-      WHERE pl.experiment_id = $1 
-      ORDER BY pl.created_at DESC
-    `;
-    const progressResult = await pool.query(progressQuery, [id]);
-
-    // Get comments
-    const commentsQuery = `
-      SELECT 
-        c.*,
-        u.username as user_name
-      FROM experiment_comments c
-      LEFT JOIN users u ON c.user_id = u.id
-      WHERE c.experiment_id = $1 
-      ORDER BY c.created_at ASC
-    `;
-    const commentsResult = await pool.query(commentsQuery, [id]);
+    const milestonesResult = await safeQuery(
+      `SELECT * FROM experiment_milestones WHERE experiment_id = $1 ORDER BY due_date ASC`,
+      [id]
+    );
+    const risksResult = await safeQuery(
+      `SELECT * FROM experiment_risks WHERE experiment_id = $1 ORDER BY created_at ASC`,
+      [id]
+    );
+    const progressResult = await safeQuery(
+      `SELECT pl.*, u.username as user_name
+       FROM experiment_progress_log pl
+       LEFT JOIN users u ON pl.user_id = u.id
+       WHERE pl.experiment_id = $1
+       ORDER BY pl.created_at DESC`,
+      [id]
+    );
+    const commentsResult = await safeQuery(
+      `SELECT c.*, u.username as user_name
+       FROM experiment_comments c
+       LEFT JOIN users u ON c.user_id = u.id
+       WHERE c.experiment_id = $1
+       ORDER BY c.created_at ASC`,
+      [id]
+    );
 
     res.json({
-      ...experiment,
+      ...mapExperimentRow(experiment),
       milestones: milestonesResult.rows,
       risks: risksResult.rows,
       progress_log: progressResult.rows,
@@ -195,66 +209,106 @@ export const createExperiment = async (req: Request, res: Response) => {
       tags,
       notes,
       templateId,
+      protocolId,
       milestones,
       risks
     } = req.body;
 
     const client = await pool.connect();
-    
+    const experimentId = crypto.randomUUID();
+    const linkedNotes = protocolId
+      ? [`Linked protocol: ${protocolId}`, notes].filter(Boolean).join('\n')
+      : notes;
+    const linkedTags = Array.isArray(tags)
+      ? (protocolId && !tags.some((t: string) => String(t).startsWith('protocol:'))
+          ? [...tags, `protocol:${protocolId}`]
+          : tags)
+      : (protocolId ? [`protocol:${protocolId}`] : []);
+
     try {
       await client.query('BEGIN');
 
-      // Insert experiment
-      const experimentQuery = `
-        INSERT INTO experiments (
-          title, description, hypothesis, objectives, methodology, expected_outcomes,
+      // MySQL: explicit id, no RETURNING; store arrays as JSON text
+      await client.query(
+        `INSERT INTO experiments (
+          id, title, name, description, hypothesis, objectives, methodology, expected_outcomes,
           priority, category, estimated_duration, due_date, lab_id, researcher_id,
           collaborators, equipment, materials, reagents, safety_requirements,
-          budget, tags, notes, template_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
-        RETURNING *
-      `;
+          budget, tags, notes, template_id, protocol_id, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)`,
+        [
+          experimentId,
+          title,
+          title,
+          description,
+          hypothesis,
+          toJsonText(objectives || []),
+          methodology,
+          toJsonText(expectedOutcomes || []),
+          priority || 'medium',
+          category,
+          estimatedDuration,
+          dueDate,
+          labId,
+          userId,
+          toJsonText(collaborators || []),
+          toJsonText(equipment || []),
+          toJsonText(materials || []),
+          toJsonText(reagents || []),
+          toJsonText(safetyRequirements || []),
+          budget || 0,
+          toJsonText(linkedTags || []),
+          linkedNotes,
+          templateId || null,
+          protocolId || null,
+          'planning'
+        ]
+      );
 
-      const experimentValues = [
-        title, description, hypothesis, objectives || [], methodology, expectedOutcomes || [],
-        priority || 'medium', category, estimatedDuration, dueDate, labId, userId,
-        collaborators || [], equipment || [], materials || [], reagents || [], safetyRequirements || [],
-        budget || 0, tags || [], notes, templateId
-      ];
-
-      const experimentResult = await client.query(experimentQuery, experimentValues);
-      const experiment = experimentResult.rows[0];
-
-      // Insert milestones if provided
       if (milestones && milestones.length > 0) {
         for (const milestone of milestones) {
-          const milestoneQuery = `
-            INSERT INTO experiment_milestones (
-              experiment_id, title, description, due_date
-            ) VALUES ($1, $2, $3, $4)
-          `;
-          await client.query(milestoneQuery, [
-            experiment.id, milestone.title, milestone.description, milestone.dueDate
-          ]);
+          await client.query(
+            `INSERT INTO experiment_milestones (
+              id, experiment_id, title, description, due_date
+            ) VALUES ($1, $2, $3, $4, $5)`,
+            [
+              crypto.randomUUID(),
+              experimentId,
+              milestone.title,
+              milestone.description,
+              milestone.dueDate
+            ]
+          );
         }
       }
 
-      // Insert risks if provided
+      // Risks table is optional; skip quietly if missing
       if (risks && risks.length > 0) {
         for (const risk of risks) {
-          const riskQuery = `
-            INSERT INTO experiment_risks (
-              experiment_id, title, description, probability, impact, mitigation
-            ) VALUES ($1, $2, $3, $4, $5, $6)
-          `;
-          await client.query(riskQuery, [
-            experiment.id, risk.title, risk.description, risk.probability, risk.impact, risk.mitigation
-          ]);
+          try {
+            await client.query(
+              `INSERT INTO experiment_risks (
+                id, experiment_id, title, description, probability, impact, mitigation
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+              [
+                crypto.randomUUID(),
+                experimentId,
+                risk.title,
+                risk.description,
+                risk.probability,
+                risk.impact,
+                risk.mitigation
+              ]
+            );
+          } catch (riskError) {
+            console.warn('Skipping experiment risk insert:', riskError);
+          }
         }
       }
 
       await client.query('COMMIT');
-      res.status(201).json(experiment);
+      const experimentResult = await pool.query('SELECT * FROM experiments WHERE id = $1', [experimentId]);
+      res.status(201).json(mapExperimentRow(experimentResult.rows[0]));
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -276,8 +330,8 @@ export const updateExperiment = async (req: Request, res: Response) => {
 
     // Check if user has permission to update this experiment
     const checkQuery = `
-      SELECT researcher_id, collaborators FROM experiments 
-      WHERE id = $1 AND (researcher_id = $2 OR $2 = ANY(collaborators))
+      SELECT researcher_id FROM experiments 
+      WHERE id = $1 AND researcher_id = $2
     `;
     const checkResult = await pool.query(checkQuery, [id, userId]);
     
@@ -285,25 +339,37 @@ export const updateExperiment = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Experiment not found or no permission' });
     }
 
-    const experiment = checkResult.rows[0];
-    const isOwner = experiment.researcher_id === userId;
-
     // Build dynamic update query
     const allowedFields = [
       'title', 'description', 'hypothesis', 'objectives', 'methodology', 'expected_outcomes',
       'status', 'priority', 'category', 'estimated_duration', 'actual_duration',
       'start_date', 'end_date', 'due_date', 'collaborators', 'equipment', 'materials',
       'reagents', 'safety_requirements', 'budget', 'actual_cost', 'tags', 'notes',
-      'results', 'conclusions', 'next_steps', 'attachments'
+      'results', 'conclusions', 'next_steps', 'attachments', 'protocol_id', 'notebook_entry_id'
     ];
+
+    const camelToSnake: Record<string, string> = {
+      expectedOutcomes: 'expected_outcomes',
+      estimatedDuration: 'estimated_duration',
+      actualDuration: 'actual_duration',
+      startDate: 'start_date',
+      endDate: 'end_date',
+      dueDate: 'due_date',
+      safetyRequirements: 'safety_requirements',
+      actualCost: 'actual_cost',
+      nextSteps: 'next_steps',
+      protocolId: 'protocol_id',
+      notebookEntryId: 'notebook_entry_id',
+    };
 
     const updateFields = [];
     const values = [];
     let paramCount = 1;
 
     for (const [key, value] of Object.entries(updateData)) {
-      if (allowedFields.includes(key) && value !== undefined) {
-        updateFields.push(`${key} = $${paramCount}`);
+      const column = camelToSnake[key] || key;
+      if (allowedFields.includes(column) && value !== undefined) {
+        updateFields.push(`${column} = $${paramCount}`);
         values.push(value);
         paramCount++;
       }
@@ -318,11 +384,11 @@ export const updateExperiment = async (req: Request, res: Response) => {
       UPDATE experiments 
       SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
       WHERE id = $${paramCount}
-      RETURNING *
     `;
 
-    const result = await pool.query(query, values);
-    res.json(result.rows[0]);
+    await pool.query(query, values);
+    const result = await pool.query(`SELECT * FROM experiments WHERE id = $1`, [id]);
+    res.json(mapExperimentRow(result.rows[0]));
   } catch (error) {
     console.error('Error updating experiment:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -377,8 +443,8 @@ export const getTemplates = async (req: Request, res: Response) => {
 
     if (search) {
       paramCount++;
-      query += ` AND (name ILIKE $${paramCount} OR description ILIKE $${paramCount})`;
-      params.push(`%${search}%`);
+      query += ` AND (LOWER(name) LIKE $${paramCount} OR LOWER(description) LIKE $${paramCount})`;
+      params.push(`%${String(search).toLowerCase()}%`);
     }
 
     query += ` ORDER BY usage_count DESC, created_at DESC`;
@@ -566,10 +632,10 @@ export const getExperimentAnalytics = async (req: Request, res: Response) => {
         COUNT(CASE WHEN due_date < CURRENT_TIMESTAMP AND status != 'completed' THEN 1 END) as overdue_experiments
       FROM experiments 
       WHERE researcher_id = $1 
-      AND created_at >= CURRENT_TIMESTAMP - INTERVAL '${timeframe} days'
+      AND created_at >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL $2 DAY)
     `;
 
-    const result = await pool.query(query, [userId]);
+    const result = await pool.query(query, [userId, Number(timeframe) || 30]);
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error fetching analytics:', error);

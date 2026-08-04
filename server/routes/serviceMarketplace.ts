@@ -4,6 +4,7 @@
  */
 
 import { Router } from 'express';
+import crypto from 'crypto';
 import pool from "../../database/config.js";
 
 const router: Router = Router();
@@ -54,58 +55,49 @@ router.get('/categories', async (req: any, res) => {
 router.get('/listings', async (req, res) => {
   try {
     const { category, service_type, min_price, max_price, search, sort_by = 'rating' } = req.query;
-    
-    console.log('📋 Fetching service listings with filters:', { category, service_type, search });
-    
+
     let query = `
-      SELECT 
+      SELECT
         sl.*,
-        COALESCE(u.first_name || ' ' || u.last_name, 'Unknown') as provider_name,
-        COALESCE(u.role::text, 'researcher') as provider_position,
-        COALESCE(u.bio, '') as provider_institution
+        COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'Unknown') as provider_name,
+        COALESCE(u.role, 'researcher') as provider_position,
+        COALESCE(u.current_institution, '') as provider_institution
       FROM service_listings sl
       LEFT JOIN users u ON sl.provider_id = u.id
-      WHERE sl.is_active = true
+      WHERE sl.is_active = 1
     `;
 
     const params: any[] = [];
-    let paramCount = 1;
 
     if (category) {
-      query += ` AND sl.category_id = $${paramCount}`;
       params.push(category);
-      paramCount++;
+      query += ` AND sl.category_id = $${params.length}`;
     }
 
     if (service_type) {
-      query += ` AND sl.service_type = $${paramCount}`;
       params.push(service_type);
-      paramCount++;
+      query += ` AND sl.service_type = $${params.length}`;
     }
 
     if (min_price) {
-      query += ` AND sl.base_price >= $${paramCount}`;
       params.push(min_price);
-      paramCount++;
+      query += ` AND sl.base_price >= $${params.length}`;
     }
 
     if (max_price) {
-      query += ` AND COALESCE(sl.price_range_max, sl.base_price) <= $${paramCount}`;
       params.push(max_price);
-      paramCount++;
+      query += ` AND COALESCE(sl.price_range_max, sl.base_price) <= $${params.length}`;
     }
 
     if (search) {
-      query += ` AND (
-        sl.service_title ILIKE $${paramCount} OR
-        sl.service_description ILIKE $${paramCount} OR
-        COALESCE(array_to_string(sl.tags, ','), '') ILIKE $${paramCount}
-      )`;
       params.push(`%${search}%`);
-      paramCount++;
+      query += ` AND (
+        sl.service_title LIKE $${params.length} OR
+        sl.service_description LIKE $${params.length} OR
+        sl.tags LIKE $${params.length}
+      )`;
     }
 
-    // Sorting
     if (sort_by === 'rating') {
       query += ` ORDER BY COALESCE(sl.average_rating, 0) DESC, COALESCE(sl.total_ratings, 0) DESC`;
     } else if (sort_by === 'price_low') {
@@ -118,13 +110,16 @@ router.get('/listings', async (req, res) => {
 
     query += ` LIMIT 50`;
 
-    console.log('📋 Executing query...');
     const result = await pool.query(query, params);
-    console.log(`✅ Found ${result.rows.length} service listings`);
-    res.json(result.rows);
+    const rows = result.rows.map((row: any) => ({
+      ...row,
+      expertise_areas: typeof row.expertise_areas === 'string' ? JSON.parse(row.expertise_areas || '[]') : (row.expertise_areas || []),
+      techniques_offered: typeof row.techniques_offered === 'string' ? JSON.parse(row.techniques_offered || '[]') : (row.techniques_offered || []),
+      tags: typeof row.tags === 'string' ? JSON.parse(row.tags || '[]') : (row.tags || []),
+    }));
+    res.json(rows);
   } catch (error: any) {
     console.error('❌ Error fetching service listings:', error.message);
-    console.error('Stack:', error.stack);
     res.status(500).json({ error: 'Failed to fetch service listings', details: error.message });
   }
 });
@@ -197,26 +192,35 @@ router.post('/listings', async (req: any, res) => {
       tags
     } = req.body;
 
-    const result = await pool.query(`
-      INSERT INTO service_listings (
-        provider_id, service_title, service_description, category_id, service_type,
-        expertise_areas, techniques_offered, software_tools,
-        pricing_model, base_price, currency, price_range_min, price_range_max,
-        typical_turnaround_days, requirements_description, deliverables_description,
-        tags
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-      RETURNING *
-    `, [providerId, service_title, service_description, category_id, service_type,
-        expertise_areas, techniques_offered, software_tools,
-        pricing_model, base_price, currency, price_range_min, price_range_max,
-        typical_turnaround_days, requirements_description, deliverables_description,
-        tags]);
+    if (!service_title) {
+      return res.status(400).json({ error: 'Service title is required' });
+    }
 
-    res.json(result.rows[0]);
+    const id = crypto.randomUUID();
+    const toJson = (v: unknown) => JSON.stringify(v ?? []);
+
+    await pool.query(`
+      INSERT INTO service_listings (
+        id, provider_id, service_title, service_description, category_id, service_type,
+        expertise_areas, techniques_offered, software_tools,
+        pricing_model, base_price, currency, price_range_min, price_range_max,
+        typical_turnaround_days, requirements_description, deliverables_description,
+        tags, is_active, currently_accepting_projects
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 1, 1)
+    `, [
+      id, providerId, service_title, service_description, category_id || null, service_type || 'data_analysis',
+      toJson(expertise_areas), toJson(techniques_offered), toJson(software_tools),
+      pricing_model || 'project_based', base_price || 0, currency || 'USD', price_range_min || null, price_range_max || null,
+      typical_turnaround_days || 7, requirements_description || '', deliverables_description || '',
+      toJson(tags)
+    ]);
+
+    const created = await pool.query(`SELECT * FROM service_listings WHERE id = $1`, [id]);
+    res.status(201).json(created.rows[0]);
   } catch (error: any) {
     console.error('Error creating service listing:', error);
-    res.status(500).json({ error: 'Failed to create service listing' });
+    res.status(500).json({ error: error.message || 'Failed to create service listing' });
   }
 });
 

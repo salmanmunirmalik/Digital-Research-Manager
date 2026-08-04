@@ -46,7 +46,12 @@ const TaskListView: React.FC<TaskListViewProps> = ({
   let groupedTasks: { [key: string]: Task[] } = {};
   if (groupBy) {
     tasks.forEach((task) => {
-      const key = task[groupBy] || 'unassigned';
+      let key: string;
+      if (groupBy === 'assignee') {
+        key = task.assignee_name || task.assignee_id || 'unassigned';
+      } else {
+        key = (task as any)[groupBy] || 'unassigned';
+      }
       if (!groupedTasks[key]) {
         groupedTasks[key] = [];
       }
@@ -68,7 +73,7 @@ const TaskListView: React.FC<TaskListViewProps> = ({
     normal: 'Normal',
     high: 'High',
     urgent: 'Urgent',
-    unassigned: 'Unassigned',
+    unassigned: 'Unassigned pool',
     all: 'All Tasks'
   };
 

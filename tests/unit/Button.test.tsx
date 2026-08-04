@@ -55,7 +55,7 @@ describe('Button Component', () => {
     );
 
     let button = screen.getByRole('button', { name: /primary/i });
-    expect(button).toHaveClass('bg-slate-800');
+    expect(button).toHaveClass('from-blue-600');
 
     rerender(
       <TestWrapper>
@@ -64,7 +64,7 @@ describe('Button Component', () => {
     );
 
     button = screen.getByRole('button', { name: /secondary/i });
-    expect(button).toHaveClass('bg-slate-200');
+    expect(button).toHaveClass('bg-gray-100');
   });
 
   test('applies custom className', () => {

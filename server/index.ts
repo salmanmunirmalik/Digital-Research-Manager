@@ -59,6 +59,7 @@ import helpForumRoutes from './routes/helpForum.js';
 import notificationsRoutes from './routes/notifications.js';
 import communityNewsRoutes from './routes/communityNews.js';
 import aiResearchAgentRoutes from './routes/aiResearchAgent.js';
+import dashboardRoutes from './routes/dashboard.js';
 import autoIndexing from './utils/autoIndexing.js';
 
 // Note: Exports moved to separate files to avoid circular dependencies
@@ -317,7 +318,7 @@ app.post('/api/auth/demo-login', authRateLimit, async (req, res) => {
   });
 });
 
-// Logout — allow without auth so client can notify server before discarding token
+// Logout - allow without auth so client can notify server before discarding token
 app.post('/api/auth/logout', async (req, res) => {
   try {
     return res.json({ message: 'Logged out' });
@@ -561,7 +562,7 @@ app.get('/api/labs', authenticateToken, async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // Public network catalog — only showcased labs
+    // Public network catalog - only showcased labs
     const query = `
       SELECT l.*, u.first_name, u.last_name, u.username as pi_name,
              (SELECT COUNT(*) FROM lab_members WHERE lab_id = l.id AND is_active = 1) as member_count
@@ -675,7 +676,7 @@ app.get('/api/labs/:id', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Access denied to this lab' });
     }
 
-    // Get lab members — emails only for members/admins
+    // Get lab members - emails only for members/admins
     const membersResult = await pool.query(`
       SELECT lm.*, u.first_name, u.last_name, u.username, u.email, u.role as user_role, u.avatar_url
       FROM lab_members lm
@@ -1200,7 +1201,7 @@ app.get('/api/protocols', authenticateToken, async (req, res) => {
     }
 
     // Non-admins: own protocols, public protocols, or lab-member protocols
-    // Push user id twice — MySQL placeholder adapter cannot reuse the same $N twice.
+    // Push user id twice - MySQL placeholder adapter cannot reuse the same $N twice.
     if (req.user.role !== 'admin') {
       paramCount++;
       const authorParam = paramCount;
@@ -1371,7 +1372,7 @@ app.delete('/api/protocols/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    // Soft delete (mark as not approved) — MySQL schema uses last_updated
+    // Soft delete (mark as not approved) - MySQL schema uses last_updated
     await pool.query(`
       UPDATE protocols SET is_approved = false, last_updated = CURRENT_TIMESTAMP WHERE id = $1
     `, [id]);
@@ -5811,6 +5812,7 @@ app.use('/api/api-task-assignments', authenticateToken, apiTaskAssignmentsRoutes
 app.use('/api/agents', authenticateToken, agentsRoutes);
 app.use('/api/orchestrator', authenticateToken, orchestratorRoutes);
 app.use('/api/lab-workspace', authenticateToken, labWorkspaceRoutes);
+app.use('/api/dashboard', authenticateToken, dashboardRoutes);
 app.use('/api/protocol-execution', authenticateToken, protocolExecutionRoutes);
 app.use('/api/protocol-collaboration', authenticateToken, protocolCollaborationRoutes);
 app.use('/api/protocol-search', authenticateToken, protocolSemanticSearchRoutes);

@@ -4,7 +4,7 @@
  */
 
 import express, { type Router } from 'express';
-import { Pool } from 'pg';
+import pool from '../../database/config.js';
 import { authenticateToken } from '../middleware/auth.js';
 import axios from 'axios';
 import { getUserApiKey, getUserDefaultProvider, getApiKeyWithFallback, getPlatformGeminiKey } from './aiProviderKeys.js';
@@ -12,11 +12,6 @@ import { getUserApiKey, getUserDefaultProvider, getApiKeyWithFallback, getPlatfo
 const router: Router = express.Router();
 
 // Initialize database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
-
 interface OpenAIEmbeddingRequest {
   input: string;
   model: string;

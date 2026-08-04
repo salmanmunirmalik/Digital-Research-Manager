@@ -7,7 +7,9 @@ import {
   CalendarIcon,
   CurrencyDollarIcon,
   UserIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  DocumentArrowUpIcon,
+  TrashIcon,
 } from './icons';
 
 interface Project {
@@ -30,14 +32,18 @@ interface Project {
 interface ProjectsViewProps {
   projects: Project[];
   onCreateProject: () => void;
+  onImportProject?: () => void;
   onProjectClick?: (project: Project) => void;
+  onDeleteProject?: (project: Project) => void;
   loading?: boolean;
 }
 
 const ProjectsView: React.FC<ProjectsViewProps> = ({ 
   projects, 
   onCreateProject,
+  onImportProject,
   onProjectClick,
+  onDeleteProject,
   loading = false 
 }) => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -126,13 +132,26 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-semibold text-gray-900">Projects</h1>
-          <button
-            onClick={onCreateProject}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <PlusIcon className="w-5 h-5" />
-            New Project
-          </button>
+          <div className="flex items-center gap-2">
+            {onImportProject && (
+              <button
+                type="button"
+                onClick={onImportProject}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white text-slate-800 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                <DocumentArrowUpIcon className="w-5 h-5" />
+                Import
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onCreateProject}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <PlusIcon className="w-5 h-5" />
+              New Project
+            </button>
+          </div>
         </div>
 
         {/* Search Bar */}
@@ -207,13 +226,26 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
                 : 'Get started by creating your first project'}
             </p>
             {!searchQuery && statusFilter === 'all' && (
-              <button
-                onClick={onCreateProject}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <PlusIcon className="w-4 h-4" />
-                Create Project
-              </button>
+              <div className="flex items-center gap-2">
+                {onImportProject && (
+                  <button
+                    type="button"
+                    onClick={onImportProject}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-white text-slate-800 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    <DocumentArrowUpIcon className="w-4 h-4" />
+                    Import Word / paste
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onCreateProject}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  Create Project
+                </button>
+              </div>
             )}
           </div>
         ) : viewMode === 'grid' ? (
@@ -232,9 +264,24 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
                     )}
                     <h3 className="text-lg font-semibold text-gray-900 truncate">{project.project_title}</h3>
                   </div>
-                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded border ${getStatusColor(project.status)}`}>
-                    {project.status}
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded border ${getStatusColor(project.status)}`}>
+                      {project.status}
+                    </span>
+                    {onDeleteProject && (
+                      <button
+                        type="button"
+                        title="Delete project"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteProject(project);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Description */}
@@ -302,6 +349,19 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded border ${getStatusColor(project.status)}`}>
                         {project.status}
                       </span>
+                      {onDeleteProject && (
+                        <button
+                          type="button"
+                          title="Delete project"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteProject(project);
+                          }}
+                          className="ml-auto p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                     {project.project_description && (
                       <p className="text-sm text-gray-600 mb-3 line-clamp-1">{project.project_description}</p>

@@ -1,51 +1,62 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useSearchParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import SideNav from './components/SideNav';
 import ProtectedRoute from './components/ProtectedRoute';
-import { getUserDisplayName, getRoleDisplayName } from './utils/roleAccess';
+import CookieBanner from './components/CookieBanner';
 
 // Import all pages
 import LabNotebookPage from './pages/LabNotebookPage';
 import DashboardPage from './pages/DashboardPage';
-import ProtocolsPageRefactored from './pages/ProtocolsPageRefactored'; // AI-first protocol generation and management ecosystem
-import DataResultsPage from './pages/DataResultsPage'; // Includes global sharing tab
+import ProtocolsPageRefactored from './pages/ProtocolsPageRefactored';
+import DataResultsPage from './pages/DataResultsPage';
 import ResearchDataBankPage from './pages/ResearchDataBankPage';
-import HelpForumPage from './pages/HelpForumPage';
+import ResearchDataBankOrgPage from './pages/ResearchDataBankOrgPage';
 import ConferenceNewsPage from './pages/ConferenceNewsPage';
-import ResearchToolsPage from './pages/ResearchToolsPage';
 import MarketplacePage from './pages/MarketplacePage';
-import AIResearchAgentPage from './pages/AIResearchAgentPage';
-import ResearchAssistantPage from './pages/ResearchAssistantPage';
-import AIAgentsCapabilitiesPage from './pages/AIAgentsCapabilitiesPage';
-import WorkflowBuilderPage from './pages/WorkflowBuilderPage';
+import SupplierWorkspacePage from './pages/SupplierWorkspacePage';
+import ServiceProviderWorkspacePage from './pages/ServiceProviderWorkspacePage';
 import LabWorkspacePage from './pages/LabWorkspacePage';
 import NegativeResultsPage from './pages/NegativeResultsPage';
 import ProjectManagementPage from './pages/ProjectManagementPage';
 import PIReviewDashboardPage from './pages/PIReviewDashboardPage';
 import CollaborationNetworkingPage from './pages/CollaborationNetworkingPage';
 import EventsOpportunitiesPage from './pages/EventsOpportunitiesPage';
-import ExperimentTrackerPage from './pages/ExperimentTrackerPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import SettingsPage from './pages/SettingsPage';
-import ScientistPassportPage from './pages/ScientistPassportPage';
 import ProfilePage from './pages/ProfilePage';
-import CommunicationsHubPage from './pages/CommunicationsHubPage';
-import CurrentTrendsPage from './pages/CurrentTrendsPage';
-import ScienceForAllJournalPage from './pages/ScienceForAllJournalPage';
 
-import BioinformaticsToolsPage from './pages/BioinformaticsToolsPage';
-import MolecularBiologyPage from './pages/MolecularBiologyPage';
 import DataAnalyticsPage from './pages/DataAnalyticsPage';
 import LandingPage from './pages/LandingPage';
+import SupportUsPage from './pages/SupportUsPage';
 import TeamManagementPage from './pages/TeamManagementPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import CookiePolicyPage from './pages/CookiePolicyPage';
+import CookiePreferencesPage from './pages/CookiePreferencesPage';
+import PrivacyRightsPage from './pages/PrivacyRightsPage';
+import TermsOfServicePage from './pages/TermsOfServicePage';
+import GrantsFundingsPage from './pages/GrantsFundingsPage';
+import NotFoundPage from './pages/NotFoundPage';
+import NotificationsPage from './pages/NotificationsPage';
+import NotificationBell from './components/NotificationBell';
+import HelpForumPage from './pages/HelpForumPage';
+import CurrentTrendsPage from './pages/CurrentTrendsPage';
+import LabPublicPage from './pages/LabPublicPage';
+import ExperimentTrackerPage from './pages/ExperimentTrackerPage';
 
-// Modern Layout Component with Quillbot-inspired design
-const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const LabSectionRedirect: React.FC<{ section: string; tab?: string }> = ({ section, tab }) => {
+  const [params] = useSearchParams();
+  const next = new URLSearchParams(params);
+  next.set('section', section);
+  if (tab) next.set('tab', tab);
+  return <Navigate to={`/lab-workspace?${next.toString()}`} replace />;
+};
+const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = React.useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
   
   // Close dropdown when clicking outside
   React.useEffect(() => {
@@ -65,87 +76,87 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     };
   }, [showUserMenu]);
 
+  React.useEffect(() => {
+    if (!mobileNavOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileNavOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = '';
+    };
+  }, [mobileNavOpen]);
+
+  const closeMobileNav = () => setMobileNavOpen(false);
+
   return (
     <div className="min-h-screen bg-gray-50">
-
-      {/* Layout Container - Merged Navigation */}
       <div className="flex">
-        {/* Left Sidebar - Enhanced */}
-        <aside className="w-64 bg-white border-r border-gray-100 min-h-screen flex-shrink-0 shadow-sm sticky top-0">
-          <div className="h-full overflow-y-auto">
+        {/* Desktop sidebar */}
+        <aside className="hidden lg:flex w-60 min-h-screen flex-shrink-0 sticky top-0 h-screen">
+          <div className="h-full w-full overflow-hidden">
             <SideNav />
           </div>
         </aside>
 
-        {/* Main Content Area with Top Navigation */}
-        <div className="flex-1 flex flex-col">
-          {/* Single Navigation Bar */}
-          <div className="bg-white border-b border-gray-100 px-6 py-3 shadow-sm sticky top-0 z-40">
-            <div className="flex items-center justify-between">
-              {/* Left spacer */}
-              <div className="flex-1"></div>
-              
-              {/* Navigation Links - Centered */}
-              <div className="flex items-center space-x-2">
-                <Link 
-                  to="/collaboration-networking" 
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center hover:bg-gray-50 hover:shadow-sm"
+        {/* Mobile sidebar overlay */}
+        {mobileNavOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <button
+              type="button"
+              className="absolute inset-0 bg-slate-900/30 backdrop-blur-[1px]"
+              aria-label="Close navigation menu"
+              onClick={closeMobileNav}
+            />
+            <aside className="relative w-64 max-w-[85vw] h-full shadow-2xl">
+              <SideNav onMobileLinkClick={closeMobileNav} />
+            </aside>
+          </div>
+        )}
+
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="bg-white border-b border-gray-100 px-4 sm:px-6 py-3 shadow-sm sticky top-0 z-40">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <button
+                  type="button"
+                  className="lg:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+                  aria-label="Open navigation menu"
+                  onClick={() => setMobileNavOpen(true)}
                 >
-                  <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center mr-2">
-                    <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                  Networking
-                </Link>
-                <Link 
-                  to="/events-opportunities" 
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center hover:bg-gray-50 hover:shadow-sm"
-                >
-                  <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center mr-2">
-                    <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  Events & Opportunities
-                </Link>
-                <Link 
-                  to="/research-databank" 
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center hover:bg-gray-50 hover:shadow-sm"
-                >
-                  <div className="w-6 h-6 bg-teal-100 rounded-lg flex items-center justify-center mr-2">
-                    <svg className="w-3 h-3 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-                    </svg>
-                  </div>
-                  Data Bank
-                </Link>
-                <Link 
-                  to="/marketplace" 
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center hover:bg-gray-50 hover:shadow-sm"
-                >
-                  <div className="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center mr-2">
-                    <svg className="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                  </div>
-                  Marketplace
-                </Link>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+                <div className="min-w-0 lg:hidden">
+                  <p className="text-sm font-semibold text-gray-900 truncate">Digital Research Manager</p>
+                </div>
               </div>
-              
-              {/* Right spacer */}
-              <div className="flex-1 flex justify-end items-center space-x-2">
-                {/* User Menu Dropdown */}
+
+              <div className="flex items-center space-x-2">
+                <NotificationBell />
                 <div className="relative user-menu">
                   <button
                     data-testid="user-menu-toggle"
                     onClick={() => setShowUserMenu(!showUserMenu)}
-                    className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-gray-50 hover:shadow-sm"
+                    className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50"
+                    aria-expanded={showUserMenu}
+                    aria-haspopup="true"
                   >
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                       {user?.first_name?.[0]}{user?.last_name?.[0]}
                     </div>
-                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span className="hidden sm:inline text-gray-700 truncate max-w-[120px]">
+                      {user?.first_name}
+                    </span>
+                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
@@ -172,7 +183,7 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                           <svg className="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
-                          Profile
+                          Research profile
                         </Link>
                         <Link
                           to="/settings"
@@ -215,10 +226,9 @@ const DemoLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 </div>
               </div>
             </div>
-          </div>
+          </header>
 
-          {/* Main Content Area */}
-          <main className="flex-1 bg-gray-50 min-h-screen pt-16">
+          <main className="flex-1 bg-gray-50 min-h-screen">
             <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
               {children}
             </div>
@@ -237,18 +247,39 @@ const AppContent: React.FC = () => {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
+      <Route path="/cookies" element={<CookiePolicyPage />} />
+      <Route path="/cookie-policy" element={<Navigate to="/cookies" replace />} />
+      <Route path="/cookie-preferences" element={<CookiePreferencesPage />} />
+      <Route path="/privacy-rights" element={<PrivacyRightsPage />} />
+      <Route path="/terms" element={<TermsOfServicePage />} />
+      <Route path="/support" element={<SupportUsPage />} />
       
       {/* Redirects */}
       <Route path="/home" element={<Navigate to="/dashboard" replace />} />
       <Route path="/tasks/new" element={<Navigate to="/dashboard" replace />} />
       <Route path="/team" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/professional-protocols" element={<Navigate to="/protocols" replace />} />
+      <Route path="/calculator-hub" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/research-tools" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/ai-research-agent" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/ai-agents-capabilities" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/research-assistant" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/presentations" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/ai-presentations" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/bioinformatics-tools" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/molecular-biology" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/data-sharing" element={<Navigate to="/research-databank" replace />} />
+      <Route path="/supplier-marketplace" element={<Navigate to="/marketplace?tab=suppliers" replace />} />
+      <Route path="/service-marketplace" element={<Navigate to="/marketplace?tab=services" replace />} />
+      <Route path="/unauthorized" element={<UnauthorizedPage />} />
       
       {/* Protected routes */}
       <Route 
         path="/dashboard" 
         element={
           <ProtectedRoute>
-            <DemoLayout><DashboardPage /></DemoLayout>
+            <AppLayout><DashboardPage /></AppLayout>
           </ProtectedRoute>
         } 
       />
@@ -256,36 +287,37 @@ const AppContent: React.FC = () => {
         path="/lab-notebook" 
         element={
           <ProtectedRoute>
-            <DemoLayout><LabNotebookPage /></DemoLayout>
+            <AppLayout><LabNotebookPage /></AppLayout>
           </ProtectedRoute>
         } 
       />
       
-      <Route 
-        path="/lab-workspace" 
+      <Route path="/lab-workspace" 
         element={
           <ProtectedRoute>
-            <DemoLayout><LabWorkspacePage /></DemoLayout>
+            <AppLayout><LabWorkspacePage /></AppLayout>
           </ProtectedRoute>
-        } 
+        }
       />
-      
-      {/* Experiment Tracker - All authenticated users */}
-      <Route 
-        path="/experiment-tracker" 
+      <Route
+        path="/experiment-tracker"
         element={
           <ProtectedRoute>
-            <DemoLayout><ExperimentTrackerPage /></DemoLayout>
+            <AppLayout><ExperimentTrackerPage /></AppLayout>
           </ProtectedRoute>
-        } 
+        }
       />
-      
+      <Route
+        path="/team-messaging"
+        element={<LabSectionRedirect section="teams" tab="messages" />}
+      />
+
       {/* Protocols - All authenticated users */}
       <Route 
         path="/protocols" 
         element={
           <ProtectedRoute>
-            <DemoLayout><ProtocolsPageRefactored /></DemoLayout>
+            <AppLayout><ProtocolsPageRefactored /></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -296,60 +328,25 @@ const AppContent: React.FC = () => {
         path="/data-results" 
         element={
           <ProtectedRoute>
-            <DemoLayout><DataResultsPage /></DemoLayout>
+            <AppLayout><DataResultsPage /></AppLayout>
           </ProtectedRoute>
         } 
       />
 
       {/* Research collaboration routes - All authenticated users */}
-      {/* Global Data Sharing - Now integrated into Data & Results */}
-      <Route 
-        path="/data-sharing" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><DataResultsPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
       <Route 
         path="/research-databank" 
         element={
           <ProtectedRoute>
-            <DemoLayout><ResearchDataBankPage /></DemoLayout>
+            <AppLayout><ResearchDataBankPage /></AppLayout>
           </ProtectedRoute>
         } 
       />
-      <Route 
-        path="/help-forum" 
+      <Route
+        path="/research-databank/:orgId"
         element={
           <ProtectedRoute>
-            <DemoLayout><HelpForumPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* Tools & Resources Routes - All authenticated users */}
-      <Route 
-        path="/research-tools" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><ResearchToolsPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/supplier-marketplace" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><MarketplacePage /></DemoLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route 
-        path="/service-marketplace" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><MarketplacePage /></DemoLayout>
+            <AppLayout><ResearchDataBankOrgPage /></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -357,7 +354,23 @@ const AppContent: React.FC = () => {
         path="/marketplace" 
         element={
           <ProtectedRoute>
-            <DemoLayout><MarketplacePage /></DemoLayout>
+            <AppLayout><MarketplacePage /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/marketplace/supplier"
+        element={
+          <ProtectedRoute>
+            <AppLayout><SupplierWorkspacePage /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/marketplace/provider"
+        element={
+          <ProtectedRoute>
+            <AppLayout><ServiceProviderWorkspacePage /></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -365,15 +378,7 @@ const AppContent: React.FC = () => {
         path="/negative-results" 
         element={
           <ProtectedRoute>
-            <DemoLayout><NegativeResultsPage /></DemoLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route 
-        path="/paper-library" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><AIResearchAgentPage /></DemoLayout>
+            <AppLayout><NegativeResultsPage /></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -381,7 +386,7 @@ const AppContent: React.FC = () => {
         path="/project-management" 
         element={
           <ProtectedRoute>
-            <DemoLayout><ProjectManagementPage /></DemoLayout>
+            <AppLayout><ProjectManagementPage /></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -389,23 +394,15 @@ const AppContent: React.FC = () => {
         path="/pi-review-dashboard" 
         element={
           <ProtectedRoute>
-            <DemoLayout><PIReviewDashboardPage /></DemoLayout>
+            <AppLayout><PIReviewDashboardPage /></AppLayout>
           </ProtectedRoute>
         }
-      />
-      <Route 
-        path="/reference-library" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><AIResearchAgentPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
       />
       <Route 
         path="/data-analysis" 
         element={
           <ProtectedRoute>
-            <DemoLayout><DataAnalyticsPage /></DemoLayout>
+            <AppLayout><DataAnalyticsPage /></AppLayout>
           </ProtectedRoute>
         } 
       />
@@ -413,141 +410,107 @@ const AppContent: React.FC = () => {
         path="/data-analytics" 
         element={
           <ProtectedRoute>
-            <DemoLayout><DataAnalyticsPage /></DemoLayout>
+            <AppLayout><DataAnalyticsPage /></AppLayout>
           </ProtectedRoute>
         } 
       />
-      <Route 
-        path="/ai-research-agent"
-        element={
-          <ProtectedRoute>
-            <DemoLayout><AIResearchAgentPage /></DemoLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route 
-        path="/ai-agents-capabilities"
-        element={
-          <ProtectedRoute>
-            <DemoLayout><AIAgentsCapabilitiesPage /></DemoLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route 
-        path="/research-assistant"
-        element={
-          <ProtectedRoute>
-            <DemoLayout><ResearchAssistantPage /></DemoLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route 
-        path="/workflow-builder/:id?"
-        element={
-          <ProtectedRoute>
-            <DemoLayout><WorkflowBuilderPage /></DemoLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route 
-        path="/molecular-biology" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><MolecularBiologyPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/bioinformatics-tools" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><BioinformaticsToolsPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
-
       {/* Collaboration Routes */}
       <Route 
         path="/collaboration-networking" 
         element={
           <ProtectedRoute>
-            <DemoLayout><CollaborationNetworkingPage /></DemoLayout>
+            <AppLayout><CollaborationNetworkingPage /></AppLayout>
           </ProtectedRoute>
         } 
+      />
+      <Route
+        path="/labs/:labId"
+        element={
+          <ProtectedRoute>
+            <AppLayout><LabPublicPage /></AppLayout>
+          </ProtectedRoute>
+        }
       />
       <Route 
         path="/events-opportunities" 
         element={
           <ProtectedRoute>
-            <DemoLayout><EventsOpportunitiesPage /></DemoLayout>
+            <AppLayout><EventsOpportunitiesPage /></AppLayout>
           </ProtectedRoute>
         } 
       />
+      <Route
+        path="/grants-fundings"
+        element={
+          <ProtectedRoute>
+            <AppLayout><GrantsFundingsPage /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
 
       {/* Profile and Settings Routes */}
-      {/* Profile - Academic Profile Page */}
+      {/* Profile - unified research identity */}
       <Route 
         path="/profile" 
         element={
           <ProtectedRoute>
-            <DemoLayout><ProfilePage /></DemoLayout>
+            <AppLayout><ProfilePage /></AppLayout>
           </ProtectedRoute>
         } 
       />
-      {/* My Scientific Passport - Redirects to Scientist Passport */}
-      <Route 
-        path="/my-portfolio" 
+      <Route
+        path="/profile/:userId"
         element={
           <ProtectedRoute>
-            <DemoLayout><ScientistPassportPage /></DemoLayout>
+            <AppLayout><ProfilePage /></AppLayout>
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/scientist-passport" 
-        element={
-          <ProtectedRoute>
-            <DemoLayout><ScientistPassportPage /></DemoLayout>
-          </ProtectedRoute>
-        } 
-      />
+      <Route path="/my-portfolio" element={<Navigate to="/profile" replace />} />
+      <Route path="/scientist-passport" element={<Navigate to="/profile" replace />} />
       <Route 
         path="/settings" 
         element={
           <ProtectedRoute>
-            <DemoLayout><SettingsPage /></DemoLayout>
+            <AppLayout><SettingsPage /></AppLayout>
           </ProtectedRoute>
         } 
       />
-      <Route 
-        path="/communications" 
+      <Route
+        path="/conference-news"
         element={
           <ProtectedRoute>
-            <DemoLayout><CommunicationsHubPage /></DemoLayout>
+            <AppLayout><ConferenceNewsPage /></AppLayout>
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/current-trends" 
+      <Route
+        path="/notifications"
         element={
           <ProtectedRoute>
-            <DemoLayout><CurrentTrendsPage /></DemoLayout>
+            <AppLayout><NotificationsPage /></AppLayout>
           </ProtectedRoute>
-        } 
+        }
       />
-
-      {/* Science For All Journal */}
-      <Route 
-        path="/journal" 
+      <Route
+        path="/help-forum"
         element={
           <ProtectedRoute>
-            <DemoLayout><ScienceForAllJournalPage /></DemoLayout>
+            <AppLayout><HelpForumPage /></AppLayout>
           </ProtectedRoute>
-        } 
+        }
+      />
+      <Route
+        path="/current-trends"
+        element={
+          <ProtectedRoute>
+            <AppLayout><CurrentTrendsPage /></AppLayout>
+          </ProtectedRoute>
+        }
       />
 
       {/* Catch-all route */}
-      <Route path="*" element={<Navigate to="/lab-notebook" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 };
@@ -557,6 +520,7 @@ const App: React.FC = () => {
     <AuthProvider>
       <Router>
         <AppContent />
+        <CookieBanner />
       </Router>
     </AuthProvider>
   );

@@ -11,7 +11,6 @@ export interface RolePermissions {
   canAccessResearchTools: boolean;
   canAccessPresentations: boolean;
   canAccessGlobalData: boolean;
-  canAccessHelpForum: boolean;
   canAccessConferences: boolean;
   canAccessReferenceLibrary: boolean;
   canAccessDataAnalytics: boolean;
@@ -60,7 +59,6 @@ export const getRolePermissions = (role: string): RolePermissions => {
     canAccessResearchTools: true,
     canAccessPresentations: true,
     canAccessGlobalData: true,
-    canAccessHelpForum: true,
     canAccessConferences: true,
     canAccessReferenceLibrary: true,
     canAccessDataAnalytics: true,
@@ -106,15 +104,10 @@ export const ROUTE_ACCESS = {
   '/protocols': { minRole: 'student' },
   '/data-results': { minRole: 'student' },
   '/presentations': { minRole: 'student' },
+  '/ai-presentations': { minRole: 'student' },
   '/data-sharing': { minRole: 'student' },
-  '/help-forum': { minRole: 'student' },
   '/conferences': { minRole: 'student' },
-  '/calculator-hub': { minRole: 'student' },
-  '/reference-library': { minRole: 'student' },
   '/data-analytics': { minRole: 'student' },
-  '/research-assistant': { minRole: 'student' },
-  '/molecular-biology': { minRole: 'student' },
-  '/bioinformatics-tools': { minRole: 'student' },
 } as const;
 
 // Check if user can access a specific route

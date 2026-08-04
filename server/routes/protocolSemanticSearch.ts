@@ -21,7 +21,7 @@ router.post('/semantic', authenticateToken, async (req: any, res) => {
       return res.status(400).json({ error: 'Search query is required' });
     }
 
-    // For now, use PostgreSQL full-text search with semantic hints
+    // For now, use MySQL text search with semantic hints
     // In production, integrate with vector database (Pinecone, Weaviate, etc.)
     
     // Enhanced search using multiple strategies

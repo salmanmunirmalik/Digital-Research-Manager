@@ -1,12 +1,7 @@
-/**
- * Lab Workspace Page
- * ClickUp-inspired task management system for lab management
- */
-
 import React, { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
-import LabWorkspaceSidebar from '../components/LabWorkspaceSidebar';
 import TaskListView from '../components/TaskListView';
 import TaskBoardView from '../components/TaskBoardView';
 import TaskCalendarView from '../components/TaskCalendarView';
@@ -15,10 +10,8 @@ import TaskForm from '../components/TaskForm';
 import ViewSwitcher, { ViewType } from '../components/ViewSwitcher';
 import FilterBar, { FilterConfig } from '../components/FilterBar';
 import TeamMembersView from '../components/TeamMembersView';
-import DirectMessagingView from '../components/DirectMessagingView';
 import ProjectsView from '../components/ProjectsView';
-import InventoryView from '../components/InventoryView';
-import InstrumentsView from '../components/InstrumentsView';
+import LabResourcesView from '../components/LabResourcesView';
 import LabWorkspaceInventoryForm from '../components/LabWorkspaceInventoryForm';
 import LabWorkspaceInstrumentForm from '../components/LabWorkspaceInstrumentForm';
 import LabWorkspaceProjectForm from '../components/LabWorkspaceProjectForm';
@@ -28,7 +21,55 @@ import LabWorkspaceMaintenanceForm from '../components/LabWorkspaceMaintenanceFo
 import InventoryTransactionForm from '../components/InventoryTransactionForm';
 import InstrumentRosterView from '../components/InstrumentRosterView';
 import InstrumentRosterForm from '../components/InstrumentRosterForm';
-import { PlusIcon, UsersIcon, FolderIcon, BeakerIcon, WrenchScrewdriverIcon } from '../components/icons';
+import LabCreateModal from '../components/LabCreateModal';
+import LabShowcaseModal from '../components/LabShowcaseModal';
+import TeamMessagingPage from './TeamMessagingPage';
+import { notifyDashboardSync } from '../utils/dashboardSync';
+import DocumentImportModal from '../components/DocumentImportModal';
+import { smartParseProjectText } from '../utils/projectImport';
+import {
+  PlusIcon,
+  UsersIcon,
+  FolderIcon,
+  ClipboardListIcon,
+  CubeIcon,
+  GlobeAltIcon,
+  DocumentArrowUpIcon,
+} from '../components/icons';
+
+const ACTIVE_LAB_KEY = 'lab-workspace-active-lab';
+const EmbeddedMessaging = TeamMessagingPage as React.ComponentType<{ embedded?: boolean }>;
+
+const getAuthToken = () =>
+  localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+
+const authHeaders = () => ({ Authorization: `Bearer ${getAuthToken()}` });
+
+type LabSection = 'tasks' | 'projects' | 'resources' | 'teams';
+
+type TeamTab = 'members' | 'messages';
+
+type TaskFocus = 'all' | 'mine' | 'unassigned' | 'person';
+
+const SECTIONS: { id: LabSection; label: string; icon: React.FC<React.SVGProps<SVGSVGElement>> }[] = [
+  { id: 'tasks', label: 'Tasks', icon: ClipboardListIcon },
+  { id: 'projects', label: 'Projects', icon: FolderIcon },
+  { id: 'resources', label: 'Resources', icon: CubeIcon },
+  { id: 'teams', label: 'Team', icon: UsersIcon },
+];
+
+const LEGACY_SECTIONS: Record<string, LabSection> = {
+  experiments: 'tasks',
+  inventory: 'resources',
+  instruments: 'resources',
+};
+
+const isLabSection = (value: string | null): value is LabSection =>
+  !!value && SECTIONS.some((s) => s.id === value);
+
+const isTeamTab = (value: string | null): value is TeamTab =>
+  value === 'members' || value === 'messages';
+
 
 interface Workspace {
   id: string;
@@ -78,6 +119,7 @@ interface Task {
   tags?: string[];
   list_id?: string;
   space_id?: string;
+  protocol_id?: string | null;
 }
 
 interface Subtask {
@@ -102,31 +144,87 @@ interface Assignee {
 
 const LabWorkspacePage: React.FC = () => {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [assignees, setAssignees] = useState<Assignee[]>([]);
   
-  const [activeSection, setActiveSection] = useState<'teams' | 'projects' | 'tasks' | 'inventory' | 'instruments'>('teams');
-  const [showDirectMessaging, setShowDirectMessaging] = useState(false);
+  const [activeSection, setActiveSection] = useState<LabSection>(() => {
+    const section = searchParams.get('section');
+    if (section === 'messaging') return 'teams';
+    if (section && LEGACY_SECTIONS[section]) return LEGACY_SECTIONS[section];
+    return isLabSection(section) ? section : 'tasks';
+  });
+  const [teamTab, setTeamTab] = useState<TeamTab>(() => {
+    if (searchParams.get('section') === 'messaging') return 'messages';
+    const tab = searchParams.get('tab');
+    return isTeamTab(tab) ? tab : 'members';
+  });
+  const [taskFocus, setTaskFocus] = useState<TaskFocus>('all');
+  const [focusPersonId, setFocusPersonId] = useState<string>('');
+
+  useEffect(() => {
+    const section = searchParams.get('section');
+    if (section === 'messaging') {
+      const next = new URLSearchParams(searchParams);
+      next.set('section', 'teams');
+      next.set('tab', 'messages');
+      setSearchParams(next, { replace: true });
+      setActiveSection('teams');
+      setTeamTab('messages');
+      return;
+    }
+    if (section && LEGACY_SECTIONS[section]) {
+      const mapped = LEGACY_SECTIONS[section];
+      const next = new URLSearchParams(searchParams);
+      next.set('section', mapped);
+      setSearchParams(next, { replace: true });
+      if (mapped !== activeSection) setActiveSection(mapped);
+      return;
+    }
+    if (isLabSection(section) && section !== activeSection) {
+      setActiveSection(section);
+    }
+    if (section === 'teams') {
+      const tab = searchParams.get('tab');
+      if (isTeamTab(tab) && tab !== teamTab) {
+        setTeamTab(tab);
+      }
+    }
+  }, [searchParams]);
+
+  const switchSection = (section: LabSection) => {
+    setActiveSection(section);
+    const next = new URLSearchParams(searchParams);
+    next.set('section', section);
+    if (section === 'teams') {
+      next.set('tab', teamTab);
+    } else {
+      next.delete('tab');
+    }
+    setSearchParams(next, { replace: true });
+  };
+
+  const switchTeamTab = (tab: TeamTab) => {
+    setTeamTab(tab);
+    setActiveSection('teams');
+    const next = new URLSearchParams(searchParams);
+    next.set('section', 'teams');
+    next.set('tab', tab);
+    setSearchParams(next, { replace: true });
+  };
   const [currentView, setCurrentView] = useState<ViewType>('list');
   const [filters, setFilters] = useState<FilterConfig>({});
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showTaskForm, setShowTaskForm] = useState(false);
-  const [showSpaceForm, setShowSpaceForm] = useState(false);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [instruments, setInstruments] = useState<any[]>([]);
   
-  const [selectedSpaceId, setSelectedSpaceId] = useState<string | undefined>();
-  const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>();
-  const [selectedListId, setSelectedListId] = useState<string | undefined>();
-  
-  const [loading, setLoading] = useState(true);
-  const [taskFormListId, setTaskFormListId] = useState<string>('');
-  
+  const [loading, setLoading] = useState(true); 
   // Inventory form state
   const [showInventoryForm, setShowInventoryForm] = useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<any | null>(null);
@@ -137,12 +235,19 @@ const LabWorkspacePage: React.FC = () => {
   
   // Project form state
   const [showProjectForm, setShowProjectForm] = useState(false);
+  const [showProjectImport, setShowProjectImport] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
   
   // Team member form state
   const [showTeamMemberForm, setShowTeamMemberForm] = useState(false);
   const [selectedTeamMember, setSelectedTeamMember] = useState<any | null>(null);
-  const [labId, setLabId] = useState<string | null>(null);
+  const [labId, setLabId] = useState<string | null>(
+    () => localStorage.getItem(ACTIVE_LAB_KEY) || null
+  );
+  const [myLabs, setMyLabs] = useState<any[]>([]);
+  const [showCreateLab, setShowCreateLab] = useState(false);
+  const [showShowcase, setShowShowcase] = useState(false);
+  const [showcaseLab, setShowcaseLab] = useState<any | null>(null);
   
   // Instrument booking and maintenance state
   const [showBookingForm, setShowBookingForm] = useState(false);
@@ -160,10 +265,10 @@ const LabWorkspacePage: React.FC = () => {
   const [showRosterForm, setShowRosterForm] = useState(false);
   const [selectedInstrumentForRoster, setSelectedInstrumentForRoster] = useState<any | null>(null);
 
-  // Fetch workspace data
+  // Fetch workspace data when active lab changes
   useEffect(() => {
     fetchWorkspace();
-  }, []);
+  }, [labId]);
 
   // Fetch data when workspace is loaded
   useEffect(() => {
@@ -171,12 +276,24 @@ const LabWorkspacePage: React.FC = () => {
       fetchProjects();
       fetchInventory();
       fetchInstruments();
+      fetchTeamMembers();
     }
   }, [workspace]);
 
+  const activeLab = myLabs.find((l) => l.id === labId) || myLabs[0] || null;
+  const canManageShowcase =
+    activeLab &&
+    ['principal_researcher', 'admin'].includes(activeLab.membership_role || '');
+
+  const switchLab = (nextLabId: string) => {
+    if (!nextLabId || nextLabId === labId) return;
+    localStorage.setItem(ACTIVE_LAB_KEY, nextLabId);
+    setLabId(nextLabId);
+    setSelectedTask(null);
+  };
   const fetchInventory = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       let labId: string | null = null;
       
       if (workspace && (workspace as any).lab_id) {
@@ -209,7 +326,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const fetchInstruments = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       let labId: string | null = null;
       
       if (workspace && (workspace as any).lab_id) {
@@ -240,13 +357,12 @@ const LabWorkspacePage: React.FC = () => {
     }
   };
 
-  // Fetch tasks when filters or selection changes
+  // Fetch tasks when filters or focus changes
   useEffect(() => {
     if (workspace) {
       fetchTasks();
     }
-  }, [workspace, filters, selectedSpaceId, selectedListId, currentView]);
-
+  }, [workspace, filters, currentView, taskFocus, focusPersonId]);
   // Fetch task details when selected
   useEffect(() => {
     if (selectedTask) {
@@ -260,7 +376,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const fetchFullTask = async (taskId: string) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await axios.get(`/api/lab-workspace/tasks/${taskId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -277,33 +393,28 @@ const LabWorkspacePage: React.FC = () => {
   const fetchWorkspace = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
+      const params: Record<string, string> = {};
+      if (labId) params.lab_id = labId;
       const response = await axios.get('/api/lab-workspace', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        params,
       });
-      
+
       const workspaceData = response.data.workspace;
-      setWorkspace(workspaceData);
-      
-      // Auto-select first space/list if available
-      if (workspaceData?.spaces && workspaceData.spaces.length > 0) {
-        const firstSpace = workspaceData.spaces[0];
-        setSelectedSpaceId(firstSpace.id);
-        
-        // Find first list
-        const firstList = firstSpace.lists?.[0] || 
-                         firstSpace.folders?.[0]?.lists?.[0];
-        if (firstList) {
-          setSelectedListId(firstList.id);
-        }
-      } else if (workspaceData && (!workspaceData.spaces || workspaceData.spaces.length === 0)) {
-        // If workspace exists but has no spaces, refresh to get the default space
-        setTimeout(() => fetchWorkspace(), 500);
+      const labs = response.data.labs || [];
+      const activeId = response.data.activeLabId || workspaceData?.lab_id || null;
+      setMyLabs(labs);
+      if (activeId && activeId !== labId) {
+        setLabId(activeId);
+        localStorage.setItem(ACTIVE_LAB_KEY, activeId);
+      } else if (activeId) {
+        localStorage.setItem(ACTIVE_LAB_KEY, activeId);
       }
+      setWorkspace(workspaceData);
     } catch (error: any) {
       console.error('Error fetching workspace:', error);
       if (error.response?.status === 404) {
-        // User not in a lab - this is expected for some users
         setWorkspace(null);
       }
     } finally {
@@ -313,17 +424,26 @@ const LabWorkspacePage: React.FC = () => {
 
   const fetchTasks = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const params: any = {
-        workspace_id: workspace?.id
+        workspace_id: workspace?.id,
+        sort_by: 'due_date',
+        sort_order: 'ASC',
       };
 
-      if (selectedSpaceId) params.space_id = selectedSpaceId;
-      if (selectedListId) params.list_id = selectedListId;
       if (filters.status) params.status = filters.status.join(',');
       if (filters.priority) params.priority = filters.priority.join(',');
-      if (filters.assignee_id) params.assignee_id = filters.assignee_id.join(',');
       if (filters.search) params.search = filters.search;
+
+      if (taskFocus === 'mine') {
+        params.mine = '1';
+      } else if (taskFocus === 'unassigned') {
+        params.unassigned = '1';
+      } else if (taskFocus === 'person' && focusPersonId) {
+        params.assignee_id = focusPersonId;
+      } else if (filters.assignee_id) {
+        params.assignee_id = filters.assignee_id.join(',');
+      }
 
       let endpoint = '/api/lab-workspace/tasks';
       if (currentView === 'board') {
@@ -338,7 +458,6 @@ const LabWorkspacePage: React.FC = () => {
       });
 
       if (currentView === 'board' && response.data.board) {
-        // Flatten board structure
         const allTasks: Task[] = [];
         Object.values(response.data.board).forEach((columnTasks: any) => {
           allTasks.push(...columnTasks);
@@ -355,7 +474,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const fetchTaskDetails = async (taskId: string) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       
       // Fetch subtasks
       const subtasksResponse = await axios.get(`/api/lab-workspace/tasks/${taskId}/subtasks`, {
@@ -376,7 +495,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const fetchAssignees = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       // Fetch lab members as potential assignees
       const response = await axios.get('/api/labs/members', {
         headers: { Authorization: `Bearer ${token}` }
@@ -403,7 +522,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const fetchProjects = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       let labId: string | null = null;
       
       // Try to get lab_id from workspace
@@ -438,31 +557,35 @@ const LabWorkspacePage: React.FC = () => {
 
   const fetchTeamMembers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      // Fetch lab members
-      const response = await axios.get('/api/labs/members', {
-        headers: { Authorization: `Bearer ${token}` }
-      }).catch(() => ({ data: { members: [] } }));
-      
+      const token = getAuthToken();
+      const active = labId || (workspace as any)?.lab_id;
+      const response = await axios
+        .get('/api/labs/members', {
+          headers: { Authorization: `Bearer ${token}` },
+          params: active ? { lab_id: active } : undefined,
+        })
+        .catch(() => ({ data: { members: [] } }));
+
       const members = response.data.members || [];
-      setTeamMembers(members.map((m: any) => ({
-        id: m.user_id || m.id,
-        user_id: m.user_id || m.id,
-        name: `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.name || 'Unknown',
-        email: m.email || '',
-        role: m.role || m.position_title || '',
-        status: m.is_active ? 'active' : 'inactive',
-        avatar_url: m.avatar_url,
-        team: 'Lab Team',
-        account_type: m.role || 'Member',
-        first_name: m.first_name,
-        last_name: m.last_name,
-        permissions: m.permissions
-      })));
-      
-      // Extract lab_id from response if available
-      if (response.data.lab?.id) {
-        setLabId(response.data.lab.id);
+      setTeamMembers(
+        members.map((m: any) => ({
+          id: m.user_id || m.id,
+          user_id: m.user_id || m.id,
+          name: `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.name || 'Unknown',
+          email: m.email || '',
+          role: m.role || m.position_title || '',
+          status: m.is_active ? 'active' : 'inactive',
+          avatar_url: m.avatar_url,
+          team: 'Lab Team',
+          account_type: m.role || 'Member',
+          first_name: m.first_name,
+          last_name: m.last_name,
+          permissions: m.permissions,
+        }))
+      );
+
+      if (response.data.lab_id) {
+        setLabId(response.data.lab_id);
       } else if (workspace && (workspace as any).lab_id) {
         setLabId((workspace as any).lab_id);
       }
@@ -474,13 +597,14 @@ const LabWorkspacePage: React.FC = () => {
 
   const handleCreateTask = async (taskData: any) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       await axios.post('/api/lab-workspace/tasks', taskData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       await fetchTasks();
       await fetchWorkspace(); // Refresh workspace to update counts
       setShowTaskForm(false);
+      notifyDashboardSync('lab-workspace');
     } catch (error: any) {
       console.error('Error creating task:', error);
       const errorMessage = error.response?.data?.error || error.message || 'Failed to create task';
@@ -490,7 +614,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const handleUpdateTask = async (taskId: string, updates: Partial<Task>) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       await axios.put(`/api/lab-workspace/tasks/${taskId}`, updates, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -501,6 +625,7 @@ const LabWorkspacePage: React.FC = () => {
         setSelectedTask({ ...selectedTask, ...updates });
       }
       fetchWorkspace(); // Refresh counts
+      notifyDashboardSync('lab-workspace');
     } catch (error) {
       console.error('Error updating task:', error);
       alert('Failed to update task');
@@ -511,7 +636,7 @@ const LabWorkspacePage: React.FC = () => {
     if (!confirm('Are you sure you want to delete this task?')) return;
     
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       await axios.delete(`/api/lab-workspace/tasks/${taskId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -519,6 +644,7 @@ const LabWorkspacePage: React.FC = () => {
       setTasks(tasks.filter(t => t.id !== taskId));
       setSelectedTask(null);
       fetchWorkspace();
+      notifyDashboardSync('lab-workspace');
     } catch (error) {
       console.error('Error deleting task:', error);
       alert('Failed to delete task');
@@ -527,7 +653,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const handleAddSubtask = async (taskId: string, title: string) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await axios.post(`/api/lab-workspace/tasks/${taskId}/subtasks`, {
         title
       }, {
@@ -543,7 +669,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const handleToggleSubtask = async (subtaskId: string) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const subtask = subtasks.find(s => s.id === subtaskId);
       if (!subtask) return;
 
@@ -567,7 +693,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const handleAddComment = async (taskId: string, content: string) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await axios.post(`/api/lab-workspace/tasks/${taskId}/comments`, {
         content
       }, {
@@ -580,39 +706,13 @@ const LabWorkspacePage: React.FC = () => {
     }
   };
 
-  const handleCreateSpace = async () => {
-    const name = prompt('Enter space name:');
-    if (!name) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post('/api/lab-workspace/spaces', {
-        name,
-        workspace_id: workspace?.id
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      await fetchWorkspace();
-    } catch (error: any) {
-      console.error('Error creating space:', error);
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to create space';
-      alert(errorMessage);
-    }
-  };
-
-  const handleListSelect = (listId: string) => {
-    setSelectedListId(listId);
-    setTaskFormListId(listId);
-  };
-
-  const handleOpenTaskForm = (status?: string) => {
-    // Always allow opening the form - it will handle list selection/creation
+  const handleOpenTaskForm = () => {
     setShowTaskForm(true);
   };
 
   const handleCreateInventoryItem = async (itemData: any) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await axios.post('/api/inventory', itemData, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -626,7 +726,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const handleUpdateInventoryItem = async (itemId: string, itemData: any) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await axios.put(`/api/inventory/${itemId}`, itemData, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -642,7 +742,7 @@ const LabWorkspacePage: React.FC = () => {
     if (!confirm('Are you sure you want to delete this inventory item?')) return;
     
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       await axios.delete(`/api/inventory/${itemId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -677,7 +777,7 @@ const LabWorkspacePage: React.FC = () => {
     if (!selectedItemForTransaction) return;
 
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       await axios.post(`/api/inventory/${selectedItemForTransaction.id}/transactions`, transactionData, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -703,7 +803,7 @@ const LabWorkspacePage: React.FC = () => {
     if (!selectedInstrumentForRoster) return;
 
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       await axios.post(`/api/instruments/${selectedInstrumentForRoster.id}/roster`, rosterData, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -727,7 +827,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const handleAcknowledgeInstrumentAlert = async (alertId: string) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       await axios.post(`/api/instruments/alerts/${alertId}/acknowledge`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -738,7 +838,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const handleCreateInstrument = async (instrumentData: any) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await axios.post('/api/instruments', instrumentData, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -752,7 +852,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const handleUpdateInstrument = async (instrumentId: string, instrumentData: any) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await axios.put(`/api/instruments/${instrumentId}`, instrumentData, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -768,7 +868,7 @@ const LabWorkspacePage: React.FC = () => {
     if (!confirm('Are you sure you want to delete this instrument?')) return;
     
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       await axios.delete(`/api/instruments/${instrumentId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -796,7 +896,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const fetchInstrumentBookings = async (instrumentId: string) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await axios.get(`/api/instruments/${instrumentId}/bookings`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -809,7 +909,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const handleCreateBooking = async (bookingData: any) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       if (!selectedInstrumentForBooking) {
         throw new Error('No instrument selected');
       }
@@ -827,7 +927,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const handleScheduleMaintenance = async (maintenanceData: any) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       if (!selectedInstrumentForMaintenance) {
         throw new Error('No instrument selected');
       }
@@ -874,7 +974,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const handleCreateProject = async (projectData: any) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await axios.post('/api/project-management/projects', projectData, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -888,7 +988,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const handleUpdateProject = async (projectId: string, projectData: any) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await axios.put(`/api/project-management/projects/${projectId}`, projectData, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -904,7 +1004,7 @@ const LabWorkspacePage: React.FC = () => {
     if (!confirm('Are you sure you want to delete this project?')) return;
     
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       await axios.delete(`/api/project-management/projects/${projectId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -921,7 +1021,7 @@ const LabWorkspacePage: React.FC = () => {
   };
 
   const handleProjectSubmit = async (projectData: any) => {
-    if (selectedProject) {
+    if (selectedProject?.id) {
       await handleUpdateProject(selectedProject.id, projectData);
     } else {
       await handleCreateProject(projectData);
@@ -932,7 +1032,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const handleCreateTeamMember = async (memberData: any) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       if (!labId) {
         throw new Error('Lab ID is required');
       }
@@ -950,7 +1050,7 @@ const LabWorkspacePage: React.FC = () => {
 
   const handleUpdateTeamMember = async (userId: string, memberData: any) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       if (!labId) {
         throw new Error('Lab ID is required');
       }
@@ -970,7 +1070,7 @@ const LabWorkspacePage: React.FC = () => {
     if (!confirm('Are you sure you want to remove this team member?')) return;
     
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       if (!labId) {
         throw new Error('Lab ID is required');
       }
@@ -1001,222 +1101,264 @@ const LabWorkspacePage: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Top Bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-2xl font-bold text-gray-900">Lab Workspace</h1>
-          {activeSection === 'teams' ? (
+    <div className="min-h-[calc(100vh-4rem)] flex flex-col bg-[#FAFBFC]">
+      {/* Header */}
+      <div className="bg-white border-b border-slate-200/80 px-6 pt-5 pb-0">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
+              Lab workspace
+            </h1>
+            <p className="mt-1.5 text-[14px] text-slate-600">
+              Run one or more labs from here. Showcase a lab when you want it discoverable on{' '}
+              <Link to="/collaboration-networking" className="font-medium text-slate-800 underline-offset-2 hover:underline">
+                Networking
+              </Link>
+              .
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <label className="text-[12px] font-medium text-slate-500">
+                Active lab
+                <select
+                  className="ml-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-[13px] text-slate-800"
+                  value={labId || ''}
+                  onChange={(e) => switchLab(e.target.value)}
+                >
+                  {myLabs.length === 0 && <option value="">Loading…</option>}
+                  {myLabs.map((lab) => (
+                    <option key={lab.id} value={lab.id}>
+                      {lab.name}
+                      {Number(lab.is_showcased) ? ' · Live' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {activeLab && (
+                <span
+                  className={`text-[11px] font-medium px-2 py-0.5 rounded-md ${
+                    Number(activeLab.is_showcased)
+                      ? 'bg-emerald-50 text-emerald-800'
+                      : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {Number(activeLab.is_showcased) ? 'Live on Networking' : 'Private workspace'}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
             <button
-              onClick={() => handleOpenTeamMemberForm()}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              type="button"
+              onClick={() => setShowCreateLab(true)}
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-slate-800 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
             >
-              <PlusIcon className="w-5 h-5" />
-              Add Member
+              <PlusIcon className="w-4 h-4" />
+              Create lab
             </button>
-          ) : activeSection === 'tasks' ? (
-            <button
-              onClick={() => handleOpenTaskForm()}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <PlusIcon className="w-5 h-5" />
-              New Task
-            </button>
-          ) : activeSection === 'projects' ? (
-            <button
-              onClick={() => handleOpenProjectForm()}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <PlusIcon className="w-5 h-5" />
-              New Project
-            </button>
-          ) : activeSection === 'inventory' ? (
-            <button
-              onClick={() => handleOpenInventoryForm()}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <PlusIcon className="w-5 h-5" />
-              Add Item
-            </button>
-          ) : activeSection === 'instruments' ? (
-            <button
-              onClick={() => {
-                // TODO: Implement instrument creation
-                alert('Instrument creation coming soon');
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <PlusIcon className="w-5 h-5" />
-              Add Instrument
-            </button>
-          ) : (
-            <button
-              onClick={() => {/* TODO: Implement invite */}}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <PlusIcon className="w-5 h-5" />
-              Invite
-            </button>
-          )}
+            {canManageShowcase && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowcaseLab(activeLab);
+                  setShowShowcase(true);
+                }}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+              >
+                <GlobeAltIcon className="w-4 h-4" />
+                {Number(activeLab?.is_showcased) ? 'Edit showcase' : 'Showcase on Networking'}
+              </button>
+            )}
+            {activeSection === 'tasks' && (
+              <button
+                type="button"
+                onClick={() => handleOpenTaskForm()}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+              >
+                <PlusIcon className="w-4 h-4" />
+                New task
+              </button>
+            )}
+            {activeSection === 'teams' && teamTab === 'members' && (
+              <button
+                type="button"
+                onClick={() => handleOpenTeamMemberForm()}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+              >
+                <PlusIcon className="w-4 h-4" />
+                Add member
+              </button>
+            )}
+            {activeSection === 'projects' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowProjectImport(true)}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-slate-800 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
+                >
+                  <DocumentArrowUpIcon className="w-4 h-4" />
+                  Import
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenProjectForm()}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  New project
+                </button>
+              </>
+            )}
+          </div>
         </div>
-        
-        {/* Section Tabs */}
-        <div className="flex items-center gap-1 border-b border-gray-200">
-          <button
-            onClick={() => setActiveSection('teams')}
-            className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-              activeSection === 'teams'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <UsersIcon className="w-4 h-4" />
-            Teams
-          </button>
-          <button
-            onClick={() => setActiveSection('projects')}
-            className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-              activeSection === 'projects'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <FolderIcon className="w-4 h-4" />
-            Projects
-          </button>
-          <button
-            onClick={() => setActiveSection('tasks')}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
-              activeSection === 'tasks'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Tasks
-          </button>
-          <button
-            onClick={() => setActiveSection('inventory')}
-            className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-              activeSection === 'inventory'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <BeakerIcon className="w-4 h-4" />
-            Inventory
-          </button>
-          <button
-            onClick={() => setActiveSection('instruments')}
-            className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-              activeSection === 'instruments'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <WrenchScrewdriverIcon className="w-4 h-4" />
-            Instruments
-          </button>
+        <div className="flex gap-1 overflow-x-auto">
+          {SECTIONS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => switchSection(id)}
+              className={`relative px-4 py-2.5 text-[13px] font-medium transition-colors inline-flex items-center gap-2 whitespace-nowrap ${
+                activeSection === id
+                  ? 'text-slate-900'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+              {activeSection === id && (
+                <span className="absolute left-2 right-2 -bottom-px h-0.5 bg-slate-900 rounded-full" />
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Filter Bar - Only show for tasks */}
+      {!workspace && !loading && (
+        <div className="mx-6 mt-6 bg-white border border-slate-200/80 rounded-xl p-8 text-center">
+          <h2 className="text-[15px] font-semibold text-slate-900 mb-2">Setting up your lab workspace</h2>
+          <p className="text-[13px] text-slate-500 max-w-md mx-auto">
+            We could not load your workspace yet. Refresh the page, or check that you are signed in.
+            A personal lab is created automatically on first visit.
+          </p>
+        </div>
+      )}
+
+      {/* Assignment focus + filters - tasks only */}
       {activeSection === 'tasks' && (
-        <FilterBar
-          filters={filters}
-          onFiltersChange={setFilters}
-          assignees={assignees}
-        />
+        <div className="px-6 py-3 border-b border-slate-200/80 bg-white space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mr-1">
+              Focus
+            </span>
+            {(
+              [
+                { id: 'all' as const, label: 'Everyone' },
+                { id: 'mine' as const, label: 'Assigned to me' },
+                { id: 'unassigned' as const, label: 'Unassigned pool' },
+                { id: 'person' as const, label: 'By person' },
+              ] as const
+            ).map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setTaskFocus(f.id)}
+                className={`px-3 py-1.5 text-[12px] font-medium rounded-full transition-colors ${
+                  taskFocus === f.id
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+            {taskFocus === 'person' && (
+              <select
+                value={focusPersonId}
+                onChange={(e) => setFocusPersonId(e.target.value)}
+                className="ml-1 px-2.5 py-1.5 text-[12px] border border-slate-200 rounded-md bg-white"
+              >
+                <option value="">Select teammate…</option>
+                {assignees.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <div className="ml-auto text-[12px] text-slate-500">
+              {tasks.length} task{tasks.length === 1 ? '' : 's'}
+            </div>
+          </div>
+          <FilterBar
+            filters={filters}
+            onFiltersChange={setFilters}
+            assignees={assignees}
+          />
+        </div>
       )}
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar - Only show for tasks */}
-        {activeSection === 'tasks' && (
-          <LabWorkspaceSidebar
-          workspace={workspace}
-          selectedSpaceId={selectedSpaceId}
-          selectedFolderId={selectedFolderId}
-          selectedListId={selectedListId}
-          onSpaceSelect={setSelectedSpaceId}
-          onFolderSelect={setSelectedFolderId}
-          onListSelect={handleListSelect}
-          onCreateSpace={handleCreateSpace}
-          onCreateFolder={(spaceId) => {
-            const name = prompt('Enter folder name:');
-            if (!name) return;
-            const token = localStorage.getItem('token');
-            axios.post('/api/lab-workspace/folders', {
-              name,
-              space_id: spaceId
-            }, {
-              headers: { Authorization: `Bearer ${token}` }
-            })
-            .then(() => fetchWorkspace())
-            .catch(error => {
-              console.error('Error creating folder:', error);
-              alert('Failed to create folder');
-            });
-          }}
-          onCreateList={(spaceId, folderId) => {
-            const name = prompt('Enter list name:');
-            if (!name) return;
-            const token = localStorage.getItem('token');
-            axios.post('/api/lab-workspace/lists', {
-              name,
-              space_id: spaceId,
-              folder_id: folderId
-            }, {
-              headers: { Authorization: `Bearer ${token}` }
-            })
-            .then(() => {
-              fetchWorkspace();
-            })
-            .catch(error => {
-              console.error('Error creating list:', error);
-              const errorMessage = error.response?.data?.error || error.message || 'Failed to create list';
-              alert(errorMessage);
-            });
-          }}
-          loading={loading}
-          />
-        )}
-
         {/* Main View Area */}
         <div className="flex-1 flex overflow-hidden">
-          {activeSection === 'teams' && showDirectMessaging ? (
-            <DirectMessagingView
-              teamMembers={teamMembers}
-              onBack={() => setShowDirectMessaging(false)}
-            />
-          ) : activeSection === 'teams' ? (
-            <TeamMembersView
-              members={teamMembers}
-              onInvite={() => handleOpenTeamMemberForm()}
-              onEdit={(member) => handleOpenTeamMemberForm(member)}
-              onDelete={(member) => handleDeleteTeamMember(member.user_id || member.id)}
-              onMessage={() => setShowDirectMessaging(true)}
-              loading={loading}
-            />
+          {activeSection === 'teams' ? (
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0 bg-white">
+              <div className="px-6 py-3 border-b border-slate-200/80 flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => switchTeamTab('members')}
+                  className={`px-3 py-1.5 text-[13px] font-medium rounded-md transition-colors ${
+                    teamTab === 'members'
+                      ? 'bg-slate-900 text-white'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  Members
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchTeamTab('messages')}
+                  className={`px-3 py-1.5 text-[13px] font-medium rounded-md transition-colors ${
+                    teamTab === 'messages'
+                      ? 'bg-slate-900 text-white'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  Messages
+                </button>
+              </div>
+              {teamTab === 'messages' ? (
+                <div className="flex-1 overflow-hidden min-h-0">
+                  <EmbeddedMessaging embedded />
+                </div>
+              ) : (
+                <TeamMembersView
+                  members={teamMembers}
+                  onInvite={() => handleOpenTeamMemberForm()}
+                  onEdit={(member) => handleOpenTeamMemberForm(member)}
+                  onDelete={(member) => handleDeleteTeamMember(member.user_id || member.id)}
+                  onMessage={() => switchTeamTab('messages')}
+                  loading={loading}
+                />
+              )}
+            </div>
           ) : activeSection === 'projects' ? (
             <ProjectsView
               projects={projects}
               onCreateProject={() => handleOpenProjectForm()}
+              onImportProject={() => setShowProjectImport(true)}
               onProjectClick={(project) => handleOpenProjectForm(project)}
+              onDeleteProject={(project) => handleDeleteProject(project.id)}
               loading={loading}
             />
-          ) : activeSection === 'inventory' ? (
-            <InventoryView
-              items={inventoryItems}
-              onCreateItem={() => handleOpenInventoryForm()}
-              onItemClick={(item) => handleOpenInventoryForm(item)}
-              onTransaction={(item) => handleOpenTransactionForm(item)}
-              loading={loading}
-            />
-          ) : activeSection === 'instruments' ? (
-            <InstrumentsView
+          ) : activeSection === 'resources' ? (
+            <LabResourcesView
+              inventory={inventoryItems}
               instruments={instruments}
-              onCreateInstrument={() => handleOpenInstrumentForm()}
-              onInstrumentClick={(instrument) => handleOpenInstrumentForm(instrument)}
+              onCreateConsumable={() => handleOpenInventoryForm()}
+              onCreateEquipment={() => handleOpenInstrumentForm()}
+              onConsumableClick={(item) => handleOpenInventoryForm(item)}
+              onEquipmentClick={(instrument) => handleOpenInstrumentForm(instrument)}
+              onTransaction={(item) => handleOpenTransactionForm(item)}
               onBookInstrument={(instrument) => handleOpenBookingForm(instrument)}
               onScheduleMaintenance={(instrument) => handleOpenMaintenanceForm(instrument)}
               onViewRoster={(instrument) => handleOpenRosterView(instrument)}
@@ -1225,15 +1367,17 @@ const LabWorkspacePage: React.FC = () => {
           ) : (
             <>
               <div className="flex-1 overflow-y-auto">
-                {/* View Switcher for Tasks */}
-                <div className="bg-white border-b border-gray-200 px-6 py-2 flex items-center justify-end">
+                <div className="bg-white border-b border-slate-200/80 px-6 py-2 flex items-center justify-between gap-3">
+                  <p className="text-[12px] text-slate-500 hidden sm:block">
+                    Assignment-first board - claim from the pool or hand work to a teammate.
+                  </p>
                   <ViewSwitcher currentView={currentView} onViewChange={setCurrentView} />
                 </div>
                 
                 {currentView === 'list' && (
                   <TaskListView
                     tasks={tasks}
-                    groupBy={filters.status ? 'status' : undefined}
+                    groupBy={taskFocus === 'all' ? 'assignee' : undefined}
                     onTaskClick={setSelectedTask}
                     onCreateTask={() => handleOpenTaskForm()}
                     loading={loading}
@@ -1251,18 +1395,19 @@ const LabWorkspacePage: React.FC = () => {
                   <TaskCalendarView
                     tasks={tasks}
                     onTaskClick={setSelectedTask}
-                    onCreateTask={(date) => handleOpenTaskForm()}
+                    onCreateTask={() => handleOpenTaskForm()}
                     loading={loading}
                   />
                 )}
                 {currentView === 'table' && (
-                  <div className="p-4">
-                    <p className="text-gray-500">Table view coming soon</p>
+                  <div className="p-8 text-center">
+                    <p className="text-[13px] text-slate-500">
+                      Table view is not available yet. Use list or board instead.
+                    </p>
                   </div>
                 )}
               </div>
 
-              {/* Task Detail Panel */}
               {selectedTask && (
                 <TaskDetailPanel
                   task={selectedTask}
@@ -1287,27 +1432,9 @@ const LabWorkspacePage: React.FC = () => {
         isOpen={showTaskForm}
         onClose={() => setShowTaskForm(false)}
         onSubmit={handleCreateTask}
-        listId={taskFormListId || selectedListId}
-        spaceId={selectedSpaceId}
-        folderId={selectedFolderId}
         assignees={assignees}
-        workspace={workspace}
-        onCreateList={async (name: string, spaceId?: string, folderId?: string) => {
-          const token = localStorage.getItem('token');
-          const response = await axios.post('/api/lab-workspace/lists', {
-            name,
-            space_id: spaceId || selectedSpaceId,
-            folder_id: folderId || selectedFolderId
-          }, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          await fetchWorkspace();
-          const newListId = response.data.list?.id || response.data.id;
-          setSelectedListId(newListId);
-          setTaskFormListId(newListId);
-          return newListId;
-        }}
+        workspaceId={workspace?.id}
+        defaultAssigneeId={taskFocus === 'mine' ? (user?.id || '') : focusPersonId}
       />
 
       {/* Inventory Form Modal */}
@@ -1336,6 +1463,7 @@ const LabWorkspacePage: React.FC = () => {
 
       {/* Project Form Modal */}
       <LabWorkspaceProjectForm
+        key={selectedProject?.id || selectedProject?.project_title || 'new-project'}
         isOpen={showProjectForm}
         onClose={() => {
           setShowProjectForm(false);
@@ -1346,6 +1474,23 @@ const LabWorkspacePage: React.FC = () => {
         labId={workspace ? (workspace as any).lab_id : null}
         assignees={assignees}
       />
+
+      {showProjectImport && (
+        <DocumentImportModal
+          title="Import project brief"
+          subtitle="Upload a proposal or paste aims — we’ll draft the project title and description."
+          parseText={smartParseProjectText}
+          onCancel={() => setShowProjectImport(false)}
+          onParsed={(result) => {
+            setShowProjectImport(false);
+            setSelectedProject({
+              ...result.payload,
+              // mark as create (no id)
+            });
+            setShowProjectForm(true);
+          }}
+        />
+      )}
 
       {/* Team Member Form Modal */}
       <LabWorkspaceTeamMemberForm
@@ -1422,6 +1567,30 @@ const LabWorkspacePage: React.FC = () => {
           onSubmit={handleRosterSubmit}
         />
       )}
+
+      <LabCreateModal
+        open={showCreateLab}
+        onClose={() => setShowCreateLab(false)}
+        onCreated={(lab) => {
+          localStorage.setItem(ACTIVE_LAB_KEY, lab.id);
+          setLabId(lab.id);
+          setShowCreateLab(false);
+          setShowcaseLab(lab);
+          setShowShowcase(true);
+        }}
+      />
+
+      <LabShowcaseModal
+        open={showShowcase}
+        lab={showcaseLab}
+        onClose={() => {
+          setShowShowcase(false);
+          setShowcaseLab(null);
+        }}
+        onSaved={() => {
+          void fetchWorkspace();
+        }}
+      />
     </div>
   );
 };

@@ -1,87 +1,68 @@
-import { Pool, PoolConfig } from 'pg';
+import dotenv from 'dotenv';
+import mysql from 'mysql2/promise';
 
-const DEFAULT_MAX_CLIENTS = Number(process.env.DB_POOL_MAX || 20);
+dotenv.config({ path: '.env.local' });
+dotenv.config();
+
+const DEFAULT_POOL_MAX = Number(process.env.DB_POOL_MAX || 20);
 const DEFAULT_IDLE_TIMEOUT = Number(process.env.DB_IDLE_TIMEOUT || 30_000);
-const DEFAULT_CONNECTION_TIMEOUT = Number(process.env.DB_CONNECTION_TIMEOUT || 2_000);
+const DEFAULT_CONNECTION_TIMEOUT = Number(process.env.DB_CONNECTION_TIMEOUT || 10_000);
 
-function buildPoolConfig(): PoolConfig {
-  if (process.env.DATABASE_URL) {
-    const useSsl = process.env.DB_SSL === 'true' || process.env.NODE_ENV === 'production';
-    
-    // Use connectionString directly - pg library handles URL encoding automatically
-    // This is the most reliable approach for passwords with special characters
-    const config: PoolConfig = {
-      connectionString: process.env.DATABASE_URL,
-      max: DEFAULT_MAX_CLIENTS,
-      idleTimeoutMillis: DEFAULT_IDLE_TIMEOUT,
-      connectionTimeoutMillis: DEFAULT_CONNECTION_TIMEOUT,
+const buildMysqlConfig = () => {
+  if (process.env.MYSQL_URL) {
+    return {
+      uri: process.env.MYSQL_URL,
+      connectionLimit: DEFAULT_POOL_MAX,
+      connectTimeout: DEFAULT_CONNECTION_TIMEOUT
     };
-    
-    // Only add SSL if needed
-    if (useSsl) {
-      config.ssl = { rejectUnauthorized: false };
-    }
-    
-    return config;
   }
 
-  const host = process.env.DB_HOST || '127.0.0.1';
-  const port = Number(process.env.DB_PORT || 5432);
-  const database = process.env.DB_NAME || 'digital_research_manager';
-  const user = process.env.DB_USER || process.env.USER || 'postgres';
-  const password = process.env.DB_PASSWORD;
-
-  const config: PoolConfig = {
-    host,
-    port,
-    database,
-    user,
-    max: DEFAULT_MAX_CLIENTS,
-    idleTimeoutMillis: DEFAULT_IDLE_TIMEOUT,
-    connectionTimeoutMillis: DEFAULT_CONNECTION_TIMEOUT,
+  return {
+    host: process.env.MYSQL_HOST || '127.0.0.1',
+    port: Number(process.env.MYSQL_PORT || 3306),
+    database: process.env.MYSQL_DB || 'digital_research_manager',
+    user: process.env.MYSQL_USER || process.env.USER || 'root',
+    password: process.env.MYSQL_PASSWORD || '',
+    socketPath: process.env.MYSQL_SOCKET || undefined,
+    connectionLimit: DEFAULT_POOL_MAX,
+    connectTimeout: DEFAULT_CONNECTION_TIMEOUT,
+    idleTimeout: DEFAULT_IDLE_TIMEOUT
   };
+};
 
-  // PostgreSQL requires password to be a string, not undefined
-  // Only set password if it's explicitly provided (non-empty)
-  // If not provided, don't include it in config (PostgreSQL will use default auth)
-  if (password !== undefined && password !== null && String(password).trim() !== '') {
-    config.password = String(password);
-  } else if (password === undefined || password === null) {
-    // If password is not set, use empty string (PostgreSQL will use peer authentication)
-    // This prevents the "client password must be a string" error
-    config.password = '';
-  }
+const config = buildMysqlConfig();
+const pool = config.uri
+  ? mysql.createPool(config.uri)
+  : mysql.createPool(config);
 
-  return config;
-}
+const normalizeQuery = (text: string) => text.replace(/\$\d+/g, '?');
 
-// Build config
-const poolConfig = buildPoolConfig();
+const query = async (text: string, params: any[] = []): Promise<{ rows: any[] }> => {
+  const [rows] = await pool.query(normalizeQuery(text), params);
+  return { rows: rows as any[] };
+};
 
-// When using connectionString, we don't need to check password
-// When using individual fields, ensure password is a string
-if (!poolConfig.connectionString && poolConfig.password !== undefined) {
-  if (typeof poolConfig.password !== 'string') {
-    poolConfig.password = String(poolConfig.password || '');
-  }
-}
+const connect = async () => {
+  const connection = await pool.getConnection();
+  return {
+    query: async (text: string, params: any[] = []): Promise<{ rows: any[] }> => {
+      const [rows] = await connection.query(normalizeQuery(text), params);
+      return { rows: rows as any[] };
+    },
+    release: () => connection.release()
+  };
+};
 
-const pool = new Pool(poolConfig);
-
-// Test database connection
-pool.on('connect', () => {
-  console.log('✅ Connected to PostgreSQL database');
-});
-
-pool.on('error', (err) => {
-  console.error('❌ Database connection error:', err);
-});
-
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('🔄 Shutting down database connections...');
+const end = async () => {
   await pool.end();
-  process.exit(0);
+};
+
+pool.on('connection', () => {
+  console.log('✅ Connected to MySQL database');
 });
 
-export default pool;
+export default {
+  query,
+  connect,
+  end
+};

@@ -4,11 +4,11 @@ export const config = {
   backendUrl: process.env.BACKEND_URL || 'http://localhost:5002',
   statsServiceUrl: process.env.STATS_SERVICE_URL || 'http://localhost:5003',
   database: {
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || '5432',
-    database: process.env.DB_NAME || 'researchlab',
-    username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'password',
+    host: process.env.MYSQL_HOST || 'localhost',
+    port: process.env.MYSQL_PORT || '3306',
+    database: process.env.MYSQL_DB || 'researchlab',
+    username: process.env.MYSQL_USER || 'root',
+    password: process.env.MYSQL_PASSWORD || 'password',
   },
   testUser: {
     email: process.env.TEST_USER_EMAIL || 'test@example.com',
@@ -43,7 +43,6 @@ export const endpoints = {
   researchTools: '/api/research-tools',
   supplierMarketplace: '/api/supplier-marketplace',
   journalsDirectory: '/api/journals-directory',
-  researchAssistant: '/api/research-assistant',
   profile: '/api/profile',
   settings: '/api/settings',
   // Advanced Features

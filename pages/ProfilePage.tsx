@@ -1,774 +1,867 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
+import { getRoleDisplayName } from '../utils/roleAccess';
 import {
-  UserIcon,
-  AcademicCapIcon,
+  FireIcon,
+  LinkIcon,
+  PencilIcon,
   CheckCircleIcon,
+  ArrowRightIcon,
   PlusIcon,
   TrashIcon,
-  StarIcon,
-  BookOpenIcon,
-  TrophyIcon,
-  LinkIcon,
-  LightBulbIcon,
-  PencilIcon,
-  CalendarIcon,
-  GlobeAltIcon,
-  BriefcaseIcon,
-  BuildingOfficeIcon,
-  ArrowDownTrayIcon,
-  XMarkIcon,
-  AtSymbolIcon,
-  GlobeAltIcon as WorldIcon,
-  EnvelopeIcon,
-  SparklesIcon,
-  CpuChipIcon,
-  ChartBarIcon
-} from '@heroicons/react/24/outline';
+  HeartIcon,
+  UserPlusIcon,
+  UserMinusIcon,
+} from '../components/icons';
 
-interface Publication {
-  id: string;
-  title: string;
-  abstract?: string;
-  authors: string[];
-  journal?: string;
-  publication_date?: string;
-  doi?: string;
-  arxiv_id?: string;
-  keywords: string[];
-  research_domains: string[];
-  citation_count: number;
-  impact_factor?: number;
-}
+type ProfileTab = 'about' | 'openness' | 'transparency';
 
 interface ResearcherProfile {
   institution?: string;
   department?: string;
   position?: string;
-  research_interests: string[];
-  expertise_areas: string[];
-  research_domains: string[];
+  research_interests?: string[];
+  research_philosophy?: string;
   years_of_experience?: number;
-  h_index: number;
-  total_citations: number;
-  total_publications: number;
-  current_projects: string[];
-  previous_institutions: string[];
-  awards: string[];
-  grants: string[];
-  languages: string[];
   orcid_id?: string;
   google_scholar_id?: string;
   researchgate_id?: string;
   linkedin_url?: string;
-  twitter_handle?: string;
   lab_website?: string;
-  collaboration_preferences?: string;
-  research_philosophy?: string;
-  mentorship_style?: string;
 }
+
+interface Availability {
+  open_for_collaboration?: boolean;
+  currently_available?: boolean;
+  available_as_consultant?: boolean;
+  available_as_service_provider?: boolean;
+  available_for_workshops?: boolean;
+  available_as_keynote_speaker?: boolean;
+  availability_notes?: string;
+}
+
+interface TransparencyStats {
+  shared: number;
+  helpfulVotes: number;
+  savedVotes: number;
+  estimatedHoursSaved: number;
+  estimatedMoneySaved: number;
+}
+
+const authHeaders = () => {
+  const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+const asArray = (payload: unknown): any[] => {
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === 'object') {
+    const obj = payload as Record<string, unknown>;
+    for (const key of ['data', 'submissions', 'items']) {
+      if (Array.isArray(obj[key])) return obj[key] as any[];
+    }
+  }
+  return [];
+};
 
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'publications' | 'research' | 'social'>('overview');
-  const [loading, setLoading] = useState(false);
-  const [profile, setProfile] = useState<ResearcherProfile | null>(null);
-  const [publications, setPublications] = useState<Publication[]>([]);
-  const [showAddPublicationModal, setShowAddPublicationModal] = useState(false);
-  const [showImportORCIDModal, setShowImportORCIDModal] = useState(false);
-  const [orcidId, setOrcidId] = useState('');
-  const [editing, setEditing] = useState(false);
-  
-  // Form states
-  const [publicationForm, setPublicationForm] = useState({
-    title: '',
-    abstract: '',
-    thoughts: ''
+  const { userId: routeUserId } = useParams<{ userId?: string }>();
+  const viewingUserId = routeUserId || user?.id;
+  const isOwnProfile = !routeUserId || routeUserId === user?.id;
+
+  const [activeTab, setActiveTab] = useState<ProfileTab>('about');
+  const [loading, setLoading] = useState(true);
+  const [editingAbout, setEditingAbout] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
+
+  const [viewedUser, setViewedUser] = useState<{
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+    bio?: string;
+    position?: string;
+    institution?: string;
+    department?: string;
+    specialization?: string;
+    location?: string;
+    followersCount?: number;
+    followingCount?: number;
+    connectionsCount?: number;
+  } | null>(null);
+  const [relationship, setRelationship] = useState({
+    isFollowing: false,
+    isConnected: false,
+    connectionStatus: 'none' as 'none' | 'pending' | 'connected',
   });
 
-  const [researchInterests, setResearchInterests] = useState<string[]>([]);
+  const [profile, setProfile] = useState<ResearcherProfile>({});
+  const [interests, setInterests] = useState<string[]>([]);
   const [newInterest, setNewInterest] = useState('');
-  const [socialLinks, setSocialLinks] = useState({
+  const [availability, setAvailability] = useState<Availability>({
+    open_for_collaboration: true,
+    currently_available: true,
+  });
+  const [transparency, setTransparency] = useState<TransparencyStats>({
+    shared: 0,
+    helpfulVotes: 0,
+    savedVotes: 0,
+    estimatedHoursSaved: 0,
+    estimatedMoneySaved: 0,
+  });
+  const [links, setLinks] = useState({
     orcid_id: '',
     google_scholar_id: '',
     researchgate_id: '',
     linkedin_url: '',
-    twitter_handle: '',
-    lab_website: ''
+    lab_website: '',
   });
 
   useEffect(() => {
-    fetchProfile();
-    fetchPublications();
-  }, []);
+    void loadProfile();
+  }, [user?.id, viewingUserId, isOwnProfile]);
 
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/researcher-portfolio/profiles', {
-        headers: { Authorization: `Bearer ${token}` }
+  const loadProfile = async () => {
+    setLoading(true);
+    const headers = authHeaders();
+
+    if (!isOwnProfile && viewingUserId) {
+      try {
+        const publicRes = await axios.get(`/api/networking/social/profile/${viewingUserId}`, {
+          headers,
+        });
+        const p = publicRes.data.profile;
+        setViewedUser(p);
+        setRelationship({
+          isFollowing: Boolean(publicRes.data.relationship?.isFollowing),
+          isConnected: Boolean(publicRes.data.relationship?.isConnected),
+          connectionStatus: publicRes.data.relationship?.connectionStatus || 'none',
+        });
+        setProfile({
+          institution: p.institution,
+          department: p.department,
+          position: p.position,
+          research_philosophy: p.bio,
+        });
+        setInterests(
+          String(p.expertise || '')
+            .split(/[,;|]/)
+            .map((s: string) => s.trim())
+            .filter(Boolean)
+        );
+        setAvailability({
+          open_for_collaboration: true,
+          currently_available: true,
+        });
+        setTransparency({
+          shared: 0,
+          helpfulVotes: 0,
+          savedVotes: 0,
+          estimatedHoursSaved: 0,
+          estimatedMoneySaved: 0,
+        });
+      } catch (error) {
+        console.error('Error loading public profile:', error);
+        setViewedUser(null);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    const [profileRes, availabilityRes, negativeRes, contributorRes] = await Promise.all([
+      axios.get('/api/researcher-portfolio/profiles', { headers }).catch(() => null),
+      axios.get('/api/scientist-passport/availability', { headers }).catch(() => null),
+      axios.get('/api/negative-results/my/submissions', { headers }).catch(() => null),
+      user?.id
+        ? axios
+            .get(`/api/negative-results/contributors/${user.id}/stats`, { headers })
+            .catch(() => null)
+        : Promise.resolve(null),
+    ]);
+
+    if (profileRes?.data?.profile) {
+      const p = profileRes.data.profile as ResearcherProfile;
+      setProfile(p);
+      setInterests(p.research_interests || []);
+      setLinks({
+        orcid_id: p.orcid_id || '',
+        google_scholar_id: p.google_scholar_id || '',
+        researchgate_id: p.researchgate_id || '',
+        linkedin_url: p.linkedin_url || '',
+        lab_website: p.lab_website || '',
       });
-      
-      if (response.data.profile) {
-        setProfile(response.data.profile);
-        setResearchInterests(response.data.profile.research_interests || []);
-        setAwards(response.data.profile.awards || []);
-        setGrants(response.data.profile.grants || []);
-        setSocialLinks({
-          orcid_id: response.data.profile.orcid_id || '',
-          google_scholar_id: response.data.profile.google_scholar_id || '',
-          researchgate_id: response.data.profile.researchgate_id || '',
-          linkedin_url: response.data.profile.linkedin_url || '',
-          twitter_handle: response.data.profile.twitter_handle || '',
-          lab_website: response.data.profile.lab_website || ''
+    }
+
+    if (availabilityRes?.data) {
+      setAvailability(availabilityRes.data);
+    }
+
+    const negatives = asArray(negativeRes?.data);
+    const contributor = contributorRes?.data;
+    const helpful =
+      contributor?.total_helpful_votes ??
+      negatives.reduce((sum, n) => sum + (n.helpful_votes || 0), 0);
+    const saved =
+      contributor?.total_saved_someone_votes ??
+      negatives.reduce((sum, n) => sum + (n.saved_someone_votes || 0), 0);
+    const hours = negatives.reduce((sum, n) => sum + (Number(n.time_spent_hours) || 0), 0);
+    const money = negatives.reduce((sum, n) => sum + (Number(n.estimated_cost_usd) || 0), 0);
+
+    setTransparency({
+      shared: contributor?.total_negative_results_shared ?? negatives.length,
+      helpfulVotes: helpful,
+      savedVotes: saved,
+      estimatedHoursSaved: hours,
+      estimatedMoneySaved: money,
+    });
+
+    // Own social counts
+    if (user?.id) {
+      try {
+        const rel = await axios.get('/api/networking/social/relationships', { headers });
+        setViewedUser({
+          id: user.id,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          role: user.role,
+          followersCount: rel.data.followersCount,
+          followingCount: rel.data.followingCount,
+          connectionsCount: rel.data.connectionsCount,
+        });
+      } catch {
+        setViewedUser({
+          id: user.id,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          role: user.role,
         });
       }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      // Initialize with empty data
-      setProfile({
-        research_interests: [],
-        expertise_areas: [],
-        research_domains: [],
-        h_index: 0,
-        total_citations: 0,
-        total_publications: 0,
-        current_projects: [],
-        previous_institutions: [],
-        awards: [],
-        grants: [],
-        languages: []
-      });
-    } finally {
-      setLoading(false);
     }
+
+    setLoading(false);
   };
 
-  const fetchPublications = async () => {
+  const runSocialAction = async (action: 'follow' | 'unfollow' | 'connect' | 'disconnect') => {
+    if (!viewingUserId || isOwnProfile) return;
+    setActionBusy(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/researcher-portfolio/publications', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.data.publications) {
-        setPublications(response.data.publications);
+      if (action === 'follow') {
+        await axios.post(`/api/networking/social/follow/${viewingUserId}`, {}, { headers: authHeaders() });
+        setRelationship((r) => ({ ...r, isFollowing: true }));
+        setViewedUser((v) =>
+          v ? { ...v, followersCount: (v.followersCount || 0) + 1 } : v
+        );
+      } else if (action === 'unfollow') {
+        await axios.delete(`/api/networking/social/follow/${viewingUserId}`, {
+          headers: authHeaders(),
+        });
+        setRelationship((r) => ({ ...r, isFollowing: false }));
+        setViewedUser((v) =>
+          v ? { ...v, followersCount: Math.max(0, (v.followersCount || 0) - 1) } : v
+        );
+      } else if (action === 'connect') {
+        const res = await axios.post(
+          `/api/networking/social/connect/${viewingUserId}`,
+          {},
+          { headers: authHeaders() }
+        );
+        setRelationship((r) => ({
+          ...r,
+          connectionStatus: res.data.connectionStatus || 'pending',
+          isConnected: Boolean(res.data.isConnected),
+        }));
+      } else {
+        await axios.delete(`/api/networking/social/connect/${viewingUserId}`, {
+          headers: authHeaders(),
+        });
+        setRelationship({ isFollowing: relationship.isFollowing, isConnected: false, connectionStatus: 'none' });
       }
     } catch (error) {
-      console.error('Error fetching publications:', error);
+      console.error(`Social action ${action} failed:`, error);
+    } finally {
+      setActionBusy(false);
     }
   };
 
-  const saveProfile = async () => {
+  const saveAbout = async () => {
     try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      await axios.post('/api/researcher-portfolio/profiles', {
-        ...profile,
-        research_interests: researchInterests,
-        awards: awards,
-        grants: grants,
-        ...socialLinks
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      alert('Profile saved successfully!');
-      setEditing(false);
-      fetchProfile();
+      setSaving(true);
+      await axios.post(
+        '/api/researcher-portfolio/profiles',
+        {
+          ...profile,
+          research_interests: interests,
+          ...links,
+        },
+        { headers: authHeaders() }
+      );
+      setEditingAbout(false);
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert('Error saving profile');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const addPublication = async () => {
+  const saveAvailability = async (next: Availability) => {
+    setAvailability(next);
     try {
-      const token = localStorage.getItem('token');
-      await axios.post('/api/researcher-portfolio/publications/upload', {
-        title: publicationForm.title,
-        abstract: publicationForm.abstract,
-        thoughts: publicationForm.thoughts
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
+      await axios.put('/api/scientist-passport/availability', next, {
+        headers: authHeaders(),
       });
-      
-      alert('Publication added successfully!');
-      setShowAddPublicationModal(false);
-      setPublicationForm({
-        title: '',
-        abstract: '',
-        thoughts: ''
-      });
-      fetchPublications();
     } catch (error) {
-      console.error('Error adding publication:', error);
-      alert('Error adding publication');
-    }
-  };
-
-  const importFromORCID = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post('/api/researcher-portfolio/publications/fetch-by-orcid', {
-        orcid: orcidId
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      alert('Publications imported successfully!');
-      setShowImportORCIDModal(false);
-      setOrcidId('');
-      fetchPublications();
-    } catch (error) {
-      console.error('Error importing from ORCID:', error);
-      alert('Error importing from ORCID');
+      console.error('Error saving availability:', error);
     }
   };
 
   const addInterest = () => {
-    if (newInterest.trim()) {
-      setResearchInterests([...researchInterests, newInterest.trim()]);
-      setNewInterest('');
-    }
+    if (!newInterest.trim()) return;
+    setInterests((prev) => [...prev, newInterest.trim()]);
+    setNewInterest('');
   };
 
-  const removeInterest = (index: number) => {
-    setResearchInterests(researchInterests.filter((_, i) => i !== index));
-  };
+  const initials =
+    `${(isOwnProfile ? user?.first_name : viewedUser?.firstName)?.[0] || ''}${(isOwnProfile ? user?.last_name : viewedUser?.lastName)?.[0] || ''}`.toUpperCase() || 'DR';
+  const displayName =
+    [isOwnProfile ? user?.first_name : viewedUser?.firstName, isOwnProfile ? user?.last_name : viewedUser?.lastName]
+      .filter(Boolean)
+      .join(' ') || 'Researcher';
+  const roleLabel = getRoleDisplayName((isOwnProfile ? user?.role : viewedUser?.role) || 'researcher');
+  const focusLine =
+    interests.slice(0, 3).join(' · ') ||
+    profile.position ||
+    viewedUser?.specialization ||
+    (isOwnProfile ? 'Add research interests in About' : 'Researcher');
 
-  if (loading && !profile) {
+  const opennessFlags = useMemo(
+    () => [
+      {
+        key: 'open_for_collaboration',
+        label: 'Open to collaborate',
+        description: 'Join projects, share methods, co-author',
+        value: Boolean(availability.open_for_collaboration),
+      },
+      {
+        key: 'available_as_consultant',
+        label: 'Available to consult',
+        description: 'Advise labs on methods and experimental design',
+        value: Boolean(availability.available_as_consultant),
+      },
+      {
+        key: 'available_as_service_provider',
+        label: 'Offer lab services',
+        description: 'Intent to offer services - list them on Marketplace when ready',
+        value: Boolean(availability.available_as_service_provider),
+      },
+      {
+        key: 'available_for_workshops',
+        label: 'Workshops / teaching',
+        description: 'Teach techniques or host sessions',
+        value: Boolean(availability.available_for_workshops),
+      },
+    ],
+    [availability]
+  );
+
+  const tabs: { id: ProfileTab; label: string }[] = [
+    { id: 'about', label: 'About & links' },
+    { id: 'openness', label: 'Open to' },
+    { id: 'transparency', label: 'Transparency' },
+  ];
+
+  if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="animate-spin h-12 w-12 border-4 border-gray-300 border-t-gray-900 rounded-full"></div>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="h-8 w-8 rounded-full border-2 border-slate-200 border-t-slate-800 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Professional Header Banner */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-8">
-          <div className="bg-gradient-to-br from-gray-50 via-white to-blue-50/30 px-8 py-12 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-6">
-                <div className="relative">
-                  <div className="w-28 h-28 bg-gradient-to-br from-gray-800 to-gray-700 rounded-full flex items-center justify-center shadow-xl ring-4 ring-gray-100">
-                    <CpuChipIcon className="w-14 h-14 text-yellow-400" />
-                  </div>
-                  <div className="absolute bottom-0 right-0 w-8 h-8 bg-yellow-500 rounded-full border-4 border-white shadow-lg flex items-center justify-center">
-                    <SparklesIcon className="w-4 h-4 text-white" />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center space-x-2 mb-2">
-                    <h1 className="text-4xl font-bold text-gray-900">{user?.first_name} {user?.last_name}</h1>
-                    <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full border border-yellow-300">AI Training Active</span>
-                  </div>
-                  <p className="text-gray-600 text-lg mb-3">{profile?.position || 'Researcher'}</p>
-                  <div className="flex items-center space-x-6 text-sm text-gray-600">
-                    {profile?.institution && (
-                      <span className="flex items-center">
-                        <BuildingOfficeIcon className="w-4 h-4 mr-2" />
-                        {profile.institution}
-                      </span>
-                    )}
-                    {profile?.department && (
-                      <span className="flex items-center">
-                        <BriefcaseIcon className="w-4 h-4 mr-2" />
-                        {profile.department}
-                      </span>
-                    )}
-                  </div>
-                </div>
+    <div className="max-w-5xl mx-auto space-y-6">
+      <section className="bg-white border border-slate-200/80 rounded-xl overflow-hidden">
+        <div className="px-6 sm:px-8 py-7">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
+            <div className="flex items-start gap-4 min-w-0">
+              <div className="w-16 h-16 rounded-full bg-slate-900 text-white flex items-center justify-center text-xl font-semibold tracking-wide flex-shrink-0">
+                {initials}
               </div>
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => setEditing(!editing)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-all shadow-sm"
-                >
-                  <PencilIcon className="w-5 h-5" />
-                  <span>{editing ? 'Cancel' : 'Edit Profile'}</span>
-                </button>
-                {editing && (
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-tight">
+                    {displayName}
+                  </h1>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-[11px] font-medium text-slate-600">
+                    {roleLabel}
+                  </span>
+                </div>
+                <p className="text-[14px] text-slate-600 mt-1.5 leading-snug">{focusLine}</p>
+                <p className="text-[13px] text-slate-500 mt-2">
+                  {[
+                    profile.institution ||
+                      (isOwnProfile ? user?.current_institution : viewedUser?.institution),
+                    profile.department || viewedUser?.department,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ') ||
+                    (isOwnProfile ? 'Add your institution in About' : 'Institution not listed')}
+                </p>
+              </div>
+            </div>
+
+            {isOwnProfile ? (
+              <Link
+                to="/settings"
+                className="inline-flex items-center gap-1.5 self-start px-3.5 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
+              >
+                Account settings
+              </Link>
+            ) : (
+              <div className="flex flex-wrap gap-2 self-start">
+                {relationship.connectionStatus === 'pending' ? (
                   <button
-                    onClick={saveProfile}
-                    disabled={loading}
-                    className="flex items-center space-x-2 px-6 py-2 bg-white text-indigo-900 rounded-lg hover:bg-gray-100 transition-all shadow-lg disabled:opacity-50 font-medium"
+                    type="button"
+                    onClick={() => runSocialAction('disconnect')}
+                    disabled={actionBusy}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50"
                   >
-                    <CheckCircleIcon className="w-5 h-5" />
-                    <span>Save Changes</span>
+                    Cancel request
+                  </button>
+                ) : relationship.isConnected ? (
+                  <button
+                    type="button"
+                    onClick={() => runSocialAction('disconnect')}
+                    disabled={actionBusy}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    <UserMinusIcon className="w-4 h-4" />
+                    Disconnect
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => runSocialAction('connect')}
+                    disabled={actionBusy}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    <UserPlusIcon className="w-4 h-4" />
+                    Connect
                   </button>
                 )}
+                {relationship.isFollowing ? (
+                  <button
+                    type="button"
+                    onClick={() => runSocialAction('unfollow')}
+                    disabled={actionBusy}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    <HeartIcon className="w-4 h-4 text-red-500" />
+                    Following
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => runSocialAction('follow')}
+                    disabled={actionBusy}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    <HeartIcon className="w-4 h-4" />
+                    Follow
+                  </button>
+                )}
+                <Link
+                  to="/collaboration-networking"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50"
+                >
+                  Back to networking
+                </Link>
               </div>
-            </div>
+            )}
           </div>
-          
-          {/* AI Training Progress Bar */}
-          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-8 py-4 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <SparklesIcon className="w-5 h-5 text-indigo-600" />
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">Personal AI Training Progress</p>
-                  <p className="text-xs text-gray-600">Your AI learns from your publications, research interests, and insights</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="text-right">
-                  <p className="text-xs text-gray-600">Training Data</p>
-                  <p className="text-lg font-bold text-indigo-600">{publications.length + researchInterests.length} items</p>
-                </div>
-                <div className="w-32 bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-indigo-600 to-purple-600 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(((publications.length + researchInterests.length) / 20) * 100, 100)}%` }}
-                  ></div>
-                </div>
-              </div>
+
+          {/* Identity-only reputation strip - not a sitemap */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-7 pt-6 border-t border-slate-100">
+            <div className="rounded-lg px-3 py-2.5">
+              <p className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">Connections</p>
+              <p className="text-xl font-semibold text-slate-900 tabular-nums mt-0.5">
+                {viewedUser?.connectionsCount ?? 0}
+              </p>
             </div>
+            <div className="rounded-lg px-3 py-2.5">
+              <p className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">Followers</p>
+              <p className="text-xl font-semibold text-slate-900 tabular-nums mt-0.5">
+                {viewedUser?.followersCount ?? 0}
+              </p>
+            </div>
+            <div className="rounded-lg px-3 py-2.5">
+              <p className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">Following</p>
+              <p className="text-xl font-semibold text-slate-900 tabular-nums mt-0.5">
+                {viewedUser?.followingCount ?? 0}
+              </p>
+            </div>
+            {isOwnProfile && (
+              <div className="rounded-lg px-3 py-2.5">
+                <p className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">Failures shared</p>
+                <p className="text-xl font-semibold text-slate-900 tabular-nums mt-0.5">
+                  {transparency.shared}
+                </p>
+              </div>
+            )}
           </div>
         </div>
+      </section>
 
-        {/* Navigation Tabs */}
-        <div className="mb-6 bg-white rounded-xl shadow-md border border-gray-200 p-1 bg-gradient-to-br from-gray-50/50 to-white">
-          <div className="flex space-x-1">
-            {[
-              { id: 'overview', label: 'Overview', icon: UserIcon, description: 'Basic info for AI context' },
-              { id: 'publications', label: 'Publications', icon: BookOpenIcon, description: 'Train AI with your work' },
-              { id: 'research', label: 'Research Interests', icon: LightBulbIcon, description: 'Define your domain' },
-              { id: 'social', label: 'Social Links', icon: LinkIcon, description: 'Connect your profiles' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 flex flex-col items-center justify-center space-y-1 py-3 px-4 rounded-lg transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-gray-800 text-white shadow-lg'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <tab.icon className="w-5 h-5" />
-                <span className="font-medium text-sm">{tab.label}</span>
-                <span className={`text-xs ${activeTab === tab.id ? 'text-white/80' : 'text-gray-500'}`}>{tab.description}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+      <nav className="flex gap-1 border-b border-slate-200 overflow-x-auto" aria-label="Profile sections">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`relative px-4 py-2.5 text-[13px] font-medium whitespace-nowrap transition-colors ${
+              activeTab === tab.id ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {tab.label}
+            {activeTab === tab.id && (
+              <span className="absolute left-2 right-2 -bottom-px h-0.5 bg-slate-900 rounded-full" />
+            )}
+          </button>
+        ))}
+      </nav>
 
-        {/* Tab Content */}
-        <div className="space-y-6">
-          {/* Overview Tab */}
-          {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column */}
-              <div className="lg:col-span-2 space-y-6">
-                {/* Basic Information */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-gray-900">Basic Information</h2>
-                    {editing && (
-                      <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Editing</span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Institution</label>
-                      <input
-                        type="text"
-                        value={profile?.institution || ''}
-                        onChange={(e) => setProfile({ ...profile!, institution: e.target.value })}
-                        disabled={!editing}
-                        className={`w-full px-4 py-2.5 rounded-lg border transition-all ${
-                          editing 
-                            ? 'border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white' 
-                            : 'border-transparent bg-gray-50'
-                        }`}
-                        placeholder="University name"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Department</label>
-                      <input
-                        type="text"
-                        value={profile?.department || ''}
-                        onChange={(e) => setProfile({ ...profile!, department: e.target.value })}
-                        disabled={!editing}
-                        className={`w-full px-4 py-2.5 rounded-lg border transition-all ${
-                          editing 
-                            ? 'border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white' 
-                            : 'border-transparent bg-gray-50'
-                        }`}
-                        placeholder="Department name"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Position</label>
-                      <input
-                        type="text"
-                        value={profile?.position || ''}
-                        onChange={(e) => setProfile({ ...profile!, position: e.target.value })}
-                        disabled={!editing}
-                        className={`w-full px-4 py-2.5 rounded-lg border transition-all ${
-                          editing 
-                            ? 'border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white' 
-                            : 'border-transparent bg-gray-50'
-                        }`}
-                        placeholder="e.g., Professor, PhD Student"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Years of Experience</label>
-                      <input
-                        type="number"
-                        value={profile?.years_of_experience || ''}
-                        onChange={(e) => setProfile({ ...profile!, years_of_experience: parseInt(e.target.value) || 0 })}
-                        disabled={!editing}
-                        className={`w-full px-4 py-2.5 rounded-lg border transition-all ${
-                          editing 
-                            ? 'border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white' 
-                            : 'border-transparent bg-gray-50'
-                        }`}
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Research Philosophy */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-4">Research Philosophy</h2>
-                  <textarea
-                    value={profile?.research_philosophy || ''}
-                    onChange={(e) => setProfile({ ...profile!, research_philosophy: e.target.value })}
-                    disabled={!editing}
-                    className={`w-full px-4 py-3 rounded-lg border transition-all ${
-                      editing 
-                        ? 'border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white' 
-                        : 'border-transparent bg-gray-50'
-                    }`}
-                    rows={4}
-                    placeholder="Describe your research philosophy..."
-                  />
-                </div>
-
-              </div>
-
-              {/* Right Column */}
-              <div className="space-y-6">
-                {/* Current Projects */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <h2 className="text-lg font-bold text-gray-900 mb-4">Current Projects</h2>
-                  <div className="space-y-3">
-                    {(profile?.current_projects || []).length > 0 ? (
-                      profile.current_projects.map((project, index) => (
-                        <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                          <p className="text-sm text-gray-700">{project}</p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-gray-500 text-sm text-center py-4">No projects added yet</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Publications Tab */}
-          {activeTab === 'publications' && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Publications</h2>
-                  <p className="text-sm text-gray-600 mt-1">Share your work to train your personal AI</p>
-                </div>
-                <div className="flex space-x-3">
+      {activeTab === 'about' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-5">
+            <section className="bg-white border border-slate-200/80 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[15px] font-semibold text-slate-900">About</h2>
+                {!editingAbout && isOwnProfile ? (
                   <button
-                    onClick={() => setShowAddPublicationModal(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all shadow-lg"
+                    type="button"
+                    onClick={() => setEditingAbout(true)}
+                    className="inline-flex items-center gap-1.5 text-[12px] font-medium text-slate-600 hover:text-slate-900"
                   >
-                    <PlusIcon className="w-5 h-5" />
-                    <span>Add Publication</span>
+                    <PencilIcon className="w-3.5 h-3.5" />
+                    Edit
                   </button>
-                </div>
-              </div>
-
-              {publications.length > 0 ? (
-                <div className="space-y-4">
-                  {publications.map((pub) => (
-                    <div key={pub.id} className="p-5 border border-gray-200 rounded-lg hover:border-gray-300 transition-all bg-white">
-                      <h3 className="font-bold text-gray-900 mb-2 text-lg">{pub.title}</h3>
-                      <p className="text-sm text-gray-600 mb-2">{pub.authors.join(', ')}</p>
-                      {pub.journal && (
-                        <p className="text-sm text-gray-700 mb-3 font-medium">{pub.journal}</p>
-                      )}
-                      <div className="flex items-center space-x-4 text-sm">
-                        {pub.citation_count > 0 && (
-                          <span className="flex items-center text-gray-600">
-                            <StarIcon className="w-4 h-4 mr-1" />
-                            {pub.citation_count} citations
-                          </span>
-                        )}
-                        {pub.doi && (
-                          <span className="flex items-center text-gray-600">
-                            <LinkIcon className="w-4 h-4 mr-1" />
-                            {pub.doi}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-16">
-                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <BookOpenIcon className="w-10 h-10 text-gray-400" />
-                  </div>
-                  <p className="text-gray-600 text-lg mb-2">No publications added yet</p>
-                  <p className="text-sm text-gray-500">Add publications manually or import from ORCID</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Research Interests Tab */}
-          {activeTab === 'research' && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Research Interests</h2>
-                <p className="text-sm text-gray-600">Define your research domain to help the AI understand your expertise</p>
-              </div>
-              
-              <div className="mb-6">
-                <div className="flex space-x-2">
-                  <input
-                    type="text"
-                    value={newInterest}
-                    onChange={(e) => setNewInterest(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && addInterest()}
-                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent"
-                    placeholder="Add research interest (e.g., Machine Learning, Bioinformatics)"
-                  />
-                  <button
-                    onClick={addInterest}
-                    className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg"
-                  >
-                    Add
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {researchInterests.map((interest, index) => (
-                  <div key={index} className="flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg shadow-md">
-                    <SparklesIcon className="w-4 h-4" />
-                    <span className="font-medium">{interest}</span>
+                ) : (
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => removeInterest(index)}
-                      className="hover:bg-white/20 rounded p-0.5 transition-colors"
+                      type="button"
+                      onClick={() => setEditingAbout(false)}
+                      className="text-[12px] text-slate-500 hover:text-slate-800"
                     >
-                      <TrashIcon className="w-4 h-4" />
+                      Cancel
                     </button>
+                    <button
+                      type="button"
+                      onClick={saveAbout}
+                      disabled={saving}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:opacity-50"
+                    >
+                      <CheckCircleIcon className="w-3.5 h-3.5" />
+                      Save
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                {(
+                  [
+                    ['institution', 'Institution'],
+                    ['department', 'Department'],
+                    ['position', 'Position'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <div key={key}>
+                    <label className="block text-[12px] font-medium text-slate-500 mb-1.5">
+                      {label}
+                    </label>
+                    <input
+                      type="text"
+                      value={(profile as any)[key] || ''}
+                      disabled={!editingAbout}
+                      onChange={(e) => setProfile({ ...profile, [key]: e.target.value })}
+                      className={`w-full px-3.5 py-2.5 rounded-md text-[13px] ${
+                        editingAbout
+                          ? 'border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10'
+                          : 'border border-transparent bg-slate-50 text-slate-700'
+                      }`}
+                    />
                   </div>
                 ))}
               </div>
-            </div>
-          )}
 
-          {/* Social Links Tab */}
-          {activeTab === 'social' && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Social Links</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">ORCID ID</label>
-                  <input
-                    type="text"
-                    value={socialLinks.orcid_id}
-                    onChange={(e) => setSocialLinks({ ...socialLinks, orcid_id: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                    placeholder="0000-0000-0000-0000"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Google Scholar ID</label>
-                  <input
-                    type="text"
-                    value={socialLinks.google_scholar_id}
-                    onChange={(e) => setSocialLinks({ ...socialLinks, google_scholar_id: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                    placeholder="Google Scholar ID"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">ResearchGate ID</label>
-                  <input
-                    type="text"
-                    value={socialLinks.researchgate_id}
-                    onChange={(e) => setSocialLinks({ ...socialLinks, researchgate_id: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                    placeholder="ResearchGate ID"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">LinkedIn URL</label>
-                  <input
-                    type="text"
-                    value={socialLinks.linkedin_url}
-                    onChange={(e) => setSocialLinks({ ...socialLinks, linkedin_url: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                    placeholder="https://linkedin.com/in/..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Twitter Handle</label>
-                  <input
-                    type="text"
-                    value={socialLinks.twitter_handle}
-                    onChange={(e) => setSocialLinks({ ...socialLinks, twitter_handle: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                    placeholder="@username"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Lab Website</label>
-                  <input
-                    type="text"
-                    value={socialLinks.lab_website}
-                    onChange={(e) => setSocialLinks({ ...socialLinks, lab_website: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                    placeholder="https://..."
-                  />
-                </div>
+              <label className="block text-[12px] font-medium text-slate-500 mb-1.5">
+                Research focus
+              </label>
+              <textarea
+                value={profile.research_philosophy || ''}
+                disabled={!editingAbout}
+                onChange={(e) => setProfile({ ...profile, research_philosophy: e.target.value })}
+                rows={4}
+                className={`w-full px-3.5 py-2.5 rounded-md text-[13px] resize-y ${
+                  editingAbout
+                    ? 'border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10'
+                    : 'border border-transparent bg-slate-50 text-slate-700'
+                }`}
+                placeholder="One or two paragraphs on what you work on and how you approach problems."
+              />
+            </section>
+
+            <section className="bg-white border border-slate-200/80 rounded-xl p-6">
+              <h2 className="text-[15px] font-semibold text-slate-900 mb-1">Research interests</h2>
+              <p className="text-[12px] text-slate-500 mb-4">
+                Used for matching grants, collaborators, and methods
+              </p>
+
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  value={newInterest}
+                  onChange={(e) => setNewInterest(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addInterest()}
+                  className="flex-1 px-3.5 py-2.5 rounded-md text-[13px] border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                  placeholder="e.g. single-cell transcriptomics"
+                />
+                <button
+                  type="button"
+                  onClick={addInterest}
+                  className="inline-flex items-center gap-1 px-3.5 py-2.5 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  Add
+                </button>
               </div>
-            </div>
-          )}
+
+              {interests.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {interests.map((interest, index) => (
+                    <span
+                      key={`${interest}-${index}`}
+                      className="inline-flex items-center gap-1 pl-3 pr-1.5 py-1.5 rounded-md bg-slate-100 text-[12px] text-slate-800"
+                    >
+                      {interest}
+                      <button
+                        type="button"
+                        onClick={() => setInterests((prev) => prev.filter((_, i) => i !== index))}
+                        className="p-1 rounded hover:bg-slate-200 text-slate-500"
+                        aria-label={`Remove ${interest}`}
+                      >
+                        <TrashIcon className="w-3.5 h-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[13px] text-slate-500">No interests yet.</p>
+              )}
+
+              {interests.length > 0 && (
+                <button
+                  type="button"
+                  onClick={saveAbout}
+                  disabled={saving}
+                  className="mt-4 text-[12px] font-medium text-slate-700 hover:text-slate-900 underline-offset-2 hover:underline"
+                >
+                  Save interests
+                </button>
+              )}
+            </section>
+          </div>
+
+          <aside className="space-y-5">
+            <section className="bg-white border border-slate-200/80 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <LinkIcon className="w-4 h-4 text-slate-400" />
+                <h2 className="text-[13px] font-semibold text-slate-900">External profiles</h2>
+              </div>
+              <p className="text-[12px] text-slate-500 mb-4">
+                Optional links to ORCID / Scholar - secondary to your identity here
+              </p>
+              <div className="space-y-3">
+                {(
+                  [
+                    ['orcid_id', 'ORCID'],
+                    ['google_scholar_id', 'Google Scholar'],
+                    ['researchgate_id', 'ResearchGate'],
+                    ['linkedin_url', 'LinkedIn'],
+                    ['lab_website', 'Lab website'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <div key={key}>
+                    <label className="block text-[11px] font-medium text-slate-500 mb-1">
+                      {label}
+                    </label>
+                    <input
+                      type="text"
+                      value={links[key]}
+                      onChange={(e) => setLinks({ ...links, [key]: e.target.value })}
+                      onBlur={saveAbout}
+                      className="w-full px-3 py-2 rounded-md text-[12px] border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                      placeholder={label}
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+          </aside>
         </div>
+      )}
 
-        {/* Add Publication Modal */}
-        {showAddPublicationModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Add Publication</h2>
-                  <p className="text-sm text-gray-600 mt-1">Help train your personal AI by sharing your research</p>
-                </div>
-                <button
-                  onClick={() => setShowAddPublicationModal(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <XMarkIcon className="w-6 h-6" />
-                </button>
-              </div>
-              
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Title *</label>
-                  <input
-                    type="text"
-                    value={publicationForm.title}
-                    onChange={(e) => setPublicationForm({ ...publicationForm, title: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                    placeholder="Publication title"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Abstract *</label>
-                  <textarea
-                    value={publicationForm.abstract}
-                    onChange={(e) => setPublicationForm({ ...publicationForm, abstract: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                    rows={6}
-                    placeholder="Enter the abstract of your publication..."
-                  />
-                  <p className="text-xs text-gray-500 mt-1">This helps the AI understand your research domain and interests</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Your Thoughts & Insights</label>
-                  <textarea
-                    value={publicationForm.thoughts}
-                    onChange={(e) => setPublicationForm({ ...publicationForm, thoughts: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                    rows={6}
-                    placeholder="Share your thoughts, insights, methodology, or any reflections on this work..."
-                  />
-                  <p className="text-xs text-gray-500 mt-1">This helps the AI understand your thinking style and approach</p>
-                </div>
-              </div>
+      {activeTab === 'openness' && (
+        <div className="max-w-3xl space-y-5">
+          <section className="bg-white border border-slate-200/80 rounded-xl p-6">
+            <h2 className="text-[15px] font-semibold text-slate-900 mb-1">What you’re open to</h2>
+            <p className="text-[12px] text-slate-500 mb-5">
+              How others should approach you - collaboration, consulting, services, teaching
+            </p>
 
-              <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowAddPublicationModal(false)}
-                  className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            <ul className="space-y-3">
+              {opennessFlags.map((flag) => (
+                <li
+                  key={flag.key}
+                  className="flex items-start justify-between gap-4 p-3.5 rounded-lg border border-slate-100"
                 >
-                  Cancel
-                </button>
-                <button
-                  onClick={addPublication}
-                  className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg"
-                >
-                  Add Publication
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Import ORCID Modal */}
-        {showImportORCIDModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-              <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">Import from ORCID</h2>
-                <button
-                  onClick={() => setShowImportORCIDModal(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <XMarkIcon className="w-6 h-6" />
-                </button>
-              </div>
-              
-              <div className="p-6">
-                <div className="mb-6">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">ORCID ID</label>
-                  <input
-                    type="text"
-                    value={orcidId}
-                    onChange={(e) => setOrcidId(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                    placeholder="0000-0000-0000-0000"
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-3">
+                  <div>
+                    <p className="text-[13px] font-medium text-slate-900">{flag.label}</p>
+                    <p className="text-[12px] text-slate-500 mt-0.5">{flag.description}</p>
+                  </div>
                   <button
-                    onClick={() => setShowImportORCIDModal(false)}
-                    className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    type="button"
+                    role="switch"
+                    aria-checked={flag.value}
+                    onClick={() =>
+                      saveAvailability({
+                        ...availability,
+                        [flag.key]: !flag.value,
+                      })
+                    }
+                    className={`relative w-10 h-6 rounded-full transition-colors flex-shrink-0 ${
+                      flag.value ? 'bg-slate-900' : 'bg-slate-200'
+                    }`}
                   >
-                    Cancel
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                        flag.value ? 'translate-x-4' : ''
+                      }`}
+                    />
                   </button>
-                  <button
-                    onClick={importFromORCID}
-                    className="px-6 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="bg-white border border-slate-200/80 rounded-xl p-6">
+            <label className="block text-[12px] font-medium text-slate-500 mb-1.5">
+              Availability notes
+            </label>
+            <textarea
+              value={availability.availability_notes || ''}
+              onChange={(e) =>
+                setAvailability((prev) => ({ ...prev, availability_notes: e.target.value }))
+              }
+              onBlur={() => saveAvailability(availability)}
+              rows={3}
+              className="w-full px-3.5 py-2.5 rounded-md text-[13px] border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+              placeholder="e.g. Available for method consulting in Q3; seeking CRISPR collaborators"
+            />
+          </section>
+        </div>
+      )}
+
+      {activeTab === 'transparency' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-5">
+            <section className="bg-white border border-slate-200/80 rounded-xl p-6">
+              <h2 className="text-[15px] font-semibold text-slate-900 mb-1">Transparency impact</h2>
+              <p className="text-[12px] text-slate-500 mb-5">
+                Credit for documenting what did not work - community standing, not a work queue
+              </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: 'Failures shared', value: transparency.shared },
+                  { label: 'Marked helpful', value: transparency.helpfulVotes },
+                  { label: '“Saved me” votes', value: transparency.savedVotes },
+                  { label: 'Hours documented', value: transparency.estimatedHoursSaved },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="rounded-lg border border-slate-100 bg-slate-50/70 px-3 py-3"
                   >
-                    Import
-                  </button>
-                </div>
+                    <p className="text-xl font-semibold text-slate-900 tabular-nums">{stat.value}</p>
+                    <p className="text-[11px] text-slate-500 mt-1">{stat.label}</p>
+                  </div>
+                ))}
               </div>
-            </div>
+
+              {transparency.estimatedMoneySaved > 0 && (
+                <p className="text-[13px] text-slate-600 mt-4">
+                  Documented experimental cost:{' '}
+                  <span className="font-semibold text-slate-900">
+                    ${transparency.estimatedMoneySaved.toLocaleString()}
+                  </span>
+                </p>
+              )}
+            </section>
+
+            <section className="bg-white border border-slate-200/80 rounded-xl p-6">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <h2 className="text-[15px] font-semibold text-slate-900">Negative results</h2>
+                <Link
+                  to="/negative-results"
+                  className="text-[12px] font-medium text-slate-600 hover:text-slate-900 inline-flex items-center gap-1"
+                >
+                  Open database
+                  <ArrowRightIcon className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+              {transparency.shared === 0 ? (
+                <div className="py-8 text-center border border-dashed border-slate-200 rounded-lg">
+                  <FireIcon className="w-7 h-7 text-slate-300 mx-auto mb-2" />
+                  <p className="text-[13px] text-slate-700 font-medium">No failures shared yet</p>
+                  <p className="text-[12px] text-slate-500 mt-1 mb-3">
+                    Sharing a negative result builds trust and helps other labs avoid wasted work.
+                  </p>
+                  <Link
+                    to="/negative-results"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800"
+                  >
+                    Share a negative result
+                  </Link>
+                </div>
+              ) : (
+                <p className="text-[13px] text-slate-600 leading-relaxed">
+                  You have contributed {transparency.shared} negative result
+                  {transparency.shared === 1 ? '' : 's'} to the community database
+                  {transparency.savedVotes > 0
+                    ? `, helping peers ${transparency.savedVotes} time${
+                        transparency.savedVotes === 1 ? '' : 's'
+                      }.`
+                    : '.'}
+                </p>
+              )}
+            </section>
           </div>
-        )}
-      </div>
+
+          <aside>
+            <section className="bg-slate-50 border border-slate-200/80 rounded-xl p-5">
+              <p className="text-[13px] font-medium text-slate-800">Transparency as reputation</p>
+              <p className="text-[12px] text-slate-500 mt-1.5 leading-relaxed">
+                Documenting failed experiments is a first-class scientific contribution - not a career
+                risk buried in a lab drawer.
+              </p>
+            </section>
+          </aside>
+        </div>
+      )}
     </div>
   );
 };

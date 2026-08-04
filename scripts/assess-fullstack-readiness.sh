@@ -104,11 +104,11 @@ else
     log_result "FAIL" "pnpm not installed" "Required package manager"
 fi
 
-# Check PostgreSQL client
-if command_exists psql; then
-    log_result "PASS" "PostgreSQL client installed"
+# Check MySQL client
+if command_exists mysql; then
+    log_result "PASS" "MySQL client installed"
 else
-    log_result "WARN" "PostgreSQL client not installed" "May need for database operations"
+    log_result "WARN" "MySQL client not installed" "May need for database operations"
 fi
 
 # Check environment variables
@@ -116,10 +116,10 @@ if [ -f ".env" ] || [ -f "env.local" ]; then
     log_result "PASS" "Environment file exists"
     
     # Check critical env vars
-    if grep -q "DATABASE_URL" .env 2>/dev/null || grep -q "DATABASE_URL" env.local 2>/dev/null; then
-        log_result "PASS" "DATABASE_URL configured"
+    if grep -q "MYSQL_URL" .env 2>/dev/null || grep -q "MYSQL_URL" env.local 2>/dev/null; then
+        log_result "PASS" "MYSQL_URL configured"
     else
-        log_result "WARN" "DATABASE_URL not found" "Required for database connection"
+        log_result "WARN" "MYSQL_URL not found" "Required for database connection"
     fi
     
     if grep -q "JWT_SECRET" .env 2>/dev/null || grep -q "JWT_SECRET" env.local 2>/dev/null; then

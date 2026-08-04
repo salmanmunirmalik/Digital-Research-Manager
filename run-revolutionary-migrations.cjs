@@ -1,22 +1,26 @@
 /**
- * Run Revolutionary Features Database Migrations
- * Executes the 4 new migration files for revolutionary features
+ * Run Revolutionary Features Database Migrations (MySQL)
+ * Executes the migration files for revolutionary features.
  */
 
-const { Pool } = require('pg');
+const mysql = require('mysql2/promise');
 const fs = require('fs');
 const path = require('path');
 
-// Database configuration
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'digital_research_manager',
-  user: process.env.DB_USER || 'm.salmanmalik',
-  password: process.env.DB_PASSWORD || '',
-});
+const buildConfig = () => {
+  if (process.env.MYSQL_URL) {
+    return { uri: process.env.MYSQL_URL };
+  }
 
-// Migration files to run (in order)
+  return {
+    host: process.env.MYSQL_HOST || 'localhost',
+    port: Number(process.env.MYSQL_PORT || 3306),
+    database: process.env.MYSQL_DB || 'digital_research_manager',
+    user: process.env.MYSQL_USER || 'root',
+    password: process.env.MYSQL_PASSWORD || ''
+  };
+};
+
 const migrations = [
   '20250121_scientist_passport_enhancement.sql',
   '20250121_service_provider_marketplace.sql',
@@ -25,38 +29,38 @@ const migrations = [
 ];
 
 async function runMigrations() {
+  const config = buildConfig();
+  const connection = config.uri
+    ? await mysql.createConnection(config.uri)
+    : await mysql.createConnection(config);
+
   console.log('🚀 Starting Revolutionary Features Migrations...\n');
 
   try {
-    // Test database connection
-    await pool.query('SELECT NOW()');
+    await connection.query('SELECT 1');
     console.log('✅ Database connection successful\n');
 
     for (const migrationFile of migrations) {
       const filePath = path.join(__dirname, 'database', 'migrations', migrationFile);
-      
+
       console.log(`📄 Running migration: ${migrationFile}`);
-      
-      // Check if file exists
+
       if (!fs.existsSync(filePath)) {
         console.error(`❌ Migration file not found: ${filePath}`);
         continue;
       }
 
-      // Read the SQL file
       const sql = fs.readFileSync(filePath, 'utf8');
-      
-      // Execute the migration
+
       try {
-        await pool.query(sql);
+        await connection.query(sql);
         console.log(`✅ Migration completed: ${migrationFile}\n`);
       } catch (error) {
         console.error(`❌ Migration failed: ${migrationFile}`);
         console.error(`Error: ${error.message}\n`);
-        
-        // Check if it's a "relation already exists" error
-        if (error.message.includes('already exists')) {
-          console.log(`⚠️  Tables may already exist, continuing...\n`);
+
+        if (error.message.includes('exists')) {
+          console.log('⚠️  Tables may already exist, continuing...\n');
         } else {
           throw error;
         }
@@ -64,57 +68,12 @@ async function runMigrations() {
     }
 
     console.log('🎉 All migrations completed successfully!');
-    console.log('\n📊 Tables created:');
-    console.log('   - Scientist Passport: 8 tables');
-    console.log('   - Service Marketplace: 12 tables');
-    console.log('   - Negative Results: 14 tables');
-    console.log('   - Project Management: 12 tables');
-    console.log('   Total: 46 new tables created!\n');
-
-    // Verify tables were created
-    const result = await pool.query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_name IN (
-        'user_technical_skills',
-        'user_software_expertise',
-        'user_laboratory_techniques',
-        'user_certifications',
-        'user_availability',
-        'user_speaking_profile',
-        'service_listings',
-        'service_projects',
-        'negative_results',
-        'research_projects',
-        'member_progress_reports',
-        'pi_reviews'
-      )
-      ORDER BY table_name
-    `);
-
-    if (result.rows.length > 0) {
-      console.log('✅ Verified tables exist:');
-      result.rows.forEach(row => {
-        console.log(`   ✓ ${row.table_name}`);
-      });
-    }
-
   } catch (error) {
-    console.error('\n❌ Migration process failed:');
-    console.error(error);
-    process.exit(1);
+    console.error('❌ Migration run failed:', error.message);
+    process.exitCode = 1;
   } finally {
-    await pool.end();
+    await connection.end();
   }
 }
 
-// Run migrations
-runMigrations().then(() => {
-  console.log('\n✨ Revolutionary features database is ready!');
-  process.exit(0);
-}).catch(error => {
-  console.error('\n💥 Fatal error:', error);
-  process.exit(1);
-});
-
+runMigrations();

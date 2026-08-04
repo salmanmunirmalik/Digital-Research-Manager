@@ -1,18 +1,18 @@
 # ============================================
 # Database Configuration
 # ============================================
-# Replace YOUR_PASSWORD_HERE with your actual PostgreSQL password
+# Replace YOUR_PASSWORD_HERE with your actual MySQL password
 
-# Option 1: Use DATABASE_URL (Recommended)
-DATABASE_URL=postgres://postgres:YOUR_PASSWORD_HERE@localhost:5432/digital_research_manager
+# Option 1: Use MYSQL_URL (Recommended)
+MYSQL_URL=mysql://root:YOUR_PASSWORD_HERE@localhost:3306/digital_research_manager
 
 # Option 2: Or use individual variables (alternative approach)
-# Uncomment these if you prefer individual variables instead of DATABASE_URL
-# DB_HOST=localhost
-# DB_PORT=5432
-# DB_NAME=digital_research_manager
-# DB_USER=postgres
-# DB_PASSWORD=YOUR_PASSWORD_HERE
+# Uncomment these if you prefer individual variables instead of MYSQL_URL
+# MYSQL_HOST=localhost
+# MYSQL_PORT=3306
+# MYSQL_DB=digital_research_manager
+# MYSQL_USER=root
+# MYSQL_PASSWORD=YOUR_PASSWORD_HERE
 
 # ============================================
 # Application Settings
@@ -20,12 +20,13 @@ DATABASE_URL=postgres://postgres:YOUR_PASSWORD_HERE@localhost:5432/digital_resea
 PORT=5002
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
-ENABLE_DEMO_AUTH=true
+# false for real users; true only for automated E2E with a test server
+ENABLE_DEMO_AUTH=false
 
 # JWT Secret (for authentication)
 JWT_SECRET=your_jwt_secret_here
 
-# Demo Auth Token (for development)
+# Used only when ENABLE_DEMO_AUTH=true (E2E)
 DEMO_AUTH_TOKEN=demo-token-123
 
 # Encryption Key (for API key encryption - should be 64 character hex)
@@ -41,7 +42,7 @@ ENCRYPTION_KEY=your-64-character-hex-encryption-key-here
 # ============================================
 # Database SSL Configuration (for production)
 # ============================================
-# DB_SSL=false
+# MYSQL_SSL=false
 
 # ============================================
 # Database Pool Settings (Optional)

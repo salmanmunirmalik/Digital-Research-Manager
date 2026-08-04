@@ -11,6 +11,9 @@ import autoIndexing from '../utils/autoIndexing.js';
 
 const router: Router = Router();
 
+const ENABLE_DEMO_AUTH = process.env.ENABLE_DEMO_AUTH === 'true';
+const DEMO_AUTH_TOKEN = process.env.DEMO_AUTH_TOKEN || 'demo-token-123';
+
 // Authentication middleware
 const authenticateToken = async (req: any, res: any, next: any) => {
   try {
@@ -20,13 +23,12 @@ const authenticateToken = async (req: any, res: any, next: any) => {
     }
     const token = authHeader.split(' ')[1];
     
-    // Demo token handling for testing
-    if (token === 'demo-token-123') {
+    if (ENABLE_DEMO_AUTH && token === DEMO_AUTH_TOKEN) {
       req.user = {
         id: '550e8400-e29b-41d4-a716-446655440003',
         email: 'demo@researchlab.com',
         username: 'student',
-        first_name: 'Sarah',
+        first_name: 'Fatima',
         last_name: 'Martinez',
         role: 'student',
         status: 'active',
@@ -83,9 +85,9 @@ router.get('/', async (req: any, res) => {
     let query = `
       SELECT 
         nr.*,
-        COALESCE(u.first_name || ' ' || u.last_name, 'Anonymous') as researcher_name,
+        COALESCE(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')), 'Anonymous') as researcher_name,
         COALESCE(u.email, '') as current_institution,
-        CASE WHEN COALESCE(nr.anonymous_sharing, false) THEN 'Anonymous' ELSE COALESCE(u.first_name || ' ' || u.last_name, 'Anonymous') END as display_name,
+        CASE WHEN COALESCE(nr.anonymous_sharing, false) THEN 'Anonymous' ELSE COALESCE(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')), 'Anonymous') END as display_name,
         COALESCE(l.name, '') as lab_name,
         COALESCE(nr.helpful_votes, 0) as helpful_votes,
         COALESCE(nr.saved_someone_votes, 0) as saved_someone_votes,
@@ -158,10 +160,10 @@ router.get('/:id', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         nr.*,
-        u.first_name || ' ' || u.last_name as researcher_name,
+        CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as researcher_name,
         u.role as current_position,
         u.email as current_institution,
-        CASE WHEN nr.anonymous_sharing THEN 'Anonymous' ELSE u.first_name || ' ' || u.last_name END as display_name,
+        CASE WHEN nr.anonymous_sharing THEN 'Anonymous' ELSE CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) END as display_name,
         l.name as lab_name
       FROM negative_results nr
       JOIN users u ON nr.researcher_id = u.id
@@ -196,9 +198,9 @@ router.get('/my/submissions', authenticateToken, async (req: any, res) => {
       SELECT 
         nr.*,
         (SELECT COUNT(*) FROM negative_result_comments WHERE negative_result_id = nr.id) as comments_count,
-        COALESCE(u.first_name || ' ' || u.last_name, 'Anonymous') as researcher_name,
+        COALESCE(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')), 'Anonymous') as researcher_name,
         COALESCE(u.email, '') as current_institution,
-        CASE WHEN COALESCE(nr.anonymous_sharing, false) THEN 'Anonymous' ELSE COALESCE(u.first_name || ' ' || u.last_name, 'Anonymous') END as display_name,
+        CASE WHEN COALESCE(nr.anonymous_sharing, false) THEN 'Anonymous' ELSE COALESCE(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')), 'Anonymous') END as display_name,
         COALESCE(l.name, '') as lab_name,
         COALESCE(nr.helpful_votes, 0) as helpful_votes,
         COALESCE(nr.saved_someone_votes, 0) as saved_someone_votes,
@@ -407,7 +409,7 @@ router.get('/:id/comments', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         nrc.*,
-        u.first_name || ' ' || u.last_name as commenter_name,
+        CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as commenter_name,
         u.current_position as commenter_position
       FROM negative_result_comments nrc
       JOIN users u ON nrc.commenter_id = u.id
@@ -525,7 +527,7 @@ router.get('/my/saved', authenticateToken, async (req: any, res) => {
         snr.save_reason,
         snr.notes,
         snr.saved_at,
-        u.first_name || ' ' || u.last_name as researcher_name
+        CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as researcher_name
       FROM saved_negative_results snr
       JOIN negative_results nr ON snr.negative_result_id = nr.id
       JOIN users u ON nr.researcher_id = u.id
@@ -624,7 +626,7 @@ router.get('/:id/citations', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         nrc.*,
-        u.first_name || ' ' || u.last_name as citing_user_name,
+        CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as citing_user_name,
         u.current_institution
       FROM negative_result_citations nrc
       JOIN users u ON nrc.citing_user_id = u.id
@@ -651,7 +653,7 @@ router.get('/:id/alternatives', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         sa.*,
-        u.first_name || ' ' || u.last_name as researcher_name,
+        CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as researcher_name,
         u.current_institution
       FROM successful_alternatives sa
       JOIN users u ON sa.researcher_id = u.id
@@ -735,7 +737,7 @@ router.get('/leaderboard', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         nrcs.*,
-        u.first_name || ' ' || u.last_name as researcher_name,
+        CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as researcher_name,
         u.current_position,
         u.current_institution
       FROM negative_results_contributor_stats nrcs

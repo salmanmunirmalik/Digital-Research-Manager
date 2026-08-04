@@ -86,7 +86,7 @@ const UnifiedReferenceSystem: React.FC = () => {
           duration: '3 days',
           score: 95,
           confidence: 90,
-          source: 'Dr. Sarah Johnson',
+          source: 'Dr. Fatima Johnson',
           createdAt: '2024-01-15',
           verified: true,
           jobMatches: ['Research Scientist', 'Postdoc']

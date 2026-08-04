@@ -12,6 +12,9 @@ import PriorityBadge from './PriorityBadge';
 import StatusBadge from './StatusBadge';
 import AssigneeAvatars from './AssigneeAvatars';
 import DueDateIndicator from './DueDateIndicator';
+import LinkedEntityChips, { buildWorkflowLinks } from './LinkedEntityChips';
+import { useEntityOptions } from '../hooks/useEntityOptions';
+import EntityLinkSelect from './EntityLinkSelect';
 
 interface Task {
   id: string;
@@ -30,6 +33,7 @@ interface Task {
   tags?: string[];
   created_at?: string;
   updated_at?: string;
+  protocol_id?: string | null;
 }
 
 interface Subtask {
@@ -76,6 +80,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const { protocols } = useEntityOptions(['protocols']);
 
   React.useEffect(() => {
     if (task) {
@@ -114,6 +119,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 
   const completedSubtasks = subtasks.filter(s => s.is_completed).length;
   const totalSubtasks = subtasks.length;
+  const linkedChips = buildWorkflowLinks({ protocolId: task.protocol_id });
 
   return (
     <div className="w-96 bg-white border-l border-gray-200 h-full flex flex-col">
@@ -183,6 +189,19 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
             )}
           </div>
         )}
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Linked protocol</label>
+          <EntityLinkSelect
+            value={task.protocol_id || ''}
+            options={protocols}
+            onChange={(id) => onUpdate(task.id, { protocol_id: id || null })}
+            placeholder="None - choose a protocol"
+          />
+          {linkedChips.length > 0 && (
+            <LinkedEntityChips links={linkedChips} title="" className="mt-2" />
+          )}
+        </div>
 
         {/* Status and Priority */}
         <div className="flex items-center gap-3">

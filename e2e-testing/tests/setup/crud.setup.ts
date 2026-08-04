@@ -1,24 +1,24 @@
-import { Pool } from 'pg';
+import mysql from 'mysql2/promise';
 import { config } from './test-config';
 
-let dbPool: Pool;
+let dbPool: mysql.Pool;
+const normalizeQuery = (text: string) => text.replace(/\$\d+/g, '?');
 
 beforeAll(async () => {
   // Initialize database connection
-  dbPool = new Pool({
+  dbPool = mysql.createPool({
     host: config.database.host,
     port: parseInt(config.database.port),
     database: config.database.database,
     user: config.database.username,
     password: config.database.password,
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionLimit: 20,
+    connectTimeout: 2000
   });
 
   // Test database connection
   try {
-    const client = await dbPool.connect();
+    const client = await dbPool.getConnection();
     await client.query('SELECT NOW()');
     client.release();
     console.log('✅ Database connection established');
@@ -40,10 +40,11 @@ global.dbPool = dbPool;
 // Helper functions for CRUD testing
 global.crudHelpers = {
   async executeQuery(query: string, params: any[] = []) {
-    const client = await dbPool.connect();
+    const client = await dbPool.getConnection();
     try {
-      const result = await client.query(query, params);
-      return result;
+      const [rows] = await client.query(normalizeQuery(query), params);
+      const insertId = (rows as any)?.insertId;
+      return { rows, insertId };
     } finally {
       client.release();
     }
@@ -51,33 +52,35 @@ global.crudHelpers = {
 
   async createTestRecord(table: string, data: Record<string, any>) {
     const columns = Object.keys(data).join(', ');
-    const placeholders = Object.keys(data).map((_, index) => `$${index + 1}`).join(', ');
+    const placeholders = Object.keys(data).map(() => '?').join(', ');
     const values = Object.values(data);
     
-    const query = `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) RETURNING *`;
+    const query = `INSERT INTO ${table} (${columns}) VALUES (${placeholders})`;
     const result = await this.executeQuery(query, values);
-    return result.rows[0];
+    const recordId = data.id ?? result.insertId;
+    return recordId ? this.readTestRecord(table, recordId) : null;
   },
 
   async readTestRecord(table: string, id: string | number) {
     const query = `SELECT * FROM ${table} WHERE id = $1`;
     const result = await this.executeQuery(query, [id]);
-    return result.rows[0];
+    return (result.rows as any[])[0];
   },
 
   async updateTestRecord(table: string, id: string | number, data: Record<string, any>) {
-    const setClause = Object.keys(data).map((key, index) => `${key} = $${index + 2}`).join(', ');
+    const setClause = Object.keys(data).map((key) => `${key} = ?`).join(', ');
     const values = Object.values(data);
     
-    const query = `UPDATE ${table} SET ${setClause} WHERE id = $1 RETURNING *`;
-    const result = await this.executeQuery(query, [id, ...values]);
-    return result.rows[0];
+    const query = `UPDATE ${table} SET ${setClause} WHERE id = ?`;
+    await this.executeQuery(query, [...values, id]);
+    return this.readTestRecord(table, id);
   },
 
   async deleteTestRecord(table: string, id: string | number) {
-    const query = `DELETE FROM ${table} WHERE id = $1 RETURNING *`;
-    const result = await this.executeQuery(query, [id]);
-    return result.rows[0];
+    const record = await this.readTestRecord(table, id);
+    const query = `DELETE FROM ${table} WHERE id = $1`;
+    await this.executeQuery(query, [id]);
+    return record;
   },
 
   async cleanupTestData(table: string, condition: string, params: any[] = []) {

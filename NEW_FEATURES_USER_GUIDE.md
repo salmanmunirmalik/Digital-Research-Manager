@@ -1063,7 +1063,7 @@ GET /api/project-management/team-hierarchy/:labId
 
 **Tree Visualization (To Be Built):**
 ```
-PI: Dr. Sarah Chen
+PI: Dr. Fatima Chen
 ├─ PostDoc: Dr. Michael Brown (reports to PI)
 │  ├─ PhD: Alice Wang (reports to PostDoc)
 │  └─ PhD: Bob Lee (reports to PostDoc)

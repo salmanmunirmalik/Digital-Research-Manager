@@ -38,48 +38,9 @@ const AIPresentationsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showAdvancedEditor, setShowAdvancedEditor] = useState(false);
 
-  // Mock data for demonstration
   useEffect(() => {
-    const mockPresentations: Presentation[] = [
-      {
-        id: '1',
-        title: 'Research Findings: Molecular Biology Study',
-        description: 'Comprehensive analysis of protein interactions in cellular pathways',
-        theme: 'research-professional',
-        slides: [],
-        createdAt: '2024-01-15T10:30:00Z',
-        updatedAt: '2024-01-20T14:45:00Z',
-        isFavorite: true,
-        status: 'published'
-      },
-      {
-        id: '2',
-        title: 'Lab Meeting Presentation',
-        description: 'Weekly progress update on ongoing experiments',
-        theme: 'lab-meeting',
-        slides: [],
-        createdAt: '2024-01-18T09:15:00Z',
-        updatedAt: '2024-01-22T16:20:00Z',
-        isFavorite: false,
-        status: 'draft'
-      },
-      {
-        id: '3',
-        title: 'Conference Abstract Presentation',
-        description: 'Preparing for upcoming molecular biology conference',
-        theme: 'conference',
-        slides: [],
-        createdAt: '2024-01-10T13:45:00Z',
-        updatedAt: '2024-01-15T11:30:00Z',
-        isFavorite: true,
-        status: 'published'
-      }
-    ];
-    
-    setTimeout(() => {
-      setPresentations(mockPresentations);
-      setIsLoading(false);
-    }, 1000);
+    setPresentations([]);
+    setIsLoading(false);
   }, []);
 
   const filteredPresentations = presentations.filter(presentation => {

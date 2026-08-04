@@ -1,410 +1,841 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
+import { canManageResource } from '../utils/ownership';
 import {
-  ChartBarIcon,
-  ArrowTrendingUpIcon,
-  SparklesIcon,
-  ClockIcon,
-  BookOpenIcon,
-  BeakerIcon,
-  AcademicCapIcon,
-  GlobeAltIcon,
-  CircleStackIcon,
+  NewspaperIcon,
+  PlusIcon,
   MagnifyingGlassIcon,
-  StarIcon,
+  LightBulbIcon,
+  DocumentTextIcon,
+  ChatBubbleLeftIcon,
+  TrashIcon,
+  PencilIcon,
+  HeartIcon,
+  BookmarkIcon,
   ShareIcon,
-  FireIcon,
-  LightBulbIcon
-} from '@heroicons/react/24/outline';
+  BriefcaseIcon,
+} from '../components/icons';
+
+type PostType = 'news' | 'update' | 'idea' | 'blog' | 'opinion' | 'opportunity';
+
+interface CommunityComment {
+  id: string;
+  postId: string;
+  userId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+}
+
+interface CommunityPost {
+  id: string;
+  userId: string;
+  authorName: string;
+  title: string;
+  body: string;
+  postType: PostType;
+  tags: string[];
+  linkUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  likeCount: number;
+  likedByMe: boolean;
+  commentCount: number;
+  savedByMe: boolean;
+}
+
+const POST_TYPE_META: Record<
+  PostType,
+  { label: string; hint: string; icon: React.FC<React.SVGProps<SVGSVGElement>> }
+> = {
+  news: {
+    label: 'News',
+    hint: 'Something happening in research or industry',
+    icon: NewspaperIcon,
+  },
+  update: {
+    label: 'Update',
+    hint: 'A finding, tool, or report worth sharing',
+    icon: DocumentTextIcon,
+  },
+  idea: {
+    label: 'Idea',
+    hint: 'A thought or suggestion for the community',
+    icon: LightBulbIcon,
+  },
+  blog: {
+    label: 'Blog',
+    hint: 'A longer write-up or personal take',
+    icon: DocumentTextIcon,
+  },
+  opinion: {
+    label: 'Opinion',
+    hint: 'Your view on how research should work',
+    icon: ChatBubbleLeftIcon,
+  },
+  opportunity: {
+    label: 'Opportunity',
+    hint: 'Open role, internship, or lab call',
+    icon: BriefcaseIcon,
+  },
+};
+
+const FILTERS: Array<{ id: 'all' | PostType; label: string }> = [
+  { id: 'all', label: 'All' },
+  { id: 'news', label: 'News' },
+  { id: 'update', label: 'Updates' },
+  { id: 'idea', label: 'Ideas' },
+  { id: 'blog', label: 'Blogs' },
+  { id: 'opinion', label: 'Opinions' },
+  { id: 'opportunity', label: 'Opportunities' },
+];
+
+const getAuthToken = () =>
+  localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+
+const authHeaders = () => ({ Authorization: `Bearer ${getAuthToken()}` });
+
+const formatWhen = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const diffMs = Date.now() - date.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString();
+};
+
+const emptyForm = {
+  title: '',
+  body: '',
+  postType: 'update' as PostType,
+  tags: '',
+  linkUrl: '',
+};
 
 const CurrentTrendsPage: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [filter, setFilter] = useState<'all' | PostType>('all');
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showComposer, setShowComposer] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+  const [commentsByPost, setCommentsByPost] = useState<Record<string, CommunityComment[]>>({});
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [commentLoading, setCommentLoading] = useState<Record<string, boolean>>({});
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const postRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  const loadPosts = useCallback(async () => {
+    const token = getAuthToken();
+    if (!token) {
+      setError('Sign in to view the feed');
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      setError('');
+      const response = await axios.get('/api/community-news', {
+        params: {
+          ...(filter !== 'all' ? { type: filter } : {}),
+          ...(search ? { search } : {}),
+          limit: 80,
+        },
+        headers: authHeaders(),
+      });
+      setPosts(
+        (response.data.posts || []).map((p: CommunityPost) => ({
+          ...p,
+          likeCount: Number(p.likeCount) || 0,
+          likedByMe: Boolean(p.likedByMe),
+          commentCount: Number(p.commentCount) || 0,
+          savedByMe: Boolean(p.savedByMe),
+        }))
+      );
+    } catch (err) {
+      console.error(err);
+      setError('Failed to load posts');
+    } finally {
+      setLoading(false);
+    }
+  }, [filter, search]);
 
   useEffect(() => {
-    fetchUserProfile();
-  }, []);
+    void loadPosts();
+  }, [loadPosts]);
 
-  const fetchUserProfile = async () => {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const postId = params.get('post');
+    if (!postId || posts.length === 0) return;
+    setHighlightId(postId);
+    setExpandedComments((prev) => new Set(prev).add(postId));
+    void loadComments(postId);
+    requestAnimationFrame(() => {
+      postRefs.current[postId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, [posts]);
+
+  const openCreate = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setShowComposer(true);
+  };
+
+  const openEdit = (post: CommunityPost) => {
+    setEditingId(post.id);
+    setForm({
+      title: post.title,
+      body: post.body,
+      postType: post.postType,
+      tags: (post.tags || []).join(', '),
+      linkUrl: post.linkUrl || '',
+    });
+    setShowComposer(true);
+  };
+
+  const closeComposer = () => {
+    setShowComposer(false);
+    setEditingId(null);
+    setForm(emptyForm);
+  };
+
+  const submitPost = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const token = getAuthToken();
+    if (!token) return;
+    if (!form.title.trim() || !form.body.trim()) {
+      setError('Title and content are required');
+      return;
+    }
+
+    const payload = {
+      title: form.title.trim(),
+      body: form.body.trim(),
+      postType: form.postType,
+      tags: form.tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean),
+      linkUrl: form.linkUrl.trim() || null,
+    };
+
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/user/profile', {
-        headers: { Authorization: `Bearer ${token}` }
+      setSaving(true);
+      setError('');
+      if (editingId) {
+        await axios.put(`/api/community-news/${editingId}`, payload, {
+          headers: authHeaders(),
+        });
+      } else {
+        await axios.post('/api/community-news', payload, {
+          headers: authHeaders(),
+        });
+      }
+      closeComposer();
+      await loadPosts();
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.error || 'Failed to save post');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deletePost = async (post: CommunityPost) => {
+    if (!window.confirm('Delete this post?')) return;
+    const token = getAuthToken();
+    if (!token) return;
+    try {
+      await axios.delete(`/api/community-news/${post.id}`, {
+        headers: authHeaders(),
       });
-      
-      setUserProfile({
-        specialization: response.data.specialization || 'General Research',
-        department: response.data.department || 'Research',
-        research_interests: response.data.research_interests || [],
-        current_research_areas: response.data.current_research_areas || [],
+      setPosts((prev) => prev.filter((p) => p.id !== post.id));
+    } catch (err) {
+      console.error(err);
+      setError('Failed to delete post');
+    }
+  };
+
+  const toggleLike = async (post: CommunityPost) => {
+    const prevLiked = post.likedByMe;
+    const prevCount = post.likeCount;
+    setPosts((list) =>
+      list.map((p) =>
+        p.id === post.id
+          ? {
+              ...p,
+              likedByMe: !prevLiked,
+              likeCount: Math.max(0, prevCount + (prevLiked ? -1 : 1)),
+            }
+          : p
+      )
+    );
+    try {
+      const res = await axios.post(
+        `/api/community-news/${post.id}/like`,
+        {},
+        { headers: authHeaders() }
+      );
+      setPosts((list) =>
+        list.map((p) =>
+          p.id === post.id
+            ? {
+                ...p,
+                likedByMe: Boolean(res.data.liked),
+                likeCount: Number(res.data.likeCount) || 0,
+              }
+            : p
+        )
+      );
+    } catch (err) {
+      console.error(err);
+      setPosts((list) =>
+        list.map((p) =>
+          p.id === post.id ? { ...p, likedByMe: prevLiked, likeCount: prevCount } : p
+        )
+      );
+    }
+  };
+
+  const toggleSave = async (post: CommunityPost) => {
+    const prev = post.savedByMe;
+    setPosts((list) =>
+      list.map((p) => (p.id === post.id ? { ...p, savedByMe: !prev } : p))
+    );
+    try {
+      const res = await axios.post(
+        `/api/community-news/${post.id}/save`,
+        {},
+        { headers: authHeaders() }
+      );
+      setPosts((list) =>
+        list.map((p) =>
+          p.id === post.id ? { ...p, savedByMe: Boolean(res.data.saved) } : p
+        )
+      );
+    } catch (err) {
+      console.error(err);
+      setPosts((list) =>
+        list.map((p) => (p.id === post.id ? { ...p, savedByMe: prev } : p))
+      );
+    }
+  };
+
+  const sharePost = async (post: CommunityPost) => {
+    const url = `${window.location.origin}/current-trends?post=${post.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: post.title, text: post.body.slice(0, 140), url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        alert('Link copied');
+      }
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+      try {
+        await navigator.clipboard.writeText(url);
+        alert('Link copied');
+      } catch {
+        alert(url);
+      }
+    }
+  };
+
+  const loadComments = async (postId: string) => {
+    setCommentLoading((m) => ({ ...m, [postId]: true }));
+    try {
+      const res = await axios.get(`/api/community-news/${postId}/comments`, {
+        headers: authHeaders(),
       });
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      setUserProfile({
-        specialization: 'General Research',
-        department: 'Research',
-        research_interests: [],
-        current_research_areas: [],
+      setCommentsByPost((m) => ({ ...m, [postId]: res.data.comments || [] }));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCommentLoading((m) => ({ ...m, [postId]: false }));
+    }
+  };
+
+  const toggleComments = async (postId: string) => {
+    const next = new Set(expandedComments);
+    if (next.has(postId)) {
+      next.delete(postId);
+      setExpandedComments(next);
+      return;
+    }
+    next.add(postId);
+    setExpandedComments(next);
+    if (!commentsByPost[postId]) {
+      await loadComments(postId);
+    }
+  };
+
+  const submitComment = async (postId: string) => {
+    const body = (commentDrafts[postId] || '').trim();
+    if (!body) return;
+    try {
+      const res = await axios.post(
+        `/api/community-news/${postId}/comments`,
+        { body },
+        { headers: authHeaders() }
+      );
+      setCommentDrafts((m) => ({ ...m, [postId]: '' }));
+      setCommentsByPost((m) => ({
+        ...m,
+        [postId]: [...(m[postId] || []), res.data.comment],
+      }));
+      setPosts((list) =>
+        list.map((p) =>
+          p.id === postId
+            ? { ...p, commentCount: Number(res.data.commentCount) || p.commentCount + 1 }
+            : p
+        )
+      );
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.error || 'Failed to post comment');
+    }
+  };
+
+  const deleteComment = async (postId: string, commentId: string) => {
+    if (!confirm('Delete this comment?')) return;
+    try {
+      await axios.delete(`/api/community-news/comments/${commentId}`, {
+        headers: authHeaders(),
       });
+      setCommentsByPost((m) => ({
+        ...m,
+        [postId]: (m[postId] || []).filter((c) => c.id !== commentId),
+      }));
+      setPosts((list) =>
+        list.map((p) =>
+          p.id === postId
+            ? { ...p, commentCount: Math.max(0, (p.commentCount || 1) - 1) }
+            : p
+        )
+      );
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.error || 'Failed to delete comment');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl shadow-lg">
-                <SparklesIcon className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Current Research Trends
-                </h1>
-                <p className="text-gray-600 mt-1">Discover the latest developments and emerging areas in scientific research</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              {/* Search */}
-              <div className="relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search trends..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
-                />
-              </div>
-              <button className="px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all flex items-center space-x-2">
-                <ShareIcon className="w-5 h-5 text-gray-600" />
-                <span className="text-sm font-medium text-gray-700">Share</span>
+    <div className="min-h-[calc(100vh-4rem)] bg-[#FAFBFC]">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight flex items-center gap-2">
+              <NewspaperIcon className="w-7 h-7 text-slate-700" />
+              News & updates
+            </h1>
+            <p className="mt-1.5 text-[14px] text-slate-600 max-w-xl">
+              Share news, ideas, opinions, and work opportunities - then like, comment, share, or save
+              what matters.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors shrink-0"
+          >
+            <PlusIcon className="w-4 h-4" />
+            Share something
+          </button>
+        </div>
+
+        <div className="mb-4 flex flex-col sm:flex-row gap-3">
+          <form
+            className="relative flex-1"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setSearch(searchInput.trim());
+            }}
+          >
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search posts…"
+              className="w-full pl-9 pr-3 py-2 text-[13px] border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+            />
+          </form>
+        </div>
+
+        <div className="flex gap-1 overflow-x-auto border-b border-slate-200/80 mb-5">
+          {FILTERS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setFilter(tab.id)}
+              className={`relative px-3.5 py-2.5 text-[13px] font-medium whitespace-nowrap transition-colors ${
+                filter === tab.id ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {tab.label}
+              {filter === tab.id && (
+                <span className="absolute left-2 right-2 -bottom-px h-0.5 bg-slate-900 rounded-full" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {error && (
+          <div className="mb-4 px-4 py-3 text-[13px] text-red-700 bg-red-50 border border-red-100 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        {showComposer && (
+          <div className="mb-6 bg-white border border-slate-200/80 rounded-xl p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[15px] font-semibold text-slate-900">
+                {editingId ? 'Edit post' : 'Share with the community'}
+              </h2>
+              <button
+                type="button"
+                onClick={closeComposer}
+                className="text-[13px] text-slate-500 hover:text-slate-800"
+              >
+                Cancel
               </button>
             </div>
+
+            <form onSubmit={submitPost} className="space-y-4">
+              <div>
+                <label className="block text-[12px] font-medium text-slate-600 mb-1.5">Type</label>
+                <div className="flex flex-wrap gap-2">
+                  {(Object.keys(POST_TYPE_META) as PostType[]).map((type) => {
+                    const meta = POST_TYPE_META[type];
+                    const selected = form.postType === type;
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, postType: type }))}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] rounded-md border transition-colors ${
+                          selected
+                            ? 'bg-slate-900 text-white border-slate-900'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                        }`}
+                        title={meta.hint}
+                      >
+                        <meta.icon className="w-3.5 h-3.5" />
+                        {meta.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1.5 text-[12px] text-slate-500">
+                  {POST_TYPE_META[form.postType].hint}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-medium text-slate-600 mb-1.5">Title</label>
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                  placeholder={
+                    form.postType === 'opportunity'
+                      ? 'e.g. Postdoc opening - single-cell immunology'
+                      : 'e.g. Found an amazing tool for image generation'
+                  }
+                  className="w-full px-3 py-2 text-[13px] border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                  maxLength={500}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-medium text-slate-600 mb-1.5">Content</label>
+                <textarea
+                  value={form.body}
+                  onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+                  placeholder={
+                    form.postType === 'opportunity'
+                      ? 'Describe the role, lab, location, and how to apply.'
+                      : 'Share what you found, read, or think - enough detail for others to learn from it.'
+                  }
+                  rows={6}
+                  className="w-full px-3 py-2 text-[13px] border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900/10 resize-y"
+                  required
+                />
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[12px] font-medium text-slate-600 mb-1.5">
+                    Tags <span className="font-normal text-slate-400">(comma-separated)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={form.tags}
+                    onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))}
+                    placeholder="cancer, AI, tools"
+                    className="w-full px-3 py-2 text-[13px] border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-medium text-slate-600 mb-1.5">
+                    Link <span className="font-normal text-slate-400">(optional)</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={form.linkUrl}
+                    onChange={(e) => setForm((f) => ({ ...f, linkUrl: e.target.value }))}
+                    placeholder="https://…"
+                    className="w-full px-3 py-2 text-[13px] border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={closeComposer}
+                  className="px-3.5 py-2 text-[13px] font-medium text-slate-600 border border-slate-200 rounded-md hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:opacity-50"
+                >
+                  {saving ? 'Saving…' : editingId ? 'Save changes' : 'Publish'}
+                </button>
+              </div>
+            </form>
           </div>
-          
-          {/* User Profile Badge */}
-          {userProfile && (
-            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200">
-              <AcademicCapIcon className="w-5 h-5 text-blue-600" />
-              <span className="text-sm text-gray-700">
-                <span className="font-medium">{userProfile.specialization}</span>
-                {userProfile.research_interests.length > 0 && (
-                  <span className="text-gray-500 ml-2">
-                    • {userProfile.research_interests.slice(0, 2).join(', ')}
-                  </span>
-                )}
-              </span>
+        )}
+
+        <div className="space-y-3">
+          {loading ? (
+            <div className="bg-white border border-slate-200/80 rounded-xl px-6 py-12 text-center text-[13px] text-slate-500">
+              Loading posts…
             </div>
+          ) : posts.length === 0 ? (
+            <div className="bg-white border border-slate-200/80 rounded-xl px-6 py-12 text-center">
+              <p className="text-[14px] font-medium text-slate-800">No posts yet</p>
+              <p className="mt-1 text-[13px] text-slate-500 max-w-sm mx-auto">
+                Be the first - share a tool, opinion, or work opportunity.
+              </p>
+              <button
+                type="button"
+                onClick={openCreate}
+                className="mt-4 inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800"
+              >
+                <PlusIcon className="w-4 h-4" />
+                Share something
+              </button>
+            </div>
+          ) : (
+            posts.map((post) => {
+              const meta = POST_TYPE_META[post.postType] || POST_TYPE_META.update;
+              const TypeIcon = meta.icon;
+              const isOwner = canManageResource(post.userId, user);
+              const commentsOpen = expandedComments.has(post.id);
+              const comments = commentsByPost[post.id] || [];
+
+              return (
+                <article
+                  key={post.id}
+                  ref={(el) => {
+                    postRefs.current[post.id] = el;
+                  }}
+                  className={`bg-white border rounded-xl p-5 transition-colors ${
+                    highlightId === post.id
+                      ? 'border-slate-400 ring-2 ring-slate-900/10'
+                      : 'border-slate-200/80 hover:border-slate-300/80'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 text-[12px] text-slate-500">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
+                          <TypeIcon className="w-3.5 h-3.5" />
+                          {meta.label}
+                        </span>
+                        <span className="font-medium text-slate-700">{post.authorName}</span>
+                        <span>·</span>
+                        <span>{formatWhen(post.createdAt)}</span>
+                      </div>
+                      <h2 className="mt-2 text-[16px] font-semibold text-slate-900 tracking-tight">
+                        {post.title}
+                      </h2>
+                      <p className="mt-2 text-[14px] text-slate-600 whitespace-pre-wrap leading-relaxed">
+                        {post.body}
+                      </p>
+                      {(post.tags?.length > 0 || post.linkUrl) && (
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          {(post.tags || []).map((tag) => (
+                            <span
+                              key={tag}
+                              className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-600 border border-slate-200"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          {post.linkUrl && (
+                            <a
+                              href={post.linkUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[12px] font-medium text-slate-800 underline-offset-2 hover:underline"
+                            >
+                              Open link
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {isOwner && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(post)}
+                          className="p-2 rounded-md text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                          aria-label="Edit post"
+                        >
+                          <PencilIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void deletePost(post)}
+                          className="p-2 rounded-md text-slate-500 hover:bg-red-50 hover:text-red-700"
+                          aria-label="Delete post"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => void toggleLike(post)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] font-medium transition-colors ${
+                        post.likedByMe
+                          ? 'text-red-600 bg-red-50'
+                          : 'text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <HeartIcon className="w-4 h-4" />
+                      {post.likeCount > 0 ? post.likeCount : 'Like'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void toggleComments(post.id)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] font-medium transition-colors ${
+                        commentsOpen
+                          ? 'text-slate-900 bg-slate-100'
+                          : 'text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <ChatBubbleLeftIcon className="w-4 h-4" />
+                      {post.commentCount > 0 ? post.commentCount : 'Comment'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void sharePost(post)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] font-medium text-slate-600 hover:bg-slate-50"
+                    >
+                      <ShareIcon className="w-4 h-4" />
+                      Share
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void toggleSave(post)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] font-medium transition-colors ${
+                        post.savedByMe
+                          ? 'text-amber-800 bg-amber-50'
+                          : 'text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <BookmarkIcon className="w-4 h-4" />
+                      {post.savedByMe ? 'Saved' : 'Save'}
+                    </button>
+                  </div>
+
+                  {commentsOpen && (
+                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-3">
+                      {commentLoading[post.id] ? (
+                        <p className="text-[12px] text-slate-400">Loading comments…</p>
+                      ) : comments.length === 0 ? (
+                        <p className="text-[12px] text-slate-400">No comments yet.</p>
+                      ) : (
+                        comments.map((c) => (
+                          <div key={c.id} className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="text-[12px] text-slate-500">
+                                <span className="font-medium text-slate-700">{c.authorName}</span>
+                                <span className="mx-1">·</span>
+                                <span>{formatWhen(c.createdAt)}</span>
+                              </div>
+                              <p className="mt-0.5 text-[13px] text-slate-700 whitespace-pre-wrap">
+                                {c.body}
+                              </p>
+                            </div>
+                            {canManageResource(c.userId, user) && (
+                              <button
+                                type="button"
+                                onClick={() => void deleteComment(post.id, c.id)}
+                                className="p-1 text-slate-400 hover:text-red-600 shrink-0"
+                                aria-label="Delete comment"
+                              >
+                                <TrashIcon className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={commentDrafts[post.id] || ''}
+                          onChange={(e) =>
+                            setCommentDrafts((m) => ({ ...m, [post.id]: e.target.value }))
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              void submitComment(post.id);
+                            }
+                          }}
+                          placeholder="Write a comment…"
+                          className="flex-1 px-3 py-2 text-[13px] border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void submitComment(post.id)}
+                          disabled={!(commentDrafts[post.id] || '').trim()}
+                          className="px-3 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:opacity-40"
+                        >
+                          Post
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })
           )}
-        </div>
-
-        {/* Trending Areas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Trending Research Areas */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                <BeakerIcon className="w-6 h-6 text-white" />
-              </div>
-              <h4 className="font-semibold text-gray-900">Trending Research Areas</h4>
-            </div>
-            <ul className="space-y-3">
-              <li className="flex items-start space-x-2">
-                <ArrowTrendingUpIcon className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Single-cell multi-omics analysis</div>
-                  <div className="text-sm text-gray-600">Rapid growth in understanding cellular heterogeneity</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <ArrowTrendingUpIcon className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">AI-driven drug discovery</div>
-                  <div className="text-sm text-gray-600">Machine learning accelerating pharmaceutical research</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <ArrowTrendingUpIcon className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">CRISPR-based therapeutics</div>
-                  <div className="text-sm text-gray-600">Gene editing moving to clinical applications</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <ArrowTrendingUpIcon className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Quantum computing in biology</div>
-                  <div className="text-sm text-gray-600">Next-generation computing for complex simulations</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <ArrowTrendingUpIcon className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Organoid technology</div>
-                  <div className="text-sm text-gray-600">3D cell cultures revolutionizing drug testing</div>
-                </div>
-              </li>
-            </ul>
-          </div>
-
-          {/* Methodology Trends */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                <ChartBarIcon className="w-6 h-6 text-white" />
-              </div>
-              <h4 className="font-semibold text-gray-900">Methodology Trends</h4>
-            </div>
-            <ul className="space-y-3">
-              <li className="flex items-start space-x-2">
-                <ArrowTrendingUpIcon className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Reproducible research practices</div>
-                  <div className="text-sm text-gray-600">Focus on transparency and data sharing</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <ArrowTrendingUpIcon className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Open science initiatives</div>
-                  <div className="text-sm text-gray-600">Increased collaboration and open access</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <ArrowTrendingUpIcon className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Collaborative research networks</div>
-                  <div className="text-sm text-gray-600">Cross-institutional partnerships</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <ArrowTrendingUpIcon className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Data sharing platforms</div>
-                  <div className="text-sm text-gray-600">Standardized repositories and protocols</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <ArrowTrendingUpIcon className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Pre-registration of studies</div>
-                  <div className="text-sm text-gray-600">Reducing publication bias and improving rigor</div>
-                </div>
-              </li>
-            </ul>
-          </div>
-
-          {/* Innovation Opportunities */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
-                <SparklesIcon className="w-6 h-6 text-white" />
-              </div>
-              <h4 className="font-semibold text-gray-900">Innovation Opportunities</h4>
-            </div>
-            <ul className="space-y-3">
-              <li className="flex items-start space-x-2">
-                <LightBulbIcon className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Cross-disciplinary collaborations</div>
-                  <div className="text-sm text-gray-600">Biology meets computer science and engineering</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <LightBulbIcon className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Citizen science projects</div>
-                  <div className="text-sm text-gray-600">Public engagement in research</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <LightBulbIcon className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Open-source research tools</div>
-                  <div className="text-sm text-gray-600">Community-driven software development</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <LightBulbIcon className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Sustainable research practices</div>
-                  <div className="text-sm text-gray-600">Eco-friendly laboratory operations</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <LightBulbIcon className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Virtual and augmented reality</div>
-                  <div className="text-sm text-gray-600">Enhanced visualization and training</div>
-                </div>
-              </li>
-            </ul>
-          </div>
-
-          {/* Research Challenges */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
-                <ClockIcon className="w-6 h-6 text-white" />
-              </div>
-              <h4 className="font-semibold text-gray-900">Research Challenges</h4>
-            </div>
-            <ul className="space-y-3">
-              <li className="flex items-start space-x-2">
-                <ClockIcon className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Data reproducibility issues</div>
-                  <div className="text-sm text-gray-600">Need for standardized protocols</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <ClockIcon className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Publication bias</div>
-                  <div className="text-sm text-gray-600">Negative results undervalued</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <ClockIcon className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Funding constraints</div>
-                  <div className="text-sm text-gray-600">Competitive grant landscape</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <ClockIcon className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Ethical considerations</div>
-                  <div className="text-sm text-gray-600">AI and gene editing ethics</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <ClockIcon className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">Time to publication</div>
-                  <div className="text-sm text-gray-600">Extended peer review processes</div>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Additional Sections */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-          {/* Emerging Tools */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <CircleStackIcon className="w-6 h-6 text-white" />
-              </div>
-              <h4 className="font-semibold text-gray-900">Emerging Tools</h4>
-            </div>
-            <ul className="space-y-2">
-              <li className="flex items-start space-x-2">
-                <FireIcon className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">AI-powered microscopy</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <FireIcon className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">Cloud-based analysis</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <FireIcon className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">Automated lab workflows</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <FireIcon className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">Collaborative platforms</div>
-                </div>
-              </li>
-            </ul>
-          </div>
-
-          {/* Funding Trends */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-lg flex items-center justify-center">
-                <BookOpenIcon className="w-6 h-6 text-white" />
-              </div>
-              <h4 className="font-semibold text-gray-900">Funding Trends</h4>
-            </div>
-            <ul className="space-y-2">
-              <li className="flex items-start space-x-2">
-                <StarIcon className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">AI-healthcare grants</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <StarIcon className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">Climate research funding</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <StarIcon className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">Early career programs</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <StarIcon className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">Public-private partnerships</div>
-                </div>
-              </li>
-            </ul>
-          </div>
-
-          {/* Community Engagement */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center">
-                <AcademicCapIcon className="w-6 h-6 text-white" />
-              </div>
-              <h4 className="font-semibold text-gray-900">Community Engagement</h4>
-            </div>
-            <ul className="space-y-2">
-              <li className="flex items-start space-x-2">
-                <GlobeAltIcon className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">Virtual conferences</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <GlobeAltIcon className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">Open Personal NoteBooks</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <GlobeAltIcon className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">Research transparency</div>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <GlobeAltIcon className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">Peer-to-peer learning</div>
-                </div>
-              </li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>

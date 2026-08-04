@@ -55,48 +55,7 @@ const TeamManagementPage: React.FC = () => {
   const fetchConversations = async () => {
     try {
       setLoading(true);
-      // Mock data - replace with actual API call
-      const mockConversations: Conversation[] = [
-        {
-          id: '1',
-          name: 'Lab Team Discussion',
-          type: 'group',
-          participants: 12,
-          last_message: 'Great progress on the experiment!',
-          last_message_time: '2024-01-15T14:30:00Z',
-          unread_count: 3
-        },
-        {
-          id: '2',
-          name: 'Research Project Alpha',
-          type: 'group',
-          participants: 8,
-          last_message: 'Meeting scheduled for tomorrow at 3 PM',
-          last_message_time: '2024-01-15T13:15:00Z',
-          unread_count: 0
-        },
-        {
-          id: '3',
-          name: 'Dr. Sarah Johnson',
-          type: 'direct',
-          participants: 2,
-          last_message: 'Thanks for the feedback on my paper',
-          last_message_time: '2024-01-15T12:00:00Z',
-          unread_count: 1
-        },
-        {
-          id: '4',
-          name: 'Dr. Michael Chen',
-          type: 'direct',
-          participants: 2,
-          last_message: 'Can you review this protocol?',
-          last_message_time: '2024-01-15T10:45:00Z',
-          unread_count: 0
-        }
-      ];
-
-      const filtered = mockConversations.filter(c => c.type === activeTab);
-      setConversations(filtered);
+      setConversations([]);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching conversations:', error);
@@ -106,35 +65,7 @@ const TeamManagementPage: React.FC = () => {
 
   const fetchMessages = async (conversationId: string) => {
     try {
-      // Mock data - replace with actual API call
-      const mockMessages: Message[] = [
-        {
-          id: '1',
-          sender_id: '1',
-          sender_name: 'Dr. Sarah Johnson',
-          content: 'Hello everyone! I wanted to share some exciting results from our latest experiment.',
-          timestamp: '2024-01-15T10:00:00Z',
-          is_read: true
-        },
-        {
-          id: '2',
-          sender_id: user?.id || '2',
-          sender_name: user?.username || 'You',
-          content: 'That sounds great! Can you share more details?',
-          timestamp: '2024-01-15T10:05:00Z',
-          is_read: true
-        },
-        {
-          id: '3',
-          sender_id: '3',
-          sender_name: 'Dr. Michael Chen',
-          content: 'I agree, this could be a breakthrough!',
-          timestamp: '2024-01-15T10:10:00Z',
-          is_read: true
-        }
-      ];
-
-      setMessages(mockMessages);
+      setMessages([]);
     } catch (error) {
       console.error('Error fetching messages:', error);
     }

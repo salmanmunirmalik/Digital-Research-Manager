@@ -4,6 +4,7 @@ import Button from './ui/Button';
 import Input from './ui/Input';
 import Select from './ui/Select';
 import { experimentService, Experiment, Milestone, Risk } from '../services/experimentService';
+import LinkedEntityChips, { buildWorkflowLinks } from './LinkedEntityChips';
 import {
   BeakerIcon,
   CalendarIcon,
@@ -207,6 +208,13 @@ const ExperimentDetailView: React.FC<ExperimentDetailViewProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <LinkedEntityChips
+              title=""
+              links={buildWorkflowLinks({
+                protocolId: experiment.protocolId,
+                notebookEntryId: experiment.notebookEntryId,
+              })}
+            />
             <Button variant="outline" onClick={() => onEdit(experiment)}>
               <EditIcon className="h-4 w-4 mr-2" />
               Edit

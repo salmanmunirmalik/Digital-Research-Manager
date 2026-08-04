@@ -393,22 +393,9 @@ const DataAnalyticsPage: React.FC = () => {
 
   // Load sample data
   const loadSampleData = () => {
-    const sampleData = [
-      { id: '1', value: 12.5, category: 'A', group: 'Control' },
-      { id: '2', value: 15.2, category: 'A', group: 'Control' },
-      { id: '3', value: 13.8, category: 'A', group: 'Control' },
-      { id: '4', value: 14.1, category: 'A', group: 'Control' },
-      { id: '5', value: 16.7, category: 'A', group: 'Control' },
-      { id: '6', value: 18.3, category: 'B', group: 'Treatment' },
-      { id: '7', value: 19.1, category: 'B', group: 'Treatment' },
-      { id: '8', value: 17.9, category: 'B', group: 'Treatment' },
-      { id: '9', value: 20.2, category: 'B', group: 'Treatment' },
-      { id: '10', value: 18.8, category: 'B', group: 'Treatment' }
-    ];
-    
-    setData(sampleData);
-    setDataName('Sample Research Data');
-    setDataInput(sampleData.map(d => `${d.value}, ${d.category}, ${d.group}`).join('\n'));
+    setData([]);
+    setDataName('');
+    setDataInput('');
   };
 
   // Clear data

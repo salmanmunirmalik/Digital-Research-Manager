@@ -103,19 +103,23 @@ const LabWorkspaceSidebar: React.FC<LabWorkspaceSidebarProps> = ({
   }
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 h-full flex flex-col">
+    <div className="w-64 bg-white border-r border-slate-200/80 h-full flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-slate-200/80">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-lg font-semibold text-gray-900">{workspace.name}</h2>
+          <h2 className="text-[13px] font-semibold text-slate-900 tracking-tight">Spaces</h2>
           <button
+            type="button"
             onClick={onCreateSpace}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100"
+            className="p-1 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-50"
             title="Create space"
           >
             <PlusIcon className="w-5 h-5" />
           </button>
         </div>
+        <p className="text-[11px] text-slate-500 truncate" title={workspace.name}>
+          {workspace.name}
+        </p>
       </div>
 
       {/* Navigation Tree */}

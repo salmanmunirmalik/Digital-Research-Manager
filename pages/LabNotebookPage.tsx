@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
@@ -8,12 +8,20 @@ import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
 import ExperimentForm from '../components/ExperimentForm';
 import IdeaForm from '../components/IdeaForm';
-import InventoryForm from '../components/InventoryForm';
-import SampleManagementForm from '../components/SampleManagementForm';
-import EquipmentBookingForm from '../components/EquipmentBookingForm';
 import ResultsForm from '../components/ResultsForm';
 import MeetingForm from '../components/MeetingForm';
 import ProblemForm from '../components/ProblemForm';
+import NotebookSummaryModal, {
+  NotebookSummaryResult,
+} from '../components/NotebookSummaryModal';
+import LinkedEntityChips, { buildWorkflowLinks } from '../components/LinkedEntityChips';
+import { useEntityDeepLink } from '../hooks/useEntityDeepLink';
+import { notifyDashboardSync } from '../utils/dashboardSync';
+import DocumentImportModal from '../components/DocumentImportModal';
+import {
+  smartParseNotebookText,
+  notebookPayloadToFormInitial,
+} from '../utils/notebookImport';
 import { 
   BookOpenIcon,
   PlusIcon, 
@@ -45,6 +53,7 @@ import {
   BrainIcon,
   CubeIcon,
   WrenchScrewdriverIcon,
+  DocumentArrowUpIcon,
   TargetIcon,
   UserGroupIcon,
   AcademicCapIcon,
@@ -71,7 +80,7 @@ interface LabNotebookEntry {
   id: string;
   title: string;
   content: string;
-  entry_type: 'experiment' | 'observation' | 'protocol' | 'analysis' | 'idea' | 'meeting';
+  entry_type: 'experiment' | 'observation' | 'idea' | 'meeting' | 'results' | 'problem' | 'protocol' | 'analysis';
   status: 'planning' | 'in_progress' | 'completed' | 'on_hold' | 'failed';
   priority: 'low' | 'medium' | 'high' | 'critical';
   objectives: string;
@@ -94,6 +103,10 @@ interface LabNotebookEntry {
   safety_notes: string;
   references: string[];
   collaborators: string[];
+  protocolId?: string | null;
+  experimentId?: string | null;
+  protocol_id?: string | null;
+  experiment_id?: string | null;
 }
 
 // Simplified interfaces for essential features only
@@ -136,24 +149,30 @@ const LabNotebookPage: React.FC = () => {
   const [showNewEntryModal, setShowNewEntryModal] = useState(false);
   const [showEntryTypeModal, setShowEntryTypeModal] = useState(false);
   
-  // Form states for different entry types
+  // Form states for documentation entry types
   const [showExperimentForm, setShowExperimentForm] = useState(false);
   const [showIdeaForm, setShowIdeaForm] = useState(false);
-  const [showInventoryForm, setShowInventoryForm] = useState(false);
-  const [showSampleManagementForm, setShowSampleManagementForm] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<LabNotebookEntry | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
-  const [showEquipmentBookingForm, setShowEquipmentBookingForm] = useState(false);
   const [showResultsForm, setShowResultsForm] = useState(false);
   const [showMeetingForm, setShowMeetingForm] = useState(false);
   const [showProblemForm, setShowProblemForm] = useState(false);
   const [showQuickNoteModal, setShowQuickNoteModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [formInitialData, setFormInitialData] = useState<Record<string, unknown> | undefined>(undefined);
+
+  const openHighlightedEntry = useCallback((entry: LabNotebookEntry) => {
+    setSelectedEntry(entry);
+    setShowViewModal(true);
+  }, []);
+  const { focusedId } = useEntityDeepLink(entries, openHighlightedEntry);
   
   // Summary generation state
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [summaryType, setSummaryType] = useState<'daily' | 'weekly' | 'project' | null>(null);
-  const [generatedSummary, setGeneratedSummary] = useState<string | null>(null);
+  const [generatedSummary, setGeneratedSummary] = useState<NotebookSummaryResult | null>(null);
+  const [summaryGeneratedAt, setSummaryGeneratedAt] = useState<string | null>(null);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   
   // Simplified entry form
@@ -195,85 +214,40 @@ const LabNotebookPage: React.FC = () => {
   const [smartSuggestions, setSmartSuggestions] = useState<SmartSuggestion[]>([]);
   // #endregion
 
-  // Entry type options
+  // Documentation-focused entry types (ops live in Lab ops)
   const entryTypes = [
-    { 
-      id: 'experiment', 
-      name: 'Experiment', 
-      description: 'Plan and track experimental procedures',
+    {
+      id: 'experiment',
+      name: 'Experiment note',
+      description: 'Document an experimental procedure and observations',
       icon: BeakerIcon,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100'
     },
-    { 
-      id: 'idea', 
-      name: 'Idea', 
+    {
+      id: 'idea',
+      name: 'Idea',
       description: 'Capture research ideas and concepts',
       icon: LightbulbIcon,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100'
     },
-    { 
-      id: 'inventory', 
-      name: 'Inventory', 
-      description: 'Add or update inventory items',
-      icon: CubeIcon,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100'
-    },
-    { 
-      id: 'sample_management', 
-      name: 'Sample Management', 
-      description: 'Manage and track research samples',
-      icon: ClipboardListIcon,
-      color: 'text-teal-600',
-      bgColor: 'bg-teal-100'
-    },
-    { 
-      id: 'equipment_booking', 
-      name: 'Book Equipment', 
-      description: 'Reserve laboratory equipment',
-      icon: WrenchScrewdriverIcon,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100'
-    },
-    { 
-      id: 'results', 
-      name: 'Add Results', 
-      description: 'Record experimental results and analysis',
+    {
+      id: 'results',
+      name: 'Results note',
+      description: 'Record findings and analysis in your notebook',
       icon: ChartBarIcon,
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-100'
     },
-    { 
-      id: 'progress_review', 
-      name: 'Progress Review', 
-      description: 'Submit progress reports & receive PI feedback',
-      icon: ClipboardListIcon,
-      color: 'text-violet-600',
-      bgColor: 'bg-violet-100'
-    },
-    { 
-      id: 'problem', 
-      name: 'Problem', 
-      description: 'Report issues and track resolutions',
+    {
+      id: 'problem',
+      name: 'Problem',
+      description: 'Log issues and how you resolved them',
       icon: ExclamationTriangleIcon,
-      color: 'text-red-600',
-      bgColor: 'bg-red-100'
     },
-    { 
-      id: 'negative_results', 
-      name: 'Negative Results', 
-      description: 'Document failed experiments & build transparency',
-      icon: FireIcon,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100'
-    }
   ];
 
-  // Handlers for different entry types
+  // Handlers for documentation entry types
+  const clearFormInitial = () => setFormInitialData(undefined);
+
   const handleEntryTypeSelect = (type: string) => {
     setShowEntryTypeModal(false);
+    clearFormInitial();
     switch (type) {
       case 'experiment':
         setShowExperimentForm(true);
@@ -281,29 +255,34 @@ const LabNotebookPage: React.FC = () => {
       case 'idea':
         setShowIdeaForm(true);
         break;
-      case 'inventory':
-        setShowInventoryForm(true);
-        break;
-      case 'sample_management':
-        setShowSampleManagementForm(true);
-        break;
-      case 'equipment_booking':
-        setShowEquipmentBookingForm(true);
-        break;
       case 'results':
         setShowResultsForm(true);
-        break;
-      case 'progress_review':
-        window.location.href = '/pi-review-dashboard';
         break;
       case 'problem':
         setShowProblemForm(true);
         break;
-      case 'negative_results':
-        navigate('/negative-results');
-        break;
       default:
         setShowNewEntryModal(true);
+    }
+  };
+
+  const openImportedEntry = (payload: ReturnType<typeof notebookPayloadToFormInitial>) => {
+    clearFormInitial();
+    setFormInitialData(payload);
+    switch (payload.entry_type) {
+      case 'idea':
+        setShowIdeaForm(true);
+        break;
+      case 'results':
+        setShowResultsForm(true);
+        break;
+      case 'problem':
+        setShowProblemForm(true);
+        break;
+      case 'experiment':
+      default:
+        setShowExperimentForm(true);
+        break;
     }
   };
 
@@ -312,39 +291,8 @@ const LabNotebookPage: React.FC = () => {
       const token = localStorage.getItem('authToken');
       console.log('🔍 Fetching lab entries, token:', token ? 'exists' : 'missing');
       if (!token) {
-        console.log('No auth token found, using mock data');
-        // Use mock data if no token
-    const mockEntries: LabNotebookEntry[] = [
-      {
-        id: '1',
-            title: 'Sample Experiment',
-            content: 'This is a sample experiment entry.',
-            entry_type: 'experiment',
-        status: 'completed',
-            priority: 'medium',
-            objectives: 'Test the system',
-            methodology: 'Basic testing',
-            results: 'System working',
-            conclusions: 'All good',
-            next_steps: 'Continue testing',
-        lab_id: 'lab1',
-        lab_name: 'Main Lab',
-            creator_name: 'Test User',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            tags: ['test', 'sample'],
-        privacy_level: 'lab',
-            estimated_duration: 60,
-            actual_duration: 45,
-            cost: 0,
-            equipment_used: [],
-            materials_used: [],
-            safety_notes: '',
-            references: [],
-            collaborators: []
-          }
-        ];
-        setEntries(mockEntries);
+        console.log('No auth token found');
+        setEntries([]);
         return;
       }
 
@@ -364,74 +312,12 @@ const LabNotebookPage: React.FC = () => {
         console.log('📝 Lab entries data received:', data);
         setEntries(data.entries || data || []);
       } else {
-        console.log('API request failed, using mock data');
-        // Use mock data if API fails
-        const mockEntries: LabNotebookEntry[] = [
-          {
-            id: '1',
-            title: 'Sample Experiment',
-            content: 'This is a sample experiment entry.',
-        entry_type: 'experiment',
-            status: 'completed',
-        priority: 'medium',
-            objectives: 'Test the system',
-            methodology: 'Basic testing',
-            results: 'System working',
-            conclusions: 'All good',
-            next_steps: 'Continue testing',
-        lab_id: 'lab1',
-        lab_name: 'Main Lab',
-            creator_name: 'Test User',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            tags: ['test', 'sample'],
-        privacy_level: 'lab',
-            estimated_duration: 60,
-            actual_duration: 45,
-            cost: 0,
-            equipment_used: [],
-            materials_used: [],
-            safety_notes: '',
-            references: [],
-        collaborators: []
-      }
-    ];
-        setEntries(mockEntries);
+        console.log('API request failed');
+        setEntries([]);
       }
     } catch (error) {
       console.error('Error fetching entries:', error);
-      // Use mock data on error
-      const mockEntries: LabNotebookEntry[] = [
-      {
-        id: '1',
-          title: 'Sample Experiment',
-          content: 'This is a sample experiment entry.',
-          entry_type: 'experiment',
-          status: 'completed',
-          priority: 'medium',
-          objectives: 'Test the system',
-          methodology: 'Basic testing',
-          results: 'System working',
-          conclusions: 'All good',
-          next_steps: 'Continue testing',
-          lab_id: 'lab1',
-          lab_name: 'Main Lab',
-          creator_name: 'Test User',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          tags: ['test', 'sample'],
-          privacy_level: 'lab',
-          estimated_duration: 60,
-          actual_duration: 45,
-          cost: 0,
-          equipment_used: [],
-          materials_used: [],
-          safety_notes: '',
-          references: [],
-          collaborators: []
-        }
-      ];
-      setEntries(mockEntries);
+      setEntries([]);
     }
   };
 
@@ -444,26 +330,8 @@ const LabNotebookPage: React.FC = () => {
       const token = localStorage.getItem('authToken');
       console.log('🔍 Fetching quick notes, token:', token ? 'exists' : 'missing');
       if (!token) {
-        console.log('No auth token found, using mock data for quick notes');
-        // Use mock data if no token
-    const mockQuickNotes: QuickNote[] = [
-      {
-        id: '1',
-            content: 'Remember to check the incubator temperature',
-        color: 'yellow',
-            created_at: new Date().toISOString()
-      },
-      {
-        id: '2',
-            content: 'Order more pipette tips for next week',
-        color: 'blue',
-            created_at: new Date(Date.now() - 86400000).toISOString()
-          }
-        ];
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/d8d74533-e1f5-4bba-aa87-ed01b5b636d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LabNotebookPage.tsx:449',message:'About to call setQuickNotes',data:{mockNotesCount:mockQuickNotes.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
-        setQuickNotes(mockQuickNotes);
+        console.log('No auth token found');
+        setQuickNotes([]);
         return;
       }
 
@@ -483,42 +351,12 @@ const LabNotebookPage: React.FC = () => {
         console.log('📝 Quick notes data received:', data);
         setQuickNotes(data || []);
       } else {
-        console.log('API request failed, using mock data for quick notes');
-        // Use mock data if API fails
-        const mockQuickNotes: QuickNote[] = [
-      {
-        id: '1',
-            content: 'Remember to check the incubator temperature',
-            color: 'yellow',
-            created_at: new Date().toISOString()
-      },
-      {
-        id: '2',
-            content: 'Order more pipette tips for next week',
-            color: 'blue',
-            created_at: new Date(Date.now() - 86400000).toISOString()
-          }
-        ];
-        setQuickNotes(mockQuickNotes);
+        console.log('API request failed');
+        setQuickNotes([]);
       }
     } catch (error) {
       console.error('Error fetching quick notes:', error);
-      // Use mock data on error
-      const mockQuickNotes: QuickNote[] = [
-      {
-        id: '1',
-          content: 'Remember to check the incubator temperature',
-          color: 'yellow',
-          created_at: new Date().toISOString()
-      },
-      {
-        id: '2',
-          content: 'Order more pipette tips for next week',
-          color: 'blue',
-          created_at: new Date(Date.now() - 86400000).toISOString()
-        }
-      ];
-    setQuickNotes(mockQuickNotes);
+      setQuickNotes([]);
     }
   };
 
@@ -538,11 +376,13 @@ const LabNotebookPage: React.FC = () => {
         status: data.status || 'completed',
         priority: data.priority || 'medium',
         objectives: data.objectives || '',
-        methodology: data.methodology || '',
+        methodology: data.methodology || data.protocolModifications || '',
         results: data.results || data.conclusions || '',
         conclusions: data.conclusions || '',
         next_steps: data.next_steps || '',
-        lab_id: data.lab_id || '550e8400-e29b-41d4-a716-446655440000',
+        lab_id: data.lab_id,
+        protocolId: data.protocolId || data.protocol_id || null,
+        experimentId: data.experimentId || data.experiment_id || null,
         tags: data.tags || [],
         privacy_level: data.privacy_level || 'lab',
         estimated_duration: data.estimated_duration || 0,
@@ -580,12 +420,6 @@ const LabNotebookPage: React.FC = () => {
           case 'idea':
             setShowIdeaForm(false);
             break;
-          case 'inventory':
-            setShowInventoryForm(false);
-            break;
-          case 'equipment_booking':
-            setShowEquipmentBookingForm(false);
-            break;
           case 'results':
             setShowResultsForm(false);
             break;
@@ -599,6 +433,7 @@ const LabNotebookPage: React.FC = () => {
         // Refresh entries and activity
         fetchEntries();
         fetchRecentActivity();
+        notifyDashboardSync('lab-notebook');
       } else {
         const errorData = await response.json();
         console.error('Failed to create entry:', errorData);
@@ -613,29 +448,8 @@ const LabNotebookPage: React.FC = () => {
     try {
       const token = localStorage.getItem('authToken');
       if (!token) {
-        console.log('No auth token found, using mock data');
-        // Use mock data if no token
-        const mockActivity: RecentActivity[] = [
-          {
-            id: '1',
-            type: 'entry_created',
-            description: 'Created new experiment entry',
-            user_name: user?.username || 'Current User',
-            timestamp: new Date().toISOString(),
-            icon: BeakerIcon,
-            color: 'text-blue-600'
-          },
-          {
-            id: '2',
-            type: 'entry_updated',
-            description: 'Updated Personal NoteBook entry',
-            user_name: user?.username || 'Current User',
-            timestamp: new Date(Date.now() - 3600000).toISOString(),
-            icon: PencilIcon,
-            color: 'text-green-600'
-          }
-        ];
-        setRecentActivity(mockActivity);
+        console.log('No auth token found');
+        setRecentActivity([]);
         return;
       }
 
@@ -653,36 +467,12 @@ const LabNotebookPage: React.FC = () => {
         const data = await response.json();
         setRecentActivity(data.activities || []);
       } else {
-        console.log('API request failed, using mock data');
-        // Use mock data if API fails
-        const mockActivity: RecentActivity[] = [
-          {
-            id: '1',
-            type: 'entry_created',
-            description: 'Created new experiment entry',
-            user_name: user?.username || 'Current User',
-            timestamp: new Date().toISOString(),
-            icon: BeakerIcon,
-            color: 'text-blue-600'
-          }
-        ];
-        setRecentActivity(mockActivity);
+        console.log('API request failed');
+        setRecentActivity([]);
       }
     } catch (error) {
       console.error('Error fetching recent activity:', error);
-      // Use mock data on error
-      const mockActivity: RecentActivity[] = [
-        {
-          id: '1',
-          type: 'entry_created',
-          description: 'Created new experiment entry',
-          user_name: user?.username || 'Current User',
-          timestamp: new Date().toISOString(),
-          icon: BeakerIcon,
-          color: 'text-blue-600'
-        }
-      ];
-      setRecentActivity(mockActivity);
+      setRecentActivity([]);
     }
   };
 
@@ -691,27 +481,8 @@ const LabNotebookPage: React.FC = () => {
     try {
       const token = localStorage.getItem('authToken');
       if (!token) {
-        console.log('No auth token found, using mock data');
-        // Use mock data if no token
-        const mockSuggestions: SmartSuggestion[] = [
-          {
-            id: '1',
-            type: 'protocol',
-            title: 'Protocol Recommendation',
-            description: 'Consider using PCR protocol for DNA amplification',
-            confidence: 85,
-            priority: 'medium'
-          },
-          {
-            id: '2',
-            type: 'safety',
-            title: 'Safety Reminder',
-            description: 'Remember to wear gloves when handling chemicals',
-            confidence: 95,
-            priority: 'high'
-          }
-        ];
-        setSmartSuggestions(mockSuggestions);
+        console.log('No auth token found');
+        setSmartSuggestions([]);
         return;
       }
 
@@ -729,64 +500,56 @@ const LabNotebookPage: React.FC = () => {
         const data = await response.json();
         setSmartSuggestions(data.suggestions || []);
       } else {
-        console.log('API request failed, using mock data');
-        // Use mock data if API fails
-        const mockSuggestions: SmartSuggestion[] = [
-          {
-            id: '1',
-            type: 'protocol',
-            title: 'Protocol Recommendation',
-            description: 'Consider using PCR protocol for DNA amplification',
-            confidence: 85,
-            priority: 'medium'
-          }
-        ];
-        setSmartSuggestions(mockSuggestions);
+        console.log('API request failed');
+        setSmartSuggestions([]);
       }
     } catch (error) {
       console.error('Error fetching smart suggestions:', error);
-      // Use mock data on error
-      const mockSuggestions: SmartSuggestion[] = [
-        {
-          id: '1',
-          type: 'protocol',
-          title: 'Protocol Recommendation',
-          description: 'Consider using PCR protocol for DNA amplification',
-          confidence: 85,
-          priority: 'medium'
-        }
-      ];
-      setSmartSuggestions(mockSuggestions);
+      setSmartSuggestions([]);
     }
   };
 
   // Load data
-  // Generate notebook summary
+  // Generate notebook summary (AI daily / weekly digest)
   const generateSummary = async (type: 'daily' | 'weekly' | 'project', projectId?: string) => {
     try {
       setGeneratingSummary(true);
       setSummaryType(type);
-      const token = localStorage.getItem('token');
+      const token =
+        localStorage.getItem('authToken') || localStorage.getItem('token') || '';
       const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api';
-      
+
+      const today = new Date();
+      const startOfToday = today.toISOString().slice(0, 10);
+      const weekAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
       const response = await axios.post(
         `${apiUrl}/notebook-summaries/generate`,
         {
           summaryType: type,
           projectId: projectId || undefined,
-          dateRange: type === 'daily' 
-            ? { start: new Date().toISOString().split('T')[0], end: new Date().toISOString().split('T')[0] }
-            : type === 'weekly'
-            ? {
-                start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                end: new Date().toISOString().split('T')[0]
-              }
-            : undefined
+          dateRange:
+            type === 'daily'
+              ? { start: startOfToday, end: startOfToday }
+              : type === 'weekly'
+                ? { start: weekAgo, end: startOfToday }
+                : undefined,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
-      setGeneratedSummary(response.data.summary || response.data.content || 'Summary generated successfully');
+
+      const payload = response.data?.summary;
+      if (payload && typeof payload === 'object') {
+        setGeneratedSummary(payload as NotebookSummaryResult);
+      } else {
+        setGeneratedSummary({
+          summary: String(payload || response.data?.content || 'Summary generated.'),
+          keyFindings: [],
+          nextSteps: [],
+          mode: response.data?.mode || 'basic',
+        });
+      }
+      setSummaryGeneratedAt(response.data?.generatedAt || new Date().toISOString());
       setShowSummaryModal(true);
     } catch (error: any) {
       console.error('Error generating summary:', error);
@@ -844,6 +607,7 @@ const LabNotebookPage: React.FC = () => {
         // Refresh entries and activity
         fetchEntries();
         fetchRecentActivity();
+        notifyDashboardSync('lab-notebook');
         } else {
         const errorData = await response.json();
         console.error('Failed to delete entry:', errorData);
@@ -881,6 +645,7 @@ const LabNotebookPage: React.FC = () => {
         fetchEntries();
         fetchRecentActivity();
         setShowEditModal(false);
+        notifyDashboardSync('lab-notebook');
       } else {
         const errorData = await response.json();
         console.error('Failed to update entry:', errorData);
@@ -896,9 +661,15 @@ const LabNotebookPage: React.FC = () => {
       return [];
     }
     let filtered = entries.filter(entry => {
-      const matchesSearch = entry.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           entry.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           entry.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+      const title = (entry.title || '').toLowerCase();
+      const content = (entry.content || '').toLowerCase();
+      const tags = Array.isArray(entry.tags) ? entry.tags : [];
+      const needle = searchTerm.toLowerCase();
+      const matchesSearch =
+        !needle ||
+        title.includes(needle) ||
+        content.includes(needle) ||
+        tags.some((tag) => String(tag).toLowerCase().includes(needle));
       const matchesType = filterType === 'all' || entry.entry_type === filterType;
       const matchesStatus = filterStatus === 'all' || entry.status === filterStatus;
       return matchesSearch && matchesType && matchesStatus;
@@ -1045,6 +816,7 @@ const LabNotebookPage: React.FC = () => {
           setQuickNotes(prev => [newNote, ...prev]);
           setQuickNoteForm({ content: '', color: 'yellow' });
           setShowQuickNoteModal(false);
+          notifyDashboardSync('lab-notebook-note');
         } else {
           console.error('Failed to create quick note');
           // Fallback to local state if API fails
@@ -1078,29 +850,42 @@ const LabNotebookPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        {/* Entry Type Selection Section */}
+        {/* New entry types */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <SparklesIcon className="h-5 w-5 text-blue-600" />
-              Start Entries
-            </CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <CardTitle className="flex items-center gap-2">
+                <SparklesIcon className="h-5 w-5 text-slate-600" />
+                New notebook entry
+              </CardTitle>
+              <button
+                type="button"
+                onClick={() => setShowImportModal(true)}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-slate-800 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors self-start"
+              >
+                <DocumentArrowUpIcon className="w-4 h-4" />
+                Import Word / paste
+              </button>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <p className="text-sm text-slate-500 mb-4">
+              Document experiments, ideas, results, and problems — or import a Word note and we’ll draft the form. For inventory, equipment, and tasks, use Lab ops.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {entryTypes.map((type) => {
                 const IconComponent = type.icon;
                 return (
                   <div
                     key={type.id}
                     onClick={() => handleEntryTypeSelect(type.id)}
-                    className={`p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-md transition-all duration-200 ${type.bgColor} group`}
+                    className={`p-4 border border-slate-200 rounded-lg cursor-pointer hover:border-slate-300 hover:shadow-sm transition-all duration-200 ${type.bgColor} group`}
                   >
                     <div className="flex items-center mb-2">
-                      <IconComponent className={`w-6 h-6 ${type.color} mr-2 group-hover:scale-110 transition-transform`} />
-                      <h3 className="text-sm font-semibold text-gray-900">{type.name}</h3>
+                      <IconComponent className={`w-5 h-5 ${type.color} mr-2`} />
+                      <h3 className="text-sm font-semibold text-slate-900">{type.name}</h3>
                     </div>
-                    <p className="text-xs text-gray-600">{type.description}</p>
+                    <p className="text-xs text-slate-600">{type.description}</p>
                   </div>
                 );
               })}
@@ -1108,12 +893,12 @@ const LabNotebookPage: React.FC = () => {
               </CardContent>
             </Card>
 
-        {/* Personal NoteBook Entries */}
+        {/* Personal notebook entries */}
           <div className="space-y-6">
           {/* Header with Summary Buttons */}
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900" data-testid="lab-notebook-heading">
-              Personal NoteBook Entries
+            <h2 className="text-2xl font-semibold text-slate-900" data-testid="lab-notebook-heading">
+              Notebook entries
             </h2>
             
             {/* Summary Generation Buttons */}
@@ -1175,11 +960,11 @@ const LabNotebookPage: React.FC = () => {
                     className="w-full"
                   >
                     <option value="all">All Types</option>
-                    <option value="experiment">Experiment</option>
-                    <option value="observation">Observation</option>
-                    <option value="protocol">Protocol</option>
-                    <option value="analysis">Analysis</option>
+                    <option value="experiment">Experiment note</option>
                     <option value="idea">Idea</option>
+                    <option value="results">Results note</option>
+                    <option value="problem">Problem</option>
+                    <option value="observation">Observation</option>
                     <option value="meeting">Meeting</option>
                   </Select>
                   <Select
@@ -1201,7 +986,13 @@ const LabNotebookPage: React.FC = () => {
             {/* Entries List */}
             <div className="space-y-4">
               {filteredEntries.map((entry) => (
-                <Card key={entry.id} className="hover:shadow-md transition-shadow">
+                <Card
+                  key={entry.id}
+                  data-entity-id={entry.id}
+                  className={`hover:shadow-md transition-shadow ${
+                    focusedId === entry.id ? 'ring-2 ring-amber-300 border-amber-400' : ''
+                  }`}
+                >
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -1289,83 +1080,116 @@ const LabNotebookPage: React.FC = () => {
 
         {/* Entry Type Selection Modal */}
         {showEntryTypeModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Choose Entry Type</h2>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowEntryTypeModal(false)}
-                  >
-                    <XMarkIcon className="h-4 w-4" />
-                  </Button>
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl w-full max-w-2xl border border-slate-200 overflow-hidden">
+              <div className="px-6 py-5 border-b border-slate-200 flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-900 tracking-tight">
+                    New notebook entry
+                  </h2>
+                  <p className="mt-1 text-[13px] text-slate-600">
+                    Choose the documentation type that fits this note
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowEntryTypeModal(false)}
+                  className="text-slate-400 hover:text-slate-600 p-1"
+                  aria-label="Close"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
               </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {entryTypes.map((type) => {
-                    const IconComponent = type.icon;
-                    return (
-                      <div
-                        key={type.id}
-                        onClick={() => handleEntryTypeSelect(type.id)}
-                        className={`p-6 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 hover:shadow-md transition-all duration-200 ${type.bgColor}`}
-                      >
-                        <div className="flex items-center mb-3">
-                          <IconComponent className={`w-8 h-8 ${type.color} mr-3`} />
-                          <h3 className="text-lg font-semibold text-gray-900">{type.name}</h3>
+              <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {entryTypes.map((type) => {
+                  const IconComponent = type.icon;
+                  return (
+                    <button
+                      key={type.id}
+                      type="button"
+                      onClick={() => handleEntryTypeSelect(type.id)}
+                      className="text-left p-4 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+                          <IconComponent className="w-5 h-5" />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-[14px] font-semibold text-slate-900">
+                            {type.name}
+                          </span>
+                          <span className="mt-1 block text-[12px] text-slate-600 leading-relaxed">
+                            {type.description}
+                          </span>
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-                        <p className="text-sm text-gray-600">{type.description}</p>
-                  </div>
-                    );
-                  })}
-              </div>
-              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Import Modal */}
+        {showImportModal && (
+          <DocumentImportModal
+            title="Import notebook entry"
+            subtitle="Upload a lab note or paste text — we’ll detect experiment, idea, results, or problem and draft the form."
+            parseText={smartParseNotebookText}
+            onCancel={() => setShowImportModal(false)}
+            onParsed={(result) => {
+              setShowImportModal(false);
+              openImportedEntry(notebookPayloadToFormInitial(result.payload));
+            }}
+          />
+        )}
 
         {/* Form Modals */}
         {showExperimentForm && (
           <ExperimentForm
-            onSubmit={(data) => handleFormSubmit(data, 'experiment')}
-            onCancel={() => setShowExperimentForm(false)}
+            key={formInitialData ? `imp-exp-${String(formInitialData.title || '')}` : 'exp-blank'}
+            mode="notebook"
+            initialData={formInitialData as any}
+            onSubmit={(data) => {
+              clearFormInitial();
+              handleFormSubmit(data, 'experiment');
+            }}
+            onCancel={() => {
+              clearFormInitial();
+              setShowExperimentForm(false);
+            }}
           />
         )}
 
         {showIdeaForm && (
           <IdeaForm
-            onSubmit={(data) => handleFormSubmit(data, 'idea')}
-            onCancel={() => setShowIdeaForm(false)}
-          />
-        )}
-
-        {showInventoryForm && (
-          <InventoryForm
-            onSubmit={(data) => handleFormSubmit(data, 'inventory')}
-            onCancel={() => setShowInventoryForm(false)}
-          />
-        )}
-
-        {showSampleManagementForm && (
-          <SampleManagementForm
-            onSubmit={(data) => handleFormSubmit(data, 'sample_management')}
-            onCancel={() => setShowSampleManagementForm(false)}
-          />
-        )}
-
-        {showEquipmentBookingForm && (
-          <EquipmentBookingForm
-            onSubmit={(data) => handleFormSubmit(data, 'equipment_booking')}
-            onCancel={() => setShowEquipmentBookingForm(false)}
+            key={formInitialData ? `imp-idea-${String(formInitialData.title || '')}` : 'idea-blank'}
+            initialData={formInitialData as any}
+            onSubmit={(data) => {
+              clearFormInitial();
+              handleFormSubmit(data, 'idea');
+            }}
+            onCancel={() => {
+              clearFormInitial();
+              setShowIdeaForm(false);
+            }}
           />
         )}
 
         {showResultsForm && (
           <ResultsForm
-            onSubmit={(data) => handleFormSubmit(data, 'results')}
-            onCancel={() => setShowResultsForm(false)}
+            key={formInitialData ? `imp-res-${String(formInitialData.title || '')}` : 'res-blank'}
+            initialData={formInitialData as any}
+            onSubmit={(data) => {
+              clearFormInitial();
+              handleFormSubmit(data, 'results');
+            }}
+            onCancel={() => {
+              clearFormInitial();
+              setShowResultsForm(false);
+            }}
           />
         )}
 
@@ -1378,8 +1202,16 @@ const LabNotebookPage: React.FC = () => {
 
         {showProblemForm && (
           <ProblemForm
-            onSubmit={(data) => handleFormSubmit(data, 'problem')}
-            onCancel={() => setShowProblemForm(false)}
+            key={formInitialData ? `imp-prob-${String(formInitialData.title || '')}` : 'prob-blank'}
+            initialData={formInitialData as any}
+            onSubmit={(data) => {
+              clearFormInitial();
+              handleFormSubmit(data, 'problem');
+            }}
+            onCancel={() => {
+              clearFormInitial();
+              setShowProblemForm(false);
+            }}
           />
       )}
 
@@ -1428,11 +1260,11 @@ const LabNotebookPage: React.FC = () => {
                         onChange={(e) => setEntryForm(prev => ({ ...prev, entry_type: e.target.value as any }))}
                         className="w-full"
                       >
-                        <option value="experiment">Experiment</option>
-                        <option value="observation">Observation</option>
-                        <option value="protocol">Protocol</option>
-                        <option value="analysis">Analysis</option>
+                        <option value="experiment">Experiment note</option>
                         <option value="idea">Idea</option>
+                        <option value="results">Results note</option>
+                        <option value="problem">Problem</option>
+                        <option value="observation">Observation</option>
                         <option value="meeting">Meeting</option>
                       </Select>
               </div>
@@ -1559,6 +1391,12 @@ const LabNotebookPage: React.FC = () => {
               </div>
 
               <div className="space-y-6">
+                <LinkedEntityChips
+                  links={buildWorkflowLinks({
+                    protocolId: selectedEntry.protocolId || selectedEntry.protocol_id,
+                    experimentId: selectedEntry.experimentId || selectedEntry.experiment_id,
+                  })}
+                />
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Entry Details</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1784,45 +1622,17 @@ const LabNotebookPage: React.FC = () => {
         </div>
       )}
 
-      {/* Summary Generation Modal */}
-      {showSummaryModal && generatedSummary && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {summaryType === 'daily' && 'Daily Summary'}
-                {summaryType === 'weekly' && 'Weekly Summary'}
-                {summaryType === 'project' && 'Project Summary'}
-              </h2>
-              <button
-                onClick={() => {
-                  setShowSummaryModal(false);
-                  setGeneratedSummary(null);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <XMarkIcon className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="prose max-w-none whitespace-pre-wrap text-gray-700">
-                {generatedSummary}
-              </div>
-            </div>
-            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end">
-              <button
-                onClick={() => {
-                  setShowSummaryModal(false);
-                  setGeneratedSummary(null);
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <NotebookSummaryModal
+        open={showSummaryModal}
+        summaryType={summaryType}
+        summary={generatedSummary}
+        generatedAt={summaryGeneratedAt}
+        onClose={() => {
+          setShowSummaryModal(false);
+          setGeneratedSummary(null);
+          setSummaryGeneratedAt(null);
+        }}
+      />
       </div>
     </div>
   );

@@ -1,25 +1,31 @@
 #!/bin/bash
 
 # Database setup and health check script
-# This script sets up the PostgreSQL database and checks its health
+# This script sets up the MySQL database and checks its health
 
-echo "🗄️  Setting up PostgreSQL database..."
+echo "🗄️  Setting up MySQL database..."
 
 # Database configuration
 DB_NAME="digital_research_manager"
-DB_USER="m.salmanmalik"
-DB_HOST="localhost"
-DB_PORT="5432"
+DB_USER="${MYSQL_USER:-root}"
+DB_HOST="${MYSQL_HOST:-localhost}"
+DB_PORT="${MYSQL_PORT:-3306}"
+DB_PASSWORD="${MYSQL_PASSWORD:-}"
 
-# Function to check if PostgreSQL is running
-check_postgres() {
-    echo "🔍 Checking if PostgreSQL is running..."
-    if pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER >/dev/null 2>&1; then
-        echo "✅ PostgreSQL is running"
+MYSQL_BASE_CMD=(mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER")
+if [ -n "$DB_PASSWORD" ]; then
+  MYSQL_BASE_CMD+=(-p"$DB_PASSWORD")
+fi
+
+# Function to check if MySQL is running
+check_mysql() {
+    echo "🔍 Checking if MySQL is running..."
+    if mysqladmin ping -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" ${DB_PASSWORD:+-p"$DB_PASSWORD"} >/dev/null 2>&1; then
+        echo "✅ MySQL is running"
         return 0
     else
-        echo "❌ PostgreSQL is not running"
-        echo "💡 Please start PostgreSQL with: brew services start postgresql"
+        echo "❌ MySQL is not running"
+        echo "💡 Please start MySQL with: brew services start mysql"
         return 1
     fi
 }
@@ -27,49 +33,29 @@ check_postgres() {
 # Function to create database if it doesn't exist
 create_database() {
     echo "🔍 Checking if database '$DB_NAME' exists..."
-    
-    if psql -h $DB_HOST -p $DB_PORT -U $DB_USER -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
-        echo "✅ Database '$DB_NAME' already exists"
+    "${MYSQL_BASE_CMD[@]}" -e "CREATE DATABASE IF NOT EXISTS \`$DB_NAME\`;"
+    if [ $? -eq 0 ]; then
+        echo "✅ Database '$DB_NAME' is ready"
     else
-        echo "🔄 Creating database '$DB_NAME'..."
-        createdb -h $DB_HOST -p $DB_PORT -U $DB_USER $DB_NAME
-        if [ $? -eq 0 ]; then
-            echo "✅ Database '$DB_NAME' created successfully"
-        else
-            echo "❌ Failed to create database '$DB_NAME'"
-            return 1
-        fi
+        echo "❌ Failed to create database '$DB_NAME'"
+        return 1
     fi
 }
 
 # Function to run database migrations
 run_migrations() {
     echo "🔄 Running database migrations..."
-    
-    # Check if schema.sql exists
+
     if [ -f "database/schema.sql" ]; then
         echo "📄 Applying schema.sql..."
-        psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f database/schema.sql
-        if [ $? -eq 0 ]; then
-            echo "✅ Schema applied successfully"
-        else
-            echo "❌ Failed to apply schema"
-            return 1
-        fi
+        "${MYSQL_BASE_CMD[@]}" "$DB_NAME" < database/schema.sql
     else
         echo "⚠️  schema.sql not found, skipping schema application"
     fi
-    
-    # Check if seed data exists
+
     if [ -f "database/seed-users.sql" ]; then
         echo "🌱 Seeding database with initial data..."
-        psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f database/seed-users.sql
-        if [ $? -eq 0 ]; then
-            echo "✅ Database seeded successfully"
-        else
-            echo "❌ Failed to seed database"
-            return 1
-        fi
+        "${MYSQL_BASE_CMD[@]}" "$DB_NAME" < database/seed-users.sql
     else
         echo "⚠️  seed-users.sql not found, skipping seeding"
     fi
@@ -78,20 +64,18 @@ run_migrations() {
 # Function to test database connection
 test_connection() {
     echo "🧪 Testing database connection..."
-    
-    # Test basic connection
-    if psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "SELECT 1;" >/dev/null 2>&1; then
+
+    if "${MYSQL_BASE_CMD[@]}" "$DB_NAME" -e "SELECT 1;" >/dev/null 2>&1; then
         echo "✅ Database connection successful"
-        
-        # Test if tables exist
-        local table_count=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null | tr -d ' ')
-        
+
+        local table_count=$("${MYSQL_BASE_CMD[@]}" "$DB_NAME" -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$DB_NAME';" 2>/dev/null | tr -d ' ')
+
         if [ "$table_count" -gt 0 ]; then
             echo "✅ Database has $table_count tables"
         else
             echo "⚠️  Database has no tables"
         fi
-        
+
         return 0
     else
         echo "❌ Database connection failed"
@@ -102,27 +86,23 @@ test_connection() {
 # Main execution
 main() {
     echo "🚀 Starting database setup..."
-    
-    # Check if PostgreSQL is running
-    if ! check_postgres; then
+
+    if ! check_mysql; then
         exit 1
     fi
-    
-    # Create database if needed
+
     if ! create_database; then
         exit 1
     fi
-    
-    # Run migrations
+
     if ! run_migrations; then
         exit 1
     fi
-    
-    # Test connection
+
     if ! test_connection; then
         exit 1
     fi
-    
+
     echo "🎉 Database setup complete!"
     echo "💡 You can now start the application with: npm run dev"
 }

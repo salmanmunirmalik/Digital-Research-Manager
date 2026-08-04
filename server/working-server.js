@@ -653,19 +653,39 @@ import paperLibraryRoutes from './routes/paperLibrary.js';
 import externalDatabasesRoutes from './routes/externalDatabases.js';
 import projectManagementRoutes from './routes/projectManagement.js';
 
-// Simple auth middleware for demo
-const demoAuth = (req, res, next) => {
-  req.user = {
-    id: '550e8400-e29b-41d4-a716-446655440003',
-    email: 'demo@researchlab.com',
-    username: 'demo_user',
-    first_name: 'Sarah',
-    last_name: 'Martinez',
-    role: 'researcher',
-    avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
-    current_institution: 'Stanford University'
-  };
-  next();
+// Legacy bundle: prefer server/index.ts in production. ENABLE_DEMO_AUTH=true uses a fixed test user (E2E only); otherwise a Bearer JWT with payload.userId is required.
+const legacyOptionalDemoAuth = (req, res, next) => {
+  if (process.env.ENABLE_DEMO_AUTH === 'true') {
+    req.user = {
+      id: '550e8400-e29b-41d4-a716-446655440003',
+      email: 'demo@researchlab.com',
+      username: 'demo_user',
+      first_name: 'Fatima',
+      last_name: 'Martinez',
+      role: 'researcher',
+      avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
+      current_institution: 'Stanford University'
+    };
+    return next();
+  }
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+  try {
+    const jwt = require('jsonwebtoken');
+    const secret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+    const decoded = jwt.verify(token, secret);
+    const userId = decoded.userId || decoded.id;
+    if (!userId) {
+      return res.status(403).json({ error: 'Invalid token' });
+    }
+    req.user = { ...decoded, id: userId };
+    next();
+  } catch (error) {
+    return res.status(403).json({ error: 'Invalid token' });
+  }
 };
 
 // Test endpoint to verify database connection
@@ -679,7 +699,7 @@ app.get('/api/test-revolutionary', async (req, res) => {
 });
 
 // Calendar Events API endpoints
-app.get('/api/calendar-events', demoAuth, async (req, res) => {
+app.get('/api/calendar-events', legacyOptionalDemoAuth, async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT * FROM calendar_events WHERE user_id = $1 ORDER BY start_time ASC',
@@ -692,7 +712,7 @@ app.get('/api/calendar-events', demoAuth, async (req, res) => {
   }
 });
 
-app.post('/api/calendar-events', demoAuth, async (req, res) => {
+app.post('/api/calendar-events', legacyOptionalDemoAuth, async (req, res) => {
   try {
     const { title, description, start_time, end_time, event_type, priority, color, all_day } = req.body;
     
@@ -714,7 +734,7 @@ app.post('/api/calendar-events', demoAuth, async (req, res) => {
   }
 });
 
-app.put('/api/calendar-events/:id', demoAuth, async (req, res) => {
+app.put('/api/calendar-events/:id', legacyOptionalDemoAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, start_time, end_time, event_type, priority, color, all_day } = req.body;
@@ -742,7 +762,7 @@ app.put('/api/calendar-events/:id', demoAuth, async (req, res) => {
   }
 });
 
-app.delete('/api/calendar-events/:id', demoAuth, async (req, res) => {
+app.delete('/api/calendar-events/:id', legacyOptionalDemoAuth, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -769,12 +789,12 @@ console.log('   - PUT /api/calendar-events/:id');
 console.log('   - DELETE /api/calendar-events/:id');
 
 // Mount the revolutionary feature routes
-app.use('/api/scientist-passport', demoAuth, scientistPassportRoutes);
-app.use('/api/services', demoAuth, serviceMarketplaceRoutes);
-app.use('/api/negative-results', demoAuth, negativeResultsRoutes);
-app.use('/api/papers', demoAuth, paperLibraryRoutes);
-app.use('/api/external-db', demoAuth, externalDatabasesRoutes);
-app.use('/api/project-management', demoAuth, projectManagementRoutes);
+app.use('/api/scientist-passport', legacyOptionalDemoAuth, scientistPassportRoutes);
+app.use('/api/services', legacyOptionalDemoAuth, serviceMarketplaceRoutes);
+app.use('/api/negative-results', legacyOptionalDemoAuth, negativeResultsRoutes);
+app.use('/api/papers', legacyOptionalDemoAuth, paperLibraryRoutes);
+app.use('/api/external-db', legacyOptionalDemoAuth, externalDatabasesRoutes);
+app.use('/api/project-management', legacyOptionalDemoAuth, projectManagementRoutes);
 
 console.log('✨ Revolutionary features API routes registered:');
 console.log('   - /api/scientist-passport (Skills, Certifications, Availability)');

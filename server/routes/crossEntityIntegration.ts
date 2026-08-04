@@ -1,12 +1,7 @@
 import express, { type Router } from 'express';
-import { Pool } from 'pg';
+import pool from '../../database/config.js';
 
 const router: Router = express.Router();
-
-// Initialize database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/digital_research_manager',
-});
 
 // ==============================================
 // CROSS-ENTITY INTEGRATION API ROUTES
