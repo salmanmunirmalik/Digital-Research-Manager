@@ -16,7 +16,7 @@ test.describe('Authentication', () => {
     await page.fill('#email', 'invalid@email.com');
     await page.fill('#password', 'nottherightpassword');
     await page.click('button[type="submit"]');
-    await expect(page.getByTestId('login-error')).toContainText(/error/i);
+    await expect(page.getByTestId('login-error')).toContainText(/invalid credentials/i);
   });
 
   test('logs in with demo credentials', async ({ page }) => {
@@ -38,14 +38,14 @@ test.describe('Navigation', () => {
   });
 
   test('opens Personal NoteBook from sidebar', async ({ page }) => {
-    await page.getByTestId('side-nav').getByRole('link', { name: 'Personal NoteBook' }).click();
+    await page.getByTestId('side-nav').getByRole('link', { name: 'Personal notebook' }).click();
     await expect(page.getByTestId('lab-notebook-heading')).toBeVisible();
   });
 
   test('opens protocol library from sidebar', async ({ page }) => {
-    await page.getByTestId('side-nav').getByRole('link', { name: 'Protocols' }).click();
+    await page.getByTestId('side-nav').getByRole('link', { name: 'Protocol library' }).click();
     await expect(page).toHaveURL(/\/protocols$/);
-    await expect(page.getByRole('heading', { name: 'Protocol Library' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Protocol library/i })).toBeVisible();
   });
 });
 

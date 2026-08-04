@@ -8,7 +8,7 @@ export const loginAsDemo = async (page: Page) => {
   await page.fill('#email', DEMO_EMAIL);
   await page.fill('#password', DEMO_PASSWORD);
   await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/\/lab-notebook/);
-  await expect(page.getByTestId('lab-notebook-heading')).toBeVisible();
+  // App post-login landing is dashboard (not lab-notebook)
+  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(page.getByRole('heading', { name: /Welcome back/i })).toBeVisible();
 };
-

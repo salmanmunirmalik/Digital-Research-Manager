@@ -2,8 +2,17 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import LegalFooterLinks from '../components/LegalFooterLinks';
 
-const RegisterPage: React.FC = () => {
+const inputClassName =
+  'w-full border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-colors focus:border-teal-700 focus:ring-1 focus:ring-teal-700';
+
+const roles = [
+  { value: 'student', label: 'Student' },
+  { value: 'researcher', label: 'Researcher' },
+] as const;
+
+function RegisterPage(): React.ReactElement {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -11,25 +20,36 @@ const RegisterPage: React.FC = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'student'
+    role: 'student',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData(prev => ({
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ): void => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value,
     }));
   };
 
-  const validateForm = () => {
-    if (!formData.firstName || !formData.lastName || !formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
+  const validateForm = (): string | null => {
+    if (
+      !formData.firstName ||
+      !formData.lastName ||
+      !formData.username ||
+      !formData.email ||
+      !formData.password ||
+      !formData.confirmPassword
+    ) {
       return 'Please fill in all fields';
     }
 
@@ -41,27 +61,30 @@ const RegisterPage: React.FC = () => {
       return 'Username must be at least 3 characters long';
     }
 
-    if (formData.password.length < 6) {
-      return 'Password must be at least 6 characters long';
+    if (formData.password.length < 8) {
+      return 'Password must be at least 8 characters long';
     }
 
     if (formData.password !== formData.confirmPassword) {
       return 'Passwords do not match';
     }
 
-    // Password strength validation
     const hasUpperCase = /[A-Z]/.test(formData.password);
     const hasLowerCase = /[a-z]/.test(formData.password);
     const hasNumbers = /\d/.test(formData.password);
-    
+
     if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
       return 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
+    }
+
+    if (!acceptedPrivacy) {
+      return 'Please accept the Privacy Policy and Terms of Service to create an account';
     }
 
     return null;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
@@ -80,48 +103,78 @@ const RegisterPage: React.FC = () => {
         password: formData.password,
         first_name: formData.firstName,
         last_name: formData.lastName,
-        role: formData.role
+        role: formData.role,
       });
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Registration failed. Please try again.';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const roles = [
-    { value: 'student', label: 'Student' },
-    { value: 'researcher', label: 'Researcher' },
-    { value: 'principal_researcher', label: 'Principal Researcher' },
-    { value: 'admin', label: 'Administrator' }
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-            <span className="text-white font-bold text-xl">DR</span>
+    <div className="landing-page flex min-h-screen bg-[#F7F8F6] text-slate-900 antialiased">
+      <div className="relative hidden w-[42%] overflow-hidden lg:block">
+        <img
+          src="https://images.unsplash.com/photo-1582719471384-894fbb16e074?auto=format&fit=crop&w=1600&q=80"
+          alt=""
+          className="h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-slate-950/70" />
+        <div className="absolute inset-0 flex flex-col justify-between p-10 text-white">
+          <Link to="/" className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center bg-white text-sm font-semibold text-slate-900">
+              DR
+            </span>
+            <span className="landing-serif text-lg tracking-tight">Digital Research Manager</span>
+          </Link>
+          <div className="max-w-sm">
+            <p className="landing-serif text-3xl leading-tight tracking-tight">
+              Start your research workspace.
+            </p>
+            <p className="mt-4 text-sm leading-relaxed text-white/70">
+              Create an account to run labs, protocols, notebooks, and collaboration in one place.
+            </p>
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            Create your account
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Join the Digital Research Lab platform
-          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col">
+        <div className="flex items-center justify-between px-6 py-6 lg:px-12">
+          <Link to="/" className="flex items-center gap-3 lg:invisible">
+            <span className="flex h-8 w-8 items-center justify-center bg-slate-900 text-xs font-semibold text-white">
+              DR
+            </span>
+            <span className="landing-serif text-base tracking-tight">Digital Research Manager</span>
+          </Link>
+          <Link
+            to="/login"
+            className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
+          >
+            Sign in
+          </Link>
         </div>
 
-        {/* Form */}
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="space-y-4">
-              {/* Name Fields */}
-              <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-1 items-center justify-center px-6 pb-16 lg:px-12">
+          <div className="w-full max-w-md">
+            <h1 className="landing-serif text-3xl tracking-tight text-slate-900">
+              Create account
+            </h1>
+            <p className="mt-2 text-sm text-slate-600">
+              Join Digital Research Manager and open your lab workspace.
+            </p>
+
+            <form className="mt-10 space-y-4" onSubmit={handleSubmit}>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-                    First Name
+                  <label
+                    htmlFor="firstName"
+                    className="mb-1.5 block text-sm font-medium text-slate-700"
+                  >
+                    First name
                   </label>
                   <input
                     id="firstName"
@@ -130,13 +183,16 @@ const RegisterPage: React.FC = () => {
                     required
                     value={formData.firstName}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="John"
+                    className={inputClassName}
+                    placeholder="Alex"
                   />
                 </div>
                 <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Name
+                  <label
+                    htmlFor="lastName"
+                    className="mb-1.5 block text-sm font-medium text-slate-700"
+                  >
+                    Last name
                   </label>
                   <input
                     id="lastName"
@@ -145,15 +201,17 @@ const RegisterPage: React.FC = () => {
                     required
                     value={formData.lastName}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Doe"
+                    className={inputClassName}
+                    placeholder="Chen"
                   />
                 </div>
               </div>
 
-              {/* Username */}
               <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="username"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
                   Username
                 </label>
                 <input
@@ -163,15 +221,14 @@ const RegisterPage: React.FC = () => {
                   required
                   value={formData.username}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="johndoe"
+                  className={inputClassName}
+                  placeholder="achen"
                 />
               </div>
 
-              {/* Email */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email address
+                <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Email
                 </label>
                 <input
                   id="email"
@@ -181,14 +238,13 @@ const RegisterPage: React.FC = () => {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="john@example.com"
+                  className={inputClassName}
+                  placeholder="you@lab.edu"
                 />
               </div>
 
-              {/* Role */}
               <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="role" className="mb-1.5 block text-sm font-medium text-slate-700">
                   Role
                 </label>
                 <select
@@ -196,9 +252,9 @@ const RegisterPage: React.FC = () => {
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={inputClassName}
                 >
-                  {roles.map(role => (
+                  {roles.map((role) => (
                     <option key={role.value} value={role.value}>
                       {role.label}
                     </option>
@@ -206,9 +262,11 @@ const RegisterPage: React.FC = () => {
                 </select>
               </div>
 
-              {/* Password */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="password"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
                   Password
                 </label>
                 <div className="relative">
@@ -220,30 +278,35 @@ const RegisterPage: React.FC = () => {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter your password"
+                    className={`${inputClassName} pr-10`}
+                    placeholder="Create a password"
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 transition-colors hover:text-slate-600"
+                    onClick={() => {
+                      setShowPassword(!showPassword);
+                    }}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? (
-                      <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                      <EyeSlashIcon className="h-5 w-5" />
                     ) : (
-                      <EyeIcon className="h-5 w-5 text-gray-400" />
+                      <EyeIcon className="h-5 w-5" />
                     )}
                   </button>
                 </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  Must contain uppercase, lowercase, and number
+                <p className="mt-1.5 text-xs text-slate-500">
+                  Use uppercase, lowercase, and a number.
                 </p>
               </div>
 
-              {/* Confirm Password */}
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirm Password
+                <label
+                  htmlFor="confirmPassword"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Confirm password
                 </label>
                 <div className="relative">
                   <input
@@ -254,64 +317,80 @@ const RegisterPage: React.FC = () => {
                     required
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`${inputClassName} pr-10`}
                     placeholder="Confirm your password"
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 transition-colors hover:text-slate-600"
+                    onClick={() => {
+                      setShowConfirmPassword(!showConfirmPassword);
+                    }}
+                    aria-label={
+                      showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'
+                    }
                   >
                     {showConfirmPassword ? (
-                      <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                      <EyeSlashIcon className="h-5 w-5" />
                     ) : (
-                      <EyeIcon className="h-5 w-5 text-gray-400" />
+                      <EyeIcon className="h-5 w-5" />
                     )}
                   </button>
                 </div>
               </div>
 
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-sm text-red-600">{error}</p>
+              {error ? (
+                <div className="border border-red-200 bg-red-50 px-3 py-2.5">
+                  <p className="text-sm text-red-700">{error}</p>
                 </div>
-              )}
+              ) : null}
 
-              {/* Submit Button */}
+              <label className="flex items-start gap-3 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={acceptedPrivacy}
+                  onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-700"
+                  required
+                />
+                <span>
+                  I agree to the{' '}
+                  <Link to="/privacy" className="font-medium text-teal-800 hover:underline">
+                    Privacy Policy
+                  </Link>{' '}
+                  and{' '}
+                  <Link to="/terms" className="font-medium text-teal-800 hover:underline">
+                    Terms of Service
+                  </Link>
+                  . I understand I can manage cookie preferences separately.
+                </span>
+              </label>
+
               <button
                 type="submit"
-                disabled={isLoading}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-slate-800 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                disabled={isLoading || !acceptedPrivacy}
+                className="flex w-full items-center justify-center bg-teal-700 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isLoading ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Creating account...
-                  </div>
-                ) : (
-                  'Create account'
-                )}
+                {isLoading ? 'Creating account…' : 'Create account'}
               </button>
-            </div>
-          </div>
+            </form>
 
-          {/* Footer */}
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
+            <p className="mt-8 text-sm text-slate-600">
               Already have an account?{' '}
               <Link
                 to="/login"
-                className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
+                className="font-medium text-teal-800 transition-colors hover:text-teal-700"
               >
-                Sign in here
+                Sign in
               </Link>
             </p>
+
+            <LegalFooterLinks className="mt-6" />
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
-};
+}
 
 export default RegisterPage;

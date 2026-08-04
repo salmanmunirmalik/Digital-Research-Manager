@@ -21,8 +21,10 @@ export default defineConfig(({ mode }) => {
       ].filter(Boolean),
       
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        // Never inline server secrets into the browser bundle.
+        // Gemini and other provider keys must stay on the backend.
+        'process.env.API_KEY': JSON.stringify(''),
+        'process.env.GEMINI_API_KEY': JSON.stringify(''),
         'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL),
         'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY)
       },

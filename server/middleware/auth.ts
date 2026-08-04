@@ -1,6 +1,13 @@
+import dotenv from 'dotenv';
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import pool from "../../database/config.js";
+import { assertAuthEnvironment, getRequiredJwtSecret } from '../utils/authEnvironment.js';
+
+dotenv.config({ path: '.env.local' });
+dotenv.config();
+
+assertAuthEnvironment();
 
 export interface AuthenticatedUser {
   id: string;
@@ -18,17 +25,17 @@ export interface AuthenticatedRequest extends Request {
   user?: AuthenticatedUser;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
-const DEMO_TOKEN = process.env.DEMO_AUTH_TOKEN || 'demo-token-123';
+const JWT_SECRET = getRequiredJwtSecret();
 const ENABLE_DEMO_AUTH = process.env.ENABLE_DEMO_AUTH === 'true';
+const DEMO_TOKEN = process.env.DEMO_AUTH_TOKEN || 'demo-token-123';
 
 const demoUser: AuthenticatedUser = {
-  id: '550e8400-e29b-41d4-a716-446655440003',
-  username: 'demo_user',
-  email: 'demo@researchlab.com',
-  role: 'student',
+  id: 'demo-user-0001',
+  username: 'researcher',
+  email: process.env.DEMO_AUTH_EMAIL || 'researcher@researchlab.com',
+  role: 'researcher',
   status: 'active',
-  first_name: 'Sarah',
+  first_name: 'Fatima',
   last_name: 'Martinez',
   avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
   current_institution: 'Stanford University'
@@ -43,18 +50,33 @@ export const authenticateToken = async (
     const authHeader = req.headers['authorization'];
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      if (ENABLE_DEMO_AUTH) {
-        req.user = demoUser;
-        return next();
-      }
-
       return res.status(401).json({ error: 'Missing or invalid Authorization header' });
     }
 
     const token = authHeader.split(' ')[1];
 
-    if (token === DEMO_TOKEN && ENABLE_DEMO_AUTH) {
+    // Demo token only when explicitly enabled (blocked in production by boot guard)
+    if (ENABLE_DEMO_AUTH && token === DEMO_TOKEN) {
       req.user = demoUser;
+      pool
+        .query(
+          `INSERT INTO users (id, username, email, first_name, last_name, password_hash, role, status, email_verified)
+           VALUES ($1, $2, $3, $4, $5, 'demo', $6, 'active', 1)
+           ON DUPLICATE KEY UPDATE
+             first_name = VALUES(first_name),
+             last_name = VALUES(last_name),
+             username = VALUES(username),
+             email = VALUES(email)`,
+          [
+            demoUser.id,
+            demoUser.username,
+            demoUser.email,
+            demoUser.first_name,
+            demoUser.last_name,
+            demoUser.role,
+          ]
+        )
+        .catch((err) => console.warn('Demo user upsert skipped:', err?.message || err));
       return next();
     }
 
@@ -106,11 +128,5 @@ export const requireRole = (roles: string[]) => {
   };
 };
 
-export const demoAuth = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  if (ENABLE_DEMO_AUTH) {
-    req.user = demoUser;
-    return next();
-  }
-
-  return authenticateToken(req, res, next);
-};
+/** @deprecated Use authenticateToken — kept as an alias for older route wiring */
+export const demoAuth = authenticateToken;

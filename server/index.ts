@@ -7,12 +7,23 @@ import express, { type Application } from 'express';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import pool from '../database/config.js';
 import { User, UserRole, UserStatus } from '../types';
 import AIPresentationService from './aiPresentationService.js';
 import AdvancedStatisticalService from './advancedStatsService.js';
 import { ActivityTracker } from './services/activityTracker.js';
 import { authenticateToken } from './middleware/auth.js';
+import { apiRateLimit, authRateLimit, securityHeaders } from './middleware/security.js';
+import {
+  changePasswordSchema,
+  formatZodError,
+  loginSchema,
+  profileUpdateSchema,
+  registerSchema,
+  resolveSignupRole
+} from './validation/authSchemas.js';
+import { getRequiredJwtSecret } from './utils/authEnvironment.js';
 
 // Revolutionary features route modules
 import scientistPassportRoutes from './routes/scientistPassport.js';
@@ -21,11 +32,7 @@ import negativeResultsRoutes from './routes/negativeResults.js';
 import aiTrainingRoutes from './routes/aiTraining.js';
 import aiProviderKeysRoutes from './routes/aiProviderKeys.js';
 import settingsRoutes from './routes/settings.js';
-import communicationsRoutes from './routes/communications.js';
-import scientistFirstRoutes from './routes/scientistFirst.js';
-import aiResearchAgentRoutes from './routes/aiResearchAgent.js';
 import apiTaskAssignmentsRoutes from './routes/apiTaskAssignments.js';
-import workflowRoutes from './routes/workflows.js';
 import agentsRoutes from './routes/agents.js';
 import orchestratorRoutes from './routes/orchestrator.js';
 import labWorkspaceRoutes from './routes/labWorkspace.js';
@@ -38,6 +45,20 @@ import experimentTrackerRoutes from './routes/experimentTracker.js';
 import projectManagementRoutes from './routes/projectManagement.js';
 import recommendationsRoutes from './routes/recommendations.js';
 import notebookSummariesRoutes from './routes/notebookSummaries.js';
+import complianceRoutes from './routes/compliance.js';
+import supportRoutes from './routes/support.js';
+import grantsRoutes from './routes/grants.js';
+import researchEventsRoutes from './routes/researchEvents.js';
+import marketplaceDirectoryRoutes from './routes/marketplaceDirectory.js';
+import networkingPostsRoutes from './routes/networkingPosts.js';
+import networkingDirectoryRoutes from './routes/networkingDirectory.js';
+import networkingSocialRoutes from './routes/networkingSocial.js';
+import { parseJsonList, toJsonList } from './utils/labShowcase.js';
+import { canManageResource } from './utils/ownership.js';
+import helpForumRoutes from './routes/helpForum.js';
+import notificationsRoutes from './routes/notifications.js';
+import communityNewsRoutes from './routes/communityNews.js';
+import aiResearchAgentRoutes from './routes/aiResearchAgent.js';
 import autoIndexing from './utils/autoIndexing.js';
 
 // Note: Exports moved to separate files to avoid circular dependencies
@@ -48,12 +69,13 @@ const ENABLE_DEMO_AUTH = process.env.ENABLE_DEMO_AUTH === 'true';
 const DEMO_AUTH_EMAIL = process.env.DEMO_AUTH_EMAIL || 'researcher@researchlab.com';
 const DEMO_AUTH_PASSWORD = process.env.DEMO_AUTH_PASSWORD || 'researcher123';
 const DEMO_AUTH_TOKEN = process.env.DEMO_AUTH_TOKEN || 'demo-token-123';
+const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS || 12);
 
 const demoAuthUser = {
   id: 'demo-user-0001',
   email: DEMO_AUTH_EMAIL,
   username: DEMO_AUTH_EMAIL.split('@')[0] || 'demo_user',
-  first_name: 'Sarah',
+  first_name: 'Fatima',
   last_name: 'Martinez',
   role: 'researcher',
   status: 'active',
@@ -70,30 +92,45 @@ declare global {
   }
 }
 
+// Trust proxy when behind Render/nginx so rate limits use real client IPs
+if (process.env.TRUST_PROXY === 'true' || process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
+app.use(securityHeaders);
+
 // --- CORS Setup for localhost + Render ---
 const allowedOrigins: string[] = process.env.FRONTEND_URL
-  ? process.env.FRONTEND_URL.split(',') // allow multiple URLs separated by commas
+  ? process.env.FRONTEND_URL.split(',').map((o) => o.trim()).filter(Boolean)
   : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'];
 
+const isProd = process.env.NODE_ENV === 'production';
 app.use(cors({
-  origin: true, // Allow all origins for demo
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (!isProd) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    console.warn('CORS blocked origin:', origin);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // --- JSON Body Parser ---
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+app.use('/api', apiRateLimit);
 
-// JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+// JWT Secret (boot already validated via auth middleware import)
+const JWT_SECRET = getRequiredJwtSecret();
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'healthy', 
     timestamp: new Date().toISOString(),
-    database: 'PostgreSQL',
+    database: 'MySQL',
     environment: process.env.NODE_ENV || 'development'
   });
 });
@@ -103,43 +140,49 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'API healthy', 
     timestamp: new Date().toISOString(),
-    database: 'PostgreSQL'
+    database: 'MySQL'
   });
 });
 
 // Authentication Routes
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authRateLimit, async (req, res) => {
   try {
-    const { email, username, password, first_name, last_name, role = 'student' } = req.body;
-
-    // Validation
-    if (!email || !username || !password || !first_name || !last_name) {
-      return res.status(400).json({ error: 'All fields are required' });
+    const parsed = registerSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: formatZodError(parsed.error) });
     }
 
-    // Check if user already exists
+    const { email, username, password, first_name, last_name } = parsed.data;
+    // Never trust client-supplied privileged roles
+    const role = resolveSignupRole(parsed.data.role);
+
+    // Check if user already exists (generic message to reduce account enumeration)
     const existingUser = await pool.query(
       'SELECT id FROM users WHERE email = $1 OR username = $2',
-      [email, username]
+      [email.toLowerCase(), username]
     );
 
     if (existingUser.rows.length > 0) {
-      return res.status(400).json({ error: 'User with this email or username already exists' });
+      return res.status(400).json({ error: 'Unable to create account with the provided details' });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const userId = crypto.randomUUID();
+    await pool.query(`
+      INSERT INTO users (id, email, username, password_hash, first_name, last_name, role, status, email_verified)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `, [userId, email.toLowerCase(), username, hashedPassword, first_name, last_name, role, 'active', false]);
 
-    // Create user
-    const result = await pool.query(`
-      INSERT INTO users (email, username, password_hash, first_name, last_name, role, status, email_verified)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING id, email, username, first_name, last_name, role, status
-    `, [email, username, hashedPassword, first_name, last_name, role, 'active', false]);
+    const user = {
+      id: userId,
+      email: email.toLowerCase(),
+      username,
+      first_name,
+      last_name,
+      role,
+      status: 'active'
+    };
 
-    const user = result.rows[0];
-
-    // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       JWT_SECRET,
@@ -162,17 +205,9 @@ app.post('/api/auth/register', async (req, res) => {
 
   } catch (error: any) {
     console.error('Registration error:', error);
-    // Log detailed error for debugging
     if (error.code) {
       console.error('Database error code:', error.code);
     }
-    if (error.message) {
-      console.error('Error message:', error.message);
-    }
-    if (error.detail) {
-      console.error('Error detail:', error.detail);
-    }
-    // Return more specific error message in development
     const errorMessage = process.env.NODE_ENV === 'production' 
       ? 'Internal server error' 
       : error.message || 'Internal server error';
@@ -180,28 +215,24 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authRateLimit, async (req, res) => {
   try {
-    console.log('🔐 Login attempt:', { email: req.body.email, timestamp: new Date().toISOString() });
-    
-    const { email, password } = req.body;
-
-    // Validation
-    if (!email || !password) {
-      console.log('❌ Login failed: Missing credentials');
-      return res.status(400).json({ error: 'Email and password are required' });
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: formatZodError(parsed.error) });
     }
 
-    // Demo auth bypass for Playwright/E2E flows
+    const { email, password } = parsed.data;
+    const loginId = email.trim();
+
+    // Optional fixed test user for Playwright/E2E only (ENABLE_DEMO_AUTH=true on the server process)
     if (
       ENABLE_DEMO_AUTH &&
-      email === DEMO_AUTH_EMAIL &&
+      loginId === DEMO_AUTH_EMAIL &&
       password === DEMO_AUTH_PASSWORD
     ) {
-      console.log('✅ Demo auth login successful');
-
       return res.json({
-        message: 'Demo login successful',
+        message: 'Test login successful',
         user: demoAuthUser,
         token: DEMO_AUTH_TOKEN
       });
@@ -211,37 +242,30 @@ app.post('/api/auth/login', async (req, res) => {
     let result;
     try {
       result = await pool.query(
-        'SELECT * FROM users WHERE email = $1 OR username = $1',
-        [email]
+        'SELECT * FROM users WHERE email = $1 OR username = $2',
+        [loginId.toLowerCase(), loginId]
       );
     } catch (dbError: any) {
       console.error('💥 Database error in login:', dbError);
-      // Database errors should return 500, not 401
       return res.status(500).json({ error: 'Internal server error' });
     }
 
     if (result.rows.length === 0) {
-      console.log('❌ Login failed: User not found');
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const user = result.rows[0];
-    console.log('👤 User found:', { username: user.username, role: user.role, status: user.status });
 
     // Check if user is active
     if (user.status !== 'active') {
-      console.log('❌ Login failed: User not active');
       return res.status(401).json({ error: 'Account is not active. Please contact administrator.' });
     }
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
-      console.log('❌ Login failed: Invalid password');
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-
-    console.log('✅ Password verified successfully');
 
     // Update last login
     await pool.query(
@@ -255,8 +279,6 @@ app.post('/api/auth/login', async (req, res) => {
       JWT_SECRET,
       { expiresIn: '24h' }
     );
-
-    console.log('🎉 Login successful:', { username: user.username, role: user.role });
 
     res.json({
       message: 'Login successful',
@@ -274,8 +296,6 @@ app.post('/api/auth/login', async (req, res) => {
 
   } catch (error: any) {
     console.error('💥 Login error:', error);
-    // Only return 500 for unexpected errors, not authentication failures
-    // Authentication failures should have already returned 401 above
     if (error.code) console.error('Database error code:', error.code);
     if (error.message) console.error('Error message:', error.message);
     const errorMessage = process.env.NODE_ENV === 'production' 
@@ -285,8 +305,20 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Logout (stateless JWT - client should discard token)
-app.post('/api/auth/logout', authenticateToken, async (req, res) => {
+app.post('/api/auth/demo-login', authRateLimit, async (req, res) => {
+  if (!ENABLE_DEMO_AUTH) {
+    return res.status(403).json({ error: 'Demo authentication is disabled' });
+  }
+
+  return res.json({
+    message: 'Demo login successful',
+    user: demoAuthUser,
+    token: DEMO_AUTH_TOKEN
+  });
+});
+
+// Logout — allow without auth so client can notify server before discarding token
+app.post('/api/auth/logout', async (req, res) => {
   try {
     return res.json({ message: 'Logged out' });
   } catch (error) {
@@ -300,7 +332,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
     const user = req.user;
     
     // Remove sensitive information
-    const { password_hash, ...safeUser } = user;
+    const { password_hash, ...safeUser } = user as any;
     
     res.json({
       user: safeUser
@@ -333,32 +365,53 @@ app.get('/api/auth/profile', authenticateToken, async (req, res) => {
 
 app.put('/api/auth/profile', authenticateToken, async (req, res) => {
   try {
-    const { first_name, last_name, email } = req.body;
-    const result = await pool.query(
+    const parsed = profileUpdateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: formatZodError(parsed.error) });
+    }
+
+    const { first_name, last_name, email } = parsed.data;
+
+    if (email) {
+      const conflict = await pool.query(
+        'SELECT id FROM users WHERE email = $1 AND id != $2',
+        [email.toLowerCase(), req.user!.id]
+      );
+      if (conflict.rows.length > 0) {
+        return res.status(400).json({ error: 'Email is already in use' });
+      }
+    }
+
+    await pool.query(
       `UPDATE users SET first_name = COALESCE($1, first_name), last_name = COALESCE($2, last_name), email = COALESCE($3, email), updated_at = CURRENT_TIMESTAMP
-       WHERE id = $4 RETURNING id, email, username, first_name, last_name, role, status`,
-      [first_name, last_name, email, req.user.id]
+       WHERE id = $4`,
+      [first_name ?? null, last_name ?? null, email ? email.toLowerCase() : null, req.user!.id]
     );
-    return res.json({ user: result.rows[0] });
+    const userResult = await pool.query(
+      'SELECT id, email, username, first_name, last_name, role, status FROM users WHERE id = $1',
+      [req.user!.id]
+    );
+    return res.json({ user: userResult.rows[0] });
   } catch (error) {
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-app.put('/api/auth/change-password', authenticateToken, async (req, res) => {
+app.put('/api/auth/change-password', authenticateToken, authRateLimit, async (req, res) => {
   try {
-    const { currentPassword, newPassword } = req.body;
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ error: 'Both current and new passwords are required' });
+    const parsed = changePasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: formatZodError(parsed.error) });
     }
-    const result = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+    const { currentPassword, newPassword } = parsed.data;
+    const result = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.user!.id]);
     const user = result.rows[0];
     const isValid = await bcrypt.compare(currentPassword, user.password_hash);
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid current password' });
     }
-    const newHash = await bcrypt.hash(newPassword, 10);
-    await pool.query('UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [newHash, req.user.id]);
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await pool.query('UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [newHash, req.user!.id]);
     return res.json({ message: 'Password updated successfully' });
   } catch (error) {
     return res.status(500).json({ error: 'Internal server error' });
@@ -389,120 +442,182 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 // Lab Management Routes
 app.post('/api/labs', authenticateToken, async (req, res) => {
   try {
-    // Demo mode - bypass permission checks
-    // req.user is provided by the bypass middleware
+    const {
+      name,
+      description,
+      institution,
+      department,
+      contact_email,
+      contact_phone,
+      address,
+      website_url,
+      research_areas,
+      looking_for,
+      lab_type,
+      established_year,
+    } = req.body;
 
-    const { name, description, institution, department, contact_email, contact_phone, address, website_url, research_areas, lab_type, established_year, principal_investigator } = req.body;
-
-    // Validation
     if (!name || !institution || !department) {
       return res.status(400).json({ error: 'Lab name, institution, and department are required' });
     }
 
-    // Validate university email if provided
-    if (contact_email) {
-      const UniversityEmailValidator = require('./services/universityEmailValidator').default;
-      const emailValidation = UniversityEmailValidator.validateUniversityEmail(contact_email);
-      
-      if (!emailValidation.isValid) {
-        return res.status(400).json({ 
-          error: 'Please provide a valid university email address',
-          details: 'Only users with verified university email addresses can create labs'
-        });
-      }
-      
-      // Log email validation for audit
-      console.log('📧 Email validation:', {
-        email: contact_email,
-        institution: emailValidation.institution,
-        verified: emailValidation.verified
-      });
-    }
+    const labId = crypto.randomUUID();
+    await pool.query(
+      `INSERT INTO labs (
+        id, name, description, institution, department, principal_researcher_id,
+        contact_email, contact_phone, address, website_url,
+        research_areas, looking_for, lab_type, established_year, is_showcased
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 0)`,
+      [
+        labId,
+        String(name).trim(),
+        description || null,
+        String(institution).trim(),
+        String(department).trim(),
+        req.user.id,
+        contact_email || null,
+        contact_phone || null,
+        address || null,
+        website_url || null,
+        toJsonList(research_areas),
+        toJsonList(looking_for),
+        lab_type || null,
+        established_year ? Number(established_year) : null,
+      ]
+    );
 
-    // Create lab with demo user ID
-    const result = await pool.query(`
-      INSERT INTO labs (name, description, institution, department, principal_researcher_id, contact_email, contact_phone, address, website_url)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *
-    `, [name, description, institution, department, req.user.id, contact_email, contact_phone, address, website_url]);
+    await pool.query(
+      `INSERT INTO lab_members (id, lab_id, user_id, role, permissions, is_active)
+       VALUES ($1, $2, $3, $4, $5, 1)`,
+      [crypto.randomUUID(), labId, req.user.id, 'principal_researcher', '{}']
+    );
 
-    const lab = result.rows[0];
+    const workspaceId = crypto.randomUUID();
+    await pool.query(
+      `INSERT INTO lab_workspaces (id, lab_id, name, created_by)
+       VALUES ($1, $2, $3, $4)`,
+      [workspaceId, labId, 'Lab workspace', req.user.id]
+    );
+    const spaceId = crypto.randomUUID();
+    await pool.query(
+      `INSERT INTO workspace_spaces (id, workspace_id, name, created_by, position)
+       VALUES ($1, $2, 'General', $3, 0)`,
+      [spaceId, workspaceId, req.user.id]
+    );
+    await pool.query(
+      `INSERT INTO workspace_lists (id, space_id, name, created_by, position)
+       VALUES ($1, $2, 'My Tasks', $3, 0)`,
+      [crypto.randomUUID(), spaceId, req.user.id]
+    );
 
-    // Add creator as lab member with principal researcher role
-    await pool.query(`
-      INSERT INTO lab_members (lab_id, user_id, role, permissions)
-      VALUES ($1, $2, $3, $4)
-    `, [lab.id, req.user.id, 'principal_researcher', '{}']);
-
-    console.log('🏢 Lab created:', { 
-      labId: lab.id, 
-      name: lab.name, 
-      creator: req.user.username,
-      institution: institution,
-      email: contact_email
-    });
+    const labResult = await pool.query('SELECT * FROM labs WHERE id = $1', [labId]);
 
     res.status(201).json({
       message: 'Lab created successfully',
-      lab
+      lab: labResult.rows[0],
     });
-
   } catch (error) {
     console.error('💥 Lab creation error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+app.get('/api/labs/mine', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const result = await pool.query(
+      `SELECT l.*, lm.role AS membership_role,
+        COALESCE(l.is_showcased, 0) AS is_showcased,
+        (SELECT COUNT(*) FROM lab_members m WHERE m.lab_id = l.id AND m.is_active = 1) AS member_count
+       FROM lab_members lm
+       JOIN labs l ON l.id = lm.lab_id
+       WHERE lm.user_id = $1 AND lm.is_active = 1
+       ORDER BY l.name ASC`,
+      [req.user.id]
+    );
+
+    const labs = result.rows.map((row: any) => ({
+      ...row,
+      is_showcased: Boolean(Number(row.is_showcased)),
+      research_areas: parseJsonList(row.research_areas),
+      looking_for: parseJsonList(row.looking_for),
+      member_count: Number(row.member_count) || 0,
+    }));
+
+    res.json({ labs });
+  } catch (error: any) {
+    console.error('💥 Get my labs error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
 app.get('/api/labs', authenticateToken, async (req, res) => {
   try {
-    // Safety check for req.user
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // Demo mode - show all labs
+    // Public network catalog — only showcased labs
     const query = `
       SELECT l.*, u.first_name, u.last_name, u.username as pi_name,
-             (SELECT COUNT(*) FROM lab_members WHERE lab_id = l.id) as member_count
+             (SELECT COUNT(*) FROM lab_members WHERE lab_id = l.id AND is_active = 1) as member_count
       FROM labs l
-      JOIN users u ON l.principal_researcher_id = u.id
-      ORDER BY l.created_at DESC
+      LEFT JOIN users u ON l.principal_researcher_id = u.id
+      WHERE COALESCE(l.is_showcased, 0) = 1
+      ORDER BY l.showcased_at DESC, l.created_at DESC
     `;
 
     const result = await pool.query(query);
-
-    res.json({ labs: result.rows });
+    res.json({
+      labs: result.rows.map((row: any) => ({
+        ...row,
+        is_showcased: true,
+        research_areas: parseJsonList(row.research_areas),
+        looking_for: parseJsonList(row.looking_for),
+      })),
+    });
   } catch (error: any) {
     console.error('💥 Get labs error:', error);
-    if (error.code) console.error('Database error code:', error.code);
-    if (error.message) console.error('Error message:', error.message);
-    if (error.detail) console.error('Error detail:', error.detail);
-    const errorMessage = process.env.NODE_ENV === 'production' 
-      ? 'Internal server error' 
-      : error.message || 'Internal server error';
+    const errorMessage =
+      process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message || 'Internal server error';
     res.status(500).json({ error: errorMessage });
   }
 });
-
-// Get lab members (for current user's lab)
+// Get lab members (for a specific lab, or the user's first lab)
 app.get('/api/labs/members', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    
-    // Get user's lab
-    const labResult = await pool.query(`
-      SELECT lab_id FROM lab_members WHERE user_id = $1 AND is_active = true LIMIT 1
-    `, [userId]);
+    const requestedLabId =
+      typeof req.query.lab_id === 'string' && req.query.lab_id.trim()
+        ? req.query.lab_id.trim()
+        : null;
 
-    if (labResult.rows.length === 0) {
-      return res.json({ members: [] });
+    let labId = requestedLabId;
+    if (labId) {
+      const membership = await pool.query(
+        `SELECT lab_id FROM lab_members WHERE user_id = $1 AND lab_id = $2 AND is_active = 1 LIMIT 1`,
+        [userId, labId]
+      );
+      if (membership.rows.length === 0) {
+        return res.status(403).json({ error: 'Not a member of this lab' });
+      }
+    } else {
+      const labResult = await pool.query(
+        `SELECT lab_id FROM lab_members WHERE user_id = $1 AND is_active = 1 LIMIT 1`,
+        [userId]
+      );
+      if (labResult.rows.length === 0) {
+        return res.json({ members: [] });
+      }
+      labId = labResult.rows[0].lab_id;
     }
 
-    const labId = labResult.rows[0].lab_id;
-
-    // Get lab members
-    const membersResult = await pool.query(`
-      SELECT 
+    const membersResult = await pool.query(
+      `SELECT 
         lm.*, 
         u.id as user_id,
         u.first_name, 
@@ -515,28 +630,28 @@ app.get('/api/labs/members', authenticateToken, async (req, res) => {
       FROM lab_members lm
       JOIN users u ON lm.user_id = u.id
       WHERE lm.lab_id = $1
-      ORDER BY lm.joined_at ASC
-    `, [labId]);
+      ORDER BY lm.joined_at ASC`,
+      [labId]
+    );
 
-    res.json({ members: membersResult.rows });
-
+    res.json({ members: membersResult.rows, lab_id: labId });
   } catch (error) {
     console.error('💥 Get lab members error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 app.get('/api/labs/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user!.id;
+    const userRole = req.user!.role;
 
-    // Demo mode - bypass access checks
-
-    // Get lab details
+    // Get lab details (LEFT JOIN so labs without PI still load)
     const labResult = await pool.query(`
-      SELECT l.*, u.first_name, u.last_name, u.username as pi_name
+      SELECT l.*,
+        u.first_name, u.last_name, u.username as pi_name
       FROM labs l
-      JOIN users u ON l.principal_researcher_id = u.id
+      LEFT JOIN users u ON l.principal_researcher_id = u.id
       WHERE l.id = $1
     `, [id]);
 
@@ -546,18 +661,44 @@ app.get('/api/labs/:id', authenticateToken, async (req, res) => {
 
     const lab = labResult.rows[0];
 
-    // Get lab members
+    const membership = await pool.query(
+      `SELECT role FROM lab_members
+       WHERE lab_id = $1 AND user_id = $2 AND COALESCE(is_active, 1) = 1
+       LIMIT 1`,
+      [id, userId]
+    );
+    const isMember = membership.rows.length > 0;
+    const isAdmin = userRole === 'admin';
+    const isShowcased = Boolean(lab.is_showcased);
+
+    if (!isMember && !isAdmin && !isShowcased) {
+      return res.status(403).json({ error: 'Access denied to this lab' });
+    }
+
+    // Get lab members — emails only for members/admins
     const membersResult = await pool.query(`
-      SELECT lm.*, u.first_name, u.last_name, u.username, u.email, u.role as user_role
+      SELECT lm.*, u.first_name, u.last_name, u.username, u.email, u.role as user_role, u.avatar_url
       FROM lab_members lm
       JOIN users u ON lm.user_id = u.id
-      WHERE lm.lab_id = $1
-      ORDER BY lm.joined_at ASC
+      WHERE lm.lab_id = $1 AND COALESCE(lm.is_active, 1) = 1
+      ORDER BY
+        CASE lm.role
+          WHEN 'principal_researcher' THEN 0
+          WHEN 'admin' THEN 1
+          ELSE 2
+        END,
+        lm.joined_at ASC
     `, [id]);
+
+    const members = membersResult.rows.map((member: any) => {
+      if (isMember || isAdmin) return member;
+      const { email, ...publicMember } = member;
+      return publicMember;
+    });
 
     res.json({
       lab,
-      members: membersResult.rows
+      members
     });
 
   } catch (error) {
@@ -599,9 +740,9 @@ app.post('/api/labs/:id/members', authenticateToken, async (req, res) => {
 
     // Add member
     await pool.query(`
-      INSERT INTO lab_members (lab_id, user_id, role, permissions)
-      VALUES ($1, $2, $3, $4)
-    `, [labId, user_id, role, JSON.stringify(permissions)]);
+      INSERT INTO lab_members (id, lab_id, user_id, role, permissions)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [crypto.randomUUID(), labId, user_id, role, JSON.stringify(permissions)]);
 
     console.log('👥 Lab member added:', { labId, userId: user_id, role, addedBy: req.user.username });
 
@@ -638,14 +779,18 @@ app.put('/api/labs/:id/members/:userId', authenticateToken, async (req, res) => 
     }
 
     // Update member
-    const result = await pool.query(`
+    await pool.query(`
       UPDATE lab_members 
       SET role = $1, permissions = $2, updated_at = CURRENT_TIMESTAMP
       WHERE lab_id = $3 AND user_id = $4
-      RETURNING *
     `, [role, JSON.stringify(permissions), labId, userId]);
 
-    if (result.rows.length === 0) {
+    const updatedMember = await pool.query(
+      'SELECT * FROM lab_members WHERE lab_id = $1 AND user_id = $2',
+      [labId, userId]
+    );
+
+    if (updatedMember.rows.length === 0) {
       return res.status(404).json({ error: 'Lab member not found' });
     }
 
@@ -653,7 +798,7 @@ app.put('/api/labs/:id/members/:userId', authenticateToken, async (req, res) => 
 
     res.json({
       message: 'Member updated successfully',
-      member: result.rows[0]
+      member: updatedMember.rows[0]
     });
 
   } catch (error) {
@@ -684,21 +829,25 @@ app.delete('/api/labs/:id/members/:userId', authenticateToken, async (req, res) 
     }
 
     // Remove member
-    const result = await pool.query(`
-      DELETE FROM lab_members 
-      WHERE lab_id = $1 AND user_id = $2
-      RETURNING *
-    `, [labId, userId]);
+    const existingMember = await pool.query(
+      'SELECT * FROM lab_members WHERE lab_id = $1 AND user_id = $2',
+      [labId, userId]
+    );
 
-    if (result.rows.length === 0) {
+    if (existingMember.rows.length === 0) {
       return res.status(404).json({ error: 'Lab member not found' });
     }
+
+    await pool.query(`
+      DELETE FROM lab_members 
+      WHERE lab_id = $1 AND user_id = $2
+    `, [labId, userId]);
 
     console.log('👥 Lab member removed:', { labId, userId, removedBy: req.user.username });
 
     res.json({
       message: 'Member removed successfully',
-      member: result.rows[0]
+      member: existingMember.rows[0]
     });
 
   } catch (error) {
@@ -710,42 +859,179 @@ app.delete('/api/labs/:id/members/:userId', authenticateToken, async (req, res) 
 app.put('/api/labs/:id', authenticateToken, async (req, res) => {
   try {
     const { id: labId } = req.params;
-    const { name, description, institution, department, contact_email, contact_phone, address } = req.body;
+    const {
+      name,
+      description,
+      institution,
+      department,
+      contact_email,
+      contact_phone,
+      address,
+      website_url,
+      research_areas,
+      looking_for,
+      lab_type,
+      established_year,
+      showcase_tagline,
+    } = req.body;
 
-    // Check if user has permission to edit lab (PI or admin)
-    const memberCheck = await pool.query(`
-      SELECT role FROM lab_members 
-      WHERE lab_id = $1 AND user_id = $2
-    `, [labId, req.user.id]);
+    const memberCheck = await pool.query(
+      `SELECT role FROM lab_members WHERE lab_id = $1 AND user_id = $2`,
+      [labId, req.user.id]
+    );
 
-    if (memberCheck.rows.length === 0 || 
-        !['principal_researcher', 'admin'].includes(memberCheck.rows[0].role)) {
+    if (
+      memberCheck.rows.length === 0 ||
+      !['principal_researcher', 'admin'].includes(memberCheck.rows[0].role)
+    ) {
       return res.status(403).json({ error: 'Insufficient permissions to edit lab' });
     }
 
-    // Update lab
-    const result = await pool.query(`
-      UPDATE labs 
-      SET name = $1, description = $2, institution = $3, department = $4, 
-          contact_email = $5, contact_phone = $6, address = $7, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $8
-      RETURNING *
-    `, [name, description, institution, department, contact_email, contact_phone, address, labId]);
-
-    if (result.rows.length === 0) {
+    const existing = await pool.query('SELECT * FROM labs WHERE id = $1', [labId]);
+    if (existing.rows.length === 0) {
       return res.status(404).json({ error: 'Lab not found' });
     }
+    const cur = existing.rows[0];
 
-    console.log('🏢 Lab updated:', { labId, name, updatedBy: req.user.username });
+    await pool.query(
+      `UPDATE labs SET
+        name = $1, description = $2, institution = $3, department = $4,
+        contact_email = $5, contact_phone = $6, address = $7, website_url = $8,
+        research_areas = $9, looking_for = $10, lab_type = $11, established_year = $12,
+        showcase_tagline = $13, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $14`,
+      [
+        name ?? cur.name,
+        description ?? cur.description,
+        institution ?? cur.institution,
+        department ?? cur.department,
+        contact_email ?? cur.contact_email,
+        contact_phone ?? cur.contact_phone,
+        address ?? cur.address,
+        website_url ?? cur.website_url,
+        research_areas !== undefined ? toJsonList(research_areas) : cur.research_areas,
+        looking_for !== undefined ? toJsonList(looking_for) : cur.looking_for,
+        lab_type ?? cur.lab_type,
+        established_year !== undefined
+          ? established_year
+            ? Number(established_year)
+            : null
+          : cur.established_year,
+        showcase_tagline ?? cur.showcase_tagline,
+        labId,
+      ]
+    );
 
-    res.json({
-      message: 'Lab updated successfully',
-      lab: result.rows[0]
-    });
-
+    const updatedLab = await pool.query('SELECT * FROM labs WHERE id = $1', [labId]);
+    res.json({ message: 'Lab updated successfully', lab: updatedLab.rows[0] });
   } catch (error) {
     console.error('💥 Update lab error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/** Publish or unpublish a lab on the Networking directory. */
+app.put('/api/labs/:id/showcase', authenticateToken, async (req, res) => {
+  try {
+    const { id: labId } = req.params;
+    const {
+      isShowcased,
+      tagline,
+      researchAreas,
+      lookingFor,
+      address,
+      website_url,
+      description,
+      department,
+    } = req.body;
+
+    const memberCheck = await pool.query(
+      `SELECT role FROM lab_members WHERE lab_id = $1 AND user_id = $2 AND is_active = 1`,
+      [labId, req.user.id]
+    );
+
+    if (
+      memberCheck.rows.length === 0 ||
+      !['principal_researcher', 'admin'].includes(memberCheck.rows[0].role)
+    ) {
+      return res.status(403).json({ error: 'Only lab admins can manage networking showcase' });
+    }
+
+    const existing = await pool.query('SELECT * FROM labs WHERE id = $1', [labId]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Lab not found' });
+    }
+    const cur = existing.rows[0];
+    const wantShowcase = Boolean(isShowcased);
+
+    const nextTagline =
+      tagline !== undefined ? String(tagline || '').trim() : cur.showcase_tagline || '';
+    const nextAreas =
+      researchAreas !== undefined ? parseJsonList(researchAreas) : parseJsonList(cur.research_areas);
+    const nextLooking =
+      lookingFor !== undefined ? parseJsonList(lookingFor) : parseJsonList(cur.looking_for);
+    const nextDescription =
+      description !== undefined ? description : cur.description;
+    const nextDepartment = department !== undefined ? department : cur.department;
+    const nextAddress = address !== undefined ? address : cur.address;
+    const nextWebsite = website_url !== undefined ? website_url : cur.website_url;
+
+    if (wantShowcase) {
+      const hasPitch = Boolean(nextTagline) || Boolean(String(nextDescription || '').trim());
+      const hasField =
+        nextAreas.length > 0 || (nextDepartment && nextDepartment !== 'General');
+      if (!hasPitch || !hasField) {
+        return res.status(400).json({
+          error:
+            'To showcase your lab, add a short pitch (tagline or description) and at least one research field.',
+        });
+      }
+    }
+
+    // MySQL adapter maps each $n → ?; do not reuse the same $n twice.
+    const showcasedAt = wantShowcase ? cur.showcased_at || new Date() : null;
+
+    await pool.query(
+      `UPDATE labs SET
+        is_showcased = $1,
+        showcased_at = $2,
+        showcase_tagline = $3,
+        research_areas = $4,
+        looking_for = $5,
+        description = $6,
+        department = $7,
+        address = $8,
+        website_url = $9,
+        updated_at = CURRENT_TIMESTAMP
+       WHERE id = $10`,
+      [
+        wantShowcase ? 1 : 0,
+        showcasedAt,
+        nextTagline || null,
+        toJsonList(nextAreas),
+        toJsonList(nextLooking),
+        nextDescription,
+        nextDepartment,
+        nextAddress,
+        nextWebsite,
+        labId,
+      ]
+    );
+
+    const updated = await pool.query('SELECT * FROM labs WHERE id = $1', [labId]);
+    const lab = updated.rows[0];
+    res.json({
+      message: wantShowcase ? 'Lab is now live on Networking' : 'Lab removed from Networking',
+      lab: {
+        ...lab,
+        is_showcased: Boolean(Number(lab.is_showcased)),
+        research_areas: parseJsonList(lab.research_areas),
+        looking_for: parseJsonList(lab.looking_for),
+      },
+    });
+  } catch (error: any) {
+    console.error('💥 Showcase lab error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
@@ -767,35 +1053,49 @@ app.post('/api/protocols', authenticateToken, async (req, res) => {
     } = req.body;
 
     // Validation
-    if (!title || !content || !lab_id) {
-      return res.status(400).json({ error: 'Title, content, and lab_id are required' });
+    if (!title || !content) {
+      return res.status(400).json({ error: 'Title and content are required' });
     }
 
-    // Check if user has access to the lab
-    const labAccess = await pool.query(`
-      SELECT role FROM lab_members WHERE lab_id = $1 AND user_id = $2
-    `, [lab_id, req.user.id]);
+    if (lab_id) {
+      const labAccess = await pool.query(`
+        SELECT role FROM lab_members WHERE lab_id = $1 AND user_id = $2
+      `, [lab_id, req.user.id]);
 
-    if (labAccess.rows.length === 0 && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied to this lab' });
+      if (labAccess.rows.length === 0 && req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Access denied to this lab' });
+      }
     }
 
     // Create protocol
-    const result = await pool.query(`
+    const protocolId = crypto.randomUUID();
+    await pool.query(`
       INSERT INTO protocols (
-        title, description, category, difficulty_level, estimated_duration, 
+        id, title, description, category, difficulty_level, estimated_duration, 
         materials, content, safety_notes, tags, lab_id, 
-        author_id, privacy_level, is_approved
+        author_id, privacy_level, is_approved, version
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-      RETURNING *
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
     `, [
-      title, description, category, difficulty_level, estimated_duration,
-      materials || [], content, safety_notes, tags || [], lab_id,
-      req.user.id, privacy_level, true
+      protocolId,
+      title,
+      description,
+      category,
+      difficulty_level,
+      estimated_duration,
+      JSON.stringify(normalizeArrayInput(materials)),
+      content,
+      safety_notes,
+      JSON.stringify(normalizeArrayInput(tags)),
+      lab_id,
+      req.user.id,
+      privacy_level,
+      true,
+      req.body.version || '1.0'
     ]);
 
-    const protocol = result.rows[0];
+    const protocolResult = await pool.query('SELECT * FROM protocols WHERE id = $1', [protocolId]);
+    const protocol = protocolResult.rows[0];
 
     // Track activity for reference system
     try {
@@ -888,8 +1188,8 @@ app.get('/api/protocols', authenticateToken, async (req, res) => {
     // Search in title and description
     if (search) {
       paramCount++;
-      query += ` AND (p.title ILIKE $${paramCount} OR p.description ILIKE $${paramCount})`;
-      params.push(`%${search}%`);
+      query += ` AND (LOWER(p.title) LIKE $${paramCount} OR LOWER(p.description) LIKE $${paramCount})`;
+      params.push(`%${String(search).toLowerCase()}%`);
     }
 
     // Filter by privacy level
@@ -899,13 +1199,21 @@ app.get('/api/protocols', authenticateToken, async (req, res) => {
       params.push(privacy);
     }
 
-    // If not admin, only show protocols from labs where user is a member or public protocols
+    // Non-admins: own protocols, public protocols, or lab-member protocols
+    // Push user id twice — MySQL placeholder adapter cannot reuse the same $N twice.
     if (req.user.role !== 'admin') {
       paramCount++;
-      query += ` AND (p.privacy_level = 'public' OR p.lab_id IN (
-        SELECT lab_id FROM lab_members WHERE user_id = $${paramCount}
-      ))`;
-      params.push(req.user.id);
+      const authorParam = paramCount;
+      paramCount++;
+      const memberParam = paramCount;
+      query += ` AND (
+        p.author_id = $${authorParam}
+        OR p.privacy_level = 'public'
+        OR (p.lab_id IS NOT NULL AND p.lab_id IN (
+          SELECT lab_id FROM lab_members WHERE user_id = $${memberParam} AND is_active = true
+        ))
+      )`;
+      params.push(req.user.id, req.user.id);
     }
 
     query += ' ORDER BY p.created_at DESC';
@@ -945,13 +1253,17 @@ app.get('/api/protocols/:id', authenticateToken, async (req, res) => {
 
     const protocol = protocolResult.rows[0];
 
-    // Check access permissions
-    if (protocol.privacy_level !== 'public') {
+    // Check access permissions (author always allowed; otherwise public or lab member)
+    const isAuthor = protocol.author_id === req.user.id;
+    if (!isAuthor && protocol.privacy_level !== 'public' && req.user.role !== 'admin') {
+      if (!protocol.lab_id) {
+        return res.status(403).json({ error: 'Access denied to this protocol' });
+      }
       const labAccess = await pool.query(`
         SELECT role FROM lab_members WHERE lab_id = $1 AND user_id = $2
       `, [protocol.lab_id, req.user.id]);
 
-      if (labAccess.rows.length === 0 && req.user.role !== 'admin') {
+      if (labAccess.rows.length === 0) {
         return res.status(403).json({ error: 'Access denied to this protocol' });
       }
     }
@@ -1007,24 +1319,25 @@ app.put('/api/protocols/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    // Update protocol
-    const result = await pool.query(`
+    // Update protocol (MySQL schema uses last_updated, not updated_at)
+    await pool.query(`
       UPDATE protocols 
       SET title = $1, description = $2, category = $3, difficulty_level = $4,
           estimated_duration = $5, materials = $6, content = $7, safety_notes = $8,
-          tags = $9, privacy_level = $10, updated_at = CURRENT_TIMESTAMP
+          tags = $9, privacy_level = $10, last_updated = CURRENT_TIMESTAMP
       WHERE id = $11
-      RETURNING *
     `, [
       title, description, category, difficulty_level, estimated_duration,
-      materials || [], content, safety_notes, tags || [], privacy_level, id
+      JSON.stringify(materials || []), content, safety_notes, JSON.stringify(tags || []), privacy_level, id
     ]);
+
+    const updated = await pool.query('SELECT * FROM protocols WHERE id = $1', [id]);
 
     console.log('📋 Protocol updated:', { protocolId: id, title, updatedBy: req.user.username });
 
     res.json({
       message: 'Protocol updated successfully',
-      protocol: result.rows[0]
+      protocol: updated.rows[0]
     });
 
   } catch (error) {
@@ -1058,9 +1371,9 @@ app.delete('/api/protocols/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    // Soft delete (mark as not approved)
+    // Soft delete (mark as not approved) — MySQL schema uses last_updated
     await pool.query(`
-      UPDATE protocols SET is_approved = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1
+      UPDATE protocols SET is_approved = false, last_updated = CURRENT_TIMESTAMP WHERE id = $1
     `, [id]);
 
     console.log('📋 Protocol deleted:', { protocolId: id, deletedBy: req.user.username });
@@ -1151,7 +1464,41 @@ app.get('/api/protocols/categories', authenticateToken, async (req, res) => {
   }
 });
 
+
 // Personal NoteBook Management Routes
+const normalizeArrayInput = (value: any) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return Array.isArray(parsed) ? parsed : [parsed];
+      } catch {
+        return trimmed.split(',').map(item => item.trim()).filter(Boolean);
+      }
+    }
+    return trimmed.split(',').map(item => item.trim()).filter(Boolean);
+  }
+  return [value];
+};
+
+const parseStoredArray = (value: any) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      return value.split(',').map(item => item.trim()).filter(Boolean);
+    }
+  }
+  return [value];
+};
+
 app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
   try {
     const { 
@@ -1165,6 +1512,10 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
       next_steps,
       lab_id,
       project_id,
+      protocol_id,
+      protocolId,
+      experiment_id,
+      experimentId,
       tags,
       privacy_level = 'lab',
       status = 'in_progress'
@@ -1175,21 +1526,21 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Title is required' });
     }
 
-    // Use default lab_id if not provided
-    const defaultLabId = '550e8400-e29b-41d4-a716-446655440000'; // Default lab UUID
-    const finalLabId = lab_id || defaultLabId;
+    const linkedProtocolId = protocol_id || protocolId || null;
+    const linkedExperimentId = experiment_id || experimentId || null;
 
     // Create Personal NoteBook entry - include all fields from the form
-    const result = await pool.query(`
+    const entryId = crypto.randomUUID();
+    await pool.query(`
       INSERT INTO lab_notebook_entries (
-        title, content, entry_type, status, priority, objectives, methodology, 
-        results, conclusions, next_steps, lab_id, user_id, privacy_level, 
+        id, title, content, entry_type, status, priority, objectives, methodology, 
+        results, conclusions, next_steps, lab_id, project_id, protocol_id, experiment_id, user_id, privacy_level, 
         tags, estimated_duration, actual_duration, cost, equipment_used, 
         materials_used, safety_notes, reference_list, collaborators
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
-      RETURNING *
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
     `, [
+      entryId,
       title, 
       content, 
       entry_type || 'experiment', 
@@ -1200,21 +1551,25 @@ app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
       results || '', 
       conclusions || '', 
       next_steps || '',
-      finalLabId, 
+      lab_id || null, 
+      project_id || null,
+      linkedProtocolId,
+      linkedExperimentId,
       req.user.id, 
       privacy_level, 
-      tags || [],
+      JSON.stringify(normalizeArrayInput(tags)),
       req.body.estimated_duration || 0,
       req.body.actual_duration || 0,
       req.body.cost || 0,
-      req.body.equipment_used || [],
-      req.body.materials_used || [],
+      JSON.stringify(normalizeArrayInput(req.body.equipment_used)),
+      JSON.stringify(normalizeArrayInput(req.body.materials_used)),
       req.body.safety_notes || '',
-      req.body.references || [],
-      req.body.collaborators || []
+      JSON.stringify(normalizeArrayInput(req.body.references)),
+      JSON.stringify(normalizeArrayInput(req.body.collaborators))
     ]);
 
-    const entry = result.rows[0];
+    const entryResult = await pool.query('SELECT * FROM lab_notebook_entries WHERE id = $1', [entryId]);
+    const entry = entryResult.rows[0];
 
     console.log('📓 Personal NoteBook entry created:', { entryId: entry.id, title: entry.title, creator: req.user.username });
 
@@ -1275,8 +1630,8 @@ app.get('/api/lab-notebooks', authenticateToken, async (req, res) => {
     // Search in title and content
     if (search) {
       paramCount++;
-      query += ` AND (e.title ILIKE $${paramCount} OR e.content ILIKE $${paramCount})`;
-      params.push(`%${search}%`);
+      query += ` AND (LOWER(e.title) LIKE $${paramCount} OR LOWER(e.content) LIKE $${paramCount})`;
+      params.push(`%${String(search).toLowerCase()}%`);
     }
 
     // Show all entries for now (removed lab access restrictions)
@@ -1317,15 +1672,13 @@ app.get('/api/lab-notebooks/activity', authenticateToken, async (req, res) => {
     const activities = await pool.query(`
       SELECT 
         'entry_created' as type,
-        'Created Personal NoteBook entry: ' || e.title as description,
+        CONCAT('Created Personal NoteBook entry: ', e.title) as description,
         u.username as user_name,
         e.created_at as timestamp,
         'entry' as category
       FROM lab_notebook_entries e
       JOIN users u ON e.user_id = u.id
-      WHERE e.lab_id IN (
-        SELECT lab_id FROM lab_members WHERE user_id = $1
-      )
+      WHERE e.user_id = $1
       ORDER BY e.created_at DESC
       LIMIT $2
     `, [req.user.id, limit]);
@@ -1363,6 +1716,8 @@ app.get('/api/lab-notebooks/suggestions', authenticateToken, async (req, res) =>
 
     // Generate rule-based suggestions
     for (const entry of recentEntries.rows) {
+      const materials = parseStoredArray(entry.materials_used);
+      const equipment = parseStoredArray(entry.equipment_used);
       // Protocol suggestions based on content
       if (entry.content && entry.content.toLowerCase().includes('dna')) {
         suggestions.push({
@@ -1376,7 +1731,7 @@ app.get('/api/lab-notebooks/suggestions', authenticateToken, async (req, res) =>
       }
       
       // Safety suggestions based on materials
-      if (entry.materials_used && entry.materials_used.some((material: string) => 
+      if (materials.some((material: string) =>
         material.toLowerCase().includes('acid') || material.toLowerCase().includes('chemical'))) {
         suggestions.push({
           id: `suggestion_${entry.title}_safety`,
@@ -1389,7 +1744,7 @@ app.get('/api/lab-notebooks/suggestions', authenticateToken, async (req, res) =>
       }
       
       // Equipment suggestions
-      if (entry.equipment_used && entry.equipment_used.length > 0) {
+      if (equipment.length > 0) {
         suggestions.push({
           id: `suggestion_${entry.title}_equipment`,
           type: 'equipment',
@@ -1451,7 +1806,7 @@ app.get('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
     const entry = entryResult.rows[0];
 
     // Check access permissions
-    if (entry.privacy_level !== 'public') {
+    if (entry.privacy_level !== 'public' && entry.user_id !== req.user.id) {
       const labAccess = await pool.query(`
         SELECT role FROM lab_members WHERE lab_id = $1 AND user_id = $2
       `, [entry.lab_id, req.user.id]);
@@ -1504,28 +1859,42 @@ app.put('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
     }
 
     // Update entry with all fields
-    const result = await pool.query(`
+    await pool.query(`
       UPDATE lab_notebook_entries 
       SET title = $1, content = $2, entry_type = $3, status = $4, priority = $5,
           objectives = $6, methodology = $7, results = $8, conclusions = $9, 
           next_steps = $10, tags = $11, privacy_level = $12, estimated_duration = $13,
           actual_duration = $14, cost = $15, equipment_used = $16, materials_used = $17,
-          safety_notes = $18, reference_list = $19, collaborators = $20, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $21
-      RETURNING *
+          safety_notes = $18, reference_list = $19, collaborators = $20,
+          protocol_id = COALESCE($21, protocol_id),
+          experiment_id = COALESCE($22, experiment_id),
+          project_id = COALESCE($23, project_id),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $24
     `, [
       title, content, entry_type, req.body.status || 'draft', req.body.priority || 'medium',
       req.body.objectives || '', req.body.methodology || '', results, conclusions, next_steps,
-      tags || [], privacy_level, req.body.estimated_duration || 0, req.body.actual_duration || 0,
-      req.body.cost || 0, req.body.equipment_used || [], req.body.materials_used || [],
-      req.body.safety_notes || '', req.body.references || [], req.body.collaborators || [], id
+      JSON.stringify(normalizeArrayInput(tags)),
+      privacy_level, req.body.estimated_duration || 0, req.body.actual_duration || 0,
+      req.body.cost || 0,
+      JSON.stringify(normalizeArrayInput(req.body.equipment_used)),
+      JSON.stringify(normalizeArrayInput(req.body.materials_used)),
+      req.body.safety_notes || '',
+      JSON.stringify(normalizeArrayInput(req.body.references)),
+      JSON.stringify(normalizeArrayInput(req.body.collaborators)),
+      req.body.protocol_id || req.body.protocolId || null,
+      req.body.experiment_id || req.body.experimentId || null,
+      req.body.project_id || null,
+      id
     ]);
+
+    const updatedResult = await pool.query('SELECT * FROM lab_notebook_entries WHERE id = $1', [id]);
 
     console.log('📓 Personal NoteBook entry updated:', { entryId: id, title, updatedBy: req.user.username });
 
     res.json({
       message: 'Personal NoteBook entry updated successfully',
-      entry: result.rows[0]
+      entry: updatedResult.rows[0]
     });
 
   } catch (error) {
@@ -1609,7 +1978,7 @@ app.post('/api/lab-notebooks/:id/share', authenticateToken, async (req, res) => 
     }
 
     // Get current collaborators or initialize empty array
-    const currentCollaborators = entry.collaborators || [];
+    const currentCollaborators = parseStoredArray(entry.collaborators);
     
     // Add new user to collaborators if not already present
     if (!currentCollaborators.includes(user_id)) {
@@ -1620,8 +1989,8 @@ app.post('/api/lab-notebooks/:id/share', authenticateToken, async (req, res) => 
     await pool.query(`
       UPDATE lab_notebook_entries 
       SET collaborators = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1
-    `, [currentCollaborators]);
+      WHERE id = $2
+    `, [JSON.stringify(currentCollaborators), id]);
 
     // Get user details for logging
     const userResult = await pool.query(`
@@ -1717,7 +2086,7 @@ app.post('/api/lab-notebooks/:id/comments', authenticateToken, async (req, res) 
 
     // Check if entry exists and user has access
     const entryAccess = await pool.query(`
-      SELECT e.id, e.privacy_level, e.lab_id
+      SELECT e.id, e.privacy_level, e.lab_id, e.user_id
       FROM lab_notebook_entries e
       WHERE e.id = $1 AND e.id IS NOT NULL
     `, [entryId]);
@@ -1729,7 +2098,7 @@ app.post('/api/lab-notebooks/:id/comments', authenticateToken, async (req, res) 
     const entry = entryAccess.rows[0];
 
     // Check access permissions
-    if (entry.privacy_level !== 'public') {
+    if (entry.privacy_level !== 'public' && entry.user_id !== req.user.id) {
       const labAccess = await pool.query(`
         SELECT role FROM lab_members WHERE lab_id = $1 AND user_id = $2
       `, [entry.lab_id, req.user.id]);
@@ -1740,19 +2109,27 @@ app.post('/api/lab-notebooks/:id/comments', authenticateToken, async (req, res) 
     }
 
     // Create comment
-    const result = await pool.query(`
+    const commentId = crypto.randomUUID();
+    await pool.query(`
       INSERT INTO lab_notebook_comments (
-        entry_id, user_id, comment_text, parent_comment_id
+        id, entry_id, user_id, comment_text, parent_comment_id
       )
-      VALUES ($1, $2, $3, $4)
-      RETURNING *
-    `, [entryId, req.user.id, comment_text, parent_comment_id || null]);
+      VALUES ($1, $2, $3, $4, $5)
+    `, [commentId, entryId, req.user.id, comment_text, parent_comment_id || null]);
 
-    console.log('💬 Comment added to Personal NoteBook:', { entryId, commentId: result.rows[0].id, user: req.user.username });
+    const commentResult = await pool.query(
+      `SELECT c.*, u.first_name, u.last_name, u.username
+       FROM lab_notebook_comments c
+       JOIN users u ON c.user_id = u.id
+       WHERE c.id = $1`,
+      [commentId]
+    );
+
+    console.log('💬 Comment added to Personal NoteBook:', { entryId, commentId, user: req.user.username });
 
     res.status(201).json({
       message: 'Comment added successfully',
-      comment: result.rows[0]
+      comment: commentResult.rows[0]
     });
 
   } catch (error) {
@@ -1817,11 +2194,11 @@ app.get('/api/lab-notebooks/statistics', authenticateToken, async (req, res) => 
     }
 
     if (time_period === 'week') {
-      whereClause += ` AND e.created_at >= NOW() - INTERVAL '7 days'`;
+      whereClause += ` AND e.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`;
     } else if (time_period === 'month') {
-      whereClause += ` AND e.created_at >= NOW() - INTERVAL '30 days'`;
+      whereClause += ` AND e.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)`;
     } else if (time_period === 'year') {
-      whereClause += ` AND e.created_at >= NOW() - INTERVAL '365 days'`;
+      whereClause += ` AND e.created_at >= DATE_SUB(NOW(), INTERVAL 365 DAY)`;
     }
 
     // Get total entries
@@ -1859,14 +2236,15 @@ app.post('/api/quick-notes', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Content is required' });
     }
 
-    const result = await pool.query(`
-      INSERT INTO quick_notes (user_id, content, color)
-      VALUES ($1, $2, $3)
-      RETURNING *
-    `, [req.user.id, content.trim(), color]);
+    const noteId = crypto.randomUUID();
+    await pool.query(`
+      INSERT INTO quick_notes (id, user_id, content, color)
+      VALUES ($1, $2, $3, $4)
+    `, [noteId, req.user.id, content.trim(), color]);
 
-    console.log('✅ Quick note created:', result.rows[0]);
-    res.status(201).json(result.rows[0]);
+    const noteResult = await pool.query('SELECT * FROM quick_notes WHERE id = $1', [noteId]);
+    console.log('✅ Quick note created:', noteResult.rows[0]);
+    res.status(201).json(noteResult.rows[0]);
   } catch (error) {
     console.error('💥 Create quick note error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -1899,18 +2277,22 @@ app.put('/api/quick-notes/:id', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Content is required' });
     }
 
-    const result = await pool.query(`
+    await pool.query(`
       UPDATE quick_notes 
       SET content = $1, color = $2, updated_at = CURRENT_TIMESTAMP
       WHERE id = $3 AND user_id = $4
-      RETURNING *
     `, [content.trim(), color, id, req.user.id]);
 
-    if (result.rows.length === 0) {
+    const updatedResult = await pool.query(
+      'SELECT * FROM quick_notes WHERE id = $1 AND user_id = $2',
+      [id, req.user.id]
+    );
+
+    if (updatedResult.rows.length === 0) {
       return res.status(404).json({ error: 'Quick note not found' });
     }
 
-    res.json(result.rows[0]);
+    res.json(updatedResult.rows[0]);
   } catch (error) {
     console.error('💥 Update quick note error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -1921,15 +2303,19 @@ app.delete('/api/quick-notes/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(`
-      DELETE FROM quick_notes 
-      WHERE id = $1 AND user_id = $2
-      RETURNING *
-    `, [id, req.user.id]);
+    const existingResult = await pool.query(
+      'SELECT id FROM quick_notes WHERE id = $1 AND user_id = $2',
+      [id, req.user.id]
+    );
 
-    if (result.rows.length === 0) {
+    if (existingResult.rows.length === 0) {
       return res.status(404).json({ error: 'Quick note not found' });
     }
+
+    await pool.query(`
+      DELETE FROM quick_notes 
+      WHERE id = $1 AND user_id = $2
+    `, [id, req.user.id]);
 
     res.json({ message: 'Quick note deleted successfully' });
   } catch (error) {
@@ -2125,9 +2511,14 @@ app.get('/api/inventory', authenticateToken, async (req, res) => {
     const { lab_id, category, search, low_stock, expired } = req.query;
     
     let query = `
-      SELECT i.*, l.name as lab_name
+      SELECT i.*,
+             COALESCE(i.quantity_value, i.quantity) as quantity,
+             COALESCE(i.low_stock_threshold, i.min_quantity) as min_quantity,
+             COALESCE(i.expiration_date, i.expiry_date) as expiry_date,
+             COALESCE(i.type, i.category) as category,
+             l.name as lab_name
       FROM inventory_items i
-      JOIN labs l ON i.lab_id = l.id
+      LEFT JOIN labs l ON i.lab_id = l.id
       WHERE 1=1
     `;
 
@@ -2141,36 +2532,36 @@ app.get('/api/inventory', authenticateToken, async (req, res) => {
       params.push(lab_id);
     }
 
-    // Filter by category
+    // Filter by category / type
     if (category) {
       paramCount++;
-      query += ` AND i.category = $${paramCount}`;
+      query += ` AND (i.category = $${paramCount} OR i.type = $${paramCount})`;
       params.push(category);
     }
 
     // Search in name and description
     if (search) {
       paramCount++;
-      query += ` AND (i.name ILIKE $${paramCount} OR i.description ILIKE $${paramCount})`;
-      params.push(`%${search}%`);
+      query += ` AND (LOWER(i.name) LIKE $${paramCount} OR LOWER(COALESCE(i.description, '')) LIKE $${paramCount})`;
+      params.push(`%${String(search).toLowerCase()}%`);
     }
 
     // Filter low stock items
     if (low_stock === 'true') {
-      query += ` AND i.quantity <= i.min_quantity`;
+      query += ` AND COALESCE(i.quantity_value, i.quantity, 0) <= COALESCE(i.low_stock_threshold, i.min_quantity, 0)`;
     }
 
     // Filter expired items
     if (expired === 'true') {
-      query += ` AND i.expiry_date < CURRENT_DATE`;
+      query += ` AND COALESCE(i.expiration_date, i.expiry_date) < CURRENT_DATE`;
     }
 
-    // If not admin, only show items from labs where user is a member
+    // If not admin, only show items from labs where user is a member (or unassigned)
     if (req.user.role !== 'admin') {
       paramCount++;
-      query += ` AND i.lab_id IN (
-        SELECT lab_id FROM lab_members WHERE user_id = $${paramCount}
-      )`;
+      query += ` AND (i.lab_id IS NULL OR i.lab_id IN (
+        SELECT lab_id FROM lab_members WHERE user_id = $${paramCount} AND is_active = true
+      ))`;
       params.push(req.user.id);
     }
 
@@ -3371,304 +3762,6 @@ app.get('/api/lab-notebooks', authenticateToken, async (req, res) => {
   }
 });
 
-// Get a specific Personal NoteBook entry
-app.get('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const query = `
-      SELECT 
-        e.*,
-        CONCAT(u.first_name, ' ', u.last_name) as creator_name,
-        l.name as lab_name,
-        l.institution
-      FROM lab_notebook_entries e
-      INNER JOIN users u ON e.user_id = u.id
-      INNER JOIN labs l ON e.lab_id = l.id
-      WHERE e.id = $1
-    `;
-
-    const result = await pool.query(query, [id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Entry not found' });
-    }
-
-    // Get comments
-    const commentsQuery = `
-      SELECT 
-        c.*,
-        CONCAT(u.first_name, ' ', u.last_name) as first_name,
-        u.username
-      FROM lab_notebook_comments c
-      INNER JOIN users u ON c.user_id = u.id
-      WHERE c.entry_id = $1
-      ORDER BY c.created_at ASC
-    `;
-    const commentsResult = await pool.query(commentsQuery, [id]);
-
-    // Get milestones
-    const milestonesQuery = `
-      SELECT * FROM lab_notebook_milestones
-      WHERE entry_id = $1
-      ORDER BY due_date ASC
-    `;
-    const milestonesResult = await pool.query(milestonesQuery, [id]);
-
-    // Get attachments
-    const attachmentsQuery = `
-      SELECT 
-        a.*,
-        CONCAT(u.first_name, ' ', u.last_name) as uploaded_by_name
-      FROM lab_notebook_attachments a
-      INNER JOIN users u ON a.uploaded_by = u.id
-      WHERE a.entry_id = $1
-      ORDER BY a.created_at DESC
-    `;
-    const attachmentsResult = await pool.query(attachmentsQuery, [id]);
-
-    const entry = result.rows[0];
-    entry.comments = commentsResult.rows;
-    entry.milestones = milestonesResult.rows;
-    entry.attachments = attachmentsResult.rows;
-
-    res.json(entry);
-  } catch (error) {
-    console.error('Error fetching Personal NoteBook entry:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Create a new Personal NoteBook entry
-app.post('/api/lab-notebooks', authenticateToken, async (req, res) => {
-  try {
-    const {
-      title,
-      content,
-      entry_type,
-      status,
-      priority,
-      objectives,
-      methodology,
-      results,
-      conclusions,
-      next_steps,
-      lab_id,
-      project_id,
-      tags,
-      privacy_level,
-      estimated_duration,
-      cost,
-      equipment_used,
-      materials_used,
-      safety_notes,
-      references,
-      collaborators
-    } = req.body;
-
-    const userId = (req as any).user.id;
-
-    const query = `
-      INSERT INTO lab_notebook_entries (
-        title, content, entry_type, status, priority, objectives, methodology,
-        results, conclusions, next_steps, lab_id, project_id, tags, privacy_level,
-        user_id, estimated_duration, cost, equipment_used, materials_used,
-        safety_notes, references, collaborators
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
-      RETURNING *
-    `;
-
-    const values = [
-      title,
-      content,
-      entry_type,
-      status,
-      priority,
-      objectives,
-      methodology,
-      results,
-      conclusions,
-      next_steps,
-      lab_id,
-      project_id,
-      tags || [],
-      privacy_level,
-      userId,
-      estimated_duration || 0,
-      cost || 0,
-      equipment_used || [],
-      materials_used || [],
-      safety_notes,
-      references || [],
-      collaborators || []
-    ];
-
-    const result = await pool.query(query, values);
-    
-    // Track activity for reference system
-    try {
-      await ActivityTracker.trackLabNotebookEntry(userId, {
-        id: result.rows[0].id,
-        title: title,
-        content: content,
-        tags: tags || [],
-        attachments: [] // Could be enhanced to track actual attachments
-      });
-    } catch (activityError) {
-      console.error('Error tracking Personal NoteBook activity:', activityError);
-      // Don't fail the main request if activity tracking fails
-    }
-    
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Error creating Personal NoteBook entry:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Update a Personal NoteBook entry
-app.put('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = (req as any).user.id;
-
-    // Check if user can edit this entry
-    const checkQuery = `
-      SELECT user_id, privacy_level, lab_id FROM lab_notebook_entries WHERE id = $1
-    `;
-    const checkResult = await pool.query(checkQuery, [id]);
-    
-    if (checkResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Entry not found' });
-    }
-
-    const entry = checkResult.rows[0];
-    
-    // Only author or lab admin can edit
-    if (entry.user_id !== userId) {
-      return res.status(403).json({ error: 'Not authorized to edit this entry' });
-    }
-
-    const {
-      title,
-      content,
-      entry_type,
-      status,
-      priority,
-      objectives,
-      methodology,
-      results,
-      conclusions,
-      next_steps,
-      lab_id,
-      project_id,
-      tags,
-      privacy_level,
-      estimated_duration,
-      cost,
-      equipment_used,
-      materials_used,
-      safety_notes,
-      references,
-      collaborators
-    } = req.body;
-
-    const query = `
-      UPDATE lab_notebook_entries SET
-        title = $1, content = $2, entry_type = $3, status = $4, priority = $5,
-        objectives = $6, methodology = $7, results = $8, conclusions = $9,
-        next_steps = $10, lab_id = $11, project_id = $12, tags = $13,
-        privacy_level = $14, estimated_duration = $15, cost = $16,
-        equipment_used = $17, materials_used = $18, safety_notes = $19,
-        references = $20, collaborators = $21, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $22
-      RETURNING *
-    `;
-
-    const values = [
-      title,
-      content,
-      entry_type,
-      status,
-      priority,
-      objectives,
-      methodology,
-      results,
-      conclusions,
-      next_steps,
-      lab_id,
-      project_id,
-      tags || [],
-      privacy_level,
-      estimated_duration || 0,
-      cost || 0,
-      equipment_used || [],
-      materials_used || [],
-      safety_notes,
-      references || [],
-      collaborators || [],
-      id
-    ];
-
-    const result = await pool.query(query, values);
-    
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error updating Personal NoteBook entry:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Delete a Personal NoteBook entry
-app.delete('/api/lab-notebooks/:id', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = (req as any).user.id;
-
-    // Check if user can delete this entry
-    const checkQuery = `
-      SELECT user_id, privacy_level, lab_id FROM lab_notebook_entries WHERE id = $1
-    `;
-    const checkResult = await pool.query(checkQuery, [id]);
-    
-    if (checkResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Entry not found' });
-    }
-
-    const entry = checkResult.rows[0];
-    
-    // Only author or lab admin can delete
-    if (entry.user_id !== userId) {
-      return res.status(403).json({ error: 'Not authorized to delete this entry' });
-    }
-
-    // Delete the entry (cascade will handle related data)
-    await pool.query('DELETE FROM lab_notebook_entries WHERE id = $1', [id]);
-
-    res.json({ message: 'Entry deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting Personal NoteBook entry:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Get labs for the Personal NoteBook
-app.get('/api/labs', authenticateToken, async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT l.*, i.name as institution_name
-      FROM labs l
-      INNER JOIN institutions i ON l.institution_id = i.id
-      ORDER BY l.name ASC
-    `);
-    
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching labs:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
 // Health check endpoint for Render
 app.get('/api/health', async (req, res) => {
   try {
@@ -4485,76 +4578,79 @@ app.post('/api/advanced-stats/export/csv', authenticateToken, async (req, res) =
 const aiPresentationService = new AIPresentationService();
 const advancedStatsService = new AdvancedStatisticalService();
 
+const parseJsonField = (value: unknown, fallback: unknown = null) => {
+  if (value == null) return fallback;
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+const normalizeResearchDataRow = (row: any) => ({
+  ...row,
+  tags: parseJsonField(row.tags, []),
+  files: parseJsonField(row.files, []),
+  metadata: parseJsonField(row.metadata, {}),
+  protocolId: row.protocol_id || null,
+  experimentId: row.experiment_id || null,
+  notebookEntryId: row.notebook_entry_id || null,
+});
+
 // Get all results for a lab
 app.get('/api/data/results', authenticateToken, async (req, res) => {
   try {
-    // Safety check for req.user
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { lab_id, data_type, search, tags, date_from, date_to } = req.query;
+    const { lab_id, data_type, search, date_from, date_to } = req.query;
     const userId = (req as any).user.id;
 
     let query = `
       SELECT r.*, u.username, u.first_name, u.last_name, l.name as lab_name
       FROM research_data r
-      JOIN users u ON r.user_id = u.id
+      LEFT JOIN users u ON r.user_id = u.id
       LEFT JOIN labs l ON r.lab_id = l.id
-      WHERE 1=1
+      WHERE (r.user_id = $1 OR r.privacy_level IN ('lab', 'institution', 'global'))
     `;
-    
-    const queryParams: any[] = [];
-    let paramCount = 0;
 
-    // Filter by lab_id if provided
+    const queryParams: any[] = [userId];
+
     if (lab_id) {
-      paramCount++;
-      query += ` AND r.lab_id = $${paramCount}`;
       queryParams.push(lab_id);
+      query += ` AND r.lab_id = $${queryParams.length}`;
     }
 
     if (data_type) {
-      paramCount++;
-      query += ` AND r.type = $${paramCount}`;
       queryParams.push(data_type);
+      query += ` AND r.type = $${queryParams.length}`;
     }
 
     if (search) {
-      paramCount++;
-      query += ` AND (r.title ILIKE $${paramCount} OR r.summary ILIKE $${paramCount})`;
       queryParams.push(`%${search}%`);
-    }
-
-    if (tags && Array.isArray(tags)) {
-      paramCount++;
-      query += ` AND r.tags && $${paramCount}`;
-      queryParams.push(tags);
+      query += ` AND (r.title LIKE $${queryParams.length} OR r.summary LIKE $${queryParams.length})`;
     }
 
     if (date_from) {
-      paramCount++;
-      query += ` AND r.created_at >= $${paramCount}`;
       queryParams.push(date_from);
+      query += ` AND r.created_at >= $${queryParams.length}`;
     }
 
     if (date_to) {
-      paramCount++;
-      query += ` AND r.created_at <= $${paramCount}`;
       queryParams.push(date_to);
+      query += ` AND r.created_at <= $${queryParams.length}`;
     }
 
     query += ` ORDER BY r.created_at DESC`;
 
     const result = await pool.query(query, queryParams);
-    res.json({ results: result.rows });
+    res.json({ results: result.rows.map(normalizeResearchDataRow) });
   } catch (error: any) {
     console.error('Error fetching results:', error);
-    if (error.code) console.error('Database error code:', error.code);
-    if (error.message) console.error('Error message:', error.message);
-    if (error.detail) console.error('Error detail:', error.detail);
-    const errorMessage = process.env.NODE_ENV === 'production' 
-      ? 'Internal server error' 
+    const errorMessage = process.env.NODE_ENV === 'production'
+      ? 'Internal server error'
       : error.message || 'Internal server error';
     res.status(500).json({ error: errorMessage });
   }
@@ -4564,13 +4660,12 @@ app.get('/api/data/results', authenticateToken, async (req, res) => {
 app.get('/api/data/results/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user.id;
 
     const result = await pool.query(`
       SELECT r.*, u.username, u.first_name, u.last_name, l.name as lab_name
       FROM research_data r
-      JOIN users u ON r.user_id = u.id
-      JOIN labs l ON r.lab_id = l.id
+      LEFT JOIN users u ON r.user_id = u.id
+      LEFT JOIN labs l ON r.lab_id = l.id
       WHERE r.id = $1
     `, [id]);
 
@@ -4578,7 +4673,7 @@ app.get('/api/data/results/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Result not found' });
     }
 
-    res.json({ result: result.rows[0] });
+    res.json({ result: normalizeResearchDataRow(result.rows[0]) });
   } catch (error) {
     console.error('Error fetching result:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -4601,46 +4696,64 @@ app.post('/api/data/results', authenticateToken, async (req, res) => {
       privacy_level,
       lab_id,
       files,
-      metadata
+      metadata,
+      status,
+      protocol_id,
+      protocolId,
+      experiment_id,
+      experimentId,
+      notebook_entry_id,
+      notebookEntryId,
     } = req.body;
 
     const userId = (req as any).user.id;
 
-    // Validate required fields
-    // Validation - only title required
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
     }
 
-    // Use default lab_id if not provided
-    const defaultLabId = '550e8400-e29b-41d4-a716-446655440000';
-    const finalLabId = lab_id || defaultLabId;
-
-    const result = await pool.query(`
+    const id = crypto.randomUUID();
+    await pool.query(`
       INSERT INTO research_data (
-        title, type, category, summary, description, methodology, results, conclusions,
-        tags, privacy_level, lab_id, user_id, files, metadata
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      RETURNING *
+        id, title, type, category, status, summary, description, methodology, results, conclusions,
+        tags, privacy_level, lab_id, protocol_id, experiment_id, notebook_entry_id, user_id, files, metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
     `, [
-      title, type || 'experiment', category || 'other', summary, description, methodology, results, conclusions,
-      tags || [], privacy_level || 'lab', finalLabId, userId, JSON.stringify(files || []), JSON.stringify(metadata || {})
+      id,
+      title,
+      type || 'experiment',
+      category || 'other',
+      status || 'draft',
+      summary || '',
+      description || '',
+      methodology || '',
+      results || '',
+      conclusions || '',
+      JSON.stringify(tags || []),
+      privacy_level || 'lab',
+      lab_id || null,
+      protocol_id || protocolId || null,
+      experiment_id || experimentId || null,
+      notebook_entry_id || notebookEntryId || null,
+      userId,
+      JSON.stringify(files || []),
+      JSON.stringify(metadata || {}),
     ]);
 
-    const researchData = result.rows[0];
+    const created = await pool.query(`SELECT * FROM research_data WHERE id = $1`, [id]);
+    const researchData = normalizeResearchDataRow(created.rows[0]);
 
-    // Auto-index for AI learning (non-blocking)
     autoIndexing.autoIndexContent(
       userId,
       'research_data',
       researchData.id,
       researchData
-    ).catch(err => console.error('Error auto-indexing research data:', err));
+    ).catch((err: unknown) => console.error('Error auto-indexing research data:', err));
 
     res.status(201).json(researchData);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating result:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
@@ -4660,12 +4773,18 @@ app.put('/api/data/results/:id', authenticateToken, async (req, res) => {
       tags,
       privacy_level,
       files,
-      metadata
+      metadata,
+      status,
+      protocol_id,
+      protocolId,
+      experiment_id,
+      experimentId,
+      notebook_entry_id,
+      notebookEntryId,
     } = req.body;
 
     const userId = (req as any).user.id;
 
-    // Check if user owns the result or has permission
     const ownershipCheck = await pool.query(`
       SELECT user_id, lab_id FROM research_data WHERE id = $1
     `, [id]);
@@ -4674,19 +4793,22 @@ app.put('/api/data/results/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Result not found' });
     }
 
-    const result = ownershipCheck.rows[0];
-    if (result.user_id !== userId) {
-      // Check if user is lab member with edit permissions
+    const owned = ownershipCheck.rows[0];
+    if (owned.user_id !== userId) {
       const labMemberCheck = await pool.query(`
         SELECT role FROM lab_members WHERE lab_id = $1 AND user_id = $2
-      `, [result.lab_id, userId]);
+      `, [owned.lab_id, userId]);
 
       if (labMemberCheck.rows.length === 0 || !['principal_researcher', 'co_supervisor'].includes(labMemberCheck.rows[0].role)) {
         return res.status(403).json({ error: 'Insufficient permissions' });
       }
     }
 
-    const updateResult = await pool.query(`
+    const linkedProtocol = protocol_id ?? protocolId;
+    const linkedExperiment = experiment_id ?? experimentId;
+    const linkedNotebook = notebook_entry_id ?? notebookEntryId;
+
+    await pool.query(`
       UPDATE research_data SET
         title = COALESCE($1, title),
         summary = COALESCE($2, summary),
@@ -4700,15 +4822,37 @@ app.put('/api/data/results/:id', authenticateToken, async (req, res) => {
         privacy_level = COALESCE($10, privacy_level),
         files = COALESCE($11, files),
         metadata = COALESCE($12, metadata),
+        status = COALESCE($13, status),
+        protocol_id = COALESCE($14, protocol_id),
+        experiment_id = COALESCE($15, experiment_id),
+        notebook_entry_id = COALESCE($16, notebook_entry_id),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $13
-      RETURNING *
-    `, [title, summary, type, category, description, methodology, results, conclusions, tags, privacy_level, files, metadata, id]);
+      WHERE id = $17
+    `, [
+      title ?? null,
+      summary ?? null,
+      type ?? null,
+      category ?? null,
+      description ?? null,
+      methodology ?? null,
+      results ?? null,
+      conclusions ?? null,
+      tags != null ? JSON.stringify(tags) : null,
+      privacy_level ?? null,
+      files != null ? JSON.stringify(files) : null,
+      metadata != null ? JSON.stringify(metadata) : null,
+      status ?? null,
+      linkedProtocol !== undefined ? linkedProtocol || null : null,
+      linkedExperiment !== undefined ? linkedExperiment || null : null,
+      linkedNotebook !== undefined ? linkedNotebook || null : null,
+      id,
+    ]);
 
-    res.json({ result: updateResult.rows[0] });
-  } catch (error) {
+    const updateResult = await pool.query(`SELECT * FROM research_data WHERE id = $1`, [id]);
+    res.json({ result: normalizeResearchDataRow(updateResult.rows[0]) });
+  } catch (error: any) {
     console.error('Error updating result:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
@@ -4718,7 +4862,6 @@ app.delete('/api/data/results/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const userId = (req as any).user.id;
 
-    // Check ownership
     const ownershipCheck = await pool.query(`
       SELECT user_id, lab_id FROM research_data WHERE id = $1
     `, [id]);
@@ -4727,12 +4870,11 @@ app.delete('/api/data/results/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Result not found' });
     }
 
-    const result = ownershipCheck.rows[0];
-    if (result.user_id !== userId) {
-      // Check if user is lab member with delete permissions
+    const owned = ownershipCheck.rows[0];
+    if (owned.user_id !== userId) {
       const labMemberCheck = await pool.query(`
         SELECT role FROM lab_members WHERE lab_id = $1 AND user_id = $2
-      `, [result.lab_id, userId]);
+      `, [owned.lab_id, userId]);
 
       if (labMemberCheck.rows.length === 0 || !['principal_researcher'].includes(labMemberCheck.rows[0].role)) {
         return res.status(403).json({ error: 'Insufficient permissions' });
@@ -4848,144 +4990,119 @@ app.get('/api/data/results/stats/overview', authenticateToken, async (req, res) 
 // Get all organizations with filtering and pagination
 app.get('/api/databank/organizations', authenticateToken, async (req, res) => {
   try {
-    const { 
-      type, 
-      category, 
-      country, 
-      verified, 
-      search, 
-      page = 1, 
+    const {
+      type,
+      category,
+      country,
+      verified,
+      search,
+      page = 1,
       limit = 20,
       sortBy = 'verified',
       sortOrder = 'desc'
     } = req.query as any;
 
     let query = `
-      SELECT 
+      SELECT
         o.*,
-        COUNT(d.id) as data_count,
-        AVG(r.rating) as avg_rating,
-        COUNT(r.id) as rating_count
+        (SELECT COUNT(*) FROM databank_data_offers d WHERE d.organization_id = o.id) as data_count,
+        COALESCE(
+          NULLIF(o.posted_by_name, ''),
+          NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), ''),
+          u.username
+        ) AS posted_by_name,
+        u.username AS posted_by_username
       FROM databank_organizations o
-      LEFT JOIN databank_data_offers d ON o.id = d.organization_id
-      LEFT JOIN databank_ratings r ON o.id = r.organization_id
+      LEFT JOIN users u ON u.id = o.created_by
       WHERE 1=1
     `;
-    
+
     const params: any[] = [];
-    let paramCount = 0;
 
     if (type && type !== 'all') {
-      paramCount++;
-      query += ` AND o.type = $${paramCount}`;
       params.push(type);
+      query += ` AND o.type = $${params.length}`;
     }
 
     if (category && category !== 'all') {
-      paramCount++;
-      query += ` AND o.category = $${paramCount}`;
       params.push(category);
+      query += ` AND o.category = $${params.length}`;
     }
 
     if (country && country !== 'all') {
-      paramCount++;
-      query += ` AND o.country ILIKE $${paramCount}`;
       params.push(`%${country}%`);
+      query += ` AND o.country LIKE $${params.length}`;
     }
 
     if (verified !== undefined) {
-      paramCount++;
-      query += ` AND o.verified = $${paramCount}`;
-      params.push(verified === 'true');
+      params.push(verified === 'true' ? 1 : 0);
+      query += ` AND o.verified = $${params.length}`;
     }
 
     if (search) {
-      paramCount++;
-      query += ` AND (
-        o.name ILIKE $${paramCount} OR 
-        o.description ILIKE $${paramCount} OR 
-        EXISTS (
-          SELECT 1 FROM unnest(o.specializations) AS spec 
-          WHERE spec ILIKE $${paramCount}
-        )
-      )`;
       params.push(`%${search}%`);
+      query += ` AND (
+        o.name LIKE $${params.length} OR
+        o.description LIKE $${params.length} OR
+        o.specializations LIKE $${params.length}
+      )`;
     }
 
-    query += ` GROUP BY o.id`;
-
-    // Add sorting
     const validSortFields = ['name', 'rating', 'joined_date', 'verified'];
     const sortField = validSortFields.includes(sortBy) ? sortBy : 'verified';
     const order = sortOrder === 'asc' ? 'ASC' : 'DESC';
-    
-    if (sortField === 'rating') {
-      query += ` ORDER BY avg_rating ${order} NULLS LAST, o.joined_date DESC`;
-    } else if (sortField === 'verified') {
-      query += ` ORDER BY o.verified ${order}, avg_rating DESC NULLS LAST`;
-    } else {
-      query += ` ORDER BY o.${sortField} ${order}`;
-    }
+    query += ` ORDER BY o.${sortField} ${order}, o.joined_date DESC`;
 
-    // Add pagination
     const offset = (parseInt(page) - 1) * parseInt(limit);
-    paramCount++;
-    query += ` LIMIT $${paramCount}`;
     params.push(parseInt(limit));
-    
-      paramCount++;
-    query += ` OFFSET $${paramCount}`;
+    query += ` LIMIT $${params.length}`;
     params.push(offset);
+    query += ` OFFSET $${params.length}`;
 
     const result = await pool.query(query, params);
-    
-    // Get total count for pagination
-    let countQuery = `
-      SELECT COUNT(*) as total
-      FROM databank_organizations o
-      WHERE 1=1
-    `;
-    const countParams: any[] = [];
-    let countParamCount = 0;
 
+    let countQuery = `SELECT COUNT(*) as total FROM databank_organizations o WHERE 1=1`;
+    const countParams: any[] = [];
     if (type && type !== 'all') {
-      countParamCount++;
-      countQuery += ` AND o.type = $${countParamCount}`;
       countParams.push(type);
+      countQuery += ` AND o.type = $${countParams.length}`;
     }
     if (category && category !== 'all') {
-      countParamCount++;
-      countQuery += ` AND o.category = $${countParamCount}`;
       countParams.push(category);
+      countQuery += ` AND o.category = $${countParams.length}`;
     }
     if (country && country !== 'all') {
-      countParamCount++;
-      countQuery += ` AND o.country ILIKE $${countParamCount}`;
       countParams.push(`%${country}%`);
+      countQuery += ` AND o.country LIKE $${countParams.length}`;
     }
     if (verified !== undefined) {
-      countParamCount++;
-      countQuery += ` AND o.verified = $${countParamCount}`;
-      countParams.push(verified === 'true');
+      countParams.push(verified === 'true' ? 1 : 0);
+      countQuery += ` AND o.verified = $${countParams.length}`;
     }
     if (search) {
-      countParamCount++;
-      countQuery += ` AND (
-        o.name ILIKE $${countParamCount} OR 
-        o.description ILIKE $${countParamCount} OR 
-        EXISTS (
-          SELECT 1 FROM unnest(o.specializations) AS spec 
-          WHERE spec ILIKE $${countParamCount}
-        )
-      )`;
       countParams.push(`%${search}%`);
+      countQuery += ` AND (
+        o.name LIKE $${countParams.length} OR
+        o.description LIKE $${countParams.length} OR
+        o.specializations LIKE $${countParams.length}
+      )`;
     }
 
     const countResult = await pool.query(countQuery, countParams);
     const total = parseInt(countResult.rows[0].total);
 
     res.json({
-      organizations: result.rows,
+      organizations: result.rows.map((row: any) => ({
+        ...row,
+        specializations: typeof row.specializations === 'string'
+          ? JSON.parse(row.specializations || '[]')
+          : (row.specializations || []),
+        verified: Boolean(row.verified),
+        postedByName:
+          (row.posted_by_name && String(row.posted_by_name).trim()) ||
+          row.posted_by_username ||
+          null,
+      })),
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -4993,10 +5110,9 @@ app.get('/api/databank/organizations', authenticateToken, async (req, res) => {
         totalPages: Math.ceil(total / parseInt(limit))
       }
     });
-
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching organizations:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
@@ -5006,127 +5122,422 @@ app.get('/api/databank/organizations/:id', authenticateToken, async (req, res) =
     const { id } = req.params;
 
     const orgResult = await pool.query(`
-      SELECT 
+      SELECT
         o.*,
-        COUNT(d.id) as data_count,
-        AVG(r.rating) as avg_rating,
-        COUNT(r.id) as rating_count
+        (SELECT COUNT(*) FROM databank_data_offers d WHERE d.organization_id = o.id) as data_count,
+        COALESCE(
+          NULLIF(o.posted_by_name, ''),
+          NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), ''),
+          u.username
+        ) AS posted_by_name,
+        u.username AS posted_by_username
       FROM databank_organizations o
-      LEFT JOIN databank_data_offers d ON o.id = d.organization_id
-      LEFT JOIN databank_ratings r ON o.id = r.organization_id
+      LEFT JOIN users u ON u.id = o.created_by
       WHERE o.id = $1
-      GROUP BY o.id
     `, [id]);
 
     if (orgResult.rows.length === 0) {
       return res.status(404).json({ error: 'Organization not found' });
     }
 
-    const organization = orgResult.rows[0];
+    const organization = {
+      ...orgResult.rows[0],
+      specializations: typeof orgResult.rows[0].specializations === 'string'
+        ? JSON.parse(orgResult.rows[0].specializations || '[]')
+        : (orgResult.rows[0].specializations || []),
+      verified: Boolean(orgResult.rows[0].verified),
+      postedByName:
+        (orgResult.rows[0].posted_by_name && String(orgResult.rows[0].posted_by_name).trim()) ||
+        orgResult.rows[0].posted_by_username ||
+        null,
+    };
 
-    // Get data offers for this organization
     const dataResult = await pool.query(`
-      SELECT * FROM databank_data_offers
-      WHERE organization_id = $1
-      ORDER BY last_updated DESC
+      SELECT d.*,
+        COALESCE(
+          NULLIF(d.posted_by_name, ''),
+          NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), ''),
+          u.username
+        ) AS posted_by_name,
+        u.username AS posted_by_username
+      FROM databank_data_offers d
+      LEFT JOIN users u ON u.id = d.created_by
+      WHERE d.organization_id = $1
+      ORDER BY d.last_updated DESC
     `, [id]);
 
-    organization.data_offers = dataResult.rows;
-
+    organization.data_offers = dataResult.rows.map((row: any) => ({
+      ...row,
+      postedByName:
+        (row.posted_by_name && String(row.posted_by_name).trim()) ||
+        row.posted_by_username ||
+        null,
+    }));
     res.json({ organization });
-
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching organization:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
 // Register new organization
 app.post('/api/databank/organizations', authenticateToken, async (req, res) => {
   try {
-    const { 
+    const {
       name,
-      type, 
+      type,
       category,
       country,
       region,
       contactEmail,
       website,
-      description, 
+      description,
       specializations
     } = req.body;
 
-    const result = await pool.query(`
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    const id = crypto.randomUUID();
+    const userId = (req as any).user.id;
+    const posterName =
+      [(req as any).user.first_name, (req as any).user.last_name].filter(Boolean).join(' ').trim() ||
+      (req as any).user.username ||
+      'Unknown';
+    await pool.query(`
       INSERT INTO databank_organizations (
-        name, type, category, country, region, contact_email, 
-        website, description, specializations, verified, rating, 
+        id, created_by, posted_by_name, name, type, category, country, region, contact_email,
+        website, description, specializations, verified, rating,
         joined_date, last_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, 0.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      RETURNING *
-    `, [name, type, category, country, region, contactEmail, website, description, specializations]);
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 0, 0.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `, [
+      id,
+      userId,
+      posterName,
+      name,
+      type,
+      category,
+      country,
+      region,
+      contactEmail,
+      website,
+      description,
+      JSON.stringify(specializations || []),
+    ]);
 
-    console.log('📊 New organization registered:', { name, type, category, contactEmail });
+    const created = await pool.query(`SELECT * FROM databank_organizations WHERE id = $1`, [id]);
 
-    res.json({ 
-      organization: result.rows[0],
-      message: 'Organization registered successfully. It will be verified before appearing publicly.'
+    res.status(201).json({
+      organization: {
+        ...created.rows[0],
+        specializations: typeof created.rows[0].specializations === 'string'
+          ? JSON.parse(created.rows[0].specializations || '[]')
+          : created.rows[0].specializations,
+        verified: Boolean(created.rows[0].verified),
+      },
+      message: 'Organization registered successfully.'
     });
-
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error registering organization:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// Update organization
+app.put('/api/databank/organizations/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+    const existing = await pool.query(`SELECT * FROM databank_organizations WHERE id = $1`, [id]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+    const org = existing.rows[0];
+    if (!canManageResource(org.created_by, (req as any).user)) {
+      return res.status(403).json({ error: 'Only the owner can update this organization' });
+    }
+
+    const {
+      name, type, category, country, region, contactEmail, website, description, specializations,
+    } = req.body;
+
+    await pool.query(`
+      UPDATE databank_organizations SET
+        name = COALESCE($1, name),
+        type = COALESCE($2, type),
+        category = COALESCE($3, category),
+        country = COALESCE($4, country),
+        region = COALESCE($5, region),
+        contact_email = COALESCE($6, contact_email),
+        website = COALESCE($7, website),
+        description = COALESCE($8, description),
+        specializations = COALESCE($9, specializations),
+        last_active = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $10
+    `, [
+      name ?? null,
+      type ?? null,
+      category ?? null,
+      country ?? null,
+      region ?? null,
+      contactEmail ?? null,
+      website ?? null,
+      description ?? null,
+      specializations != null ? JSON.stringify(specializations) : null,
+      id,
+    ]);
+
+    const updated = await pool.query(`SELECT * FROM databank_organizations WHERE id = $1`, [id]);
+    const row = updated.rows[0];
+    res.json({
+      organization: {
+        ...row,
+        specializations: typeof row.specializations === 'string'
+          ? JSON.parse(row.specializations || '[]')
+          : (row.specializations || []),
+        verified: Boolean(row.verified),
+      },
+    });
+  } catch (error: any) {
+    console.error('Error updating organization:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// Delete organization
+app.delete('/api/databank/organizations/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+    const existing = await pool.query(`SELECT * FROM databank_organizations WHERE id = $1`, [id]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+    const org = existing.rows[0];
+    if (org.created_by && org.created_by !== userId && (req as any).user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only the owner can delete this organization' });
+    }
+
+    await pool.query(`
+      DELETE r FROM databank_data_requests r
+      INNER JOIN databank_data_offers d ON r.data_offer_id = d.id
+      WHERE d.organization_id = $1
+    `, [id]);
+    await pool.query(`DELETE FROM databank_data_offers WHERE organization_id = $1`, [id]);
+    await pool.query(`DELETE FROM databank_organizations WHERE id = $1`, [id]);
+    res.json({ message: 'Organization deleted' });
+  } catch (error: any) {
+    console.error('Error deleting organization:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// Create dataset offer
+app.post('/api/databank/organizations/:id/offers', authenticateToken, async (req, res) => {
+  try {
+    const { id: organizationId } = req.params;
+    const userId = (req as any).user.id;
+    const org = await pool.query(`SELECT * FROM databank_organizations WHERE id = $1`, [organizationId]);
+    if (org.rows.length === 0) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+    if (!canManageResource(org.rows[0].created_by, (req as any).user)) {
+      return res.status(403).json({ error: 'Only the owner can publish offers' });
+    }
+
+    const {
+      title, description, dataType, populationType, sampleSize, timePeriod,
+      accessLevel, contactPerson, requirements, diseaseFocus, geographicCoverage,
+    } = req.body;
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+
+    const offerId = crypto.randomUUID();
+    const posterName =
+      [(req as any).user.first_name, (req as any).user.last_name].filter(Boolean).join(' ').trim() ||
+      (req as any).user.username ||
+      'Unknown';
+    await pool.query(`
+      INSERT INTO databank_data_offers (
+        id, organization_id, created_by, posted_by_name, title, description, data_type, disease_focus,
+        population_type, sample_size, geographic_coverage, time_period,
+        access_level, requirements, contact_person, last_updated, request_count
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,CURRENT_TIMESTAMP,0)
+    `, [
+      offerId,
+      organizationId,
+      userId,
+      posterName,
+      title,
+      description || '',
+      dataType || 'clinical',
+      JSON.stringify(diseaseFocus || []),
+      populationType || 'general',
+      sampleSize || 0,
+      JSON.stringify(geographicCoverage || []),
+      timePeriod || '',
+      accessLevel || 'restricted',
+      JSON.stringify(requirements || []),
+      contactPerson || '',
+    ]);
+
+    const created = await pool.query(`SELECT * FROM databank_data_offers WHERE id = $1`, [offerId]);
+    res.status(201).json({ offer: created.rows[0] });
+  } catch (error: any) {
+    console.error('Error creating data offer:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// Update dataset offer
+app.put('/api/databank/offers/:offerId', authenticateToken, async (req, res) => {
+  try {
+    const { offerId } = req.params;
+    const userId = (req as any).user.id;
+    const offerRes = await pool.query(`
+      SELECT d.*, COALESCE(d.created_by, o.created_by) AS owner_id
+      FROM databank_data_offers d
+      JOIN databank_organizations o ON o.id = d.organization_id
+      WHERE d.id = $1
+    `, [offerId]);
+    if (offerRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+    if (!canManageResource(offerRes.rows[0].owner_id, (req as any).user)) {
+      return res.status(403).json({ error: 'Only the owner can update this offer' });
+    }
+
+    const b = req.body;
+    await pool.query(`
+      UPDATE databank_data_offers SET
+        title = COALESCE($1, title),
+        description = COALESCE($2, description),
+        data_type = COALESCE($3, data_type),
+        disease_focus = COALESCE($4, disease_focus),
+        population_type = COALESCE($5, population_type),
+        sample_size = COALESCE($6, sample_size),
+        geographic_coverage = COALESCE($7, geographic_coverage),
+        time_period = COALESCE($8, time_period),
+        access_level = COALESCE($9, access_level),
+        requirements = COALESCE($10, requirements),
+        contact_person = COALESCE($11, contact_person),
+        last_updated = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $12
+    `, [
+      b.title ?? null,
+      b.description ?? null,
+      b.dataType ?? null,
+      b.diseaseFocus != null ? JSON.stringify(b.diseaseFocus) : null,
+      b.populationType ?? null,
+      b.sampleSize ?? null,
+      b.geographicCoverage != null ? JSON.stringify(b.geographicCoverage) : null,
+      b.timePeriod ?? null,
+      b.accessLevel ?? null,
+      b.requirements != null ? JSON.stringify(b.requirements) : null,
+      b.contactPerson ?? null,
+      offerId,
+    ]);
+
+    const updated = await pool.query(`SELECT * FROM databank_data_offers WHERE id = $1`, [offerId]);
+    res.json({ offer: updated.rows[0] });
+  } catch (error: any) {
+    console.error('Error updating data offer:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// Delete dataset offer
+app.delete('/api/databank/offers/:offerId', authenticateToken, async (req, res) => {
+  try {
+    const { offerId } = req.params;
+    const userId = (req as any).user.id;
+    const offerRes = await pool.query(`
+      SELECT d.*, COALESCE(d.created_by, o.created_by) AS owner_id
+      FROM databank_data_offers d
+      JOIN databank_organizations o ON o.id = d.organization_id
+      WHERE d.id = $1
+    `, [offerId]);
+    if (offerRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+    if (!canManageResource(offerRes.rows[0].owner_id, (req as any).user)) {
+      return res.status(403).json({ error: 'Only the owner can delete this offer' });
+    }
+
+    await pool.query(`DELETE FROM databank_data_requests WHERE data_offer_id = $1`, [offerId]);
+    await pool.query(`DELETE FROM databank_data_offers WHERE id = $1`, [offerId]);
+    res.json({ message: 'Offer deleted' });
+  } catch (error: any) {
+    console.error('Error deleting data offer:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
 // Submit data request
 app.post('/api/databank/data-requests', authenticateToken, async (req, res) => {
   try {
-    const { 
+    const userId = (req as any).user.id;
+    const userRow = (req as any).user;
+    const {
       dataOfferId,
       requesterName,
       requesterInstitution,
       requesterEmail,
-      purpose, 
+      purpose,
       methodology,
       timeline,
       collaborationProposed,
       additionalNotes
     } = req.body;
 
-    const result = await pool.query(`
+    const displayName =
+      requesterName ||
+      [userRow.first_name, userRow.last_name].filter(Boolean).join(' ').trim() ||
+      userRow.username ||
+      'Unknown';
+
+    const id = crypto.randomUUID();
+    await pool.query(`
       INSERT INTO databank_data_requests (
-        data_offer_id, requester_name, requester_institution, requester_email,
+        id, data_offer_id, user_id, requester_name, requester_institution, requester_email,
         purpose, methodology, timeline, collaboration_proposed, additional_notes,
         status, submitted_date
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', CURRENT_TIMESTAMP)
-      RETURNING *
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', CURRENT_TIMESTAMP)
     `, [
-      dataOfferId, requesterName, requesterInstitution, requesterEmail,
-      purpose, methodology, timeline, collaborationProposed, additionalNotes
+      id,
+      dataOfferId || null,
+      userId,
+      displayName,
+      requesterInstitution,
+      requesterEmail || userRow.email || '',
+      purpose,
+      methodology,
+      timeline,
+      collaborationProposed || '',
+      additionalNotes || '',
     ]);
 
-    // Update request count for the data offer
-    await pool.query(`
-      UPDATE databank_data_offers 
-      SET request_count = request_count + 1 
-      WHERE id = $1
-    `, [dataOfferId]);
+    if (dataOfferId) {
+      await pool.query(`
+        UPDATE databank_data_offers
+        SET request_count = request_count + 1
+        WHERE id = $1
+      `, [dataOfferId]);
+    }
 
-    console.log('📊 New data request submitted:', { 
-      dataOfferId, 
-      requesterName, 
-      requesterInstitution,
-      purpose: purpose.substring(0, 100) + '...'
-    });
+    const created = await pool.query(`SELECT * FROM databank_data_requests WHERE id = $1`, [id]);
 
-    res.json({ 
-      data_request: result.rows[0],
+    res.json({
+      data_request: created.rows[0],
       message: 'Data request submitted successfully. The organization will review your request.'
     });
-
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error submitting data request:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
@@ -5396,11 +5807,7 @@ app.use('/api/negative-results', negativeResultsRoutes);
 app.use('/api/ai-training', authenticateToken, aiTrainingRoutes);
 app.use('/api/ai-providers', authenticateToken, aiProviderKeysRoutes);
 app.use('/api/settings', authenticateToken, settingsRoutes);
-app.use('/api/communications', authenticateToken, communicationsRoutes);
-app.use('/api/scientist-first', scientistFirstRoutes);
-app.use('/api/ai-research-agent', authenticateToken, aiResearchAgentRoutes);
 app.use('/api/api-task-assignments', authenticateToken, apiTaskAssignmentsRoutes);
-app.use('/api/workflows', authenticateToken, workflowRoutes);
 app.use('/api/agents', authenticateToken, agentsRoutes);
 app.use('/api/orchestrator', authenticateToken, orchestratorRoutes);
 app.use('/api/lab-workspace', authenticateToken, labWorkspaceRoutes);
@@ -5410,9 +5817,22 @@ app.use('/api/protocol-search', authenticateToken, protocolSemanticSearchRoutes)
 app.use('/api/protocol-ai', authenticateToken, protocolAIRoutes);
 app.use('/api/protocol-comparison', authenticateToken, protocolComparisonRoutes);
 app.use('/api/experiment-tracker', authenticateToken, experimentTrackerRoutes);
+app.use('/api/experiments', authenticateToken, experimentTrackerRoutes);
 app.use('/api/project-management', authenticateToken, projectManagementRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
 app.use('/api/notebook-summaries', notebookSummariesRoutes);
+app.use('/api/compliance', complianceRoutes);
+app.use('/api/support', supportRoutes);
+app.use('/api/grants', authenticateToken, grantsRoutes);
+app.use('/api/research-events', authenticateToken, researchEventsRoutes);
+app.use('/api/marketplace', authenticateToken, marketplaceDirectoryRoutes);
+app.use('/api/networking/posts', authenticateToken, networkingPostsRoutes);
+app.use('/api/networking/directory', authenticateToken, networkingDirectoryRoutes);
+app.use('/api/networking/social', authenticateToken, networkingSocialRoutes);
+app.use('/api/help-forum', authenticateToken, helpForumRoutes);
+app.use('/api/notifications', authenticateToken, notificationsRoutes);
+app.use('/api/community-news', authenticateToken, communityNewsRoutes);
+app.use('/api/ai-research-agent', authenticateToken, aiResearchAgentRoutes);
 
 // Alias route for data-results (frontend uses hyphen, backend uses slash)
 app.get('/api/data-results', authenticateToken, async (req, res) => {
@@ -5507,14 +5927,13 @@ console.log('   - /api/services (Service marketplace)');
 console.log('   - /api/negative-results (Failed experiments database)');
 console.log('   - /api/ai-training (Personalized AI training)');
 console.log('   - /api/ai-providers (API key management)');
-console.log('   - /api/ai-research-agent (Intelligent research assistant)');
 console.log('   - /api/api-task-assignments (API task assignments)');
-console.log('   - /api/workflows (Visual Workflow Builder)');
 console.log('   - /api/agents (Individual Task Agents)');
 console.log('   - /api/orchestrator (Multi-Agent Workflow Orchestration)');
+console.log('   - /api/notifications (In-app notification inbox)');
 console.log('   - /api/lab-workspace (ClickUp-inspired task management)');
 console.log('   - /api/settings (User settings & preferences)');
-console.log('   - /api/communications (Unified communications hub)');
+console.log('   - /api/marketplace (Directory: suppliers & service providers)');
 console.log('   - /api/recommendations (Intelligent recommendations system)');
 
 // Start server

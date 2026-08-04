@@ -20,28 +20,11 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  demoLogin: () => void;
   register: (userData: any) => Promise<void>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
-
-// Mock demo user data
-const mockUser: User = {
-  id: '550e8400-e29b-41d4-a716-446655440003',
-  username: 'demo_user',
-  email: 'demo@researchlab.com',
-  first_name: 'Sarah',
-  last_name: 'Martinez',
-  role: 'student',
-  lab_id: '650e8400-e29b-41d4-a716-446655440000',
-  created_at: new Date().toISOString(),
-  avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
-  current_institution: 'Stanford University'
-};
-
-const mockToken = 'demo-token-123';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -57,22 +40,34 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const clearLocalSession = () => {
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('user');
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setLoading] = useState(true);
 
-  // Load from localStorage on mount
+  // Load token then revalidate against the API (do not trust localStorage role alone)
   useEffect(() => {
     const init = async () => {
       try {
         const storedToken = localStorage.getItem('authToken');
-        const storedUser = localStorage.getItem('user');
-        
-        if (storedToken && storedUser) {
-          const userData = JSON.parse(storedUser);
-          setToken(storedToken);
-          setUser(userData);
+        if (!storedToken) {
+          return;
+        }
+
+        setToken(storedToken);
+        try {
+          const profile = await authAPI.getProfile();
+          setUser(profile.user);
+          localStorage.setItem('user', JSON.stringify(profile.user));
+        } catch {
+          clearLocalSession();
+          setToken(null);
+          setUser(null);
         }
       } finally {
         setLoading(false);
@@ -87,6 +82,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const data = await authAPI.login(email, password);
       setUser(data.user);
       setToken(data.token);
+
+      // Link anonymous cookie consent session to authenticated user (GDPR accountability)
+      try {
+        const sessionId = localStorage.getItem('consent_session_id');
+        if (sessionId && data.token) {
+          const apiBase = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || 'http://localhost:5002/api';
+          await fetch(`${apiBase}/compliance/consent/link-session`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${data.token}`,
+              'X-Session-Id': sessionId
+            },
+            body: JSON.stringify({ sessionId })
+          });
+        }
+      } catch (linkError) {
+        console.error('Failed to link consent session:', linkError);
+      }
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -95,17 +109,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const demoLogin = () => {
-    setUser(mockUser);
-    setToken(mockToken);
-    localStorage.setItem('authToken', mockToken);
-    localStorage.setItem('user', JSON.stringify(mockUser));
-  };
-
   const register = async (userData: any) => {
     setLoading(true);
     try {
-      const data = await authAPI.register(userData.username, userData.email, userData.password, userData.role);
+      const data = await authAPI.register(
+        userData.username,
+        userData.email,
+        userData.password,
+        userData.first_name,
+        userData.last_name,
+        userData.role
+      );
       setUser(data.user);
       setToken(data.token);
     } catch (error) {
@@ -119,8 +133,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     try {
       await authAPI.logout();
-    } catch (error) {
-      console.log('Logout API call failed, but local data cleared');
+    } catch {
+      // local session still cleared in apiService / finally
     } finally {
       setUser(null);
       setToken(null);
@@ -159,7 +173,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: !!user && !!token,
     isLoading,
     login,
-    demoLogin,
     register,
     logout,
     updateProfile,

@@ -45,6 +45,10 @@ const apiRequest = async <T>(
     const response = await fetch(url, config);
     
     if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+      }
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
     }
@@ -54,6 +58,66 @@ const apiRequest = async <T>(
     console.error(`API request failed for ${endpoint}:`, error);
     throw error;
   }
+};
+
+/** Strip leading /api because API_BASE_URL already includes it */
+const toApiPath = (endpoint: string): string => {
+  if (/^https?:\/\//i.test(endpoint)) {
+    const base = API_BASE_URL.replace(/\/$/, '');
+    if (endpoint.startsWith(base)) {
+      return endpoint.slice(base.length) || '/';
+    }
+    return endpoint;
+  }
+  let path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  if (path.startsWith('/api/')) path = path.slice(4);
+  else if (path === '/api') path = '/';
+  return path.startsWith('/') ? path : `/${path}`;
+};
+
+type HttpConfig = {
+  responseType?: 'json' | 'blob';
+  headers?: Record<string, string>;
+};
+
+const httpGet = async (endpoint: string, config: HttpConfig = {}) => {
+  const path = toApiPath(endpoint);
+  if (/^https?:\/\//i.test(path)) {
+    const response = await fetch(path, { headers: { ...getAuthHeaders(), ...config.headers } });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error((errorData as { error?: string }).error || `HTTP error! status: ${response.status}`);
+    }
+    return { data: config.responseType === 'blob' ? await response.blob() : await response.json() };
+  }
+
+  if (config.responseType === 'blob') {
+    const url = `${API_BASE_URL}${path}`;
+    const response = await fetch(url, { headers: { ...getAuthHeaders(), ...config.headers } });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error((errorData as { error?: string }).error || `HTTP error! status: ${response.status}`);
+    }
+    return { data: await response.blob() };
+  }
+
+  const data = await apiRequest(path);
+  return { data };
+};
+
+const httpSend = async (
+  method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+  endpoint: string,
+  body?: unknown,
+  config: HttpConfig = {}
+) => {
+  const path = toApiPath(endpoint);
+  const data = await apiRequest(path, {
+    method,
+    headers: { ...getAuthHeaders(), ...config.headers },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  return { data };
 };
 
 // Authentication API with simplified logic
@@ -71,10 +135,17 @@ export const authAPI = {
     return response;
   },
 
-  register: async (username: string, email: string, password: string, role?: string) => {
+  register: async (
+    username: string,
+    email: string,
+    password: string,
+    first_name: string,
+    last_name: string,
+    role?: string
+  ) => {
     const response = await apiRequest<{ token: string; user: any }>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ username, email, password, role })
+      body: JSON.stringify({ username, email, password, first_name, last_name, role })
     });
     
     // Store token and user data
@@ -85,15 +156,22 @@ export const authAPI = {
   },
 
   logout: async () => {
-    // Clear local storage immediately
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    
-    // Try to call logout API (but don't fail if it doesn't work)
+    const token = localStorage.getItem('authToken');
     try {
-      await apiRequest('/auth/logout', { method: 'POST' });
-    } catch (error) {
-      console.log('Logout API call failed, but local data cleared');
+      if (token) {
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          }
+        });
+      }
+    } catch {
+      // Best-effort server notify
+    } finally {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
     }
   },
 
@@ -427,23 +505,20 @@ export const calculatorsAPI = {
   }
 };
 
-// Demo mode - always return authenticated
 export const isAuthenticated = (): boolean => {
-  return true;
+  if (typeof window === 'undefined') return false;
+  return Boolean(localStorage.getItem('authToken'));
 };
 
-// Demo mode - return mock user
-export const getCurrentUser = () => {
-  return {
-    id: 'demo-user-123',
-    username: 'demo_user',
-    email: 'demo@researchlab.com',
-    first_name: 'Sarah',
-    last_name: 'Martinez',
-    role: 'Principal Investigator',
-    avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
-    current_institution: 'Stanford University'
-  };
+export const getCurrentUser = (): Record<string, unknown> | null => {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem('user');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
 };
 
 // Export all APIs as a single service
@@ -460,5 +535,11 @@ export const apiService = {
   team: teamAPI,
   calculators: calculatorsAPI,
   isAuthenticated,
-  getCurrentUser
+  getCurrentUser,
+  // Axios-compatible helpers used by domain services (e.g. experimentService)
+  get: httpGet,
+  post: (endpoint: string, body?: unknown, config?: HttpConfig) => httpSend('POST', endpoint, body, config),
+  put: (endpoint: string, body?: unknown, config?: HttpConfig) => httpSend('PUT', endpoint, body, config),
+  patch: (endpoint: string, body?: unknown, config?: HttpConfig) => httpSend('PATCH', endpoint, body, config),
+  delete: (endpoint: string, config?: HttpConfig) => httpSend('DELETE', endpoint, undefined, config),
 };

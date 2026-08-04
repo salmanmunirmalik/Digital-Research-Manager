@@ -1,15 +1,14 @@
-
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { ResultEntry, PrimerPair, RestrictionResult } from '../types';
 
-// Ensure the API key is available as an environment variable.
-// In a real Vite/Create React App setup, this would be `import.meta.env.VITE_API_KEY` or `process.env.REACT_APP_API_KEY`
-// For this environment, we assume `process.env.API_KEY` is directly available.
-const apiKey = process.env.API_KEY;
+// Client-side Gemini calls are disabled for security.
+// Use authenticated backend AI routes (e.g. /api/protocol-ai, /api/ai-providers) instead.
+const apiKey = '';
 
 if (!apiKey) {
-    console.error("API key is missing. Please set the API_KEY environment variable.");
+    console.warn(
+      'Client Gemini API key is disabled. AI features must use authenticated server routes.'
+    );
 }
 
 const ai = new GoogleGenAI({ apiKey: apiKey || "" });
@@ -55,58 +54,6 @@ export const getTroubleshootingAdvice = async (
                 systemInstruction: systemInstruction,
                 temperature: 0.5,
                 topK: 32,
-                topP: 1,
-            },
-        });
-        
-        return response.text;
-    } catch (error) {
-        console.error("Error calling Gemini API:", error);
-        throw new Error("Failed to communicate with the AI model.");
-    }
-};
-
-/**
- * Gets community-style troubleshooting advice from the Gemini model for the help forum.
- * @param title The title of the help request.
- * @param description The user's detailed problem.
- * @param protocolName The name of the protocol, if relevant.
- * @returns A string containing friendly, initial advice.
- */
-export const getCommunityHelpAdvice = async (
-    title: string,
-    description: string,
-    protocolName?: string
-): Promise<string> => {
-    if (!apiKey) {
-        throw new Error("API key is not configured.");
-    }
-    
-    const model = 'gemini-2.5-flash';
-
-    const systemInstruction = `You are a helpful and experienced senior researcher in a collaborative, global research community forum. A user has posted a help request.
-    Your goal is to provide a friendly, encouraging, and helpful initial response with potential solutions they can try while waiting for more community feedback.
-    Start by acknowledging their problem. Then, offer clear, actionable suggestions. Format your response clearly. Do not use markdown.`;
-
-    const prompt = `
-        A user posted a new help request in the forum.
-
-        Title: "${title}"
-        ${protocolName ? `Relevant Protocol: "${protocolName}"` : ''}
-        
-        Problem Description: "${description}"
-
-        Please provide a helpful initial response for them.
-    `;
-    
-    try {
-        const response = await ai.models.generateContent({
-            model: model,
-            contents: prompt,
-            config: {
-                systemInstruction: systemInstruction,
-                temperature: 0.6,
-                topK: 40,
                 topP: 1,
             },
         });

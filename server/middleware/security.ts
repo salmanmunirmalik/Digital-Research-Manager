@@ -24,35 +24,9 @@ export const apiRateLimit = createRateLimit(
   'Too many requests from this IP, please try again later.'
 );
 
-// Auth endpoints rate limiting (stricter)
-export const authRateLimit = createRateLimit(
-  15 * 60 * 1000, // 15 minutes
-  5, // limit each IP to 5 requests per windowMs
-  'Too many authentication attempts, please try again later.'
-);
-
-// File upload rate limiting
-export const uploadRateLimit = createRateLimit(
-  15 * 60 * 1000, // 15 minutes
-  10, // limit each IP to 10 uploads per windowMs
-  'Too many file uploads, please try again later.'
-);
-
-// Helmet security configuration
+// Helmet security configuration (API server — CSP less critical than HSTS/frame guards)
 export const securityHeaders = helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      scriptSrc: ["'self'"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-    },
-  },
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
   hsts: {
     maxAge: 31536000,
@@ -60,6 +34,26 @@ export const securityHeaders = helmet({
     preload: true
   }
 });
+
+// Auth endpoints rate limiting (stricter in production; looser for local/E2E)
+const authWindowMs = 15 * 60 * 1000;
+const authMax =
+  process.env.NODE_ENV === 'production'
+    ? 10
+    : Number(process.env.AUTH_RATE_LIMIT_MAX || 80);
+
+export const authRateLimit = createRateLimit(
+  authWindowMs,
+  authMax,
+  'Too many authentication attempts, please try again later.'
+);
+
+// File upload rate limiting
+export const uploadRateLimit = createRateLimit(
+  15 * 60 * 1000,
+  10,
+  'Too many file uploads, please try again later.'
+);
 
 // Input validation middleware
 export const validateInput = (req: Request, res: Response, next: NextFunction) => {
