@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { getAuthHeaders, getAuthToken, resolveApiBaseUrl, formatApiNetworkError } from '../utils/apiBase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
@@ -6,18 +7,15 @@ import {
   BeakerIcon,
   DocumentTextIcon,
   FireIcon,
-  ClockIcon,
   BookOpenIcon,
   ArrowRightIcon,
   PlusIcon,
-  UserIcon,
   CalendarDaysIcon,
   QuestionMarkCircleIcon,
   NewspaperIcon,
   ChatBubbleLeftRightIcon,
   MapPinIcon,
   BellAlertIcon,
-  ClipboardDocumentListIcon,
   ArrowPathIcon,
   PencilSquareIcon,
   PencilIcon,
@@ -25,10 +23,9 @@ import {
 } from '@heroicons/react/24/outline';
 import { DASHBOARD_SYNC_EVENT, notifyDashboardSync } from '../utils/dashboardSync';
 import DashboardNoteForm, { type DashboardNoteFormValues } from '../components/DashboardNoteForm';
+import { PageHeader, PagePanel, PageStat } from '../components/PageHeader';
 
-const API_BASE = (
-  import.meta.env.VITE_API_URL || 'http://localhost:5002/api'
-).replace(/\/$/, '');
+const API_BASE = resolveApiBaseUrl();
 
 const apiUrl = (path: string) => {
   const p = path.startsWith('/') ? path : `/${path}`;
@@ -80,17 +77,7 @@ interface NoteItem {
   updatedAt?: string;
 }
 
-interface ActivityItem {
-  id: string;
-  kind: 'notebook' | 'task' | 'experiment';
-  title: string;
-  subtitle: string;
-  timestamp: string;
-  link: string;
-  source: string;
-}
-
-type HubTab = 'all' | 'reminders' | 'notes' | 'activity';
+type HubTab = 'all' | 'reminders' | 'notes';
 
 const POLL_MS = 25000;
 
@@ -134,20 +121,14 @@ const noteColorClass = (color?: string) => {
 const urgencyBadge = (urgency: ReminderItem['urgency']) => {
   switch (urgency) {
     case 'overdue':
-      return 'bg-red-100 text-red-800';
+      return 'bg-rose-50 text-rose-800 border border-rose-100';
     case 'today':
-      return 'bg-amber-100 text-amber-900';
+      return 'bg-amber-50 text-amber-900 border border-amber-100';
     case 'soon':
-      return 'bg-sky-100 text-sky-800';
+      return 'bg-sky-50 text-sky-800 border border-sky-100';
     default:
-      return 'bg-slate-100 text-slate-600';
+      return 'bg-slate-50 text-slate-600 border border-slate-100';
   }
-};
-
-const activityIcon = (kind: ActivityItem['kind']) => {
-  if (kind === 'notebook') return BookOpenIcon;
-  if (kind === 'experiment') return BeakerIcon;
-  return ClipboardDocumentListIcon;
 };
 
 const DashboardPage: React.FC = () => {
@@ -158,8 +139,7 @@ const DashboardPage: React.FC = () => {
   const [newsItems, setNewsItems] = useState<PulseNews[]>([]);
   const [reminders, setReminders] = useState<ReminderItem[]>([]);
   const [notes, setNotes] = useState<NoteItem[]>([]);
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [counts, setCounts] = useState({ reminders: 0, notes: 0, activities: 0, overdue: 0 });
+  const [counts, setCounts] = useState({ reminders: 0, notes: 0, overdue: 0 });
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -172,7 +152,7 @@ const DashboardPage: React.FC = () => {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const authHeaders = useCallback(() => {
-    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+    const token = getAuthToken();
     return {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
@@ -186,10 +166,11 @@ const DashboardPage: React.FC = () => {
       const res = await axios.get(apiUrl('/dashboard/pulse'), { headers });
       setReminders(res.data.reminders || []);
       setNotes(res.data.notes || []);
-      setActivities(res.data.activities || []);
-      setCounts(
-        res.data.counts || { reminders: 0, notes: 0, activities: 0, overdue: 0 }
-      );
+      setCounts({
+        reminders: res.data.counts?.reminders ?? 0,
+        notes: res.data.counts?.notes ?? 0,
+        overdue: res.data.counts?.overdue ?? 0,
+      });
       setUpdatedAt(res.data.updatedAt || new Date().toISOString());
     } catch (error) {
       console.error('Dashboard pulse error:', error);
@@ -401,315 +382,279 @@ const DashboardPage: React.FC = () => {
 
   const quickActions = [
     {
-      icon: PlusIcon,
+      icon: BeakerIcon,
       title: 'Start experiment',
       description: 'Track a new experiment',
-      color: 'from-blue-500 to-blue-600',
+      well: 'from-sky-500 to-sky-700 shadow-sky-200/50',
       link: '/experiment-tracker',
     },
     {
       icon: DocumentTextIcon,
       title: 'Add protocol',
       description: 'Document a method',
-      color: 'from-green-500 to-green-600',
+      well: 'from-emerald-500 to-teal-700 shadow-emerald-200/50',
       link: '/protocols',
     },
     {
       icon: BookOpenIcon,
       title: 'Open notebook',
       description: 'Write a lab note',
-      color: 'from-slate-600 to-slate-800',
+      well: 'from-slate-600 to-slate-800 shadow-slate-200/50',
       link: '/lab-notebook',
     },
     {
       icon: FireIcon,
       title: 'Share failed experiment',
       description: 'Build transparency credit',
-      color: 'from-orange-500 to-red-500',
+      well: 'from-orange-500 to-red-600 shadow-orange-200/40',
       link: '/negative-results',
     },
   ];
 
   const showReminders = hubTab === 'all' || hubTab === 'reminders';
   const showNotes = hubTab === 'all' || hubTab === 'notes';
-  const showActivity = hubTab === 'all' || hubTab === 'activity';
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
-            Welcome back, {user?.first_name || 'Researcher'}
-          </h1>
-          <p className="mt-1.5 text-[14px] text-slate-600">
-            Live activities, notes, and reminders from your notebook and lab workspace
-          </p>
+    <div className="mx-auto max-w-7xl space-y-5">
+      <PageHeader
+        title={`Welcome back, ${user?.first_name || 'Researcher'}`}
+        subtitle="Your notes, reminders, and research pulse — from notebook to lab workspace."
+        accent="sky"
+        icon={<BeakerIcon />}
+        actions={
+          <button
+            type="button"
+            onClick={() => void fetchPulse()}
+            disabled={refreshing}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-60"
+          >
+            <ArrowPathIcon className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        }
+      >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <PageStat
+            label="Overdue"
+            value={counts.overdue}
+            accent={counts.overdue > 0 ? 'orange' : 'sky'}
+          />
+          <PageStat label="Reminders" value={counts.reminders} accent="amber" />
+          <PageStat label="Notes" value={counts.notes} accent="sky" />
+          <PageStat
+            label="Updated"
+            value={updatedAt ? formatRelative(updatedAt) : '—'}
+            accent="teal"
+          />
         </div>
-        <button
-          type="button"
-          onClick={() => navigate('/profile')}
-          className="inline-flex items-center gap-2 self-start px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
-        >
-          <UserIcon className="w-4 h-4" />
-          Research profile
-        </button>
-      </div>
+      </PageHeader>
 
       {loading ? (
-        <div className="text-center py-16">
-          <div className="animate-spin rounded-full h-10 w-10 border-2 border-slate-200 border-t-slate-800 mx-auto" />
+        <div className="rounded-2xl border border-slate-200/80 bg-white/90 py-16 text-center shadow-sm">
+          <div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-slate-200 border-t-sky-600" />
           <p className="mt-4 text-[13px] text-slate-500">Loading dashboard…</p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Primary hub */}
-          <section className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm">
-            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-br from-slate-50 via-white to-amber-50/40">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <h2 className="text-[16px] font-semibold text-slate-900 tracking-tight">
-                    Activities, notes & reminders
-                  </h2>
-                  <p className="text-[12px] text-slate-500 mt-0.5">
-                    {counts.overdue > 0
-                      ? `${counts.overdue} overdue · `
-                      : ''}
-                    {counts.reminders} reminders · {counts.notes} notes · {counts.activities}{' '}
-                    recent
-                    {updatedAt ? ` · updated ${formatRelative(updatedAt)}` : ''}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {(
-                    [
-                      { id: 'all' as const, label: 'All' },
-                      { id: 'reminders' as const, label: 'Reminders' },
-                      { id: 'notes' as const, label: 'Notes' },
-                      { id: 'activity' as const, label: 'Activity' },
-                    ] as const
-                  ).map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setHubTab(tab.id)}
-                      className={`px-2.5 py-1 text-[12px] font-medium rounded-full transition-colors ${
-                        hubTab === tab.id
-                          ? 'bg-slate-900 text-white'
-                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+        <div className="space-y-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-[15px] font-semibold tracking-tight text-slate-900">
+                Notes & reminders
+              </h2>
+              <p className="mt-0.5 text-[12px] text-slate-500">
+                {counts.overdue > 0 ? `${counts.overdue} overdue · ` : ''}
+                Focus on what needs attention next
+              </p>
+            </div>
+            <div
+              className="inline-flex rounded-xl border border-slate-200/80 bg-white p-1 shadow-sm"
+              role="tablist"
+              aria-label="Hub filter"
+            >
+              {(
+                [
+                  { id: 'all' as const, label: 'All' },
+                  { id: 'reminders' as const, label: 'Reminders' },
+                  { id: 'notes' as const, label: 'Notes' },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={hubTab === tab.id}
+                  onClick={() => setHubTab(tab.id)}
+                  className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                    hubTab === tab.id
+                      ? 'bg-sky-700 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div
+            className={`grid gap-4 ${
+              hubTab === 'all' ? 'md:grid-cols-2' : 'md:grid-cols-1'
+            }`}
+          >
+            {showReminders ? (
+              <PagePanel
+                accent="amber"
+                className="min-h-[280px] flex flex-col"
+                title={
+                  <span className="inline-flex items-center gap-2">
+                    <BellAlertIcon className="h-4 w-4 text-amber-700" />
+                    Reminders
+                  </span>
+                }
+                action={
                   <button
                     type="button"
-                    onClick={() => void fetchPulse()}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium text-slate-600 bg-white border border-slate-200 rounded-full hover:bg-slate-50"
-                    title="Refresh now"
+                    onClick={() => navigate('/lab-workspace?section=tasks')}
+                    className="inline-flex items-center gap-0.5 text-[12px] font-medium text-slate-500 hover:text-slate-900"
                   >
-                    <ArrowPathIcon className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-                    Refresh
+                    Workspace
+                    <ArrowRightIcon className="h-3 w-3" />
                   </button>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className={`grid gap-0 divide-y md:divide-y-0 md:divide-x divide-slate-100 ${
-                hubTab === 'all'
-                  ? 'md:grid-cols-3'
-                  : 'md:grid-cols-1'
-              }`}
-            >
-              {showReminders ? (
-                <div className="p-4 min-h-[280px] flex flex-col">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <BellAlertIcon className="w-4 h-4 text-amber-700" />
-                      <h3 className="text-[13px] font-semibold text-slate-900">Reminders</h3>
+                }
+              >
+                <div className="flex-1 space-y-1.5 overflow-y-auto max-h-[360px]">
+                  {reminders.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-amber-200/80 bg-gradient-to-br from-amber-50/50 to-white px-3 py-10 text-center">
+                      <p className="text-[13px] text-slate-700">Nothing due right now</p>
+                      <p className="mt-1 text-[12px] text-slate-400">
+                        Assign tasks in Lab workspace to see them here
+                      </p>
                     </div>
+                  ) : (
+                    reminders.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => navigate(item.link)}
+                        className="group w-full rounded-xl border border-transparent px-3 py-2.5 text-left transition-colors hover:border-amber-100 hover:bg-amber-50/40"
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <span
+                            className={`mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${urgencyBadge(item.urgency)}`}
+                          >
+                            {item.urgency}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-medium text-slate-900 line-clamp-2 group-hover:text-slate-800">
+                              {item.title}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-slate-500">
+                              {item.subtitle} · {item.source}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </PagePanel>
+            ) : null}
+
+            {showNotes ? (
+              <PagePanel
+                accent="sky"
+                className="min-h-[280px] flex flex-col"
+                title={
+                  <span className="inline-flex items-center gap-2">
+                    <PencilSquareIcon className="h-4 w-4 text-sky-700" />
+                    Notes
+                  </span>
+                }
+                action={
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => navigate('/lab-workspace?section=tasks')}
-                      className="text-[11px] font-medium text-slate-500 hover:text-slate-900 inline-flex items-center gap-0.5"
+                      onClick={openCreateNote}
+                      className="inline-flex items-center gap-1 rounded-lg bg-sky-700 px-2.5 py-1 text-[11px] font-medium text-white shadow-sm hover:bg-sky-800"
                     >
-                      Workspace
-                      <ArrowRightIcon className="w-3 h-3" />
+                      <PlusIcon className="h-3.5 w-3.5" />
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/lab-notebook')}
+                      className="inline-flex items-center gap-0.5 text-[12px] font-medium text-slate-500 hover:text-slate-900"
+                    >
+                      Notebook
+                      <ArrowRightIcon className="h-3 w-3" />
                     </button>
                   </div>
-                  <div className="flex-1 space-y-1.5 overflow-y-auto max-h-[360px]">
-                    {reminders.length === 0 ? (
-                      <div className="py-8 text-center px-2">
-                        <p className="text-[13px] text-slate-600">Nothing due right now</p>
-                        <p className="text-[11px] text-slate-400 mt-1">
-                          Assign tasks in Lab workspace to see them here
-                        </p>
-                      </div>
-                    ) : (
-                      reminders.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => navigate(item.link)}
-                          className="w-full text-left px-2.5 py-2 rounded-lg border border-transparent hover:border-slate-200 hover:bg-slate-50 transition-colors group"
-                        >
-                          <div className="flex items-start gap-2">
-                            <span
-                              className={`mt-0.5 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${urgencyBadge(item.urgency)}`}
-                            >
-                              {item.urgency}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-[13px] font-medium text-slate-900 line-clamp-2 group-hover:text-slate-700">
-                                {item.title}
-                              </p>
-                              <p className="text-[11px] text-slate-500 mt-0.5">
-                                {item.subtitle} · {item.source}
-                              </p>
-                            </div>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              ) : null}
-
-              {showNotes ? (
-                <div className="p-4 min-h-[280px] flex flex-col bg-slate-50/40">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <PencilSquareIcon className="w-4 h-4 text-slate-700" />
-                      <h3 className="text-[13px] font-semibold text-slate-900">Notes</h3>
-                    </div>
-                    <div className="flex items-center gap-2">
+                }
+              >
+                <div className="flex-1 space-y-2 overflow-y-auto max-h-[360px]">
+                  {notes.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-sky-200/80 bg-gradient-to-br from-sky-50/50 to-white px-3 py-8 text-center">
+                      <p className="text-[13px] text-slate-700">No sticky notes yet</p>
+                      <p className="mt-1 mb-3 text-[12px] text-slate-400">
+                        Capture a thought — syncs with notebook quick notes
+                      </p>
                       <button
                         type="button"
                         onClick={openCreateNote}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-sky-700 px-3 py-1.5 text-[12px] font-medium text-white shadow-sm hover:bg-sky-800"
                       >
-                        <PlusIcon className="w-3.5 h-3.5" />
-                        Add
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => navigate('/lab-notebook')}
-                        className="text-[11px] font-medium text-slate-500 hover:text-slate-900 inline-flex items-center gap-0.5"
-                      >
-                        Notebook
-                        <ArrowRightIcon className="w-3 h-3" />
+                        <PlusIcon className="h-3.5 w-3.5" />
+                        Create note
                       </button>
                     </div>
-                  </div>
-
-                  <div className="flex-1 space-y-2 overflow-y-auto max-h-[360px]">
-                    {notes.length === 0 ? (
-                      <div className="py-6 text-center px-2">
-                        <p className="text-[13px] text-slate-600">No sticky notes yet</p>
-                        <p className="text-[11px] text-slate-400 mt-1 mb-3">
-                          Capture a thought — syncs with notebook quick notes
+                  ) : (
+                    notes.map((note) => (
+                      <div
+                        key={note.id}
+                        className={`group relative rounded-xl border px-3 py-2.5 ${noteColorClass(note.color)}`}
+                      >
+                        <p className="pr-14 whitespace-pre-wrap text-[13px] text-slate-800">
+                          {note.content}
                         </p>
-                        <button
-                          type="button"
-                          onClick={openCreateNote}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800"
-                        >
-                          <PlusIcon className="w-3.5 h-3.5" />
-                          Create note
-                        </button>
-                      </div>
-                    ) : (
-                      notes.map((note) => (
-                        <div
-                          key={note.id}
-                          className={`relative group rounded-lg border px-3 py-2.5 ${noteColorClass(note.color)}`}
-                        >
-                          <p className="text-[13px] text-slate-800 whitespace-pre-wrap pr-14">
-                            {note.content}
-                          </p>
-                          <p className="text-[10px] text-slate-500 mt-1.5">
-                            {formatRelative(note.updatedAt || note.createdAt)}
-                          </p>
-                          <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                            <button
-                              type="button"
-                              onClick={() => openEditNote(note)}
-                              className="p-1 rounded text-slate-500 hover:text-slate-800 hover:bg-white/70"
-                              aria-label="Edit note"
-                            >
-                              <PencilIcon className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => void handleDeleteNote(note.id)}
-                              className="p-1 rounded text-slate-500 hover:text-red-700 hover:bg-white/70"
-                              aria-label="Delete note"
-                            >
-                              <TrashIcon className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              ) : null}
-
-              {showActivity ? (
-                <div className="p-4 min-h-[280px] flex flex-col">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <ClockIcon className="w-4 h-4 text-slate-700" />
-                      <h3 className="text-[13px] font-semibold text-slate-900">Recent activity</h3>
-                    </div>
-                  </div>
-                  <div className="flex-1 space-y-1.5 overflow-y-auto max-h-[360px]">
-                    {activities.length === 0 ? (
-                      <div className="py-8 text-center px-2">
-                        <p className="text-[13px] text-slate-600">No recent activity</p>
-                        <p className="text-[11px] text-slate-400 mt-1">
-                          Notebook entries, tasks, and experiments appear here live
+                        <p className="mt-1.5 text-[10px] text-slate-500">
+                          {formatRelative(note.updatedAt || note.createdAt)}
                         </p>
-                      </div>
-                    ) : (
-                      activities.map((item) => {
-                        const Icon = activityIcon(item.kind);
-                        return (
+                        <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                           <button
-                            key={item.id}
                             type="button"
-                            onClick={() => navigate(item.link)}
-                            className="w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg hover:bg-slate-50 transition-colors text-left group"
+                            onClick={() => openEditNote(note)}
+                            className="rounded-md p-1 text-slate-500 hover:bg-white/70 hover:text-slate-800"
+                            aria-label="Edit note"
                           >
-                            <span className="mt-0.5 w-7 h-7 rounded-md bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
-                              <Icon className="w-3.5 h-3.5" />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-[13px] font-medium text-slate-900 truncate group-hover:text-slate-700">
-                                {item.title}
-                              </p>
-                              <p className="text-[11px] text-slate-500 mt-0.5 truncate">
-                                {item.source} · {item.subtitle} · {formatRelative(item.timestamp)}
-                              </p>
-                            </div>
-                            <ArrowRightIcon className="w-3.5 h-3.5 text-slate-300 mt-1 shrink-0 group-hover:text-slate-500" />
+                            <PencilIcon className="h-3.5 w-3.5" />
                           </button>
-                        );
-                      })
-                    )}
-                  </div>
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteNote(note.id)}
+                            className="rounded-md p-1 text-slate-500 hover:bg-white/70 hover:text-rose-700"
+                            aria-label="Delete note"
+                          >
+                            <TrashIcon className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
-              ) : null}
-            </div>
-          </section>
+              </PagePanel>
+            ) : null}
+          </div>
 
-          {/* Quick actions */}
-          <section className="bg-white border border-slate-200/80 rounded-xl p-4">
-            <h2 className="text-[13px] font-semibold text-slate-900 mb-3 flex items-center gap-2">
-              <PlusIcon className="w-4 h-4 text-slate-500" />
-              Quick actions
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          <PagePanel
+            accent="sky"
+            title={
+              <span className="inline-flex items-center gap-2">
+                <PlusIcon className="h-4 w-4 text-slate-500" />
+                Quick actions
+              </span>
+            }
+          >
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {quickActions.map((action) => {
                 const Icon = action.icon;
                 return (
@@ -717,62 +662,63 @@ const DashboardPage: React.FC = () => {
                     key={action.title}
                     type="button"
                     onClick={() => navigate(action.link)}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors text-left group"
+                    className="group flex items-center gap-3 rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50/60 p-3 text-left transition-colors hover:border-sky-100 hover:from-sky-50/40 hover:to-white"
                   >
-                    <div className={`p-2 bg-gradient-to-br ${action.color} rounded-lg`}>
-                      <Icon className="w-4 h-4 text-white" />
+                    <div
+                      className={`rounded-xl bg-gradient-to-br p-2.5 shadow-md ${action.well}`}
+                    >
+                      <Icon className="h-4 w-4 text-white" />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-[13px] font-medium text-slate-900">{action.title}</p>
-                      <p className="text-[11px] text-slate-500 truncate">{action.description}</p>
+                      <p className="truncate text-[11px] text-slate-500">{action.description}</p>
                     </div>
                   </button>
                 );
               })}
             </div>
-          </section>
+          </PagePanel>
 
-          {/* Stay connected */}
-          <section>
-            <div className="flex items-end justify-between gap-3 mb-3 px-0.5">
-              <div>
-                <h2 className="text-[15px] font-semibold text-slate-900">Stay connected</h2>
-                <p className="text-[12px] text-slate-500 mt-0.5">
-                  Upcoming events, open questions, and what the community is sharing
-                </p>
-              </div>
+          <section className="space-y-3">
+            <div>
+              <h2 className="text-[15px] font-semibold tracking-tight text-slate-900">
+                Stay connected
+              </h2>
+              <p className="mt-0.5 text-[12px] text-slate-500">
+                Events, open questions, and what the community is sharing
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white border border-slate-200/80 rounded-xl overflow-hidden flex flex-col">
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2 bg-gradient-to-br from-sky-50/80 to-white">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-8 h-8 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
-                      <CalendarDaysIcon className="w-4 h-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-slate-900">Events</p>
-                      <p className="text-[11px] text-slate-500 truncate">Conferences & exchanges</p>
-                    </div>
-                  </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <PagePanel
+                accent="sky"
+                className="flex flex-col"
+                title={
+                  <span className="inline-flex items-center gap-2">
+                    <CalendarDaysIcon className="h-4 w-4 text-sky-700" />
+                    Events
+                  </span>
+                }
+                action={
                   <button
                     type="button"
                     onClick={() => navigate('/events-opportunities')}
-                    className="text-[11px] font-medium text-slate-600 hover:text-slate-900 inline-flex items-center gap-0.5 shrink-0"
+                    className="inline-flex items-center gap-0.5 text-[12px] font-medium text-slate-500 hover:text-slate-900"
                   >
                     Browse
-                    <ArrowRightIcon className="w-3 h-3" />
+                    <ArrowRightIcon className="h-3 w-3" />
                   </button>
-                </div>
-                <div className="flex-1 p-3 space-y-1.5">
+                }
+              >
+                <div className="flex-1 space-y-1">
                   {events.length === 0 ? (
                     <button
                       type="button"
                       onClick={() => navigate('/events-opportunities')}
-                      className="w-full text-left px-2.5 py-6 rounded-lg hover:bg-slate-50 transition-colors"
+                      className="w-full rounded-xl border border-dashed border-slate-200 px-3 py-6 text-left transition-colors hover:bg-slate-50"
                     >
-                      <p className="text-[13px] text-slate-600">Nothing upcoming right now</p>
-                      <p className="text-[11px] text-slate-400 mt-1">Explore events & opportunities →</p>
+                      <p className="text-[13px] text-slate-600">Nothing upcoming</p>
+                      <p className="mt-1 text-[11px] text-slate-400">Explore events →</p>
                     </button>
                   ) : (
                     events.map((event) => (
@@ -780,17 +726,17 @@ const DashboardPage: React.FC = () => {
                         key={event.id}
                         type="button"
                         onClick={() => navigate('/events-opportunities')}
-                        className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-slate-50 transition-colors group"
+                        className="group w-full rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-sky-50/50"
                       >
-                        <p className="text-[13px] font-medium text-slate-900 line-clamp-2 group-hover:text-slate-700">
+                        <p className="text-[13px] font-medium text-slate-900 line-clamp-2 group-hover:text-slate-800">
                           {event.title}
                         </p>
-                        <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+                        <p className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
                           {event.startDate ? <span>{formatShortDate(event.startDate)}</span> : null}
                           {event.location ? (
                             <span className="inline-flex items-center gap-0.5">
-                              <MapPinIcon className="w-3 h-3" />
-                              <span className="truncate max-w-[9rem]">{event.location}</span>
+                              <MapPinIcon className="h-3 w-3" />
+                              <span className="max-w-[9rem] truncate">{event.location}</span>
                             </span>
                           ) : null}
                         </p>
@@ -798,37 +744,37 @@ const DashboardPage: React.FC = () => {
                     ))
                   )}
                 </div>
-              </div>
+              </PagePanel>
 
-              <div className="bg-white border border-slate-200/80 rounded-xl overflow-hidden flex flex-col">
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2 bg-gradient-to-br from-amber-50/80 to-white">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
-                      <QuestionMarkCircleIcon className="w-4 h-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-slate-900">Help forum</p>
-                      <p className="text-[11px] text-slate-500 truncate">Ask & answer</p>
-                    </div>
-                  </div>
+              <PagePanel
+                accent="amber"
+                className="flex flex-col"
+                title={
+                  <span className="inline-flex items-center gap-2">
+                    <QuestionMarkCircleIcon className="h-4 w-4 text-amber-700" />
+                    Help forum
+                  </span>
+                }
+                action={
                   <button
                     type="button"
                     onClick={() => navigate('/help-forum')}
-                    className="text-[11px] font-medium text-slate-600 hover:text-slate-900 inline-flex items-center gap-0.5 shrink-0"
+                    className="inline-flex items-center gap-0.5 text-[12px] font-medium text-slate-500 hover:text-slate-900"
                   >
                     Browse
-                    <ArrowRightIcon className="w-3 h-3" />
+                    <ArrowRightIcon className="h-3 w-3" />
                   </button>
-                </div>
-                <div className="flex-1 p-3 space-y-1.5">
+                }
+              >
+                <div className="flex-1 space-y-1">
                   {forumItems.length === 0 ? (
                     <button
                       type="button"
                       onClick={() => navigate('/help-forum')}
-                      className="w-full text-left px-2.5 py-6 rounded-lg hover:bg-slate-50 transition-colors"
+                      className="w-full rounded-xl border border-dashed border-slate-200 px-3 py-6 text-left transition-colors hover:bg-slate-50"
                     >
-                      <p className="text-[13px] text-slate-600">No open questions yet</p>
-                      <p className="text-[11px] text-slate-400 mt-1">Start a thread or help someone →</p>
+                      <p className="text-[13px] text-slate-600">No open questions</p>
+                      <p className="mt-1 text-[11px] text-slate-400">Ask or help someone →</p>
                     </button>
                   ) : (
                     forumItems.map((item) => (
@@ -836,15 +782,15 @@ const DashboardPage: React.FC = () => {
                         key={item.id}
                         type="button"
                         onClick={() => navigate('/help-forum')}
-                        className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-slate-50 transition-colors group"
+                        className="group w-full rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-amber-50/50"
                       >
-                        <p className="text-[13px] font-medium text-slate-900 line-clamp-2 group-hover:text-slate-700">
+                        <p className="text-[13px] font-medium text-slate-900 line-clamp-2 group-hover:text-slate-800">
                           {item.title}
                         </p>
-                        <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+                        <p className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
                           {item.category ? <span>{item.category}</span> : null}
                           <span className="inline-flex items-center gap-0.5 text-slate-400">
-                            <ChatBubbleLeftRightIcon className="w-3 h-3" />
+                            <ChatBubbleLeftRightIcon className="h-3 w-3" />
                             {item.responses ?? 0}
                           </span>
                         </p>
@@ -852,37 +798,37 @@ const DashboardPage: React.FC = () => {
                     ))
                   )}
                 </div>
-              </div>
+              </PagePanel>
 
-              <div className="bg-white border border-slate-200/80 rounded-xl overflow-hidden flex flex-col">
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2 bg-gradient-to-br from-emerald-50/80 to-white">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
-                      <NewspaperIcon className="w-4 h-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-slate-900">News & updates</p>
-                      <p className="text-[11px] text-slate-500 truncate">Community feed</p>
-                    </div>
-                  </div>
+              <PagePanel
+                accent="emerald"
+                className="flex flex-col"
+                title={
+                  <span className="inline-flex items-center gap-2">
+                    <NewspaperIcon className="h-4 w-4 text-emerald-700" />
+                    News & updates
+                  </span>
+                }
+                action={
                   <button
                     type="button"
                     onClick={() => navigate('/current-trends')}
-                    className="text-[11px] font-medium text-slate-600 hover:text-slate-900 inline-flex items-center gap-0.5 shrink-0"
+                    className="inline-flex items-center gap-0.5 text-[12px] font-medium text-slate-500 hover:text-slate-900"
                   >
                     Browse
-                    <ArrowRightIcon className="w-3 h-3" />
+                    <ArrowRightIcon className="h-3 w-3" />
                   </button>
-                </div>
-                <div className="flex-1 p-3 space-y-1.5">
+                }
+              >
+                <div className="flex-1 space-y-1">
                   {newsItems.length === 0 ? (
                     <button
                       type="button"
                       onClick={() => navigate('/current-trends')}
-                      className="w-full text-left px-2.5 py-6 rounded-lg hover:bg-slate-50 transition-colors"
+                      className="w-full rounded-xl border border-dashed border-slate-200 px-3 py-6 text-left transition-colors hover:bg-slate-50"
                     >
                       <p className="text-[13px] text-slate-600">Feed is quiet</p>
-                      <p className="text-[11px] text-slate-400 mt-1">Share news or an idea →</p>
+                      <p className="mt-1 text-[11px] text-slate-400">Share news or an idea →</p>
                     </button>
                   ) : (
                     newsItems.map((item) => (
@@ -892,12 +838,12 @@ const DashboardPage: React.FC = () => {
                         onClick={() =>
                           navigate(`/current-trends?post=${encodeURIComponent(item.id)}`)
                         }
-                        className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-slate-50 transition-colors group"
+                        className="group w-full rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-emerald-50/50"
                       >
-                        <p className="text-[13px] font-medium text-slate-900 line-clamp-2 group-hover:text-slate-700">
+                        <p className="text-[13px] font-medium text-slate-900 line-clamp-2 group-hover:text-slate-800">
                           {item.title}
                         </p>
-                        <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+                        <p className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
                           {item.postType ? (
                             <span className="capitalize">{item.postType}</span>
                           ) : null}
@@ -907,7 +853,7 @@ const DashboardPage: React.FC = () => {
                     ))
                   )}
                 </div>
-              </div>
+              </PagePanel>
             </div>
           </section>
         </div>
@@ -935,5 +881,6 @@ const DashboardPage: React.FC = () => {
     </div>
   );
 };
+
 
 export default DashboardPage;

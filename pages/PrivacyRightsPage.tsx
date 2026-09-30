@@ -1,19 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { getAuthHeaders, getAuthToken, resolveApiBaseUrl, formatApiNetworkError } from '../utils/apiBase';
 import { Link, useSearchParams } from 'react-router-dom';
 
-const resolveApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL.replace(/\/$/, '');
-  }
-  if (typeof window !== 'undefined') {
-    const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-    if (isLocalhost) {
-      return `http://localhost:${import.meta.env.VITE_API_PORT || '5002'}/api`;
-    }
-    return `${window.location.origin}/api`;
-  }
-  return 'http://localhost:5002/api';
-};
 
 type RequestType = 'access' | 'rectification' | 'erasure' | 'portability' | 'restriction' | 'objection';
 

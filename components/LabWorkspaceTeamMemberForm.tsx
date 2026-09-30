@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from './icons';
 import axios from 'axios';
+import { getAuthToken } from '../utils/apiBase';
 
 interface TeamMemberFormProps {
   isOpen: boolean;
@@ -73,44 +74,38 @@ const LabWorkspaceTeamMemberForm: React.FC<TeamMemberFormProps> = ({
     }
   }, [isOpen, initialData]);
 
-  // Search for users by email
+  // Search for users by email/name
   const searchUsers = async (query: string) => {
-    if (!query || query.length < 3) {
+    if (!query || query.length < 2) {
       setSearchResults([]);
       return;
     }
 
     setSearching(true);
     try {
-      const token = localStorage.getItem('token');
-      // Try to search users by email
-      const response = await axios.get('/api/users', {
-        headers: { Authorization: `Bearer ${token}` }
-      }).catch(() => ({ data: { users: [] } }));
-      
-      // Filter users by email/name match
+      const token = getAuthToken();
+      const response = await axios.get('/api/users/search', {
+        headers: { Authorization: `Bearer ${token || ''}` },
+        params: { q: query },
+      });
+
       const allUsers = response.data.users || [];
-      const matchingUsers = allUsers.filter((u: any) => 
-        (u.email && u.email.toLowerCase().includes(query.toLowerCase())) ||
-        (u.first_name && u.first_name.toLowerCase().includes(query.toLowerCase())) ||
-        (u.last_name && u.last_name.toLowerCase().includes(query.toLowerCase())) ||
-        (u.username && u.username.toLowerCase().includes(query.toLowerCase()))
-      );
-      
-      // Filter out users who are already members
-      const existingUserIds = existingMembers.map(m => m.user_id || m.id);
-      const filtered = matchingUsers.filter((u: any) => 
-        !existingUserIds.includes(u.id) || (initialData && u.id === initialData.user_id)
-      ).map((u: any) => ({
-        id: u.id,
-        email: u.email,
-        name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username || u.email
-      }));
-      
+      const existingUserIds = existingMembers.map((m) => m.user_id || m.id);
+      const filtered = allUsers
+        .filter(
+          (u: any) =>
+            !existingUserIds.includes(u.id) ||
+            (initialData && u.id === (initialData.user_id || initialData.id))
+        )
+        .map((u: any) => ({
+          id: u.id,
+          email: u.email,
+          name: u.name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email,
+        }));
+
       setSearchResults(filtered);
     } catch (err: any) {
-      // If search fails, allow manual email entry
-      console.log('User search not available, will use email directly');
+      console.log('User search unavailable, email invite still allowed');
       setSearchResults([]);
     } finally {
       setSearching(false);
@@ -142,10 +137,9 @@ const LabWorkspaceTeamMemberForm: React.FC<TeamMemberFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // For new members, require user selection or email
+
     if (!initialData && !selectedUser && !userSearch.trim()) {
-      setError('Please search and select a user, or enter an email address');
+      setError('Enter a colleague’s email, or pick someone from the search results');
       return;
     }
 
@@ -158,54 +152,44 @@ const LabWorkspaceTeamMemberForm: React.FC<TeamMemberFormProps> = ({
     setError(null);
 
     try {
-      // If editing, use existing user_id
-      // If creating, we need to find user by email or use selected user
-      let userId: string;
-      
+      let submitData: { user_id?: string; email?: string; role: string; permissions: any };
+
       if (initialData) {
-        // Editing existing member
-        userId = initialData.user_id || initialData.id;
+        submitData = {
+          user_id: initialData.user_id || initialData.id,
+          role: formData.role,
+          permissions: {
+            ...formData.permissions,
+            roleLabel:
+              formData.roleLabel ||
+              roles.find((r) => r.label === formData.roleLabel)?.label ||
+              '',
+            roleCategory: roles.find((r) => r.label === formData.roleLabel)?.category || '',
+          },
+        };
       } else if (selectedUser) {
-        // New member - user selected from search
-        userId = selectedUser.id;
+        submitData = {
+          user_id: selectedUser.id,
+          email: selectedUser.email,
+          role: formData.role,
+          permissions: {
+            ...formData.permissions,
+            roleLabel: formData.roleLabel || '',
+            roleCategory: roles.find((r) => r.label === formData.roleLabel)?.category || '',
+          },
+        };
       } else {
-        // New member - try to find user by email
-        // First try to get user by email from /api/users
-        try {
-          const token = localStorage.getItem('token');
-          const usersResponse = await axios.get('/api/users', {
-            headers: { Authorization: `Bearer ${token}` }
-          }).catch(() => ({ data: { users: [] } }));
-          
-          const foundUser = usersResponse.data.users?.find((u: any) => 
-            u.email.toLowerCase() === userSearch.toLowerCase()
-          );
-          
-          if (foundUser) {
-            userId = foundUser.id;
-          } else {
-            throw new Error('User not found. Please search for the user first.');
-          }
-        } catch (searchError: any) {
-          setError(searchError.message || 'User not found. Please search for the user by email.');
-          setLoading(false);
-          return;
-        }
+        // Invite by email — backend resolves the account
+        submitData = {
+          email: userSearch.trim(),
+          role: formData.role,
+          permissions: {
+            ...formData.permissions,
+            roleLabel: formData.roleLabel || '',
+            roleCategory: roles.find((r) => r.label === formData.roleLabel)?.category || '',
+          },
+        };
       }
-
-      // Store detailed role label in permissions for display purposes
-      const selectedRoleInfo = roles.find(r => r.label === formData.roleLabel);
-      const permissionsWithRole = {
-        ...formData.permissions,
-        roleLabel: formData.roleLabel || selectedRoleInfo?.label || '',
-        roleCategory: selectedRoleInfo?.category || ''
-      };
-
-      const submitData = {
-        user_id: userId,
-        role: formData.role,
-        permissions: permissionsWithRole
-      };
 
       await onSubmit(submitData);
       onClose();
@@ -364,10 +348,12 @@ const LabWorkspaceTeamMemberForm: React.FC<TeamMemberFormProps> = ({
                       setSelectedUser(null);
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter email address"
+                    placeholder="Type a name or email to find colleagues"
                     required={!initialData}
                   />
-                  
+                  <p className="mt-1.5 text-[12px] text-slate-500">
+                    Pick a match from the list, or enter their full account email to invite.
+                  </p>
                   {/* Search Results Dropdown */}
                   {searchResults.length > 0 && !selectedUser && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -416,7 +402,7 @@ const LabWorkspaceTeamMemberForm: React.FC<TeamMemberFormProps> = ({
                   if (selectedRole) {
                     setFormData(prev => ({
                       ...prev,
-                      role: selectedRole.value,
+                      role: selectedRole.value as typeof prev.role,
                       roleLabel: selectedRole.label
                     }));
                   }

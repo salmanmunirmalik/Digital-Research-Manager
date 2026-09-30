@@ -6,6 +6,49 @@
 import axios from 'axios';
 import { AIProvider, AIProviderConfig, ChatMessage, ChatResponse, EmbeddingResponse } from '../AIProvider.js';
 
+const DEFAULT_CHAT_MODEL = 'gemini-3.6-flash';
+
+/** Prefer env primary, then other flash models when capacity / availability fails. */
+const CHAT_MODEL_FALLBACKS = [
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-3.8-flash',
+  'gemini-3.7-flash',
+  'gemini-flash-latest',
+  'gemini-3.1-flash-lite',
+  'gemini-2.5-flash-lite',
+] as const;
+
+function sanitizeGeminiError(raw: unknown): string {
+  return String(raw || 'Unknown error')
+    .replace(/AIza[0-9A-Za-z_-]{10,}/g, 'AIza***')
+    .replace(/AQ\.[A-Za-z0-9_-]{10,}/g, 'AQ.***')
+    .replace(/api_key:[^\s']+/gi, 'api_key:***');
+}
+
+function isRetryableGeminiError(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes('high demand') ||
+    m.includes('try again later') ||
+    m.includes('temporarily') ||
+    m.includes('overloaded') ||
+    m.includes('unavailable') ||
+    m.includes('no longer available') ||
+    m.includes('not found') ||
+    m.includes('resource_exhausted') ||
+    m.includes('429') ||
+    m.includes('503') ||
+    m.includes('500')
+  );
+}
+
+export function resolveGeminiChatModels(preferred?: string): string[] {
+  const primary = (preferred || process.env.GEMINI_CHAT_MODEL || DEFAULT_CHAT_MODEL).trim();
+  const ordered = [primary, ...CHAT_MODEL_FALLBACKS.filter((m) => m !== primary)];
+  return [...new Set(ordered)];
+}
+
 export class GoogleGeminiProvider implements AIProvider {
   readonly provider = 'google_gemini';
   readonly providerName = 'Google Gemini';
@@ -30,7 +73,7 @@ export class GoogleGeminiProvider implements AIProvider {
   }
   
   getDefaultChatModel(): string {
-    return 'gemini-pro';
+    return process.env.GEMINI_CHAT_MODEL?.trim() || DEFAULT_CHAT_MODEL;
   }
   
   getDefaultEmbeddingModel(): string {
@@ -41,7 +84,7 @@ export class GoogleGeminiProvider implements AIProvider {
     messages: ChatMessage[],
     config?: AIProviderConfig
   ): Promise<ChatResponse> {
-    const model = config?.model || this.getDefaultChatModel();
+    const models = resolveGeminiChatModels(config?.model || this.getDefaultChatModel());
     
     // Convert messages to Gemini format
     const contents = messages
@@ -53,42 +96,53 @@ export class GoogleGeminiProvider implements AIProvider {
     
     // Add system instruction if present
     const systemInstruction = messages.find(msg => msg.role === 'system')?.content;
-    
-    try {
-      const response = await axios.post(
-        `${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`,
-        {
-          contents,
-          systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
-          generationConfig: {
-            temperature: config?.temperature ?? 0.7,
-            maxOutputTokens: config?.maxTokens ?? 2000
-          }
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+    const body = {
+      contents,
+      systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
+      generationConfig: {
+        temperature: config?.temperature ?? 0.7,
+        maxOutputTokens: config?.maxTokens ?? 2000
+      }
+    };
+
+    let lastError = 'Unknown error';
+    for (let i = 0; i < models.length; i++) {
+      const model = models[i];
+      try {
+        const response = await axios.post(
+          `${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`,
+          body,
+          { headers: { 'Content-Type': 'application/json' } }
+        );
       
-      const data = response.data;
+        const data = response.data;
       
-      return {
-        content: data.candidates[0].content.parts[0].text,
-        model: model,
-        usage: {
-          promptTokens: data.usageMetadata?.promptTokenCount,
-          completionTokens: data.usageMetadata?.candidatesTokenCount,
-          totalTokens: data.usageMetadata?.totalTokenCount
-        },
-        metadata: {
-          finishReason: data.candidates[0].finishReason
+        return {
+          content: data.candidates[0].content.parts[0].text,
+          model,
+          usage: {
+            promptTokens: data.usageMetadata?.promptTokenCount,
+            completionTokens: data.usageMetadata?.candidatesTokenCount,
+            totalTokens: data.usageMetadata?.totalTokenCount
+          },
+          metadata: {
+            finishReason: data.candidates[0].finishReason,
+            ...(i > 0 ? { fallbackFrom: models[0] } : {})
+          }
+        };
+      } catch (error: any) {
+        lastError = sanitizeGeminiError(
+          error.response?.data?.error?.message || error.message
+        );
+        const retry = isRetryableGeminiError(lastError) && i < models.length - 1;
+        if (!retry) {
+          throw new Error(`Google Gemini API error: ${lastError}`);
         }
-      };
-    } catch (error: any) {
-      throw new Error(`Google Gemini API error: ${error.response?.data?.error?.message || error.message}`);
+        console.warn(`[Gemini] ${model} failed (${lastError.slice(0, 120)}); trying ${models[i + 1]}`);
+      }
     }
+
+    throw new Error(`Google Gemini API error: ${lastError}`);
   }
   
   async embed(
@@ -123,7 +177,10 @@ export class GoogleGeminiProvider implements AIProvider {
         }
       };
     } catch (error: any) {
-      throw new Error(`Google Gemini Embedding API error: ${error.response?.data?.error?.message || error.message}`);
+      const safe = sanitizeGeminiError(
+        error.response?.data?.error?.message || error.message
+      );
+      throw new Error(`Google Gemini Embedding API error: ${safe}`);
     }
   }
   
@@ -137,4 +194,3 @@ export class GoogleGeminiProvider implements AIProvider {
     }
   }
 }
-

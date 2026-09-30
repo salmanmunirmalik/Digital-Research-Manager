@@ -16,7 +16,9 @@ describe('UI Navigation Tests', () => {
       { name: 'Research Tools', path: '/research-tools' },
       { name: 'Marketplace', path: '/marketplace' },
       { name: 'Journals Directory', path: '/journals-directory' },
-      { name: 'AI Presentations', path: '/ai-presentations' },
+      { name: 'Writing studio', path: '/writing-studio' },
+      // Note: /writing-studio/compose/* and /writing-studio/m/* are immersive (no app SideNav).
+      // Desk/list above keeps AppLayout chrome.
       { name: 'Statistical Analysis Tools', path: '/statistical-analysis-tools' },
       { name: 'Profile', path: '/profile' },
       { name: 'Settings', path: '/settings' },

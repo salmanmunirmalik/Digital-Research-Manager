@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { getAuthHeaders, getAuthToken, resolveApiBaseUrl, formatApiNetworkError } from '../utils/apiBase';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import TaskListView from '../components/TaskListView';
@@ -8,7 +9,7 @@ import TaskCalendarView from '../components/TaskCalendarView';
 import TaskDetailPanel from '../components/TaskDetailPanel';
 import TaskForm from '../components/TaskForm';
 import ViewSwitcher, { ViewType } from '../components/ViewSwitcher';
-import FilterBar, { FilterConfig } from '../components/FilterBar';
+import type { FilterConfig } from '../components/FilterBar';
 import TeamMembersView from '../components/TeamMembersView';
 import ProjectsView from '../components/ProjectsView';
 import LabResourcesView from '../components/LabResourcesView';
@@ -35,40 +36,34 @@ import {
   CubeIcon,
   GlobeAltIcon,
   DocumentArrowUpIcon,
+  ChatBubbleLeftRightIcon,
+  MagnifyingGlassIcon,
 } from '../components/icons';
+import { PageHeader } from '../components/PageHeader';
 
 const ACTIVE_LAB_KEY = 'lab-workspace-active-lab';
-const EmbeddedMessaging = TeamMessagingPage as React.ComponentType<{ embedded?: boolean }>;
 
-const getAuthToken = () =>
-  localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+const authHeaders = () => ({ Authorization: `Bearer ${getAuthToken() || ''}` });
 
-const authHeaders = () => ({ Authorization: `Bearer ${getAuthToken()}` });
-
-type LabSection = 'tasks' | 'projects' | 'resources' | 'teams';
-
-type TeamTab = 'members' | 'messages';
-
-type TaskFocus = 'all' | 'mine' | 'unassigned' | 'person';
+type LabSection = 'tasks' | 'projects' | 'resources' | 'teams' | 'messages';
 
 const SECTIONS: { id: LabSection; label: string; icon: React.FC<React.SVGProps<SVGSVGElement>> }[] = [
   { id: 'tasks', label: 'Tasks', icon: ClipboardListIcon },
   { id: 'projects', label: 'Projects', icon: FolderIcon },
   { id: 'resources', label: 'Resources', icon: CubeIcon },
   { id: 'teams', label: 'Team', icon: UsersIcon },
+  { id: 'messages', label: 'Messages', icon: ChatBubbleLeftRightIcon },
 ];
 
 const LEGACY_SECTIONS: Record<string, LabSection> = {
   experiments: 'tasks',
   inventory: 'resources',
   instruments: 'resources',
+  messaging: 'messages',
 };
 
 const isLabSection = (value: string | null): value is LabSection =>
   !!value && SECTIONS.some((s) => s.id === value);
-
-const isTeamTab = (value: string | null): value is TeamTab =>
-  value === 'members' || value === 'messages';
 
 
 interface Workspace {
@@ -153,33 +148,31 @@ const LabWorkspacePage: React.FC = () => {
   
   const [activeSection, setActiveSection] = useState<LabSection>(() => {
     const section = searchParams.get('section');
-    if (section === 'messaging') return 'teams';
+    // Legacy: messages lived under Team
+    if (section === 'teams' && searchParams.get('tab') === 'messages') return 'messages';
     if (section && LEGACY_SECTIONS[section]) return LEGACY_SECTIONS[section];
     return isLabSection(section) ? section : 'tasks';
   });
-  const [teamTab, setTeamTab] = useState<TeamTab>(() => {
-    if (searchParams.get('section') === 'messaging') return 'messages';
-    const tab = searchParams.get('tab');
-    return isTeamTab(tab) ? tab : 'members';
-  });
-  const [taskFocus, setTaskFocus] = useState<TaskFocus>('all');
-  const [focusPersonId, setFocusPersonId] = useState<string>('');
 
   useEffect(() => {
     const section = searchParams.get('section');
-    if (section === 'messaging') {
+    const tab = searchParams.get('tab');
+
+    // Redirect legacy Team → Messages nested tab
+    if (section === 'teams' && tab === 'messages') {
       const next = new URLSearchParams(searchParams);
-      next.set('section', 'teams');
-      next.set('tab', 'messages');
+      next.set('section', 'messages');
+      next.delete('tab');
       setSearchParams(next, { replace: true });
-      setActiveSection('teams');
-      setTeamTab('messages');
+      setActiveSection('messages');
       return;
     }
+
     if (section && LEGACY_SECTIONS[section]) {
       const mapped = LEGACY_SECTIONS[section];
       const next = new URLSearchParams(searchParams);
       next.set('section', mapped);
+      next.delete('tab');
       setSearchParams(next, { replace: true });
       if (mapped !== activeSection) setActiveSection(mapped);
       return;
@@ -187,34 +180,16 @@ const LabWorkspacePage: React.FC = () => {
     if (isLabSection(section) && section !== activeSection) {
       setActiveSection(section);
     }
-    if (section === 'teams') {
-      const tab = searchParams.get('tab');
-      if (isTeamTab(tab) && tab !== teamTab) {
-        setTeamTab(tab);
-      }
-    }
   }, [searchParams]);
 
   const switchSection = (section: LabSection) => {
     setActiveSection(section);
     const next = new URLSearchParams(searchParams);
     next.set('section', section);
-    if (section === 'teams') {
-      next.set('tab', teamTab);
-    } else {
-      next.delete('tab');
-    }
+    next.delete('tab');
     setSearchParams(next, { replace: true });
   };
 
-  const switchTeamTab = (tab: TeamTab) => {
-    setTeamTab(tab);
-    setActiveSection('teams');
-    const next = new URLSearchParams(searchParams);
-    next.set('section', 'teams');
-    next.set('tab', tab);
-    setSearchParams(next, { replace: true });
-  };
   const [currentView, setCurrentView] = useState<ViewType>('list');
   const [filters, setFilters] = useState<FilterConfig>({});
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -357,12 +332,12 @@ const LabWorkspacePage: React.FC = () => {
     }
   };
 
-  // Fetch tasks when filters or focus changes
+  // Fetch tasks when filters or view changes
   useEffect(() => {
     if (workspace) {
       fetchTasks();
     }
-  }, [workspace, filters, currentView, taskFocus, focusPersonId]);
+  }, [workspace, filters, currentView]);
   // Fetch task details when selected
   useEffect(() => {
     if (selectedTask) {
@@ -434,16 +409,7 @@ const LabWorkspacePage: React.FC = () => {
       if (filters.status) params.status = filters.status.join(',');
       if (filters.priority) params.priority = filters.priority.join(',');
       if (filters.search) params.search = filters.search;
-
-      if (taskFocus === 'mine') {
-        params.mine = '1';
-      } else if (taskFocus === 'unassigned') {
-        params.unassigned = '1';
-      } else if (taskFocus === 'person' && focusPersonId) {
-        params.assignee_id = focusPersonId;
-      } else if (filters.assignee_id) {
-        params.assignee_id = filters.assignee_id.join(',');
-      }
+      if (filters.assignee_id) params.assignee_id = filters.assignee_id.join(',');
 
       let endpoint = '/api/lab-workspace/tasks';
       if (currentView === 'board') {
@@ -1101,115 +1067,130 @@ const LabWorkspacePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col bg-[#FAFBFC]">
+    <div className="h-[calc(100vh-4rem)] flex flex-col bg-gradient-to-br from-slate-50 via-white to-sky-50/30">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200/80 px-6 pt-5 pb-0">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
-          <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
-              Lab workspace
-            </h1>
-            <p className="mt-1.5 text-[14px] text-slate-600">
-              Run one or more labs from here. Showcase a lab when you want it discoverable on{' '}
-              <Link to="/collaboration-networking" className="font-medium text-slate-800 underline-offset-2 hover:underline">
-                Networking
-              </Link>
-              .
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <label className="text-[12px] font-medium text-slate-500">
-                Active lab
+      <div className="bg-gradient-to-br from-sky-50/95 via-white to-slate-50/80 border-b border-sky-100 px-6 pt-5 pb-0">
+        <PageHeader
+          className="mb-5 !rounded-none !border-0 !shadow-none !ring-0 !bg-transparent !px-0 !py-0"
+          title="Lab workspace"
+          accent="sky"
+          icon={<CubeIcon />}
+          subtitle={
+            activeLab?.name ? (
+              <>
+                Working in <span className="font-medium text-slate-800">{activeLab.name}</span>
+                {Number(activeLab.is_showcased) ? ' · live on Networking' : ''}
+              </>
+            ) : (
+              <>
+                Tasks, projects, resources, and team messaging for your lab.
+              </>
+            )
+          }
+          actions={
+            <>
+              {myLabs.length > 1 && (
                 <select
-                  className="ml-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-[13px] text-slate-800"
-                  value={labId || ''}
+                  aria-label="Switch lab"
+                  className="rounded-md border border-sky-200 bg-white/90 px-2.5 py-2 text-[13px] text-slate-800 max-w-[11rem]"
+                  value={labId || activeLab?.id || ''}
                   onChange={(e) => switchLab(e.target.value)}
                 >
-                  {myLabs.length === 0 && <option value="">Loading…</option>}
                   {myLabs.map((lab) => (
                     <option key={lab.id} value={lab.id}>
                       {lab.name}
-                      {Number(lab.is_showcased) ? ' · Live' : ''}
                     </option>
                   ))}
                 </select>
-              </label>
-              {activeLab && (
-                <span
-                  className={`text-[11px] font-medium px-2 py-0.5 rounded-md ${
-                    Number(activeLab.is_showcased)
-                      ? 'bg-emerald-50 text-emerald-800'
-                      : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  {Number(activeLab.is_showcased) ? 'Live on Networking' : 'Private workspace'}
-                </span>
               )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-            <button
-              type="button"
-              onClick={() => setShowCreateLab(true)}
-              className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-slate-800 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
-            >
-              <PlusIcon className="w-4 h-4" />
-              Create lab
-            </button>
-            {canManageShowcase && (
-              <button
-                type="button"
-                onClick={() => {
-                  setShowcaseLab(activeLab);
-                  setShowShowcase(true);
-                }}
-                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
-              >
-                <GlobeAltIcon className="w-4 h-4" />
-                {Number(activeLab?.is_showcased) ? 'Edit showcase' : 'Showcase on Networking'}
-              </button>
-            )}
-            {activeSection === 'tasks' && (
-              <button
-                type="button"
-                onClick={() => handleOpenTaskForm()}
-                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
-              >
-                <PlusIcon className="w-4 h-4" />
-                New task
-              </button>
-            )}
-            {activeSection === 'teams' && teamTab === 'members' && (
-              <button
-                type="button"
-                onClick={() => handleOpenTeamMemberForm()}
-                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
-              >
-                <PlusIcon className="w-4 h-4" />
-                Add member
-              </button>
-            )}
-            {activeSection === 'projects' && (
-              <>
+
+              {/* Landing (Tasks): lab-level actions + New task */}
+              {(myLabs.length === 0 || activeSection === 'tasks') && (
                 <button
                   type="button"
-                  onClick={() => setShowProjectImport(true)}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-slate-800 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
-                >
-                  <DocumentArrowUpIcon className="w-4 h-4" />
-                  Import
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleOpenProjectForm()}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+                  onClick={() => setShowCreateLab(true)}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-sky-900 bg-white/90 border border-sky-200 rounded-md hover:bg-sky-50 transition-colors"
                 >
                   <PlusIcon className="w-4 h-4" />
-                  New project
+                  Create lab
                 </button>
-              </>
-            )}
-          </div>
-        </div>
+              )}
+              {activeSection === 'tasks' && canManageShowcase && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowcaseLab(activeLab);
+                    setShowShowcase(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-sky-900 bg-white/90 border border-sky-200 rounded-md hover:bg-sky-50 transition-colors"
+                >
+                  <GlobeAltIcon className="w-4 h-4" />
+                  {Number(activeLab?.is_showcased) ? 'Edit showcase' : 'Showcase'}
+                </button>
+              )}
+              {activeSection === 'tasks' && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenTaskForm()}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-sky-700 rounded-md hover:bg-sky-800 transition-colors"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  New task
+                </button>
+              )}
+              {activeSection === 'projects' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowProjectImport(true)}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-sky-900 bg-white/90 border border-sky-200 rounded-md hover:bg-sky-50 transition-colors"
+                  >
+                    <DocumentArrowUpIcon className="w-4 h-4" />
+                    Import
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenProjectForm()}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-sky-700 rounded-md hover:bg-sky-800 transition-colors"
+                  >
+                    <PlusIcon className="w-4 h-4" />
+                    New project
+                  </button>
+                </>
+              )}
+              {activeSection === 'resources' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenInventoryForm()}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-sky-900 bg-white/90 border border-sky-200 rounded-md hover:bg-sky-50 transition-colors"
+                  >
+                    <PlusIcon className="w-4 h-4" />
+                    Consumable
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenInstrumentForm()}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-sky-700 rounded-md hover:bg-sky-800 transition-colors"
+                  >
+                    <PlusIcon className="w-4 h-4" />
+                    Instrument
+                  </button>
+                </>
+              )}
+              {activeSection === 'teams' && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenTeamMemberForm()}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-sky-700 rounded-md hover:bg-sky-800 transition-colors"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  Invite
+                </button>
+              )}
+            </>
+          }
+        />
         <div className="flex gap-1 overflow-x-auto">
           {SECTIONS.map(({ id, label, icon: Icon }) => (
             <button
@@ -1242,105 +1223,22 @@ const LabWorkspacePage: React.FC = () => {
         </div>
       )}
 
-      {/* Assignment focus + filters - tasks only */}
-      {activeSection === 'tasks' && (
-        <div className="px-6 py-3 border-b border-slate-200/80 bg-white space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mr-1">
-              Focus
-            </span>
-            {(
-              [
-                { id: 'all' as const, label: 'Everyone' },
-                { id: 'mine' as const, label: 'Assigned to me' },
-                { id: 'unassigned' as const, label: 'Unassigned pool' },
-                { id: 'person' as const, label: 'By person' },
-              ] as const
-            ).map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setTaskFocus(f.id)}
-                className={`px-3 py-1.5 text-[12px] font-medium rounded-full transition-colors ${
-                  taskFocus === f.id
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-            {taskFocus === 'person' && (
-              <select
-                value={focusPersonId}
-                onChange={(e) => setFocusPersonId(e.target.value)}
-                className="ml-1 px-2.5 py-1.5 text-[12px] border border-slate-200 rounded-md bg-white"
-              >
-                <option value="">Select teammate…</option>
-                {assignees.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            <div className="ml-auto text-[12px] text-slate-500">
-              {tasks.length} task{tasks.length === 1 ? '' : 's'}
-            </div>
-          </div>
-          <FilterBar
-            filters={filters}
-            onFiltersChange={setFilters}
-            assignees={assignees}
-          />
-        </div>
-      )}
-
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Main View Area */}
         <div className="flex-1 flex overflow-hidden">
-          {activeSection === 'teams' ? (
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0 bg-white">
-              <div className="px-6 py-3 border-b border-slate-200/80 flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => switchTeamTab('members')}
-                  className={`px-3 py-1.5 text-[13px] font-medium rounded-md transition-colors ${
-                    teamTab === 'members'
-                      ? 'bg-slate-900 text-white'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  Members
-                </button>
-                <button
-                  type="button"
-                  onClick={() => switchTeamTab('messages')}
-                  className={`px-3 py-1.5 text-[13px] font-medium rounded-md transition-colors ${
-                    teamTab === 'messages'
-                      ? 'bg-slate-900 text-white'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  Messages
-                </button>
-              </div>
-              {teamTab === 'messages' ? (
-                <div className="flex-1 overflow-hidden min-h-0">
-                  <EmbeddedMessaging embedded />
-                </div>
-              ) : (
-                <TeamMembersView
-                  members={teamMembers}
-                  onInvite={() => handleOpenTeamMemberForm()}
-                  onEdit={(member) => handleOpenTeamMemberForm(member)}
-                  onDelete={(member) => handleDeleteTeamMember(member.user_id || member.id)}
-                  onMessage={() => switchTeamTab('messages')}
-                  loading={loading}
-                />
-              )}
+          {activeSection === 'messages' ? (
+            <div className="flex-1 overflow-hidden min-h-0">
+              <TeamMessagingPage embedded teamMembers={teamMembers} />
             </div>
+          ) : activeSection === 'teams' ? (
+            <TeamMembersView
+              members={teamMembers}
+              onInvite={() => handleOpenTeamMemberForm()}
+              onEdit={(member) => handleOpenTeamMemberForm(member)}
+              onDelete={(member) => handleDeleteTeamMember(member.user_id || member.id)}
+              loading={loading}
+            />
           ) : activeSection === 'projects' ? (
             <ProjectsView
               projects={projects}
@@ -1363,21 +1261,35 @@ const LabWorkspacePage: React.FC = () => {
               onScheduleMaintenance={(instrument) => handleOpenMaintenanceForm(instrument)}
               onViewRoster={(instrument) => handleOpenRosterView(instrument)}
               loading={loading}
+              hideCreateMenu
             />
           ) : (
             <>
               <div className="flex-1 overflow-y-auto">
-                <div className="bg-white border-b border-slate-200/80 px-6 py-2 flex items-center justify-between gap-3">
-                  <p className="text-[12px] text-slate-500 hidden sm:block">
-                    Assignment-first board - claim from the pool or hand work to a teammate.
-                  </p>
-                  <ViewSwitcher currentView={currentView} onViewChange={setCurrentView} />
+                <div className="bg-white/80 backdrop-blur-sm border-b border-slate-200/80 px-4 sm:px-6 py-2.5 flex flex-wrap items-center gap-2.5">
+                  <div className="relative flex-1 min-w-[12rem] max-w-sm">
+                    <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="search"
+                      placeholder="Search tasks…"
+                      value={filters.search || ''}
+                      onChange={(e) =>
+                        setFilters((prev) => ({ ...prev, search: e.target.value || undefined }))
+                      }
+                      className="w-full pl-8 pr-3 py-1.5 text-[13px] border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-300"
+                    />
+                  </div>
+                  <span className="text-[12px] text-slate-500 tabular-nums">
+                    {tasks.length} task{tasks.length === 1 ? '' : 's'}
+                  </span>
+                  <div className="ml-auto">
+                    <ViewSwitcher currentView={currentView} onViewChange={setCurrentView} />
+                  </div>
                 </div>
-                
+
                 {currentView === 'list' && (
                   <TaskListView
                     tasks={tasks}
-                    groupBy={taskFocus === 'all' ? 'assignee' : undefined}
                     onTaskClick={setSelectedTask}
                     onCreateTask={() => handleOpenTaskForm()}
                     loading={loading}
@@ -1398,13 +1310,6 @@ const LabWorkspacePage: React.FC = () => {
                     onCreateTask={() => handleOpenTaskForm()}
                     loading={loading}
                   />
-                )}
-                {currentView === 'table' && (
-                  <div className="p-8 text-center">
-                    <p className="text-[13px] text-slate-500">
-                      Table view is not available yet. Use list or board instead.
-                    </p>
-                  </div>
                 )}
               </div>
 
@@ -1434,7 +1339,7 @@ const LabWorkspacePage: React.FC = () => {
         onSubmit={handleCreateTask}
         assignees={assignees}
         workspaceId={workspace?.id}
-        defaultAssigneeId={taskFocus === 'mine' ? (user?.id || '') : focusPersonId}
+        defaultAssigneeId={user?.id || ''}
       />
 
       {/* Inventory Form Modal */}

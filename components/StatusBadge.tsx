@@ -7,11 +7,11 @@ interface StatusBadgeProps {
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' }) => {
   const config = {
-    to_do: { color: 'bg-gray-100 text-gray-700 border-gray-300', label: 'To Do' },
-    in_progress: { color: 'bg-blue-100 text-blue-700 border-blue-300', label: 'In Progress' },
-    in_review: { color: 'bg-yellow-100 text-yellow-700 border-yellow-300', label: 'In Review' },
-    done: { color: 'bg-green-100 text-green-700 border-green-300', label: 'Done' },
-    cancelled: { color: 'bg-red-100 text-red-700 border-red-300', label: 'Cancelled' }
+    to_do: { color: 'bg-slate-50 text-slate-700 border-slate-200', label: 'To do' },
+    in_progress: { color: 'bg-sky-50 text-sky-800 border-sky-100', label: 'In progress' },
+    in_review: { color: 'bg-amber-50 text-amber-800 border-amber-100', label: 'In review' },
+    done: { color: 'bg-emerald-50 text-emerald-800 border-emerald-100', label: 'Done' },
+    cancelled: { color: 'bg-rose-50 text-rose-800 border-rose-100', label: 'Cancelled' }
   };
 
   const sizeClasses = {

@@ -249,15 +249,16 @@ router.get('/', authenticateToken, async (req, res) => {
     )`;
     queryParams.push(req.user.id);
 
-    // Search filter
+    // Search filter (MySQL-safe; avoid Postgres arrays / FTS)
     if (search) {
       query += ` AND (
-        p.title ILIKE $${++paramCount} OR
-        p.description ILIKE $${++paramCount} OR
-        p.tags && $${++paramCount} OR
-        p.search_vector @@ plainto_tsquery('english', $${++paramCount})
+        p.title LIKE $${++paramCount} OR
+        p.description LIKE $${++paramCount} OR
+        COALESCE(p.tags, '') LIKE $${++paramCount} OR
+        COALESCE(p.keywords, '') LIKE $${++paramCount}
       )`;
-      queryParams.push(`%${search}%`, `%${search}%`, [search], search);
+      const term = `%${search}%`;
+      queryParams.push(term, term, term, term);
     }
 
     // Other filters

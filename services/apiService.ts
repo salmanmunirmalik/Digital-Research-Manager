@@ -1,33 +1,15 @@
 import { Protocol, Project, ResultEntry, InventoryItem, Instrument } from '../types';
-
-const resolveApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL.replace(/\/$/, '');
-  }
-
-  if (typeof window !== 'undefined') {
-    const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-    if (isLocalhost) {
-      const port = import.meta.env.VITE_API_PORT || '5002';
-      return `http://localhost:${port}/api`;
-    }
-
-    return `${window.location.origin}/api`;
-  }
-
-  return 'http://localhost:5002/api';
-};
+import {
+  clearAuthToken,
+  formatApiNetworkError,
+  getAuthHeaders,
+  getAuthToken,
+  isBackendUnreachableError,
+  resolveApiBaseUrl,
+  setAuthToken,
+} from '../utils/apiBase';
 
 const API_BASE_URL = resolveApiBaseUrl();
-
-// Helper function to get auth headers
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('authToken');
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` })
-  };
-};
 
 // Generic API request function with better error handling
 const apiRequest = async <T>(
@@ -46,17 +28,31 @@ const apiRequest = async <T>(
     
     if (!response.ok) {
       if (response.status === 401) {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
+        // Don't wipe session on login/register failures — only on authenticated calls
+        const isAuthAttempt = /\/auth\/(login|register)/.test(normalizedEndpoint);
+        if (!isAuthAttempt) {
+          clearAuthToken();
+        }
       }
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      const errorData = await response.json().catch(() => ({} as { error?: string }));
+      const detail =
+        errorData.error ||
+        (response.status === 500
+          ? 'Server error (is the API running on port 5002? Try: pnpm run fix-ports && pnpm run dev:app)'
+          : `HTTP error! status: ${response.status}`);
+      throw new Error(detail);
     }
 
     return await response.json();
   } catch (error) {
-    console.error(`API request failed for ${endpoint}:`, error);
-    throw error;
+    // Preserve intentional HTTP errors; only remap true network failures
+    if (error instanceof Error && !isBackendUnreachableError(error) && error.message) {
+      console.error(`API request failed for ${endpoint}:`, error.message);
+      throw error;
+    }
+    const message = formatApiNetworkError(error);
+    console.error(`API request failed for ${endpoint}:`, message, error);
+    throw new Error(message);
   }
 };
 
@@ -128,8 +124,7 @@ export const authAPI = {
       body: JSON.stringify({ email, password })
     });
     
-    // Store token and user data
-    localStorage.setItem('authToken', response.token);
+    setAuthToken(response.token);
     localStorage.setItem('user', JSON.stringify(response.user));
     
     return response;
@@ -148,30 +143,25 @@ export const authAPI = {
       body: JSON.stringify({ username, email, password, first_name, last_name, role })
     });
     
-    // Store token and user data
-    localStorage.setItem('authToken', response.token);
+    setAuthToken(response.token);
     localStorage.setItem('user', JSON.stringify(response.user));
     
     return response;
   },
 
   logout: async () => {
-    const token = localStorage.getItem('authToken');
+    const token = getAuthHeaders().Authorization?.replace(/^Bearer\s+/i, '') || null;
     try {
       if (token) {
         await fetch(`${API_BASE_URL}/auth/logout`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          }
+          headers: getAuthHeaders(),
         });
       }
     } catch {
       // Best-effort server notify
     } finally {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
+      clearAuthToken();
     }
   },
 
@@ -507,7 +497,7 @@ export const calculatorsAPI = {
 
 export const isAuthenticated = (): boolean => {
   if (typeof window === 'undefined') return false;
-  return Boolean(localStorage.getItem('authToken'));
+  return Boolean(getAuthToken());
 };
 
 export const getCurrentUser = (): Record<string, unknown> | null => {

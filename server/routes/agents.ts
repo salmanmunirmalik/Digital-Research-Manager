@@ -7,6 +7,10 @@ import { Router } from 'express';
 import { AgentFactory } from '../services/AgentFactory.js';
 import { UserContextRetriever } from '../services/UserContextRetriever.js';
 import { authenticateToken } from '../middleware/auth.js';
+import {
+  gateAgentExecution,
+  reviewAgentOutput,
+} from '../services/safety/agentSafetyGate.js';
 
 const router: Router = Router();
 
@@ -38,11 +42,27 @@ router.post('/:agentType/execute', authenticateToken, async (req: any, res) => {
         requiredContext: agent.getRequiredContext()
       });
     }
+
+    // Safety gate (soft warnings + hard block only for unsafe/critical)
+    const gate = await gateAgentExecution({
+      userId,
+      agentType,
+      input,
+      userRole: req.user?.role,
+    });
+    if (!gate.allowed) {
+      return res.status(403).json({
+        success: false,
+        error: gate.blockedReason || 'Blocked by AI safety policy',
+        safety: gate.precheck,
+        warnings: gate.warnings,
+      });
+    }
     
     // Retrieve user context if needed
     const requiredContext = agent.getRequiredContext();
     const userContext = requiredContext.length > 0
-      ? await UserContextRetriever.retrieveContext(userId, input.query || input.content || '')
+      ? await UserContextRetriever.retrieveContext(userId, input.query || input.content || input.researchQuestion || '')
       : { user: null, papers: [], notebooks: [], protocols: [], experiments: [], relevantContent: [] };
     
     // Execute agent
@@ -51,18 +71,37 @@ router.post('/:agentType/execute', authenticateToken, async (req: any, res) => {
       conversationHistory: [],
       additionalData: { userId }
     }, config);
+
+    const outputSafety = result.success
+      ? await reviewAgentOutput(
+          agentType,
+          result.content,
+          input.query || input.content || input.researchQuestion
+        )
+      : null;
     
     if (result.success) {
       res.json({
         success: true,
         result: result.content,
-        metadata: result.metadata
+        metadata: {
+          ...(result.metadata || {}),
+          safety: {
+            precheck: gate.precheck,
+            output: outputSafety,
+            warnings: gate.warnings,
+            requiresApproval: gate.requiresApproval,
+          },
+        },
       });
     } else {
       res.status(500).json({
         success: false,
         error: result.error,
-        metadata: result.metadata
+        metadata: {
+          ...(result.metadata || {}),
+          safety: { precheck: gate.precheck, warnings: gate.warnings },
+        },
       });
     }
   } catch (error: any) {

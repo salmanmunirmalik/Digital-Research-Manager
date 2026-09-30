@@ -1,43 +1,37 @@
 #!/bin/bash
+# Free ports used by local Digital Research Manager (API, Vite, optional stats).
 
-# Port conflict resolution script
-# This script kills processes using ports 5001 and 5173
+set -euo pipefail
 
-echo "🔍 Checking for processes using ports 5001 and 5173..."
+echo "Checking ports 5002 (API), 5173 (Vite), 5003 (stats)..."
 
-# Function to kill processes on a specific port
 kill_port() {
-    local port=$1
-    local pids=$(lsof -ti:$port 2>/dev/null)
-    
-    if [ -n "$pids" ]; then
-        echo "⚠️  Found processes using port $port: $pids"
-        echo "🔄 Killing processes on port $port..."
-        echo $pids | xargs kill -9 2>/dev/null
-        sleep 2
-        
-        # Check if processes are still running
-        local remaining_pids=$(lsof -ti:$port 2>/dev/null)
-        if [ -n "$remaining_pids" ]; then
-            echo "⚠️  Some processes still running on port $port, force killing..."
-            echo $remaining_pids | xargs kill -9 2>/dev/null
-        fi
-        
-        echo "✅ Port $port is now free"
-    else
-        echo "✅ Port $port is free"
+  local port=$1
+  local pids
+  pids=$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)
+
+  if [[ -n "${pids}" ]]; then
+    echo "Found listeners on port ${port}: ${pids}"
+    # shellcheck disable=SC2086
+    kill ${pids} 2>/dev/null || true
+    sleep 1
+    pids=$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)
+    if [[ -n "${pids}" ]]; then
+      # shellcheck disable=SC2086
+      kill -9 ${pids} 2>/dev/null || true
     fi
+    echo "Port ${port} is free"
+  else
+    echo "Port ${port} is free"
+  fi
 }
 
-# Kill processes on both ports
-kill_port 5001
+kill_port 5002
 kill_port 5173
+kill_port 5003
+# Legacy mistaken port from older scripts
+kill_port 5001
 
-# Also kill any node processes that might be hanging
-echo "🔄 Cleaning up any hanging node processes..."
-pkill -f "node.*server" 2>/dev/null
-pkill -f "nodemon" 2>/dev/null
-pkill -f "vite" 2>/dev/null
-
-echo "✅ Port cleanup complete!"
-echo "🚀 You can now start the development server with: npm run dev"
+echo "Port cleanup complete."
+echo "Start the app with: pnpm run dev:app"
+echo "Ensure XAMPP MySQL is running (and Homebrew mysql is stopped) on 3306."

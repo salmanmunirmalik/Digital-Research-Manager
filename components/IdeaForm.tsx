@@ -20,7 +20,7 @@ interface IdeaData {
   title: string;
   description: string;
   category: 'research' | 'methodology' | 'collaboration' | 'equipment' | 'process' | 'other';
-  priority: 'low' | 'medium' | 'high' | 'critical';
+  priority: 'low' | 'medium' | 'high';
   feasibility: 'low' | 'medium' | 'high';
   impact: 'low' | 'medium' | 'high';
   effort: 'low' | 'medium' | 'high';
@@ -32,14 +32,16 @@ interface IdeaData {
   notes: string;
   lab_id: string;
   privacy_level: 'personal' | 'team' | 'lab' | 'institution' | 'global';
+  rationale: string;
+  next_check: string;
 }
 
 const categories = [
-  { value: 'research', label: 'Research direction' },
-  { value: 'methodology', label: 'Methodology' },
+  { value: 'research', label: 'Research question' },
+  { value: 'methodology', label: 'Method / assay' },
   { value: 'collaboration', label: 'Collaboration' },
   { value: 'equipment', label: 'Equipment / tech' },
-  { value: 'process', label: 'Process' },
+  { value: 'process', label: 'Lab process' },
   { value: 'other', label: 'Other' },
 ];
 
@@ -60,6 +62,8 @@ const IdeaForm: React.FC<IdeaFormProps> = ({ onSubmit, onCancel, initialData }) 
     notes: '',
     lab_id: '',
     privacy_level: 'lab',
+    rationale: '',
+    next_check: '',
     ...initialData,
   });
 
@@ -75,13 +79,13 @@ const IdeaForm: React.FC<IdeaFormProps> = ({ onSubmit, onCancel, initialData }) 
   return (
     <NotebookFormModal
       title="Research idea"
-      subtitle="Capture a concept you may pursue later"
+      subtitle="Capture a hypothesis or concept worth revisiting"
       onCancel={onCancel}
       onSubmit={handleSubmit}
       submitLabel="Save idea"
-      maxWidth="max-w-2xl"
+      maxWidth="max-w-xl"
     >
-      <FormSection title="Idea" description="Keep it concrete enough to revisit">
+      <FormSection title="Idea" description="Be specific enough that future-you understands the bet">
         <Field label="Title" required>
           <Input
             value={formData.title}
@@ -90,16 +94,24 @@ const IdeaForm: React.FC<IdeaFormProps> = ({ onSubmit, onCancel, initialData }) 
             required
           />
         </Field>
-        <Field label="Description" required>
+        <Field label="Hypothesis / concept" required>
           <TextArea
             value={formData.description}
             onChange={(e) => set('description', e.target.value)}
             rows={5}
-            placeholder="Hypothesis, motivation, or concept in your own words…"
+            placeholder="What do you want to test or explore, and why it might work…"
             required
           />
         </Field>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Why it matters" hint="Gap, opportunity, or practical need">
+          <TextArea
+            value={formData.rationale}
+            onChange={(e) => set('rationale', e.target.value)}
+            rows={2}
+            placeholder="e.g. Current assay is too slow for screening; literature lacks X"
+          />
+        </Field>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Category">
             <Select
               value={formData.category}
@@ -107,100 +119,43 @@ const IdeaForm: React.FC<IdeaFormProps> = ({ onSubmit, onCancel, initialData }) 
               options={categories}
             />
           </Field>
-          <Field label="Rough timeline">
-            <Input
-              value={formData.timeline}
-              onChange={(e) => set('timeline', e.target.value)}
-              placeholder="e.g. 3–6 months, Q3"
-            />
-          </Field>
-        </div>
-      </FormSection>
-
-      <FormSection title="Assessment" description="Quick judgment - revise anytime">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <SegmentedChoice
             label="Priority"
             value={formData.priority}
             onChange={(v) => set('priority', v)}
             options={[
               { value: 'low', label: 'Low' },
-              { value: 'medium', label: 'Medium' },
-              { value: 'high', label: 'High' },
-              { value: 'critical', label: 'Critical' },
-            ]}
-          />
-          <SegmentedChoice
-            label="Feasibility"
-            value={formData.feasibility}
-            onChange={(v) => set('feasibility', v)}
-            options={[
-              { value: 'low', label: 'Low' },
-              { value: 'medium', label: 'Medium' },
-              { value: 'high', label: 'High' },
-            ]}
-          />
-          <SegmentedChoice
-            label="Impact"
-            value={formData.impact}
-            onChange={(v) => set('impact', v)}
-            options={[
-              { value: 'low', label: 'Low' },
-              { value: 'medium', label: 'Medium' },
-              { value: 'high', label: 'High' },
-            ]}
-          />
-          <SegmentedChoice
-            label="Effort"
-            value={formData.effort}
-            onChange={(v) => set('effort', v)}
-            options={[
-              { value: 'low', label: 'Low' },
-              { value: 'medium', label: 'Medium' },
+              { value: 'medium', label: 'Med' },
               { value: 'high', label: 'High' },
             ]}
           />
         </div>
       </FormSection>
 
-      <FormSection title="Context">
-        <TagListField
-          label="Resources needed"
-          values={formData.resources_needed}
-          onChange={(v) => set('resources_needed', v)}
-          placeholder="Reagent, instrument, dataset…"
-        />
-        <TagListField
-          label="Potential collaborators"
-          values={formData.potential_collaborators}
-          onChange={(v) => set('potential_collaborators', v)}
-          placeholder="Name or email"
-        />
+      <FormSection title="Follow-up" description="Optional — keep the backlog lightweight">
+        <Field label="Next check" hint="What would make you pursue or drop this">
+          <Input
+            value={formData.next_check || formData.timeline}
+            onChange={(e) => {
+              set('next_check', e.target.value);
+              set('timeline', e.target.value);
+            }}
+            placeholder="e.g. Read Smith 2024; ask PI in next meeting"
+          />
+        </Field>
         <TagListField
           label="Tags"
           values={formData.tags}
           onChange={(v) => set('tags', v)}
           placeholder="Keyword"
         />
-        <Field label="Notes">
-          <TextArea
-            value={formData.notes}
-            onChange={(e) => set('notes', e.target.value)}
-            rows={3}
-            placeholder="Open questions, risks, next checks…"
-          />
-        </Field>
         <Field label="Visibility">
           <Select
             value={formData.privacy_level}
-            onChange={(e) =>
-              set('privacy_level', e.target.value as IdeaData['privacy_level'])
-            }
+            onChange={(e) => set('privacy_level', e.target.value as IdeaData['privacy_level'])}
             options={[
               { value: 'personal', label: 'Only me' },
-              { value: 'team', label: 'My team' },
               { value: 'lab', label: 'My lab' },
-              { value: 'institution', label: 'Institution' },
               { value: 'global', label: 'Public' },
             ]}
           />

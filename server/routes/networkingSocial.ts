@@ -1,6 +1,15 @@
 /**
- * Networking social actions: follow, connect, public profile, pending requests.
+ * Networking social actions: follow, connect, lab join/follow, pending requests.
  * Relationships are persisted so both sides see consistent state.
+ *
+ * Researcher:
+ *   Follow  = one-way interest (no approval)
+ *   Connect = mutual; pending until accepted (or auto-accept if reverse pending)
+ *
+ * Lab:
+ *   Follow  = one-way interest in a showcased lab
+ *   Join    = request membership; pending until a lab admin accepts
+ *   Leave   = self-remove (not allowed for principal researcher)
  */
 import { Router } from 'express';
 import crypto from 'crypto';
@@ -16,6 +25,8 @@ const displayName = (row: any) =>
     last_name: row.last_name,
     username: row.username,
   });
+
+const ADMIN_ROLES = new Set(['principal_researcher', 'admin']);
 
 async function loadRelationshipMaps(userId: string) {
   const [followsOut, followsIn, connections] = await Promise.all([
@@ -59,6 +70,82 @@ async function loadRelationshipMaps(userId: string) {
   }
 
   return { followingIds, followerIds, connectionByUser };
+}
+
+async function loadLabRelationshipMaps(userId: string) {
+  const [follows, memberships, joinRequests] = await Promise.all([
+    pool.query(`SELECT lab_id FROM lab_follows WHERE user_id = $1`, [userId]),
+    pool.query(
+      `SELECT lab_id, role FROM lab_members
+       WHERE user_id = $1 AND COALESCE(is_active, 1) = 1`,
+      [userId]
+    ),
+    pool.query(
+      `SELECT id, lab_id, status FROM lab_join_requests
+       WHERE requester_id = $1 AND status = 'pending'`,
+      [userId]
+    ),
+  ]);
+
+  const followingLabIds = new Set(follows.rows.map((r: any) => r.lab_id));
+  const membershipByLab = new Map<string, { role: string }>();
+  for (const row of memberships.rows as any[]) {
+    membershipByLab.set(row.lab_id, { role: row.role || 'researcher' });
+  }
+  const pendingJoinByLab = new Map<string, string>();
+  for (const row of joinRequests.rows as any[]) {
+    pendingJoinByLab.set(row.lab_id, row.id);
+  }
+
+  return { followingLabIds, membershipByLab, pendingJoinByLab };
+}
+
+async function getShowcasedLab(labId: string) {
+  const result = await pool.query(
+    `SELECT id, name, principal_researcher_id, COALESCE(is_showcased, 0) AS is_showcased
+     FROM labs WHERE id = $1 LIMIT 1`,
+    [labId]
+  );
+  return result.rows[0] || null;
+}
+
+async function getLabAdminIds(labId: string): Promise<string[]> {
+  const result = await pool.query(
+    `SELECT user_id FROM lab_members
+     WHERE lab_id = $1 AND COALESCE(is_active, 1) = 1
+       AND role IN ('principal_researcher', 'admin')`,
+    [labId]
+  );
+  return result.rows.map((r: any) => r.user_id).filter(Boolean);
+}
+
+async function notifyLabAdmins(
+  labId: string,
+  payload: {
+    actorId: string;
+    title: string;
+    body: string;
+    link: string;
+    entityType: string;
+    entityId: string;
+  }
+) {
+  const admins = await getLabAdminIds(labId);
+  await Promise.all(
+    admins
+      .filter((id) => id !== payload.actorId)
+      .map((userId) =>
+        createNotification({
+          userId,
+          type: 'research_update',
+          title: payload.title,
+          body: payload.body,
+          link: payload.link,
+          entityType: payload.entityType,
+          entityId: payload.entityId,
+        })
+      )
+  );
 }
 
 router.get('/relationships', async (req: any, res) => {
@@ -330,16 +417,41 @@ router.post('/connect/:userId', async (req: any, res) => {
 
     if (existing.rows.length > 0) {
       const row = existing.rows[0];
-      if (row.status === 'declined') {
-        await pool.query(
-          `UPDATE user_connections SET status = 'pending', message = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
-          [req.body?.message || null, row.id]
-        );
+      if (row.status === 'accepted') {
+        return res.json({
+          success: true,
+          connectionStatus: 'connected',
+          isConnected: true,
+          connectionId: row.id,
+        });
       }
+      if (row.status === 'pending') {
+        return res.json({
+          success: true,
+          connectionStatus: 'pending',
+          isConnected: false,
+          connectionId: row.id,
+        });
+      }
+      // declined / withdrawn → re-open as a fresh pending request
+      await pool.query(
+        `UPDATE user_connections SET status = 'pending', message = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+        [req.body?.message || null, row.id]
+      );
+      const actor = nameFromAuthUser(req.user);
+      await createNotification({
+        userId: recipientId,
+        type: 'research_update',
+        title: `${actor} wants to connect`,
+        body: 'Respond to the connection request on Networking.',
+        link: `/collaboration-networking`,
+        entityType: 'connection',
+        entityId: row.id,
+      });
       return res.json({
         success: true,
-        connectionStatus: row.status === 'accepted' ? 'connected' : 'pending',
-        isConnected: row.status === 'accepted',
+        connectionStatus: 'pending',
+        isConnected: false,
         connectionId: row.id,
       });
     }
@@ -445,5 +557,325 @@ router.delete('/connect/:userId', async (req: any, res) => {
   }
 });
 
-export { loadRelationshipMaps };
+/** ---------- Lab follow / join / leave ---------- */
+
+router.post('/labs/:labId/follow', async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    const { labId } = req.params;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const lab = await getShowcasedLab(labId);
+    if (!lab) return res.status(404).json({ error: 'Lab not found' });
+    if (!Number(lab.is_showcased)) {
+      return res.status(400).json({ error: 'Only showcased labs can be followed from Networking' });
+    }
+
+    const existing = await pool.query(
+      `SELECT id FROM lab_follows WHERE user_id = $1 AND lab_id = $2`,
+      [userId, labId]
+    );
+    if (existing.rows.length === 0) {
+      await pool.query(`INSERT INTO lab_follows (id, user_id, lab_id) VALUES ($1, $2, $3)`, [
+        crypto.randomUUID(),
+        userId,
+        labId,
+      ]);
+    }
+
+    res.json({ success: true, isFollowing: true });
+  } catch (error: any) {
+    console.error('Error following lab:', error);
+    res.status(500).json({ error: error.message || 'Failed to follow lab' });
+  }
+});
+
+router.delete('/labs/:labId/follow', async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    const { labId } = req.params;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    await pool.query(`DELETE FROM lab_follows WHERE user_id = $1 AND lab_id = $2`, [userId, labId]);
+    res.json({ success: true, isFollowing: false });
+  } catch (error: any) {
+    console.error('Error unfollowing lab:', error);
+    res.status(500).json({ error: error.message || 'Failed to unfollow lab' });
+  }
+});
+
+router.post('/labs/:labId/join-requests', async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    const { labId } = req.params;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const lab = await getShowcasedLab(labId);
+    if (!lab) return res.status(404).json({ error: 'Lab not found' });
+    if (!Number(lab.is_showcased)) {
+      return res.status(400).json({ error: 'Only showcased labs accept join requests from Networking' });
+    }
+
+    const membership = await pool.query(
+      `SELECT role FROM lab_members WHERE lab_id = $1 AND user_id = $2 AND COALESCE(is_active, 1) = 1`,
+      [labId, userId]
+    );
+    if (membership.rows.length > 0) {
+      return res.json({
+        success: true,
+        membershipStatus: 'member',
+        isMember: true,
+        membershipRole: membership.rows[0].role,
+        joinRequestId: null,
+      });
+    }
+
+    const existing = await pool.query(
+      `SELECT id, status FROM lab_join_requests WHERE lab_id = $1 AND requester_id = $2 LIMIT 1`,
+      [labId, userId]
+    );
+
+    let requestId: string;
+    if (existing.rows.length > 0) {
+      const row = existing.rows[0];
+      if (row.status === 'pending') {
+        return res.json({
+          success: true,
+          membershipStatus: 'pending',
+          isMember: false,
+          joinRequestId: row.id,
+        });
+      }
+      await pool.query(
+        `UPDATE lab_join_requests
+         SET status = 'pending', message = $1, reviewed_by = NULL, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2`,
+        [req.body?.message || null, row.id]
+      );
+      requestId = row.id;
+    } else {
+      requestId = crypto.randomUUID();
+      await pool.query(
+        `INSERT INTO lab_join_requests (id, lab_id, requester_id, status, message)
+         VALUES ($1, $2, $3, 'pending', $4)`,
+        [requestId, labId, userId, req.body?.message || null]
+      );
+    }
+
+    const actor = nameFromAuthUser(req.user);
+    await notifyLabAdmins(labId, {
+      actorId: userId,
+      title: `${actor} requested to join ${lab.name}`,
+      body: 'Review the join request on Networking.',
+      link: `/collaboration-networking`,
+      entityType: 'lab_join_request',
+      entityId: requestId,
+    });
+
+    res.status(201).json({
+      success: true,
+      membershipStatus: 'pending',
+      isMember: false,
+      joinRequestId: requestId,
+    });
+  } catch (error: any) {
+    console.error('Error creating lab join request:', error);
+    res.status(500).json({ error: error.message || 'Failed to request lab membership' });
+  }
+});
+
+router.delete('/labs/:labId/join-requests', async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    const { labId } = req.params;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    await pool.query(
+      `DELETE FROM lab_join_requests
+       WHERE lab_id = $1 AND requester_id = $2 AND status = 'pending'`,
+      [labId, userId]
+    );
+
+    res.json({ success: true, membershipStatus: 'none', isMember: false, joinRequestId: null });
+  } catch (error: any) {
+    console.error('Error cancelling lab join request:', error);
+    res.status(500).json({ error: error.message || 'Failed to cancel join request' });
+  }
+});
+
+router.get('/labs/join-requests', async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const result = await pool.query(
+      `SELECT r.id, r.lab_id, r.requester_id, r.status, r.message, r.created_at,
+              l.name AS lab_name,
+              u.first_name, u.last_name, u.username, u.avatar_url,
+              u.current_position, u.current_institution
+       FROM lab_join_requests r
+       JOIN labs l ON l.id = r.lab_id
+       JOIN users u ON u.id = r.requester_id
+       JOIN lab_members lm ON lm.lab_id = r.lab_id AND lm.user_id = $1
+         AND COALESCE(lm.is_active, 1) = 1
+         AND lm.role IN ('principal_researcher', 'admin')
+       WHERE r.status = 'pending'
+       ORDER BY r.created_at DESC`,
+      [userId]
+    );
+
+    res.json({
+      requests: result.rows.map((row: any) => ({
+        id: row.id,
+        labId: row.lab_id,
+        labName: row.lab_name,
+        requesterId: row.requester_id,
+        status: row.status,
+        message: row.message,
+        createdAt: row.created_at,
+        name: displayName(row),
+        avatarUrl: row.avatar_url,
+        position: row.current_position || '',
+        institution: row.current_institution || '',
+      })),
+    });
+  } catch (error: any) {
+    console.error('Error loading lab join requests:', error);
+    res.status(500).json({ error: error.message || 'Failed to load join requests' });
+  }
+});
+
+router.post('/labs/join-requests/:requestId/respond', async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+    const { status } = req.body;
+    if (!['accepted', 'declined'].includes(status)) {
+      return res.status(400).json({ error: 'status must be accepted or declined' });
+    }
+
+    const existing = await pool.query(
+      `SELECT r.*, l.name AS lab_name
+       FROM lab_join_requests r
+       JOIN labs l ON l.id = r.lab_id
+       WHERE r.id = $1 AND r.status = 'pending'
+       LIMIT 1`,
+      [req.params.requestId]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Join request not found' });
+    }
+
+    const request = existing.rows[0];
+    const adminCheck = await pool.query(
+      `SELECT role FROM lab_members
+       WHERE lab_id = $1 AND user_id = $2 AND COALESCE(is_active, 1) = 1
+         AND role IN ('principal_researcher', 'admin')
+       LIMIT 1`,
+      [request.lab_id, userId]
+    );
+    if (adminCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Only lab admins can review join requests' });
+    }
+
+    if (status === 'accepted') {
+      const alreadyMember = await pool.query(
+        `SELECT id, is_active FROM lab_members WHERE lab_id = $1 AND user_id = $2 LIMIT 1`,
+        [request.lab_id, request.requester_id]
+      );
+      if (alreadyMember.rows.length === 0) {
+        await pool.query(
+          `INSERT INTO lab_members (id, lab_id, user_id, role, permissions, is_active)
+           VALUES ($1, $2, $3, 'researcher', $4, 1)`,
+          [crypto.randomUUID(), request.lab_id, request.requester_id, JSON.stringify({})]
+        );
+      } else if (!Number(alreadyMember.rows[0].is_active)) {
+        await pool.query(
+          `UPDATE lab_members SET is_active = 1, role = 'researcher'
+           WHERE lab_id = $1 AND user_id = $2`,
+          [request.lab_id, request.requester_id]
+        );
+      }
+    }
+
+    await pool.query(
+      `UPDATE lab_join_requests
+       SET status = $1, reviewed_by = $2, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3`,
+      [status, userId, request.id]
+    );
+
+    const actor = nameFromAuthUser(req.user);
+    await createNotification({
+      userId: request.requester_id,
+      type: 'research_update',
+      title:
+        status === 'accepted'
+          ? `${actor} accepted your request to join ${request.lab_name}`
+          : `${actor} declined your request to join ${request.lab_name}`,
+      body:
+        status === 'accepted'
+          ? 'You are now a member of this lab.'
+          : 'Your join request was declined.',
+      link: status === 'accepted' ? `/labs/${request.lab_id}` : `/collaboration-networking`,
+      entityType: 'lab',
+      entityId: request.lab_id,
+    });
+
+    res.json({
+      success: true,
+      membershipStatus: status === 'accepted' ? 'member' : 'none',
+      isMember: status === 'accepted',
+    });
+  } catch (error: any) {
+    console.error('Error responding to lab join request:', error);
+    res.status(500).json({ error: error.message || 'Failed to respond to join request' });
+  }
+});
+
+router.post('/labs/:labId/leave', async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    const { labId } = req.params;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const lab = await getShowcasedLab(labId);
+    if (!lab) return res.status(404).json({ error: 'Lab not found' });
+
+    if (lab.principal_researcher_id === userId) {
+      return res.status(400).json({
+        error: 'Principal investigator cannot leave the lab. Transfer ownership first.',
+      });
+    }
+
+    const membership = await pool.query(
+      `SELECT id, role FROM lab_members
+       WHERE lab_id = $1 AND user_id = $2 AND COALESCE(is_active, 1) = 1
+       LIMIT 1`,
+      [labId, userId]
+    );
+    if (membership.rows.length === 0) {
+      return res.json({ success: true, membershipStatus: 'none', isMember: false });
+    }
+
+    if (ADMIN_ROLES.has(membership.rows[0].role) && membership.rows[0].role === 'principal_researcher') {
+      return res.status(400).json({
+        error: 'Principal investigator cannot leave the lab. Transfer ownership first.',
+      });
+    }
+
+    await pool.query(`DELETE FROM lab_members WHERE lab_id = $1 AND user_id = $2`, [labId, userId]);
+    await pool.query(
+      `DELETE FROM lab_join_requests WHERE lab_id = $1 AND requester_id = $2 AND status = 'pending'`,
+      [labId, userId]
+    );
+
+    res.json({ success: true, membershipStatus: 'none', isMember: false });
+  } catch (error: any) {
+    console.error('Error leaving lab:', error);
+    res.status(500).json({ error: error.message || 'Failed to leave lab' });
+  }
+});
+
+export { loadRelationshipMaps, loadLabRelationshipMaps };
 export default router;

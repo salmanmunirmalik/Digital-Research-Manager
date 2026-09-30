@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
+import { getAuthHeaders } from '../utils/apiBase';
 
 export type EntityOption = {
   id: string;
@@ -7,10 +8,7 @@ export type EntityOption = {
   meta?: string;
 };
 
-const authHeaders = () => {
-  const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+const authHeaders = () => getAuthHeaders();
 
 const asList = (payload: unknown, keys: string[]): any[] => {
   if (Array.isArray(payload)) return payload;

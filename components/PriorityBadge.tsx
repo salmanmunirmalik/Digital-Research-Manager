@@ -7,10 +7,10 @@ interface PriorityBadgeProps {
 
 const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, size = 'md' }) => {
   const config = {
-    low: { color: 'bg-gray-100 text-gray-700 border-gray-300', label: 'Low' },
-    normal: { color: 'bg-blue-100 text-blue-700 border-blue-300', label: 'Normal' },
-    high: { color: 'bg-orange-100 text-orange-700 border-orange-300', label: 'High' },
-    urgent: { color: 'bg-red-100 text-red-700 border-red-300', label: 'Urgent' }
+    low: { color: 'bg-slate-50 text-slate-600 border-slate-200', label: 'Low' },
+    normal: { color: 'bg-sky-50 text-sky-800 border-sky-100', label: 'Normal' },
+    high: { color: 'bg-orange-50 text-orange-800 border-orange-100', label: 'High' },
+    urgent: { color: 'bg-rose-50 text-rose-800 border-rose-100', label: 'Urgent' }
   };
 
   const sizeClasses = {

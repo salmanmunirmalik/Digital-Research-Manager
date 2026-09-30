@@ -39,10 +39,20 @@ function appendInFilter(
   };
 }
 
-// Helper function to get user's first lab membership
+// Helper function to get user's first lab membership (deterministic)
 async function getUserLab(userId: string): Promise<string | null> {
   const result = await pool.query(
-    `SELECT lab_id FROM lab_members WHERE user_id = $1 AND is_active = 1 LIMIT 1`,
+    `SELECT lab_id FROM lab_members
+     WHERE user_id = $1 AND is_active = 1
+     ORDER BY
+       CASE role
+         WHEN 'principal_researcher' THEN 0
+         WHEN 'admin' THEN 1
+         ELSE 2
+       END,
+       joined_at ASC,
+       lab_id ASC
+     LIMIT 1`,
     [userId]
   );
   return result.rows.length > 0 ? result.rows[0].lab_id : null;
@@ -70,6 +80,18 @@ async function userBelongsToLab(userId: string, labId: string): Promise<boolean>
   return result.rows.length > 0;
 }
 
+async function userCanAccessWorkspace(userId: string, workspaceId: string): Promise<boolean> {
+  const result = await pool.query(
+    `SELECT 1 AS ok
+     FROM lab_workspaces w
+     JOIN lab_members lm ON lm.lab_id = w.lab_id
+     WHERE w.id = $1 AND lm.user_id = $2 AND lm.is_active = 1
+     LIMIT 1`,
+    [workspaceId, userId]
+  );
+  return result.rows.length > 0;
+}
+
 /** Resolve active lab: optional lab_id query (must be a membership), else first / auto-create. */
 async function resolveActiveLabId(userId: string, requestedLabId?: string | null): Promise<string> {
   if (requestedLabId && (await userBelongsToLab(userId, requestedLabId))) {
@@ -78,54 +100,85 @@ async function resolveActiveLabId(userId: string, requestedLabId?: string | null
   return ensureUserLab(userId);
 }
 
-/** Ensure the user belongs to a lab; create a personal lab if needed (private, not showcased). */
+/** Ensure the user belongs to a lab; create a personal lab only if they have none. */
 async function ensureUserLab(userId: string): Promise<string> {
   const existing = await getUserLab(userId);
   if (existing) return existing;
 
-  const userResult = await pool.query(
-    `SELECT id, username, email, first_name, last_name, current_institution, department
-     FROM users WHERE id = $1 LIMIT 1`,
-    [userId]
-  );
-  const user = userResult.rows[0];
-  if (!user) {
-    throw new Error('User not found');
+  const connection = await pool.connect();
+  try {
+    await connection.query('BEGIN');
+
+    // Re-check inside transaction to avoid duplicate personal labs under concurrency
+    const again = await connection.query(
+      `SELECT lab_id FROM lab_members
+       WHERE user_id = $1 AND is_active = 1
+       ORDER BY joined_at ASC, lab_id ASC
+       LIMIT 1
+       FOR UPDATE`,
+      [userId]
+    );
+    if (again.rows.length > 0) {
+      await connection.query('COMMIT');
+      return again.rows[0].lab_id;
+    }
+
+    const userResult = await connection.query(
+      `SELECT id, username, email, first_name, last_name, current_institution, department
+       FROM users WHERE id = $1 LIMIT 1`,
+      [userId]
+    );
+    const user = userResult.rows[0];
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const displayName =
+      [user.first_name, user.last_name].filter(Boolean).join(' ').trim() ||
+      user.username ||
+      user.email ||
+      'Personal';
+
+    const institution = user.current_institution || null;
+    const labName = institution ? `${institution} lab` : 'Personal lab';
+    const labId = crypto.randomUUID();
+
+    await connection.query(
+      `INSERT INTO labs (
+        id, name, description, institution, department, principal_researcher_id, contact_email, is_showcased
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 0)`,
+      [
+        labId,
+        labName,
+        `Lab workspace for ${displayName}`,
+        institution || 'Independent',
+        user.department || 'General',
+        userId,
+        user.email || null,
+      ]
+    );
+
+    await connection.query(
+      `INSERT INTO lab_members (id, lab_id, user_id, role, permissions, is_active)
+       VALUES ($1, $2, $3, $4, $5, 1)`,
+      [crypto.randomUUID(), labId, userId, 'principal_researcher', '{}']
+    );
+
+    await connection.query('COMMIT');
+    return labId;
+  } catch (error) {
+    try {
+      await connection.query('ROLLBACK');
+    } catch {
+      /* ignore */
+    }
+    // Another concurrent request may have created a lab; prefer that over failing
+    const fallback = await getUserLab(userId);
+    if (fallback) return fallback;
+    throw error;
+  } finally {
+    connection.release();
   }
-
-  const displayName =
-    [user.first_name, user.last_name].filter(Boolean).join(' ').trim() ||
-    user.username ||
-    user.email ||
-    'Personal';
-
-  const institution = user.current_institution || null;
-  // Neutral lab label - avoid "{Person}'s Lab" in the shared ops UI
-  const labName = institution ? `${institution} lab` : 'Personal lab';
-
-  const labId = crypto.randomUUID();
-  await pool.query(
-    `INSERT INTO labs (
-      id, name, description, institution, department, principal_researcher_id, contact_email, is_showcased
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, 0)`,
-    [
-      labId,
-      labName,
-      `Lab workspace for ${displayName}`,
-      institution || 'Independent',
-      user.department || 'General',
-      userId,
-      user.email || null,
-    ]
-  );
-
-  await pool.query(
-    `INSERT INTO lab_members (id, lab_id, user_id, role, permissions, is_active)
-     VALUES ($1, $2, $3, $4, $5, 1)`,
-    [crypto.randomUUID(), labId, userId, 'principal_researcher', '{}']
-  );
-
-  return labId;
 }
 
 // Helper function to get workspace for lab
@@ -308,6 +361,8 @@ router.post('/spaces', authenticateToken, async (req: AuthenticatedRequest, res)
         return res.status(404).json({ error: 'Workspace not found' });
       }
       workspaceId = workspace.id;
+    } else if (!(await userCanAccessWorkspace(userId, String(workspaceId)))) {
+      return res.status(403).json({ error: 'Not a member of this workspace lab' });
     }
 
     // Get max position
@@ -603,6 +658,10 @@ async function ensureInboxList(workspaceId: string, userId: string): Promise<{
 // List tasks with filters
 router.get('/tasks', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const userId = req.user.id;
     const {
       workspace_id,
       space_id,
@@ -620,6 +679,13 @@ router.get('/tasks', authenticateToken, async (req: AuthenticatedRequest, res) =
       sort_order = 'ASC'
     } = req.query;
 
+    if (workspace_id) {
+      const allowed = await userCanAccessWorkspace(userId, String(workspace_id));
+      if (!allowed) {
+        return res.status(403).json({ error: 'Not a member of this workspace lab' });
+      }
+    }
+
     let query = `
       SELECT t.*,
         CONCAT(u1.first_name, ' ', u1.last_name) as assignee_name,
@@ -631,11 +697,15 @@ router.get('/tasks', authenticateToken, async (req: AuthenticatedRequest, res) =
       FROM workspace_tasks t
       LEFT JOIN users u1 ON t.assignee_id = u1.id
       LEFT JOIN users u2 ON t.created_by = u2.id
-      WHERE 1=1
+      WHERE t.workspace_id IN (
+        SELECT w.id FROM lab_workspaces w
+        JOIN lab_members lm ON lm.lab_id = w.lab_id
+        WHERE lm.user_id = $1 AND lm.is_active = 1
+      )
     `;
 
-    const params: any[] = [];
-    let paramCount = 0;
+    const params: any[] = [userId];
+    let paramCount = 1;
 
     if (workspace_id) {
       paramCount++;
@@ -771,6 +841,8 @@ router.post('/tasks', authenticateToken, async (req: AuthenticatedRequest, res) 
         return res.status(404).json({ error: 'Workspace not found' });
       }
       finalWorkspaceId = workspace.id;
+    } else if (!(await userCanAccessWorkspace(userId, String(finalWorkspaceId)))) {
+      return res.status(403).json({ error: 'Not a member of this workspace lab' });
     }
 
     if (!finalListId) {
@@ -792,6 +864,9 @@ router.post('/tasks', authenticateToken, async (req: AuthenticatedRequest, res) 
 
       finalSpaceId = listResult.rows[0].space_id;
       finalWorkspaceId = listResult.rows[0].workspace_id;
+      if (!(await userCanAccessWorkspace(userId, String(finalWorkspaceId)))) {
+        return res.status(403).json({ error: 'Not a member of this workspace lab' });
+      }
     }
 
     // Get max position in list
@@ -861,7 +936,15 @@ router.post('/tasks', authenticateToken, async (req: AuthenticatedRequest, res) 
 // Get board view data
 router.get('/tasks/board', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const userId = req.user.id;
     const { workspace_id, space_id, list_id } = req.query;
+
+    if (workspace_id && !(await userCanAccessWorkspace(userId, String(workspace_id)))) {
+      return res.status(403).json({ error: 'Not a member of this workspace lab' });
+    }
 
     let query = `
       SELECT t.*,
@@ -870,10 +953,15 @@ router.get('/tasks/board', authenticateToken, async (req: AuthenticatedRequest, 
       FROM workspace_tasks t
       LEFT JOIN users u1 ON t.assignee_id = u1.id
       WHERE t.is_archived = 0
+        AND t.workspace_id IN (
+          SELECT w.id FROM lab_workspaces w
+          JOIN lab_members lm ON lm.lab_id = w.lab_id
+          WHERE lm.user_id = $1 AND lm.is_active = 1
+        )
     `;
 
-    const params: any[] = [];
-    let paramCount = 0;
+    const params: any[] = [userId];
+    let paramCount = 1;
 
     if (workspace_id) {
       paramCount++;
@@ -921,7 +1009,15 @@ router.get('/tasks/board', authenticateToken, async (req: AuthenticatedRequest, 
 // Get calendar view data
 router.get('/tasks/calendar', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const userId = req.user.id;
     const { workspace_id, space_id, start_date, end_date } = req.query;
+
+    if (workspace_id && !(await userCanAccessWorkspace(userId, String(workspace_id)))) {
+      return res.status(403).json({ error: 'Not a member of this workspace lab' });
+    }
 
     let query = `
       SELECT t.*,
@@ -930,10 +1026,15 @@ router.get('/tasks/calendar', authenticateToken, async (req: AuthenticatedReques
       FROM workspace_tasks t
       LEFT JOIN users u1 ON t.assignee_id = u1.id
       WHERE t.is_archived = 0
+        AND t.workspace_id IN (
+          SELECT w.id FROM lab_workspaces w
+          JOIN lab_members lm ON lm.lab_id = w.lab_id
+          WHERE lm.user_id = $1 AND lm.is_active = 1
+        )
     `;
 
-    const params: any[] = [];
-    let paramCount = 0;
+    const params: any[] = [userId];
+    let paramCount = 1;
 
     if (workspace_id) {
       paramCount++;

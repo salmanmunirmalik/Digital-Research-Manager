@@ -4,7 +4,12 @@
 import { Router } from 'express';
 import pool from '../../database/config.js';
 import { LOOKING_FOR_OPTIONS, parseJsonList } from '../utils/labShowcase.js';
-import { loadRelationshipMaps } from './networkingSocial.js';
+import { loadRelationshipMaps, loadLabRelationshipMaps } from './networkingSocial.js';
+import {
+  parseInterestList,
+  softMatchScore,
+  buildInterestMatchReasons,
+} from '../utils/interestOverlap.js';
 
 const router: Router = Router();
 
@@ -67,9 +72,28 @@ const profileCompleteness = (row: any): number => {
     Boolean(row.specialization || row.department),
     Boolean(row.current_institution),
     Boolean(row.current_position),
-    parseList(row.expertise).length > 0,
+    parseList(row.expertise).length > 0 || parseInterestList(row.research_interests).length > 0,
   ];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+};
+
+const loadViewerInterests = async (userId?: string): Promise<string[]> => {
+  if (!userId) return [];
+  try {
+    const result = await pool.query(
+      `SELECT research_interests, expertise, specialization FROM users WHERE id = $1 LIMIT 1`,
+      [userId]
+    );
+    if (!result.rows[0]) return [];
+    const row = result.rows[0];
+    return [
+      ...parseInterestList(row.research_interests),
+      ...parseInterestList(row.expertise),
+      ...(row.specialization ? [String(row.specialization)] : []),
+    ];
+  } catch {
+    return [];
+  }
 };
 
 let availabilityTableChecked = false;
@@ -98,6 +122,7 @@ const uniqueSorted = (values: string[]) =>
 router.get('/', async (req: any, res) => {
   try {
     const currentUserId = req.user?.id;
+    const viewerInterests = await loadViewerInterests(currentUserId);
 
     const labsResult = await pool.query(
       `SELECT l.*,
@@ -119,17 +144,23 @@ router.get('/', async (req: any, res) => {
          JOIN labs l ON l.id = lm.lab_id
          WHERE lm.user_id = $1 AND lm.is_active = 1
            AND lm.role IN ('principal_researcher', 'admin')
-         ORDER BY l.name ASC`,
+         ORDER BY l.name ASC, lm.role ASC`,
         [currentUserId]
       );
-      myLabs = mine.rows.map((row: any) => ({
-        id: row.id,
-        name: row.name,
-        institution: row.institution || '',
-        isShowcased: Boolean(Number(row.is_showcased)),
-        membershipRole: row.membership_role,
-        tagline: row.showcase_tagline || '',
-      }));
+      const seen = new Set<string>();
+      myLabs = [];
+      for (const row of mine.rows) {
+        if (seen.has(row.id)) continue;
+        seen.add(row.id);
+        myLabs.push({
+          id: row.id,
+          name: row.name,
+          institution: row.institution || '',
+          isShowcased: Boolean(Number(row.is_showcased)),
+          membershipRole: row.membership_role,
+          tagline: row.showcase_tagline || '',
+        });
+      }
     }
 
     const withAvailability = await ensureAvailabilityTable();
@@ -137,7 +168,7 @@ router.get('/', async (req: any, res) => {
       ? await pool.query(
           `SELECT u.id, u.first_name, u.last_name, u.username, u.role, u.avatar_url,
             u.department, u.specialization, u.bio, u.current_position, u.current_institution,
-            u.location, u.expertise, u.timezone, u.profile_visibility, u.updated_at, u.last_login,
+            u.location, u.expertise, u.research_interests, u.timezone, u.profile_visibility, u.updated_at, u.last_login,
             ua.open_for_collaboration, ua.currently_available, ua.available_as_consultant,
             ua.available_for_workshops, ua.travel_willingness, ua.availability_notes
            FROM users u
@@ -150,7 +181,7 @@ router.get('/', async (req: any, res) => {
       : await pool.query(
           `SELECT u.id, u.first_name, u.last_name, u.username, u.role, u.avatar_url,
             u.department, u.specialization, u.bio, u.current_position, u.current_institution,
-            u.location, u.expertise, u.timezone, u.profile_visibility, u.updated_at, u.last_login
+            u.location, u.expertise, u.research_interests, u.timezone, u.profile_visibility, u.updated_at, u.last_login
            FROM users u
            WHERE u.status = 'active'
              AND (u.profile_visibility IS NULL OR u.profile_visibility IN ('public', 'network', 'lab'))
@@ -161,6 +192,9 @@ router.get('/', async (req: any, res) => {
     const relationshipMaps = currentUserId
       ? await loadRelationshipMaps(currentUserId)
       : null;
+    const labRelationshipMaps = currentUserId
+      ? await loadLabRelationshipMaps(currentUserId)
+      : null;
 
     const labs = labsResult.rows.map((lab: any) => {
       const loc = parseLocation(lab.address);
@@ -170,6 +204,19 @@ router.get('/', async (req: any, res) => {
         areas[0] ||
         (lab.department && lab.department !== 'General' ? lab.department : '');
       const piName = [lab.pi_first_name, lab.pi_last_name].filter(Boolean).join(' ').trim();
+      const membership = labRelationshipMaps?.membershipByLab.get(lab.id);
+      const pendingJoinId = labRelationshipMaps?.pendingJoinByLab.get(lab.id) || null;
+      const membershipStatus = membership
+        ? 'member'
+        : pendingJoinId
+          ? 'pending'
+          : 'none';
+      const labTags = uniqueSorted([
+        ...areas,
+        ...(field ? [field] : []),
+        lab.department || '',
+      ].filter(Boolean) as string[]);
+      const matchScore = softMatchScore(viewerInterests, labTags);
       return {
         id: lab.id,
         name: lab.name,
@@ -198,6 +245,23 @@ router.get('/', async (req: any, res) => {
         postedByName: piName,
         principalResearcherId: lab.principal_researcher_id || null,
         showcasedAt: lab.showcased_at,
+        isMember: membershipStatus === 'member',
+        isFollowing: labRelationshipMaps
+          ? labRelationshipMaps.followingLabIds.has(lab.id)
+          : false,
+        membershipStatus,
+        membershipRole: membership?.role || null,
+        joinRequestId: pendingJoinId,
+        canLeave: Boolean(
+          membership &&
+            membership.role !== 'principal_researcher' &&
+            lab.principal_researcher_id !== currentUserId
+        ),
+        isOwnLab: Boolean(
+          membership && ['principal_researcher', 'admin'].includes(membership.role)
+        ),
+        matchScore,
+        matchReasons: buildInterestMatchReasons(viewerInterests, labTags),
       };
     });
 
@@ -205,10 +269,13 @@ router.get('/', async (req: any, res) => {
       .filter((row: any) => row.id !== currentUserId)
       .map((row: any) => {
         const loc = parseLocation(row.location);
+        const interestTags = parseInterestList(row.research_interests);
+        const expertiseTags = parseList(row.expertise);
         const fields = uniqueSorted([
           row.specialization,
           row.department,
-          ...parseList(row.expertise),
+          ...expertiseTags,
+          ...interestTags,
         ].filter(Boolean) as string[]);
         const openToCollaborate =
           row.open_for_collaboration == null ? true : Boolean(Number(row.open_for_collaboration));
@@ -219,6 +286,7 @@ router.get('/', async (req: any, res) => {
         const daysSinceActive = updatedAt
           ? Math.floor((Date.now() - new Date(updatedAt).getTime()) / (1000 * 60 * 60 * 24))
           : 999;
+        const matchScore = softMatchScore(viewerInterests, fields);
         return {
           id: row.id,
           firstName: row.first_name || '',
@@ -231,7 +299,7 @@ router.get('/', async (req: any, res) => {
           country: loc.country,
           fieldsOfResearch: fields,
           fieldOfResearch: fields[0] || '',
-          researchInterests: fields,
+          researchInterests: interestTags.length ? interestTags : fields,
           bio: row.bio || '',
           profilePicture: row.avatar_url || undefined,
           careerStage: inferCareerStage(row.role, row.current_position),
@@ -258,8 +326,27 @@ router.get('/', async (req: any, res) => {
           connectionId: relationshipMaps
             ? relationshipMaps.connectionByUser.get(row.id)?.connectionId || null
             : null,
+          matchScore,
+          matchReasons: buildInterestMatchReasons(viewerInterests, fields),
         };
       });
+
+    // Soft-rank by interest overlap, then completeness / name
+    labs.sort((a, b) => {
+      if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+    });
+    researchers.sort((a, b) => {
+      if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
+      if (b.profileCompleteness !== a.profileCompleteness) {
+        return b.profileCompleteness - a.profileCompleteness;
+      }
+      return `${a.lastName}${a.firstName}`.localeCompare(
+        `${b.lastName}${b.firstName}`,
+        undefined,
+        { sensitivity: 'base' }
+      );
+    });
 
     const filterOptions = {
       countries: uniqueSorted([
@@ -279,7 +366,13 @@ router.get('/', async (req: any, res) => {
       lookingFor: LOOKING_FOR_OPTIONS.map((o) => ({ id: o.id, label: o.label })),
     };
 
-    res.json({ labs, researchers, myLabs, filterOptions });
+    res.json({
+      labs,
+      researchers,
+      myLabs,
+      filterOptions,
+      viewerHasInterests: viewerInterests.length > 0,
+    });
   } catch (error: any) {
     console.error('Error loading networking directory:', error);
     res.status(500).json({ error: error.message || 'Failed to load networking directory' });

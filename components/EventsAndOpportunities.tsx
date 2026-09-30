@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getAuthHeaders, getAuthToken, resolveApiBaseUrl, formatApiNetworkError } from '../utils/apiBase';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
@@ -30,11 +31,11 @@ import {
   TrashIcon
 } from '../components/icons';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
+const API_BASE = resolveApiBaseUrl();
 
 const authHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
-  Authorization: `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token') || ''}`,
+  Authorization: `Bearer ${getAuthToken() || ''}`,
 });
 
 interface Event {

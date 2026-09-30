@@ -62,6 +62,23 @@ interface CrossRefResponse {
   };
 }
 
+/** Prefer a real article title over Crossref article-type placeholders. */
+function pickBestCrossrefTitle(titles: string[]): string | null {
+  if (!titles.length) return null;
+  const isPlaceholder = (t: string) =>
+    /^(full\s*length\s*article|original\s*article|research\s*article|brief\s*report|editorial|letter\s*to\s*the\s*editor|corrigendum|erratum|retraction|untitled|article)$/i.test(
+      t.trim()
+    );
+  const ranked = [...titles].sort((a, b) => {
+    const ap = isPlaceholder(a) ? 1 : 0;
+    const bp = isPlaceholder(b) ? 1 : 0;
+    if (ap !== bp) return ap - bp;
+    return b.length - a.length;
+  });
+  const best = ranked.find((t) => !isPlaceholder(t)) || ranked[0];
+  return best || null;
+}
+
 interface PubMedArticle {
   MedlineCitation: {
     PMID: { _text: string };
@@ -162,11 +179,24 @@ export class CrossRefService {
   }
 
   private parseCrossRefResponse(data: CrossRefResponse): Paper {
-    const msg = data.message;
-    
+    const msg = data.message as CrossRefResponse['message'] & {
+      subtitle?: string[];
+      short_title?: string[];
+    };
+
+    const titles = [
+      ...(Array.isArray(msg.title) ? msg.title : msg.title ? [msg.title] : []),
+      ...(Array.isArray(msg.subtitle) ? msg.subtitle : []),
+      ...(Array.isArray(msg.short_title) ? msg.short_title : []),
+    ]
+      .map((t) => String(t || '').trim())
+      .filter(Boolean);
+
+    const title = pickBestCrossrefTitle(titles) || 'Untitled';
+
     return {
       doi: msg.DOI,
-      title: Array.isArray(msg.title) ? msg.title[0] : msg.title,
+      title,
       authors: this.parseAuthors(msg.author || []),
       abstract: msg.abstract,
       journal: msg['container-title']?.[0],
@@ -190,12 +220,28 @@ export class CrossRefService {
   }
 
   private parseAuthors(authors: any[]): Author[] {
-    return authors.map(author => ({
-      firstName: author.given || '',
-      lastName: author.family || '',
-      affiliation: author.affiliation?.[0]?.name,
-      orcid: author.ORCID?.replace('http://orcid.org/', '')
-    }));
+    return authors
+      .map((author) => {
+        const lastName = String(author.family || '').trim();
+        const firstName = String(author.given || '').trim();
+        // Crossref sometimes only has a literal name (organizations / anonymous)
+        const literal = String(author.name || author.literal || '').trim();
+        if (!lastName && !firstName && literal) {
+          return {
+            firstName: '',
+            lastName: literal,
+            affiliation: author.affiliation?.[0]?.name,
+            orcid: author.ORCID?.replace('http://orcid.org/', ''),
+          };
+        }
+        return {
+          firstName,
+          lastName,
+          affiliation: author.affiliation?.[0]?.name,
+          orcid: author.ORCID?.replace('http://orcid.org/', ''),
+        };
+      })
+      .filter((a) => a.firstName || a.lastName);
   }
 
   private extractYear(published: any): number {
@@ -380,21 +426,85 @@ export class PaperFetchingService {
   }
 
   /**
+   * Extract DOI / PMID / arXiv from pasted identifiers or publisher URLs.
+   * Returns null when the input is a bare URL we cannot safely resolve.
+   */
+  extractIdentifier(raw: string): {
+    kind: 'doi' | 'pmid' | 'arxiv' | 'query';
+    value: string;
+  } | null {
+    const input = String(raw || '').trim();
+    if (!input) return null;
+
+    // Explicit DOI URL or bare DOI
+    const doiFromUrl = input.match(
+      /(?:doi\.org\/|dx\.doi\.org\/|doi:\s*|\/doi\/(?:full\/|abs\/|pdf\/)?|\/doi\/)(10\.\d{4,9}\/[-._;()\/:a-zA-Z0-9]+)/i
+    );
+    if (doiFromUrl?.[1]) {
+      return { kind: 'doi', value: this.cleanDoiValue(doiFromUrl[1]) };
+    }
+    // Path style …/10.1234/abc
+    const doiInPath = input.match(/\/(10\.\d{4,9}\/[-._;()\/:a-zA-Z0-9]+)/);
+    if (doiInPath?.[1] && /https?:\/\//i.test(input)) {
+      return { kind: 'doi', value: this.cleanDoiValue(doiInPath[1]) };
+    }
+    if (/^10\.\d{4,9}\/\S+/i.test(input)) {
+      return { kind: 'doi', value: this.cleanDoiValue(input) };
+    }
+
+    // PubMed
+    const pmidUrl = input.match(/pubmed\.ncbi\.nlm\.nih\.gov\/(\d{5,9})/i);
+    if (pmidUrl?.[1]) return { kind: 'pmid', value: pmidUrl[1] };
+    const pmidPref = input.match(/pmid:?\s*(\d{5,9})/i);
+    if (pmidPref?.[1]) return { kind: 'pmid', value: pmidPref[1] };
+    if (/^\d{5,9}$/.test(input)) return { kind: 'pmid', value: input };
+
+    // arXiv
+    const arxivUrl = input.match(/arxiv\.org\/(?:abs|pdf)\/([a-z0-9.\-/]+)/i);
+    if (arxivUrl?.[1]) {
+      return { kind: 'arxiv', value: arxivUrl[1].replace(/\.pdf$/i, '') };
+    }
+    if (/^(arxiv:)?(\d{4}\.\d{4,5}|[a-z-]+\/\d{7})(v\d+)?$/i.test(input)) {
+      return { kind: 'arxiv', value: input.replace(/^arxiv:/i, '') };
+    }
+
+    // Bare publisher URL with no extractable id — do NOT free-text search the URL
+    // (Crossref returns unrelated hits; first result is often garbage).
+    if (/^https?:\/\//i.test(input)) {
+      return null;
+    }
+
+    // Title / keyword query
+    if (input.length >= 8) return { kind: 'query', value: input };
+    return null;
+  }
+
+  /**
    * Smart paper fetching - detects identifier type and fetches from appropriate source
    */
   async fetchPaper(identifier: string): Promise<Paper | null> {
-    // Detect identifier type
-    if (this.isDOI(identifier)) {
-      return this.crossRef.fetchByDOI(identifier);
-    } else if (this.isPMID(identifier)) {
-      return this.pubMed.fetchByPMID(identifier);
-    } else if (this.isArXivId(identifier)) {
-      return this.arXiv.fetchByArXivId(identifier);
+    const extracted = this.extractIdentifier(identifier);
+    if (!extracted) {
+      return null;
     }
 
-    // If no specific format detected, try search across all
-    const papers = await this.searchAcrossAll(identifier);
-    return papers.length > 0 ? papers[0] : null;
+    if (extracted.kind === 'doi') {
+      return this.crossRef.fetchByDOI(extracted.value);
+    }
+    if (extracted.kind === 'pmid') {
+      return this.pubMed.fetchByPMID(extracted.value);
+    }
+    if (extracted.kind === 'arxiv') {
+      return this.arXiv.fetchByArXivId(extracted.value);
+    }
+
+    // Title/keyword search — prefer Crossref bibliographic query, take best scored hit
+    const papers = await this.crossRef.searchPapers(extracted.value, 5);
+    if (!papers.length) {
+      const fallback = await this.searchAcrossAll(extracted.value, 5);
+      return fallback[0] || null;
+    }
+    return papers[0] || null;
   }
 
   /**
@@ -402,8 +512,7 @@ export class PaperFetchingService {
    */
   async fetchPapersByORCID(orcid: string): Promise<Paper[]> {
     try {
-      const papers = await this.crossRef.fetchByAuthorORCID(orcid);
-      return papers;
+      return await this.crossRef.fetchByAuthorORCID(orcid);
     } catch (error) {
       console.error('Error fetching papers by ORCID:', error);
       return [];
@@ -414,83 +523,62 @@ export class PaperFetchingService {
    * Search across all databases
    */
   async searchAcrossAll(query: string, limit: number = 20): Promise<Paper[]> {
+    const extracted = this.extractIdentifier(query);
+    // Never free-text search a raw URL
+    if (!extracted || (extracted.kind === 'query' && /^https?:\/\//i.test(query))) {
+      return [];
+    }
+    const q = extracted.kind === 'query' ? extracted.value : extracted.value;
+    if (extracted.kind === 'doi') {
+      const p = await this.crossRef.fetchByDOI(extracted.value);
+      return p ? [p] : [];
+    }
+    if (extracted.kind === 'pmid') {
+      const p = await this.pubMed.fetchByPMID(extracted.value);
+      return p ? [p] : [];
+    }
+    if (extracted.kind === 'arxiv') {
+      const p = await this.arXiv.fetchByArXivId(extracted.value);
+      return p ? [p] : [];
+    }
+
     const results = await Promise.allSettled([
-      this.crossRef.searchPapers(query, limit),
-      this.arXiv.search(query, limit / 2),
+      this.crossRef.searchPapers(q, limit),
+      this.arXiv.search(q, Math.max(1, Math.floor(limit / 2))),
     ]);
 
     const papers: Paper[] = [];
-    
-    results.forEach(result => {
+    results.forEach((result) => {
       if (result.status === 'fulfilled') {
         papers.push(...result.value);
       }
     });
-
-    // Remove duplicates by DOI/PMID/arXivId
     return this.deduplicatePapers(papers);
   }
 
-  /**
-   * Generate AI summary for a paper (placeholder for AI integration)
-   */
-  async generateAISummary(paper: Paper): Promise<string> {
-    // This would integrate with OpenAI/Together AI
-    // Placeholder implementation
-    return `AI Summary: This paper titled "${paper.title}" was published in ${paper.year}. ${paper.abstract ? paper.abstract.substring(0, 200) + '...' : 'Abstract not available.'}`;
+  private cleanDoiValue(doi: string): string {
+    return doi.replace(/^(https?:\/\/)?(dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '');
   }
 
-  /**
-   * Extract key findings using AI (placeholder)
-   */
-  async extractKeyFindings(paper: Paper): Promise<string[]> {
-    // This would use AI to analyze the paper
-    // Placeholder implementation
-    return [
-      'Key finding 1 from the paper',
-      'Key finding 2 from the paper',
-      'Key finding 3 from the paper'
-    ];
-  }
-
-  /**
-   * Extract methodology using AI (placeholder)
-   */
-  async extractMethodology(paper: Paper): Promise<string> {
-    // This would use AI to extract methodology
-    // Placeholder implementation
-    return 'Methodology: The study employed...';
-  }
-
-  /**
-   * Calculate relevance to user's work (placeholder)
-   */
-  async calculateRelevance(paper: Paper, userProfile: any): Promise<number> {
-    // This would use AI to match paper to user's research interests
-    // Returns score 0-100
-    // Placeholder implementation
-    return Math.floor(Math.random() * 100);
-  }
-
-  // Helper methods
+  // Helper methods (kept for callers / tests)
   private isDOI(str: string): boolean {
-    return /^(https?:\/\/)?(dx\.)?doi\.org\/10\.\d+/i.test(str) || 
-           /^10\.\d+\/.+/.test(str);
+    return this.extractIdentifier(str)?.kind === 'doi';
   }
 
   private isPMID(str: string): boolean {
-    return /^\d{7,8}$/.test(str.trim()) || 
-           /pmid:?\s*\d{7,8}/i.test(str);
+    return /^\d{5,9}$/.test(str.trim()) || /pmid:?\s*\d{5,9}/i.test(str);
   }
 
   private isArXivId(str: string): boolean {
-    return /^(arxiv:)?(\d{4}\.\d{4,5}|[a-z-]+\/\d{7})(v\d+)?$/i.test(str) ||
-           /arxiv\.org\/abs\//i.test(str);
+    return (
+      /^(arxiv:)?(\d{4}\.\d{4,5}|[a-z-]+\/\d{7})(v\d+)?$/i.test(str) ||
+      /arxiv\.org\/abs\//i.test(str)
+    );
   }
 
   private deduplicatePapers(papers: Paper[]): Paper[] {
     const seen = new Set<string>();
-    return papers.filter(paper => {
+    return papers.filter((paper) => {
       const key = paper.doi || paper.pmid || paper.arxivId || paper.title;
       if (seen.has(key)) return false;
       seen.add(key);

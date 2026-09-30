@@ -3,7 +3,7 @@ import PriorityBadge from './PriorityBadge';
 import StatusBadge from './StatusBadge';
 import AssigneeAvatars from './AssigneeAvatars';
 import DueDateIndicator from './DueDateIndicator';
-import { CheckCircleIcon } from './icons';
+import { CheckCircleIcon, ChatBubbleLeftRightIcon } from './icons';
 
 interface Task {
   id: string;
@@ -29,101 +29,100 @@ interface TaskCardProps {
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, compact = false }) => {
-  const assignees = task.assignee_id ? [{
-    id: task.assignee_id,
-    name: task.assignee_name || 'Assignee',
-    avatar_url: task.assignee_avatar
-  }] : [];
+  const assignees = task.assignee_id
+    ? [
+        {
+          id: task.assignee_id,
+          name: task.assignee_name || 'Assignee',
+          avatar_url: task.assignee_avatar,
+        },
+      ]
+    : [];
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
-      className={`bg-white border border-gray-200 rounded-lg p-3 cursor-pointer hover:shadow-md transition-all ${
-        compact ? 'p-2' : ''
+      className={`w-full text-left bg-white border border-slate-200/80 rounded-xl transition-all hover:border-sky-200 hover:shadow-sm hover:shadow-sky-100/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-200 ${
+        compact ? 'p-3' : 'p-3.5'
       }`}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex-1 min-w-0">
-          <h3 className={`font-medium text-gray-900 ${compact ? 'text-sm' : 'text-base'} line-clamp-2`}>
-            {task.title}
-          </h3>
-        </div>
+      <div className="flex items-start justify-between gap-2 mb-1.5">
+        <h3
+          className={`font-medium text-slate-900 leading-snug line-clamp-2 ${
+            compact ? 'text-[13px]' : 'text-[14px]'
+          }`}
+        >
+          {task.title}
+        </h3>
         {task.status === 'done' && (
-          <CheckCircleIcon className="w-5 h-5 text-green-600 flex-shrink-0" />
+          <CheckCircleIcon className="w-4.5 h-4.5 w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
         )}
       </div>
 
-      {/* Description */}
       {!compact && task.description && (
-        <p className="text-sm text-gray-600 mb-2 line-clamp-2">{task.description}</p>
+        <p className="text-[12px] text-slate-500 mb-2.5 line-clamp-2 leading-relaxed">
+          {task.description}
+        </p>
       )}
 
-      {/* Tags */}
       {task.tags && task.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-2">
-          {task.tags.slice(0, 3).map((tag, index) => (
+        <div className="flex flex-wrap gap-1 mb-2.5">
+          {task.tags.slice(0, 3).map((tag) => (
             <span
-              key={index}
-              className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700"
+              key={tag}
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] bg-slate-50 text-slate-600 border border-slate-100"
             >
               {tag}
             </span>
           ))}
           {task.tags.length > 3 && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
-              +{task.tags.length - 3}
-            </span>
+            <span className="text-[11px] text-slate-400">+{task.tags.length - 3}</span>
           )}
         </div>
       )}
 
-      {/* Progress Bar */}
-      {task.progress_percentage !== undefined && task.progress_percentage > 0 && (
-        <div className="mb-2">
-          <div className="w-full bg-gray-200 rounded-full h-1.5">
+      {typeof task.progress_percentage === 'number' && task.progress_percentage > 0 && (
+        <div className="mb-2.5">
+          <div className="w-full bg-slate-100 rounded-full h-1">
             <div
-              className="bg-blue-600 h-1.5 rounded-full transition-all"
+              className="bg-sky-600 h-1 rounded-full transition-all"
               style={{ width: `${task.progress_percentage}%` }}
             />
           </div>
         </div>
       )}
 
-      {/* Subtasks Progress */}
-      {task.total_subtasks !== undefined && task.total_subtasks > 0 && (
-        <div className="mb-2 flex items-center gap-2 text-xs text-gray-600">
-          <CheckCircleIcon className="w-4 h-4" />
+      {typeof task.total_subtasks === 'number' && task.total_subtasks > 0 && (
+        <div className="mb-2 flex items-center gap-1.5 text-[11px] text-slate-500">
+          <CheckCircleIcon className="w-3.5 h-3.5" />
           <span>
-            {task.total_subtasks - (task.incomplete_subtasks || 0)}/{task.total_subtasks} subtasks
+            {(task.total_subtasks || 0) - (task.incomplete_subtasks || 0)}/{task.total_subtasks}{' '}
+            subtasks
           </span>
         </div>
       )}
 
-      {/* Footer */}
-      <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-gray-100">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2 mt-1 pt-2 border-t border-slate-100">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <StatusBadge status={task.status} size="sm" />
           <PriorityBadge priority={task.priority} size="sm" />
         </div>
-        <div className="flex items-center gap-2">
-          {task.due_date && (
-            <DueDateIndicator dueDate={task.due_date} size="sm" />
-          )}
+        <div className="flex items-center gap-2 shrink-0">
+          {task.due_date && <DueDateIndicator dueDate={task.due_date} size="sm" />}
           {assignees.length > 0 && (
             <AssigneeAvatars assignees={assignees} size="sm" maxVisible={1} />
           )}
-          {task.comment_count !== undefined && task.comment_count > 0 && (
-            <span className="text-xs text-gray-500">
-              💬 {task.comment_count}
+          {typeof task.comment_count === 'number' && task.comment_count > 0 && (
+            <span className="inline-flex items-center gap-0.5 text-[11px] text-slate-400">
+              <ChatBubbleLeftRightIcon className="w-3.5 h-3.5" />
+              {task.comment_count}
             </span>
           )}
         </div>
       </div>
-    </div>
+    </button>
   );
 };
 
 export default TaskCard;
-
-

@@ -1,24 +1,25 @@
 /**
- * AI Research Agent Page
- * Simple chat interface that routes to user-configured APIs
- * Users control which APIs handle which tasks
+ * AI Research Agent — research workbench grounded in DRM workflows.
+ * Chat stays simple; modes + starters steer people toward literature, writing,
+ * experiment design, analysis, and funding—not a generic chatbot.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { 
+import { useAuth } from '../contexts/AuthContext';
+import { PageHeader, PagePanel, PageStat } from '../components/PageHeader';
+import {
   SparklesIcon,
   ArrowUpIcon,
-  PaperclipIcon,
   StopIcon,
   SettingsIcon,
   DocumentTextIcon,
   MicroscopeIcon,
   LightBulbIcon,
   ClipboardDocumentListIcon,
-  InformationCircleIcon
+  BookOpenIcon,
+  ArrowPathIcon,
 } from '../components/icons';
 
 interface Message {
@@ -27,7 +28,7 @@ interface Message {
   content: string;
   timestamp: Date;
   isStreaming?: boolean;
-  apiUsed?: string; // Which API was used for this response
+  apiUsed?: string;
 }
 
 interface ApiKey {
@@ -37,17 +38,266 @@ interface ApiKey {
   is_active: boolean;
 }
 
-interface TaskAssignment {
+type AiAccessStatus = {
+  platformConfigured: boolean;
+  platformProvider: string | null;
+  hasUserKeys: boolean;
+  userKeyCount: number;
+  quota: { limit: number; used: number; remaining: number; allowed: boolean };
+  canUsePlatform: boolean;
+  canUseAi: boolean;
+  message: string;
+};
+
+type AgentMode = 'discover' | 'write' | 'design' | 'analyze' | 'fund';
+
+type Starter = {
   id: string;
-  task_type: string;
-  task_name: string;
-  provider: string;
-  provider_name: string;
-  priority: number;
-  is_active: boolean;
+  title: string;
+  prompt: string;
+  hint: string;
+};
+
+const MODES: {
+  id: AgentMode;
+  label: string;
+  blurb: string;
+  icon: React.FC<React.SVGProps<SVGSVGElement>>;
+  accent: string;
+  link?: { to: string; label: string };
+  starters: Starter[];
+}[] = [
+  {
+    id: 'discover',
+    label: 'Discover',
+    blurb: 'Literature, papers, and open questions in your field',
+    icon: BookOpenIcon,
+    accent: 'sky',
+    link: { to: '/current-trends', label: 'Community news' },
+    starters: [
+      {
+        id: 'papers',
+        title: 'Find key papers',
+        prompt:
+          'Find recent and foundational papers on my research topic. Summarize why each matters and suggest what to read first.',
+        hint: 'Curated reading list',
+      },
+      {
+        id: 'gaps',
+        title: 'Spot research gaps',
+        prompt:
+          'Based on my profile and field, suggest under-explored questions and why they matter scientifically.',
+        hint: 'Idea space map',
+      },
+      {
+        id: 'review',
+        title: 'Outline a lit review',
+        prompt:
+          'Create a structured literature review outline for my topic, with section headings and what each section should cover.',
+        hint: 'Section-by-section plan',
+      },
+    ],
+  },
+  {
+    id: 'write',
+    label: 'Write',
+    blurb: 'Abstracts, methods drafts, and paper scaffolding',
+    icon: DocumentTextIcon,
+    accent: 'teal',
+    link: { to: '/lab-notebook', label: 'Open notebook' },
+    starters: [
+      {
+        id: 'abstract',
+        title: 'Draft an abstract',
+        prompt:
+          'Help me write a concise scientific abstract. Ask for missing background, methods, results, and conclusions if needed.',
+        hint: 'IMRaD-ready',
+      },
+      {
+        id: 'methods',
+        title: 'Methods narrative',
+        prompt:
+          'Turn my experimental notes into a clear Methods section suitable for a manuscript, noting what details are still missing.',
+        hint: 'From notes → prose',
+      },
+      {
+        id: 'paper',
+        title: 'Paper outline from data',
+        prompt:
+          'Propose a paper outline from my experimental work: title options, figures plan, and claims I should (and should not) make.',
+        hint: 'Claims + figures first',
+      },
+    ],
+  },
+  {
+    id: 'design',
+    label: 'Design',
+    blurb: 'Experiments, protocols, and control logic',
+    icon: MicroscopeIcon,
+    accent: 'emerald',
+    link: { to: '/protocols', label: 'Protocol library' },
+    starters: [
+      {
+        id: 'experiment',
+        title: 'Design an experiment',
+        prompt:
+          'Help me design an experiment for my research question. Include hypothesis, variables, controls, replicates, and success criteria.',
+        hint: 'Controls & replicates',
+      },
+      {
+        id: 'protocol',
+        title: 'Protocol checklist',
+        prompt:
+          'Draft a step-by-step protocol checklist for my assay, including reagents, timing, and common failure points.',
+        hint: 'Lab-ready steps',
+      },
+      {
+        id: 'troubleshoot',
+        title: 'Troubleshoot a failure',
+        prompt:
+          'My experiment failed. Help me systematically troubleshoot: likely causes, what to check first, and what to change next run.',
+        hint: 'Next-run plan',
+      },
+    ],
+  },
+  {
+    id: 'analyze',
+    label: 'Analyze',
+    blurb: 'Interpret results, figures, and evidence packs',
+    icon: LightBulbIcon,
+    accent: 'amber',
+    link: { to: '/data-results', label: 'Research evidence' },
+    starters: [
+      {
+        id: 'interpret',
+        title: 'Interpret results',
+        prompt:
+          'Help me interpret experimental results. Ask for the design, what I measured, and what I expected—then suggest claims and caveats.',
+        hint: 'Claims with caveats',
+      },
+      {
+        id: 'xy',
+        title: 'Standard curve advice',
+        prompt:
+          'Explain how to analyze an XY standard curve with replicates: mean ± SD, linear regression on means, R², and QC flags to watch.',
+        hint: 'Mean-based regression',
+      },
+      {
+        id: 'negative',
+        title: 'Frame a null result',
+        prompt:
+          'Help me document a failed or negative result so others can learn from it: what we tried, what failed, and what we would do differently.',
+        hint: 'Transparency credit',
+      },
+    ],
+  },
+  {
+    id: 'fund',
+    label: 'Fund',
+    blurb: 'Proposals, aims, and grant-ready framing',
+    icon: ClipboardDocumentListIcon,
+    accent: 'orange',
+    link: { to: '/grants-fundings', label: 'Grants & funding' },
+    starters: [
+      {
+        id: 'aims',
+        title: 'Specific aims draft',
+        prompt:
+          'Draft 2–3 specific aims for my project with rationale, approach, and expected outcomes—tight enough for a grant page.',
+        hint: 'Aims page tone',
+      },
+      {
+        id: 'proposal',
+        title: 'Proposal scaffold',
+        prompt:
+          'Outline a research proposal: significance, innovation, approach, timeline, and risks. Ask clarifying questions first if needed.',
+        hint: 'Full scaffold',
+      },
+      {
+        id: 'match',
+        title: 'Pitch for a call',
+        prompt:
+          'Help me pitch my project to a funding call: one-paragraph fit statement and what evidence I should attach from my lab work.',
+        hint: 'Call-fit statement',
+      },
+    ],
+  },
+];
+
+function formatAgentResult(content: any, agentType: string): string {
+  if (typeof content === 'string') return content;
+  switch (agentType) {
+    case 'paper_finding':
+      if (content.papers) {
+        return `Found ${content.papers.length} papers:\n\n${content.papers
+          .map(
+            (p: any, i: number) =>
+              `${i + 1}. ${p.title}\n   ${p.authors?.join(', ')}\n   Relevance: ${(p.relevanceScore * 100).toFixed(0)}%`
+          )
+          .join('\n\n')}`;
+      }
+      break;
+    case 'abstract_writing':
+      if (content.abstract) {
+        return `Abstract:\n\n${content.abstract}\n\nWord count: ${content.wordCount || 'N/A'}`;
+      }
+      break;
+    case 'idea_generation':
+      if (content.ideas) {
+        return `Generated ${content.ideas.length} research ideas:\n\n${content.ideas
+          .map(
+            (idea: any, i: number) =>
+              `${i + 1}. ${idea.title}\n   ${idea.description}\n   Feasibility: ${idea.feasibility} | Impact: ${idea.potentialImpact}`
+          )
+          .join('\n\n')}`;
+      }
+      break;
+  }
+  return JSON.stringify(content, null, 2);
 }
 
-const AIResearchAgentPage: React.FC = () => {
+function formatWorkflowResult(result: any): string {
+  if (result.tasks) {
+    return `Workflow finished (${result.tasks.length} steps):\n\n${result.tasks
+      .map((task: any, i: number) => `${i + 1}. ${task.task}: ${task.success ? 'ok' : 'failed'}`)
+      .join('\n')}`;
+  }
+  return JSON.stringify(result, null, 2);
+}
+
+/** Lightweight formatting for assistant text (bold + paragraphs). */
+function MessageBody({ text, streaming }: { text: string; streaming?: boolean }) {
+  if (!text && streaming) {
+    return (
+      <div className="flex items-center gap-1.5 text-slate-400 py-1">
+        <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse" />
+        <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse [animation-delay:150ms]" />
+        <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse [animation-delay:300ms]" />
+        <span className="ml-1 text-[12px]">Thinking…</span>
+      </div>
+    );
+  }
+
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return (
+    <div className="whitespace-pre-wrap break-words text-[14px] leading-relaxed">
+      {parts.map((part, i) =>
+        part.startsWith('**') && part.endsWith('**') ? (
+          <strong key={i} className="font-semibold text-slate-900">
+            {part.slice(2, -2)}
+          </strong>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+      {streaming && text ? (
+        <span className="ml-0.5 inline-block h-3.5 w-0.5 animate-pulse bg-sky-600 align-middle" />
+      ) : null}
+    </div>
+  );
+}
+
+const AIResearchAgentPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -55,156 +305,160 @@ const AIResearchAgentPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
-  const [taskAssignments, setTaskAssignments] = useState<TaskAssignment[]>([]);
+  const [aiAccess, setAiAccess] = useState<AiAccessStatus | null>(null);
   const [isCheckingSetup, setIsCheckingSetup] = useState(true);
   const [isExecutingWorkflow, setIsExecutingWorkflow] = useState(false);
+  const [mode, setMode] = useState<AgentMode>('discover');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Example prompts for quick start
-  const examplePrompts = [
-    "Find papers on CRISPR gene editing in cancer",
-    "Write an abstract for my experiment on protein folding",
-    "Generate research ideas for my field",
-    "Create a paper from my experimental data",
-    "Analyze my experimental results",
-    "Write a research proposal for grant funding"
-  ];
+  const activeMode = useMemo(() => MODES.find((m) => m.id === mode)!, [mode]);
+  const ModeIcon = activeMode.icon;
+  const hasConversation = messages.length > 0;
+  const activeKeys = apiKeys.filter((k) => k.is_active);
+  const canUseAi = aiAccess?.canUseAi ?? activeKeys.length > 0;
 
-  // Check API setup on mount
-  useEffect(() => {
-    checkApiSetup();
-  }, []);
-
-  // Scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // No welcome message - start with empty chat
-
-  // Check API setup
-  const checkApiSetup = async () => {
+  const checkApiSetup = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      
-      // Fetch API keys
-      const keysResponse = await axios.get('/api/api-task-assignments/api-keys', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setApiKeys(keysResponse.data.apiKeys || []);
-      
-      // Fetch task assignments
-      const assignmentsResponse = await axios.get('/api/api-task-assignments/assignments', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setTaskAssignments(assignmentsResponse.data.assignments || []);
+      const headers = { Authorization: `Bearer ${token}` };
+      const [keysResponse, accessResponse] = await Promise.all([
+        axios.get('/api/api-task-assignments/api-keys', { headers }).catch(() => null),
+        axios.get('/api/ai-research-agent/access', { headers }).catch(() => null),
+      ]);
+      setApiKeys(keysResponse?.data?.apiKeys || []);
+      if (accessResponse?.data) setAiAccess(accessResponse.data);
     } catch (error) {
       console.error('Error checking API setup:', error);
     } finally {
       setIsCheckingSetup(false);
     }
-  };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
+  useEffect(() => {
+    void checkApiSetup();
+  }, [checkApiSetup]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
+  }, [input]);
+
+  const sendChat = async (raw: string) => {
+    const content = raw.trim();
+    if (!content || isLoading || isExecutingWorkflow) return;
+
+    if (!canUseAi) {
+      if (aiAccess && !aiAccess.quota.allowed && !aiAccess.hasUserKeys) {
+        // Quota exhausted — send anyway so server returns the clear message, or navigate
+        navigate('/settings?tab=api-management');
+        return;
+      }
+      if (!aiAccess?.platformConfigured && activeKeys.length === 0) {
+        navigate('/settings?tab=api-management');
+        return;
+      }
+    }
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: `u-${Date.now()}`,
       role: 'user',
-      content: input.trim(),
-      timestamp: new Date()
+      content,
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
     setIsStreaming(true);
-
-    // Create abort controller for cancellation
     abortControllerRef.current = new AbortController();
 
-    // Create assistant message for streaming
-    const assistantMessageId = (Date.now() + 1).toString();
-    const assistantMessage: Message = {
-      id: assistantMessageId,
-      role: 'assistant',
-      content: '',
-      timestamp: new Date(),
-      isStreaming: true
-    };
-
-    setMessages(prev => [...prev, assistantMessage]);
+    const assistantMessageId = `a-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        isStreaming: true,
+      },
+    ]);
 
     try {
       const token = localStorage.getItem('token');
-      
-      if (!token) {
-        throw new Error('Please log in to use the AI Research Agent');
-      }
+      if (!token) throw new Error('Please log in to use the AI Research Agent');
 
-      // Use non-streaming for now (can add streaming later with EventSource)
+      const modeHint = `User selected research mode: ${activeMode.label} — ${activeMode.blurb}`;
       const response = await axios.post(
         '/api/ai-research-agent/chat',
         {
-          message: userMessage.content,
-          conversation_history: messages.map(m => ({
+          message: content,
+          conversation_history: messages.map((m) => ({
             role: m.role,
-            content: m.content
+            content: m.content,
           })),
-          stream: false // Use non-streaming for now
+          stream: false,
+          pageContext: modeHint,
         },
         {
-          headers: { 
+          headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
-          signal: abortControllerRef.current.signal
+          signal: abortControllerRef.current.signal,
         }
       );
 
-      // Handle response
-      if (response.data) {
-        const content = response.data.content || response.data.message || 'I received your message. Processing...';
-        
-        // Extract API info from response if available
-        const apiUsed = response.data.apiUsed || response.data.provider || null;
-        
-        setMessages(prev => prev.map(msg => 
-          msg.id === assistantMessageId 
-            ? { ...msg, content, isStreaming: false, apiUsed }
+      const reply =
+        response.data?.content ||
+        response.data?.message ||
+        'I received your message but returned an empty response.';
+      const apiUsed = response.data?.apiUsed || response.data?.provider || null;
+      if (response.data?.access) setAiAccess(response.data.access);
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? { ...msg, content: reply, isStreaming: false, apiUsed }
             : msg
-        ));
-        
-        // Refresh setup check to update status
-        checkApiSetup();
-      }
+        )
+      );
+      void checkApiSetup();
     } catch (error: any) {
       if (axios.isCancel(error)) {
-        // Request was cancelled
-        setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
+        setMessages((prev) => prev.filter((msg) => msg.id !== assistantMessageId));
         return;
       }
 
-      const errorMessage = error.response?.data?.error || 'Sorry, I encountered an error. Please try again.';
-      
-      // Check if error is about missing API assignment
-      const isMissingAssignment = errorMessage.toLowerCase().includes('assigned') || 
-                                   errorMessage.toLowerCase().includes('assignment');
-      
-      let errorContent = `❌ ${errorMessage}`;
-      
+      const errorMessage =
+        error.response?.data?.error || error.message || 'Sorry, something went wrong.';
+      const isMissingAssignment =
+        errorMessage.toLowerCase().includes('assigned') ||
+        errorMessage.toLowerCase().includes('assignment') ||
+        errorMessage.toLowerCase().includes('api key');
+
+      let errorContent = errorMessage;
       if (isMissingAssignment) {
-        errorContent += `\n\n💡 **Quick Fix:**\n`;
-        errorContent += `Go to Settings → API Task Assignments to configure your APIs for this task.`;
+        errorContent +=
+          '\n\n**Quick fix:** open Settings → API keys to connect your own provider, or ask an admin to set GEMINI_API_KEY on the server.';
       }
-      
-      setMessages(prev => prev.map(msg => 
-        msg.id === assistantMessageId 
-          ? { ...msg, content: errorContent, isStreaming: false }
-          : msg
-      ));
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? { ...msg, content: errorContent, isStreaming: false }
+            : msg
+        )
+      );
+      void checkApiSetup();
     } finally {
       setIsLoading(false);
       setIsStreaming(false);
@@ -213,119 +467,20 @@ const AIResearchAgentPage: React.FC = () => {
   };
 
   const handleStop = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      setIsStreaming(false);
-      setIsLoading(false);
-    }
+    abortControllerRef.current?.abort();
+    setIsStreaming(false);
+    setIsLoading(false);
   };
 
-  const handleExampleClick = (prompt: string) => {
-    setInput(prompt);
+  const handleNewChat = () => {
+    if (isLoading) handleStop();
+    setMessages([]);
+    setInput('');
   };
 
-  // Handle quick action buttons - sends message directly to chat endpoint
-  const handleQuickAction = async (message: string) => {
+  const handleWorkflowClick = async (workflowType: string, payload?: Record<string, unknown>) => {
     if (isLoading || isExecutingWorkflow) return;
-    
-    if (apiKeys.length === 0) {
-      navigate('/settings?tab=api-management');
-      return;
-    }
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: message,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setIsLoading(true);
-    setIsStreaming(true);
-
-    // Create abort controller for cancellation
-    abortControllerRef.current = new AbortController();
-
-    // Create assistant message for streaming
-    const assistantMessageId = (Date.now() + 1).toString();
-    const assistantMessage: Message = {
-      id: assistantMessageId,
-      role: 'assistant',
-      content: '',
-      timestamp: new Date(),
-      isStreaming: true
-    };
-
-    setMessages(prev => [...prev, assistantMessage]);
-
-    try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        throw new Error('Please log in to use the AI Research Agent');
-      }
-
-      const response = await axios.post(
-        '/api/ai-research-agent/chat',
-        {
-          message: message,
-          conversation_history: messages.map(m => ({
-            role: m.role,
-            content: m.content
-          })),
-          stream: false
-        },
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          signal: abortControllerRef.current.signal
-        }
-      );
-
-      // Handle response
-      if (response.data) {
-        const content = typeof response.data === 'string' 
-          ? response.data 
-          : response.data.content || response.data.message || 'I received your message. Processing...';
-        
-        // Extract API info from response if available
-        const apiUsed = response.data.apiUsed || response.data.provider || null;
-        
-        setMessages(prev => prev.map(msg => 
-          msg.id === assistantMessageId 
-            ? { ...msg, content, isStreaming: false, apiUsed }
-            : msg
-        ));
-      }
-    } catch (error: any) {
-      if (axios.isCancel(error)) {
-        // Request was cancelled
-        setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
-        return;
-      }
-
-      const errorMessage = error.response?.data?.error || 'Sorry, I encountered an error. Please try again.';
-      
-      setMessages(prev => prev.map(msg => 
-        msg.id === assistantMessageId 
-          ? { ...msg, content: `❌ ${errorMessage}`, isStreaming: false }
-          : msg
-      ));
-    } finally {
-      setIsLoading(false);
-      setIsStreaming(false);
-      abortControllerRef.current = null;
-    }
-  };
-
-  // Handle workflow execution
-  const handleWorkflowClick = async (workflowType: string, input?: any) => {
-    if (isLoading || isExecutingWorkflow) return;
-    
-    if (apiKeys.length === 0) {
+    if (!canUseAi) {
       navigate('/settings?tab=api-management');
       return;
     }
@@ -334,485 +489,459 @@ const AIResearchAgentPage: React.FC = () => {
     setIsLoading(true);
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: `u-${Date.now()}`,
       role: 'user',
-      content: `Execute ${workflowType} workflow`,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-
-    const assistantMessageId = (Date.now() + 1).toString();
-    const assistantMessage: Message = {
-      id: assistantMessageId,
-      role: 'assistant',
-      content: '',
+      content:
+        workflowType === 'paper-generation'
+          ? 'Run the paper-generation workflow from my research context.'
+          : 'Run the experiment-design workflow from my research question.',
       timestamp: new Date(),
-      isStreaming: true
     };
+    setMessages((prev) => [...prev, userMessage]);
 
-    setMessages(prev => [...prev, assistantMessage]);
+    const assistantMessageId = `a-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        isStreaming: true,
+      },
+    ]);
 
     try {
       const token = localStorage.getItem('token');
-      
-      let response;
-      if (workflowType === 'paper-generation' || workflowType === 'experiment') {
-        // Predefined workflow
-        response = await axios.post(
-          `/api/orchestrator/execute/${workflowType}`,
-          { input: input || {} },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else {
-        // Individual agent
-        response = await axios.post(
-          `/api/agents/${workflowType}/execute`,
-          { input: input || {}, config: {} },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      }
+      const response = await axios.post(
+        `/api/orchestrator/execute/${workflowType}`,
+        { input: payload || {} },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
       if (response.data.success) {
         const result = response.data.result || response.data;
-        let content = `✅ ${workflowType} completed successfully!\n\n`;
-        
-        if (result.content) {
-          content += formatAgentResult(result.content, workflowType);
-        } else if (result.synthesizedResult) {
-          content += formatWorkflowResult(result.synthesizedResult);
-        } else {
-          content += JSON.stringify(result, null, 2);
-        }
+        let content = `**${workflowType.replace(/-/g, ' ')}** finished.\n\n`;
+        if (result.content) content += formatAgentResult(result.content, workflowType);
+        else if (result.synthesizedResult) content += formatWorkflowResult(result.synthesizedResult);
+        else content += JSON.stringify(result, null, 2);
 
-        setMessages(prev => prev.map(msg =>
-          msg.id === assistantMessageId
-            ? { ...msg, content, isStreaming: false }
-            : msg
-        ));
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId ? { ...msg, content, isStreaming: false } : msg
+          )
+        );
       } else {
         throw new Error(response.data.error || 'Workflow execution failed');
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to execute workflow';
-      setMessages(prev => prev.map(msg =>
-        msg.id === assistantMessageId
-          ? { ...msg, content: `❌ Error: ${errorMessage}`, isStreaming: false }
-          : msg
-      ));
+      const errorMessage =
+        error.response?.data?.error || error.message || 'Failed to execute workflow';
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? { ...msg, content: errorMessage, isStreaming: false }
+            : msg
+        )
+      );
     } finally {
       setIsLoading(false);
       setIsExecutingWorkflow(false);
     }
   };
 
-  // Format agent result for display
-  const formatAgentResult = (content: any, agentType: string): string => {
-    if (typeof content === 'string') return content;
-    
-    switch (agentType) {
-      case 'paper_finding':
-        if (content.papers) {
-          return `Found ${content.papers.length} papers:\n\n${content.papers.map((p: any, i: number) => 
-            `${i + 1}. ${p.title}\n   ${p.authors?.join(', ')}\n   Relevance: ${(p.relevanceScore * 100).toFixed(0)}%`
-          ).join('\n\n')}`;
-        }
-        break;
-      case 'abstract_writing':
-        if (content.abstract) {
-          return `Abstract:\n\n${content.abstract}\n\nWord count: ${content.wordCount || 'N/A'}`;
-        }
-        break;
-      case 'idea_generation':
-        if (content.ideas) {
-          return `Generated ${content.ideas.length} research ideas:\n\n${content.ideas.map((idea: any, i: number) =>
-            `${i + 1}. ${idea.title}\n   ${idea.description}\n   Feasibility: ${idea.feasibility} | Impact: ${idea.potentialImpact}`
-          ).join('\n\n')}`;
-        }
-        break;
-    }
-    
-    return JSON.stringify(content, null, 2);
-  };
-
-  // Format workflow result for display
-  const formatWorkflowResult = (result: any): string => {
-    if (result.tasks) {
-      return `Workflow completed with ${result.tasks.length} tasks:\n\n${result.tasks.map((task: any, i: number) =>
-        `${i + 1}. ${task.task}: ${task.success ? '✅' : '❌'}`
-      ).join('\n')}`;
-    }
-    return JSON.stringify(result, null, 2);
-  };
-
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto h-screen flex flex-col">
-        {/* Header - Minimal, like Gemini */}
-        {messages.length <= 1 && (
-          <div className="px-6 pt-8 pb-4">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm">
-                  <SparklesIcon className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-semibold text-gray-900">AI Research Agent</h1>
-                  <p className="text-sm text-gray-500">Your intelligent research assistant</p>
-                </div>
-              </div>
-              {/* API Status Indicator */}
-              {!isCheckingSetup && (
-                <div className="flex items-center space-x-2">
-                  {apiKeys.length > 0 ? (
-                    <div className="flex items-center space-x-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-xs font-medium text-green-700">
-                        {apiKeys.length} API{apiKeys.length > 1 ? 's' : ''} configured
-                      </span>
-                    </div>
-                  ) : (
-                      <button
-                        onClick={() => navigate('/settings?tab=api-management')}
-                        className="flex items-center space-x-2 px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
-                      >
-                        <SettingsIcon className="w-4 h-4 text-orange-600" />
-                        <span className="text-xs font-medium text-orange-700">Setup Required</span>
-                      </button>
-                  )}
-                </div>
-              )}
-            </div>
+    <div className={`mx-auto flex max-w-6xl flex-col gap-5 ${embedded ? 'px-4 py-4 sm:px-6' : 'pb-6'}`}>
+      {embedded ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 flex-1 min-w-0">
+            <PageStat label="Mode" value={activeMode.label} accent="sky" />
+            <PageStat
+              label="AI access"
+              value={
+                isCheckingSetup
+                  ? '…'
+                  : aiAccess?.hasUserKeys
+                    ? 'Your keys'
+                    : aiAccess?.platformConfigured
+                      ? 'Included'
+                      : 'Needed'
+              }
+              accent={canUseAi ? 'emerald' : 'orange'}
+            />
+            <PageStat
+              label="Free today"
+              value={isCheckingSetup ? '…' : aiAccess ? `${aiAccess.quota.remaining}` : '—'}
+              accent={aiAccess && !aiAccess.quota.allowed ? 'orange' : 'teal'}
+            />
+            <PageStat
+              label="Status"
+              value={isLoading ? 'Working' : canUseAi ? 'Ready' : 'Limited'}
+              accent={isLoading ? 'amber' : canUseAi ? 'sky' : 'orange'}
+            />
           </div>
-        )}
-
-        {/* Messages Area - Clean, spacious */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-          {messages.map((message, index) => (
-            <div
-              key={message.id}
-              className={`flex gap-4 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              style={{ animation: `fadeIn 0.3s ease-in ${index * 0.1}s both` }}
-            >
-              {message.role === 'assistant' && (
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <SparklesIcon className="w-4 h-4 text-white" />
-                </div>
-              )}
-              <div
-                className={`max-w-[80%] rounded-3xl px-5 py-4 ${
-                  message.role === 'user'
-                    ? 'bg-blue-600 text-white shadow-sm hover:shadow-md transition-shadow'
-                    : 'bg-gray-50 text-gray-900 border border-gray-100 hover:border-gray-200 transition-all'
-                }`}
+          <div className="flex flex-wrap items-center gap-2">
+            {hasConversation ? (
+              <button
+                type="button"
+                onClick={handleNewChat}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-slate-50"
               >
-                <div className="whitespace-pre-wrap break-words leading-relaxed text-[15px]">
-                  {message.content || (message.isStreaming && (
-                    <div className="flex items-center space-x-2 text-gray-500">
-                      <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-pulse"></span>
-                      <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></span>
-                      <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></span>
-                    </div>
-                  ))}
-                </div>
-                {message.isStreaming && message.content && (
-                  <div className="mt-3 flex items-center space-x-1">
-                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                  </div>
-                )}
-                {/* Show which API was used */}
-                {message.role === 'assistant' && message.apiUsed && !message.isStreaming && (
-                  <div className="mt-2 pt-2 border-t border-gray-200">
-                    <span className="text-xs text-gray-500">
-                      Powered by <span className="font-medium">{message.apiUsed}</span>
-                    </span>
-                  </div>
-                )}
-              </div>
-              {message.role === 'user' && (
-                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-medium text-gray-600">
-                    {user?.first_name?.[0] || user?.email?.[0] || 'U'}
-                  </span>
-                </div>
-              )}
-            </div>
-          ))}
-          
-
-          {/* Example prompts - Modern card design */}
-          {messages.length <= 1 && apiKeys.length > 0 && !isCheckingSetup && (
-            <div className="mt-12 space-y-4">
-              <p className="text-sm font-medium text-gray-700 ml-11">Try asking:</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-11">
-                {examplePrompts.map((prompt, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleExampleClick(prompt)}
-                    className="group text-left px-5 py-4 bg-white rounded-2xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 text-sm text-gray-700 hover:text-gray-900"
-                  >
-                    <div className="flex items-start space-x-3">
-                      <div className="w-6 h-6 rounded-lg bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors">
-                        <SparklesIcon className="w-3.5 h-3.5 text-blue-600" />
-                      </div>
-                      <span className="flex-1">{prompt}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
+                <ArrowPathIcon className="h-4 w-4" />
+                New chat
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => navigate('/settings?tab=api-management')}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              <SettingsIcon className="h-4 w-4" />
+              API keys
+            </button>
+          </div>
         </div>
+      ) : (
+        <PageHeader
+          title="Research agent"
+          subtitle="A workbench for literature, writing, experiment design, analysis, and funding — grounded in how you already work in Digital Research Manager."
+          accent="sky"
+          icon={<SparklesIcon />}
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              {hasConversation ? (
+                <button
+                  type="button"
+                  onClick={handleNewChat}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                >
+                  <ArrowPathIcon className="h-4 w-4" />
+                  New chat
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => navigate('/settings?tab=api-management')}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+              >
+                <SettingsIcon className="h-4 w-4" />
+                API keys
+              </button>
+            </div>
+          }
+        >
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <PageStat label="Mode" value={activeMode.label} accent="sky" />
+            <PageStat
+              label="AI access"
+              value={
+                isCheckingSetup
+                  ? '…'
+                  : aiAccess?.hasUserKeys
+                    ? 'Your keys'
+                    : aiAccess?.platformConfigured
+                      ? 'Included'
+                      : 'Needed'
+              }
+              accent={canUseAi ? 'emerald' : 'orange'}
+              action={
+                !isCheckingSetup && aiAccess?.canUsePlatform && !aiAccess.hasUserKeys ? (
+                  <span className="text-[11px] text-slate-500">
+                    {aiAccess.quota.remaining}/{aiAccess.quota.limit}
+                  </span>
+                ) : null
+              }
+            />
+            <PageStat
+              label="Free today"
+              value={isCheckingSetup ? '…' : aiAccess ? `${aiAccess.quota.remaining}` : '—'}
+              accent={aiAccess && !aiAccess.quota.allowed ? 'orange' : 'teal'}
+            />
+            <PageStat
+              label="Status"
+              value={isLoading ? 'Working' : canUseAi ? 'Ready' : 'Limited'}
+              accent={isLoading ? 'amber' : canUseAi ? 'sky' : 'orange'}
+            />
+          </div>
+        </PageHeader>
+      )}
 
-        {/* Input Area - Modern, like Gemini */}
-        <div className="border-t border-gray-200 bg-white">
-          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto px-6 py-4">
-            <div className="relative">
-              <div className={`flex items-end gap-3 bg-gray-50 rounded-3xl border-2 transition-all ${
-                isLoading ? 'border-gray-200' : 'border-gray-200 hover:border-gray-300 focus-within:border-blue-500 focus-within:shadow-lg'
-              }`}>
-                <div className="flex-1 px-5 py-4">
-                  <textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSubmit(e);
-                      }
-                    }}
-                    placeholder="Ask me anything about your research..."
-                    rows={1}
-                    className="w-full bg-transparent border-0 focus:ring-0 resize-none text-gray-900 placeholder-gray-400 text-[15px] leading-relaxed"
-                    style={{ 
-                      minHeight: '24px', 
-                      maxHeight: '200px',
-                      overflowY: 'auto'
-                    }}
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="flex items-center gap-2 px-4 pb-3">
+      {!isCheckingSetup && aiAccess?.message ? (
+        <div
+          className={`rounded-xl border px-4 py-3 text-[13px] ${
+            canUseAi
+              ? 'border-emerald-200 bg-emerald-50/80 text-emerald-950'
+              : 'border-amber-200 bg-amber-50/80 text-amber-950'
+          }`}
+        >
+          {aiAccess.message}{' '}
+          {!canUseAi || (aiAccess.platformConfigured && !aiAccess.hasUserKeys) ? (
+            <button
+              type="button"
+              onClick={() => navigate('/settings?tab=api-management')}
+              className="font-semibold underline-offset-2 hover:underline"
+            >
+              {canUseAi ? 'Add your own key (optional)' : 'Connect your API key'}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:items-start">
+        {/* Mode rail */}
+        <aside className="lg:col-span-3 space-y-3 lg:sticky lg:top-4">
+          <PagePanel accent="sky" className="p-2 sm:p-2" title="Focus">
+            <nav className="space-y-0.5" aria-label="Agent modes">
+              {MODES.map((m) => {
+                const Icon = m.icon;
+                const active = mode === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setMode(m.id)}
+                    className={`flex w-full items-start gap-2.5 rounded-lg px-3 py-2.5 text-left transition-colors ${
+                      active
+                        ? 'bg-sky-700 text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    }`}
+                  >
+                    <Icon
+                      className={`mt-0.5 h-4 w-4 shrink-0 ${active ? 'text-sky-100' : 'text-slate-400'}`}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-[13px] font-medium">{m.label}</span>
+                      <span
+                        className={`mt-0.5 block text-[11px] leading-snug ${
+                          active ? 'text-sky-100/90' : 'text-slate-500'
+                        }`}
+                      >
+                        {m.blurb}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
+          </PagePanel>
+
+          {activeMode.link ? (
+            <PagePanel accent="teal" title="In the app">
+              <p className="text-[12px] text-slate-500 mb-2">
+                Pair the agent with the workspace where this work already lives.
+              </p>
+              <Link
+                to={activeMode.link.to}
+                className="inline-flex text-[13px] font-medium text-sky-800 hover:text-sky-950"
+              >
+                {activeMode.link.label} →
+              </Link>
+            </PagePanel>
+          ) : null}
+
+          {(mode === 'write' || mode === 'design') && (
+            <PagePanel accent="amber" title="Longer runs">
+              <p className="text-[12px] text-slate-500 mb-3">
+                Multi-step orchestrations when a single chat turn is not enough.
+              </p>
+              <div className="space-y-2">
+                {mode === 'write' ? (
+                  <button
+                    type="button"
+                    disabled={isLoading || isExecutingWorkflow}
+                    onClick={() =>
+                      void handleWorkflowClick('paper-generation', {
+                        researchQuestion: 'Research question',
+                        data: {},
+                      })
+                    }
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-[12px] font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Paper generation workflow
+                  </button>
+                ) : null}
+                {mode === 'design' ? (
+                  <button
+                    type="button"
+                    disabled={isLoading || isExecutingWorkflow}
+                    onClick={() =>
+                      void handleWorkflowClick('experiment', {
+                        researchQuestion: 'Research question',
+                        constraints: {},
+                      })
+                    }
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-[12px] font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Experiment workflow
+                  </button>
+                ) : null}
+              </div>
+            </PagePanel>
+          )}
+        </aside>
+
+        {/* Chat column */}
+        <div className="lg:col-span-9 flex min-h-[70vh] flex-col">
+          <PagePanel
+            accent="sky"
+            className="flex flex-1 flex-col !p-0 overflow-hidden"
+            title={
+              <span className="inline-flex items-center gap-2">
+                <ModeIcon className="h-4 w-4 text-sky-700" />
+                {activeMode.label}
+              </span>
+            }
+            action={
+              <span className="text-[11px] text-slate-500 hidden sm:inline">
+                {user?.first_name
+                  ? `Working with ${user.first_name}`
+                  : 'Ask in plain language'}
+              </span>
+            }
+          >
+            <div className="flex flex-1 flex-col min-h-[28rem]">
+              <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5 max-h-[min(58vh,640px)]">
+                {!hasConversation ? (
+                  <div className="space-y-4">
+                    <div className="rounded-xl border border-dashed border-sky-200 bg-gradient-to-br from-sky-50/70 to-white px-4 py-5">
+                      <p className="text-[14px] font-semibold text-slate-900">
+                        Start from a research job — not a blank chat
+                      </p>
+                      <p className="mt-1 text-[12px] text-slate-500 leading-relaxed">
+                        Pick a starter below, or type your own. The agent uses your configured
+                        providers and can lean on context from your lab work.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                      {activeMode.starters.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          disabled={isLoading}
+                          onClick={() => void sendChat(s.prompt)}
+                          className="group rounded-xl border border-slate-200 bg-white p-3.5 text-left shadow-sm transition-colors hover:border-sky-200 hover:bg-sky-50/40 disabled:opacity-50"
+                        >
+                          <p className="text-[13px] font-semibold text-slate-900 group-hover:text-sky-950">
+                            {s.title}
+                          </p>
+                          <p className="mt-1 text-[11px] text-slate-500">{s.hint}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {message.role === 'assistant' ? (
+                        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-sky-700 text-white shadow-sm shadow-sky-200/50">
+                          <SparklesIcon className="h-4 w-4" />
+                        </div>
+                      ) : null}
+                      <div
+                        className={`max-w-[min(100%,36rem)] rounded-2xl px-4 py-3 ${
+                          message.role === 'user'
+                            ? 'bg-sky-700 text-white shadow-sm'
+                            : 'border border-slate-200/80 bg-slate-50/80 text-slate-900'
+                        }`}
+                      >
+                        <MessageBody
+                          text={message.content}
+                          streaming={message.isStreaming}
+                        />
+                        {message.role === 'assistant' &&
+                        message.apiUsed &&
+                        !message.isStreaming ? (
+                          <p className="mt-2 border-t border-slate-200/80 pt-2 text-[11px] text-slate-500">
+                            Via {message.apiUsed}
+                          </p>
+                        ) : null}
+                      </div>
+                      {message.role === 'user' ? (
+                        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-200 text-[11px] font-semibold text-slate-700">
+                          {user?.first_name?.[0] || user?.email?.[0] || 'U'}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              <div className="border-t border-slate-100 bg-white/90 px-4 py-3 sm:px-5">
+                {!hasConversation ? (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {activeMode.starters.map((s) => (
+                      <button
+                        key={`chip-${s.id}`}
+                        type="button"
+                        onClick={() => setInput(s.prompt)}
+                        className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-900"
+                      >
+                        {s.title}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void sendChat(input);
+                  }}
+                  className="flex items-end gap-2"
+                >
+                  <div className="flex-1 rounded-xl border border-slate-200 bg-white focus-within:border-sky-300 focus-within:ring-2 focus-within:ring-sky-400/30">
+                    <textarea
+                      ref={textareaRef}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          void sendChat(input);
+                        }
+                      }}
+                      placeholder={`Ask about ${activeMode.label.toLowerCase()}…`}
+                      rows={1}
+                      disabled={isLoading}
+                      className="w-full resize-none bg-transparent px-3.5 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-60"
+                      style={{ minHeight: 42, maxHeight: 180 }}
+                    />
+                  </div>
                   {isStreaming ? (
                     <button
                       type="button"
                       onClick={handleStop}
-                      className="p-2.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                      title="Stop generation"
+                      className="inline-flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100"
+                      title="Stop"
                     >
-                      <StopIcon className="w-5 h-5" />
+                      <StopIcon className="h-5 w-5" />
                     </button>
                   ) : (
-                    <>
-                      <button
-                        type="button"
-                        className="p-2.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors"
-                        title="Attach file"
-                      >
-                        <PaperclipIcon className="w-5 h-5" />
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={!input.trim() || isLoading}
-                        className={`p-2.5 rounded-full transition-all ${
-                          input.trim() && !isLoading
-                            ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
-                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        }`}
-                        title="Send message"
-                      >
-                        <ArrowUpIcon className="w-5 h-5" />
-                      </button>
-                    </>
+                    <button
+                      type="submit"
+                      disabled={!input.trim() || isLoading}
+                      className="inline-flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl bg-sky-700 text-white shadow-sm hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Send"
+                    >
+                      <ArrowUpIcon className="h-5 w-5" />
+                    </button>
                   )}
-                </div>
+                </form>
+                <p className="mt-2 text-center text-[11px] text-slate-400">
+                  Enter to send · Shift+Enter for a new line · Mode shapes the starter prompts
+                </p>
               </div>
-              {isLoading && (
-                <div className="mt-2 ml-5 flex items-center space-x-2 text-xs text-gray-500">
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
-                  <span>Processing your request...</span>
-                </div>
-              )}
             </div>
-            <div className="mt-3 flex items-center justify-center text-xs text-gray-400">
-              <span>Press Enter to send, Shift+Enter for new line</span>
-            </div>
-          </form>
+          </PagePanel>
         </div>
-
-        {/* Workflow Buttons - After input area */}
-        {!isCheckingSetup && (
-          <div className="border-t border-gray-200 bg-white">
-            <div className="max-w-4xl mx-auto px-6 py-3">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Quick Actions</p>
-                <button
-                  onClick={() => navigate('/ai-agents-capabilities')}
-                  className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  <InformationCircleIcon className="w-4 h-4" />
-                  <span>Learn about AI Agents</span>
-                </button>
-              </div>
-              {apiKeys.length === 0 && (
-                <p className="text-xs text-orange-600 mb-2">⚠️ Add API keys in Settings to use these features</p>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {/* Individual Agents - Use chat endpoint instead of workflow endpoints */}
-                <button
-                  onClick={() => {
-                    if (apiKeys.length === 0) {
-                      navigate('/settings?tab=api-management');
-                    } else {
-                      handleQuickAction('Find papers on my research topic');
-                    }
-                  }}
-                  disabled={isLoading || isExecutingWorkflow}
-                  className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all text-xs font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <DocumentTextIcon className="w-4 h-4 text-blue-600" />
-                  <span>Find Papers</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (apiKeys.length === 0) {
-                      navigate('/settings?tab=api-management');
-                    } else {
-                      handleQuickAction('Write an abstract for my experiment');
-                    }
-                  }}
-                  disabled={isLoading || isExecutingWorkflow}
-                  className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all text-xs font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <DocumentTextIcon className="w-4 h-4 text-blue-600" />
-                  <span>Write Abstract</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (apiKeys.length === 0) {
-                      navigate('/settings?tab=api-management');
-                    } else {
-                      handleQuickAction('Generate research ideas for my field');
-                    }
-                  }}
-                  disabled={isLoading || isExecutingWorkflow}
-                  className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all text-xs font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <LightBulbIcon className="w-4 h-4 text-yellow-600" />
-                  <span>Generate Ideas</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (apiKeys.length === 0) {
-                      navigate('/settings?tab=api-management');
-                    } else {
-                      handleQuickAction('Write a research proposal for grant funding');
-                    }
-                  }}
-                  disabled={isLoading || isExecutingWorkflow}
-                  className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all text-xs font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ClipboardDocumentListIcon className="w-4 h-4 text-purple-600" />
-                  <span>Write Proposal</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (apiKeys.length === 0) {
-                      navigate('/settings?tab=api-management');
-                    } else {
-                      handleQuickAction('Create a literature review on my research topic');
-                    }
-                  }}
-                  disabled={isLoading || isExecutingWorkflow}
-                  className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all text-xs font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <DocumentTextIcon className="w-4 h-4 text-green-600" />
-                  <span>Literature Review</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (apiKeys.length === 0) {
-                      navigate('/settings?tab=api-management');
-                    } else {
-                      handleQuickAction('Design an experiment for my research question');
-                    }
-                  }}
-                  disabled={isLoading || isExecutingWorkflow}
-                  className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all text-xs font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <MicroscopeIcon className="w-4 h-4 text-indigo-600" />
-                  <span>Design Experiment</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (apiKeys.length === 0) {
-                      navigate('/settings?tab=api-management');
-                    } else {
-                      handleQuickAction('Analyze my experimental data and provide insights');
-                    }
-                  }}
-                  disabled={isLoading || isExecutingWorkflow}
-                  className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all text-xs font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <MicroscopeIcon className="w-4 h-4 text-teal-600" />
-                  <span>Analyze Data</span>
-                </button>
-                
-                {/* Workflows */}
-                <div className="w-full border-t border-gray-200 my-2"></div>
-                <button
-                  onClick={() => {
-                    if (apiKeys.length === 0) {
-                      navigate('/settings?tab=api-management');
-                    } else {
-                      handleWorkflowClick('paper-generation', { researchQuestion: 'Research question', data: {} });
-                    }
-                  }}
-                  disabled={isLoading || isExecutingWorkflow}
-                  className="flex items-center space-x-2 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all text-xs font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <SparklesIcon className="w-4 h-4" />
-                  <span>Paper Generation Workflow</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (apiKeys.length === 0) {
-                      navigate('/settings?tab=api-management');
-                    } else {
-                      handleWorkflowClick('experiment', { researchQuestion: 'Research question', constraints: {} });
-                    }
-                  }}
-                  disabled={isLoading || isExecutingWorkflow}
-                  className="flex items-center space-x-2 px-3 py-1.5 bg-gradient-to-r from-indigo-500 to-blue-600 text-white rounded-lg hover:from-indigo-600 hover:to-blue-700 transition-all text-xs font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <MicroscopeIcon className="w-4 h-4" />
-                  <span>Experiment Workflow</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
-
-      <style>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 };
 
 export default AIResearchAgentPage;
-

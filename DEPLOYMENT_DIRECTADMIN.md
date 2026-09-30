@@ -1,254 +1,169 @@
-# DirectAdmin Deployment Guide
+# ============================================================
+# Digital Research Manager — DirectAdmin / cPanel deployment
+# ============================================================
 
-## Pre-Deployment Checklist
+This guide targets **DirectAdmin with Node.js Selector** (also works on similar cPanel Node hosts).
 
-### 1. Database Setup
-- [ ] Run all migrations including `20250127_safety_systems.sql`
-- [ ] Verify database connection settings in `.env`
-- [ ] Ensure PostgreSQL extensions are enabled (pgvector if needed)
+## Recommended architecture (simplest)
 
-### 2. Environment Variables
-Create `.env` file with:
-```env
-# Database
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=digital_research_manager
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
+Run **one Node.js app** that serves:
 
-# Server
-NODE_ENV=production
-PORT=3000
-JWT_SECRET=your_jwt_secret_here
+- REST API under `/api/*`
+- Built React SPA from `dist/`
 
-# Frontend
-VITE_API_URL=https://yourdomain.com/api
+Startup file: **`app.js`** (copied from `deploy/directadmin/app.js` by the pack script)  
+Env flag: **`SERVE_FRONTEND=true`** (default when `NODE_ENV=production`)
 
-# AI Providers (optional, users can add their own)
-OPENAI_API_KEY=
-ANTHROPIC_API_KEY=
-GOOGLE_GEMINI_API_KEY=
-PERPLEXITY_API_KEY=
+```
+Browser  →  DirectAdmin proxy  →  Node (app.js)
+                                  ├─ /api/*     Express routes
+                                  └─ /*         dist/index.html + assets
 ```
 
-### 3. Build Commands
+---
+
+## 1. Create MySQL database (DirectAdmin)
+
+1. **MySQL Management** → create database + user, grant ALL on that DB.
+2. Note: host (usually `localhost`), DB name, user, password.
+
+Apply schema/migrations from `database/migrations/mysql_*.sql` (or your existing MySQL migration process) against that database.
+
+---
+
+## 2. Build locally (or on a machine with Node 18+)
+
 ```bash
-# Install dependencies
 pnpm install
 
-# Build frontend
-pnpm run build
+# Use your real domain — Vite bakes VITE_API_URL into the JS bundle
+export VITE_API_URL=https://YOUR-DOMAIN.com/api
+export NODE_ENV=production
 
-# Build backend (if using TypeScript compilation)
-pnpm run build:server
+pnpm run build:all
+# or: pnpm run build:directadmin
 ```
 
-### 4. DirectAdmin Setup Steps
+Package for upload:
 
-#### Step 1: Create Application Directory
-1. Log into DirectAdmin
-2. Navigate to File Manager
-3. Create directory: `public_html/researchlab` (or your preferred path)
-
-#### Step 2: Upload Files
-Upload the following:
-- `dist/` (frontend build)
-- `server/` (backend source)
-- `database/` (migrations)
-- `package.json`
-- `.env` (create on server, don't upload from local)
-- `node_modules/` (or install on server)
-
-#### Step 3: Node.js Application Setup
-1. In DirectAdmin, go to **Advanced Features** → **Node.js App**
-2. Click **Create Node.js App**
-3. Configure:
-   - **App Name**: `researchlab`
-   - **App URL**: `/researchlab` or root domain
-   - **App Root**: `/home/username/researchlab`
-   - **App Startup File**: `server/index.js` or `server/index.ts`
-   - **Node.js Version**: Latest LTS (18.x or 20.x)
-   - **App Mode**: Production
-
-#### Step 4: Environment Variables in DirectAdmin
-1. In Node.js App settings, add environment variables:
-   - `NODE_ENV=production`
-   - `PORT=3000` (or port assigned by DirectAdmin)
-   - All database and API keys from `.env`
-
-#### Step 5: Database Configuration
-1. Create PostgreSQL database in DirectAdmin:
-   - Go to **Advanced Features** → **PostgreSQL Databases**
-   - Create database: `digital_research_manager`
-   - Create user and grant privileges
-   - Note connection details
-
-2. Run migrations:
-   ```bash
-   # SSH into server
-   cd /home/username/researchlab
-   psql -U db_user -d digital_research_manager -f database/migrations/20250127_safety_systems.sql
-   # Run other migrations in order
-   ```
-
-#### Step 6: Reverse Proxy Setup (if needed)
-If using DirectAdmin's Apache/Nginx:
-1. Go to **Advanced Features** → **Custom HTTPD Config**
-2. Add reverse proxy configuration:
-
-**For Apache:**
-```apache
-<Location /api>
-    ProxyPass http://localhost:3000/api
-    ProxyPassReverse http://localhost:3000/api
-</Location>
-```
-
-**For Nginx:**
-```nginx
-location /api {
-    proxy_pass http://localhost:3000;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection 'upgrade';
-    proxy_set_header Host $host;
-    proxy_cache_bypass $http_upgrade;
-}
-```
-
-#### Step 7: SSL Certificate
-1. In DirectAdmin, go to **SSL Certificates**
-2. Install Let's Encrypt certificate for your domain
-3. Force HTTPS redirect
-
-#### Step 8: Start Application
-1. In Node.js App settings, click **Start**
-2. Check logs for errors
-3. Test API endpoint: `https://yourdomain.com/api/health`
-
-### 5. File Permissions
 ```bash
-# Set proper permissions
-chmod 755 /home/username/researchlab
-chmod 644 /home/username/researchlab/.env
-chmod 755 /home/username/researchlab/server
+pnpm run pack:directadmin
+# → creates digital-research-manager-directadmin-YYYYMMDD-HHMMSS.zip
 ```
 
-### 6. Process Manager (PM2) - Optional
-If DirectAdmin doesn't manage Node.js processes:
+---
+
+## 3. Upload to the server
+
+Extract into the Node application root, for example:
+
+`/home/USERNAME/domains/YOUR-DOMAIN.com/nodejs/`  
+(or the path DirectAdmin shows as **Application root**)
+
+Upload at least:
+
+| Path | Purpose |
+|------|---------|
+| `app.js` | DirectAdmin startup file (from pack) |
+| `package.json` + `pnpm-lock.yaml` | deps |
+| `dist/client/` | frontend SPA |
+| `dist/server/` | compiled API |
+| `database/migrations/` | MySQL SQL (optional on server if already migrated) |
+| `env.directadmin.example` | copy to `.env` and edit |
+| `ecosystem.config.cjs` | optional PM2 |
+
+Do **not** upload local `.env` with secrets from your laptop. Create `.env` on the server.
+
+---
+
+## 4. Create the Node.js application (DirectAdmin UI)
+
+1. **Extra Features** → **Node.js** (or **Setup Node.js App**).
+2. **Create Application**:
+   - **Node.js version:** 18.x or 20.x LTS
+   - **Application mode:** Production
+   - **Application root:** folder with `app.js`
+   - **Application URL:** `/` (whole domain) or a subdomain
+   - **Application startup file:** `app.js`
+   - **Passenger log** / port: leave DirectAdmin defaults (it sets `PORT`)
+3. Open the app’s environment editor and paste values from `env.directadmin.example` (filled in).
+4. In the application directory (SSH or Terminal):
+
 ```bash
-# Install PM2 globally
-npm install -g pm2
-
-# Start application
-cd /home/username/researchlab
-pm2 start server/index.js --name researchlab
-
-# Save PM2 configuration
-pm2 save
-pm2 startup
+cd /path/to/application/root
+npm install -g pnpm   # if not available
+pnpm install --prod
+# If pnpm is unavailable:
+# npm install --omit=dev
 ```
 
-### 7. Cron Jobs (if needed)
-For scheduled tasks:
-1. Go to **Advanced Features** → **Cron Jobs**
-2. Add cron jobs for:
-   - Database backups
-   - Cleanup tasks
-   - Scheduled workflows
+5. **Restart** the Node.js application in DirectAdmin.
 
-### 8. Monitoring
-- Check DirectAdmin Node.js App logs
-- Monitor database connections
-- Check server resources (CPU, Memory)
-- Set up error alerts
+---
 
-## Post-Deployment Verification
+## 5. Required environment variables
 
-1. **Health Check**: `https://yourdomain.com/api/health`
-2. **Frontend**: `https://yourdomain.com`
-3. **Database**: Verify all tables created
-4. **API Endpoints**: Test key endpoints
-5. **Authentication**: Test login/register
-6. **AI Features**: Test AI Research Agent (requires API keys)
+| Variable | Notes |
+|----------|--------|
+| `NODE_ENV` | `production` |
+| `PORT` | Usually set by DirectAdmin — do not fight it |
+| `TRUST_PROXY` | `true` |
+| `SERVE_FRONTEND` | `true` |
+| `FRONTEND_URL` | `https://YOUR-DOMAIN.com` |
+| `JWT_SECRET` | `openssl rand -hex 32` |
+| `ENCRYPTION_KEY` | `openssl rand -hex 32` |
+| `ENABLE_DEMO_AUTH` | **must be `false`** |
+| `MYSQL_*` | DirectAdmin MySQL credentials |
+| `VITE_API_URL` | Already baked at build time; keep for documentation |
+
+Optional: `GEMINI_API_KEY`, `OPENAI_API_KEY`, etc.
+
+---
+
+## 6. Verify
+
+```bash
+curl -sS https://YOUR-DOMAIN.com/api/health
+# expect: {"status":"API healthy", ... "database":"MySQL"}
+
+# Open in browser:
+# https://YOUR-DOMAIN.com/
+```
+
+Deep links (`/lab-notebook`, `/protocols`, …) must load the SPA (Express fallback handles this when `SERVE_FRONTEND=true`).
+
+---
+
+## Alternative: static SPA in `public_html` + Node API only
+
+Use this if your host forces static files in `public_html` and Node on another port.
+
+1. Set `SERVE_FRONTEND=false` on the Node app.
+2. Copy contents of `dist/` (except nested `dist/server`) into `public_html/`.
+3. Copy `deploy/directadmin/htaccess.apache-static-spa` to `public_html/.htaccess` and set the proxy port to the Node app port.
+4. Build with `VITE_API_URL=https://YOUR-DOMAIN.com/api`.
+
+Requires Apache `mod_rewrite` + `mod_proxy` (or LiteSpeed equivalents).
+
+---
 
 ## Troubleshooting
 
-### Application Won't Start
-- Check Node.js version compatibility
-- Verify environment variables
-- Check file permissions
-- Review application logs
+| Symptom | Fix |
+|---------|-----|
+| Blank page / wrong API host | Rebuild frontend with correct `VITE_API_URL`, re-upload `dist/` |
+| CORS errors | Set `FRONTEND_URL` to the exact browser origin (`https://…`) |
+| `JWT_SECRET` boot failure | Use a long random secret; remove example/weak values |
+| DB connection failed | Check MySQL user host (`localhost`), DB name, password; test with `mysql` CLI |
+| 502 / app won’t start | Check DirectAdmin Node error log; confirm `app.js` path and `pnpm install --prod` |
+| Port conflicts | Let DirectAdmin assign `PORT`; don’t hardcode a busy port |
 
-### Database Connection Issues
-- Verify database credentials
-- Check PostgreSQL is running
-- Verify network access
-- Check firewall rules
+---
 
-### API Not Responding
-- Verify reverse proxy configuration
-- Check port assignments
-- Review Apache/Nginx error logs
-- Verify application is running
+## Local package command reference
 
-### Frontend Not Loading
-- Check build output in `dist/`
-- Verify `VITE_API_URL` in environment
-- Check browser console for errors
-- Verify static file serving
-
-## Security Checklist
-
-- [ ] Use HTTPS only
-- [ ] Secure `.env` file (not in public directory)
-- [ ] Set strong JWT secret
-- [ ] Enable CORS only for your domain
-- [ ] Use database connection pooling
-- [ ] Implement rate limiting
-- [ ] Regular security updates
-- [ ] Database backups enabled
-- [ ] Audit logging enabled
-- [ ] API keys stored securely
-
-## Backup Strategy
-
-1. **Database Backups**:
-   ```bash
-   pg_dump -U db_user digital_research_manager > backup_$(date +%Y%m%d).sql
-   ```
-
-2. **File Backups**:
-   - Backup `server/` directory
-   - Backup `.env` file
-   - Backup `database/migrations/`
-
-3. **Automated Backups**:
-   - Set up cron job for daily database backups
-   - Store backups off-server
-
-## Performance Optimization
-
-1. **Enable Caching**:
-   - Redis for session storage (optional)
-   - CDN for static assets
-
-2. **Database Optimization**:
-   - Regular VACUUM and ANALYZE
-   - Monitor query performance
-   - Add indexes as needed
-
-3. **Application Optimization**:
-   - Enable gzip compression
-   - Optimize images
-   - Minify JavaScript/CSS
-
-## Support
-
-For issues:
-1. Check application logs in DirectAdmin
-2. Review database logs
-3. Check server error logs
-4. Review this deployment guide
-
+```bash
+pnpm run build:directadmin   # production build with /api default if VITE_API_URL unset
+pnpm run pack:directadmin    # zip ready to upload
+pnpm run start:prod          # smoke-test the same entry as production
+```

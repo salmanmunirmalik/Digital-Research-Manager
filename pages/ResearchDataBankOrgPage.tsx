@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { getAuthHeaders, getAuthToken, resolveApiBaseUrl, formatApiNetworkError } from '../utils/apiBase';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -22,11 +23,11 @@ import {
   ArrowLeftIcon,
 } from '../components/icons';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
+const API_BASE = resolveApiBaseUrl();
 
 const authHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
-  Authorization: `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token') || ''}`,
+  Authorization: `Bearer ${getAuthToken() || ''}`,
 });
 
 const labelize = (value: string) =>

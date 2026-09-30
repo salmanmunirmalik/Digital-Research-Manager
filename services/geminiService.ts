@@ -29,7 +29,7 @@ export const getTroubleshootingAdvice = async (
         throw new Error("API key is not configured.");
     }
     
-    const model = 'gemini-2.5-flash';
+    const model = 'gemini-3.6-flash';
 
     const systemInstruction = `You are an expert lab research assistant. Your goal is to help scientists troubleshoot experimental problems. 
     Provide concise, practical, and step-by-step advice. Start with the most likely cause first.
@@ -75,7 +75,7 @@ export const generateNotebookSummary = async (entryContent: string): Promise<str
         throw new Error("API key is not configured.");
     }
 
-    const model = 'gemini-2.5-flash';
+    const model = 'gemini-3.6-flash';
 
     const systemInstruction = `You are a scientific research assistant. Your task is to summarize a day's Personal NoteBook entry.
     Your tone must be professional and concise.
@@ -124,7 +124,7 @@ export const compileSummaries = async (
     if (!apiKey) {
         throw new Error("API key is not configured.");
     }
-    const model = 'gemini-2.5-flash';
+    const model = 'gemini-3.6-flash';
 
     const systemInstructions = {
         'Weekly Report': `You are a meticulous research assistant compiling a progress report.
@@ -177,7 +177,7 @@ export const analyzeResultData = async (
         throw new Error("API key is not configured.");
     }
 
-    const model = 'gemini-2.5-flash';
+    const model = 'gemini-3.6-flash';
 
     const systemInstruction = `You are a highly experienced Principal Investigator (PI) reviewing a result from a member of your lab.
     Your goal is to provide constructive, insightful, and forward-looking feedback.
@@ -249,7 +249,7 @@ export const designPrimers = async (
 ): Promise<PrimerPair[]> => {
     if (!apiKey) throw new Error("API key is not configured.");
 
-    const model = 'gemini-2.5-flash';
+    const model = 'gemini-3.6-flash';
     const systemInstruction = "You are a bioinformatics expert specializing in PCR primer design. Your task is to design 5 optimal PCR primer pairs based on a given DNA sequence and user-defined parameters. Adhere strictly to all parameters. Return the results in a JSON array format matching the provided schema. Do not include any primers that anneal to themselves or each other. Ensure the reverse primer is on the opposite strand.";
 
     const prompt = `
@@ -328,7 +328,7 @@ export const simulateRestrictionDigest = async (
 ): Promise<RestrictionResult> => {
     if (!apiKey) throw new Error("API key is not configured.");
 
-    const model = 'gemini-2.5-flash';
+    const model = 'gemini-3.6-flash';
     const systemInstruction = "You are a bioinformatics tool that simulates restriction enzyme digests on DNA sequences. Your task is to identify all 1-based start positions of the recognition sequence for a given list of enzymes and calculate the sizes of the resulting DNA fragments. Assume the DNA is linear. Provide the output in a strict JSON format matching the provided schema.";
 
     const prompt = `

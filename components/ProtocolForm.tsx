@@ -7,20 +7,30 @@ import {
   Field,
   TextArea,
   TagListField,
-  SegmentedChoice,
 } from './notebook/NotebookFormPrimitives';
 
 export type ProtocolFormValues = {
   title: string;
   description: string;
   category: string;
+  /** Kept for API compatibility; not shown in the form */
   difficulty_level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
   estimated_duration: number;
   objective: string;
   background: string;
+  /** What this method applies to / does not cover */
+  scope: string;
+  /** Sample / starting material requirements */
+  sample_requirements: string;
+  /** Run parameters: temp, atmosphere, buffer, instrument settings, culture conditions */
+  experimental_conditions: string;
+  /** Nature-style reagent / buffer prep before the run */
+  reagent_setup: string;
   materials: string[];
   equipment: string[];
   safety_notes: string;
+  /** Positive / negative controls and pass/fail criteria */
+  controls: string;
   procedure: string;
   expected_results: string;
   troubleshooting: string;
@@ -28,6 +38,7 @@ export type ProtocolFormValues = {
   tags: string[];
   privacy_level: 'personal' | 'team' | 'lab' | 'institution' | 'global';
   version: string;
+  video_url: string;
 };
 
 type Props = {
@@ -46,9 +57,14 @@ const defaults: ProtocolFormValues = {
   estimated_duration: 60,
   objective: '',
   background: '',
+  scope: '',
+  sample_requirements: '',
+  experimental_conditions: '',
+  reagent_setup: '',
   materials: [],
   equipment: [],
   safety_notes: '',
+  controls: '',
   procedure: '',
   expected_results: '',
   troubleshooting: '',
@@ -56,44 +72,42 @@ const defaults: ProtocolFormValues = {
   tags: [],
   privacy_level: 'lab',
   version: '1.0',
+  video_url: '',
 };
 
 /** Compose a durable SOP body for DB `content` column */
 export function composeProtocolContent(form: ProtocolFormValues): string {
   const sections: string[] = [];
+  let n = 1;
+  const push = (title: string, body: string) => {
+    const text = body.trim();
+    if (!text) return;
+    sections.push(`## ${n}. ${title}\n${text}`);
+    n += 1;
+  };
 
-  if (form.objective.trim()) {
-    sections.push(`## 1. Objective\n${form.objective.trim()}`);
-  }
-  if (form.background.trim()) {
-    sections.push(`## 2. Background\n${form.background.trim()}`);
-  }
+  push('Objective', form.objective);
+  push('Background', form.background);
+  push('Scope', form.scope);
+  push('Sample requirements', form.sample_requirements);
+  push('Experimental conditions', form.experimental_conditions);
+  push('Reagent setup', form.reagent_setup);
   if (form.materials.length) {
-    sections.push(
-      `## 3. Materials / Reagents\n${form.materials.map((m, i) => `${i + 1}. ${m}`).join('\n')}`
+    push(
+      'Materials / Reagents',
+      form.materials.map((m, i) => `${i + 1}. ${m}`).join('\n')
     );
   }
   if (form.equipment.length) {
-    sections.push(
-      `## 4. Equipment\n${form.equipment.map((m, i) => `${i + 1}. ${m}`).join('\n')}`
-    );
+    push('Equipment', form.equipment.map((m, i) => `${i + 1}. ${m}`).join('\n'));
   }
-  if (form.safety_notes.trim()) {
-    sections.push(`## 5. Safety\n${form.safety_notes.trim()}`);
-  }
-  if (form.procedure.trim()) {
-    sections.push(`## 6. Procedure\n${form.procedure.trim()}`);
-  }
-  if (form.expected_results.trim()) {
-    sections.push(`## 7. Expected results\n${form.expected_results.trim()}`);
-  }
-  if (form.troubleshooting.trim()) {
-    sections.push(`## 8. Troubleshooting\n${form.troubleshooting.trim()}`);
-  }
+  push('Safety', form.safety_notes);
+  push('Controls & acceptance criteria', form.controls);
+  push('Procedure', form.procedure);
+  push('Expected results', form.expected_results);
+  push('Troubleshooting', form.troubleshooting);
   if (form.references.length) {
-    sections.push(
-      `## 9. References\n${form.references.map((r, i) => `${i + 1}. ${r}`).join('\n')}`
-    );
+    push('References', form.references.map((r, i) => `${i + 1}. ${r}`).join('\n'));
   }
 
   return sections.join('\n\n') || form.description || form.title;
@@ -115,12 +129,13 @@ const ProtocolForm: React.FC<Props> = ({
   return (
     <NotebookFormModal
       title={mode === 'edit' ? 'Revise protocol' : 'Write protocol'}
-      subtitle="Structured SOP - objective, materials, safety, and stepwise procedure"
+      subtitle="Lab-ready SOP — conditions, setup, controls, and stepwise method"
       onCancel={onCancel}
       onSubmit={async (e) => {
         e.preventDefault();
         await onSubmit({
           ...form,
+          difficulty_level: form.difficulty_level || 'intermediate',
           content: composeProtocolContent(form),
         });
       }}
@@ -187,22 +202,11 @@ const ProtocolForm: React.FC<Props> = ({
             />
           </Field>
         </div>
-        <SegmentedChoice
-          label="Difficulty"
-          value={form.difficulty_level}
-          onChange={(v) => set('difficulty_level', v)}
-          options={[
-            { value: 'beginner', label: 'Beginner' },
-            { value: 'intermediate', label: 'Intermediate' },
-            { value: 'advanced', label: 'Advanced' },
-            { value: 'expert', label: 'Expert' },
-          ]}
-        />
       </FormSection>
 
       <FormSection
         title="Scientific framing"
-        description="Why this method exists and what success looks like"
+        description="Purpose, applicability, and what success means"
       >
         <Field label="Objective" required>
           <TextArea
@@ -217,8 +221,47 @@ const ProtocolForm: React.FC<Props> = ({
           <TextArea
             value={form.background}
             onChange={(e) => set('background', e.target.value)}
-            rows={3}
+            rows={2}
             placeholder="Rationale, prior art, and assumptions…"
+          />
+        </Field>
+        <Field label="Scope">
+          <TextArea
+            value={form.scope}
+            onChange={(e) => set('scope', e.target.value)}
+            rows={2}
+            placeholder="Applies to… Does not cover… (sample types, instruments, or use-cases)"
+          />
+        </Field>
+        <Field label="Sample / starting material">
+          <TextArea
+            value={form.sample_requirements}
+            onChange={(e) => set('sample_requirements', e.target.value)}
+            rows={2}
+            placeholder="e.g. 1×10⁶ HEK293 cells, mid-log E. coli culture, 50–100 mg tissue, RNA integrity…"
+          />
+        </Field>
+      </FormSection>
+
+      <FormSection
+        title="Experimental conditions"
+        description="Define the run environment so others can reproduce the same experiment"
+      >
+        <Field label="Conditions & parameters" required>
+          <TextArea
+            value={form.experimental_conditions}
+            onChange={(e) => set('experimental_conditions', e.target.value)}
+            rows={5}
+            placeholder={`Temperature / atmosphere (e.g. 37°C, 5% CO₂)\nIncubation times and light/dark cycles\nBuffer / medium composition and pH\nInstrument settings (speed ×g, wavelength, voltage, software version)\nCulture density, MOI, or loading amounts`}
+            required
+          />
+        </Field>
+        <Field label="Reagent & buffer setup">
+          <TextArea
+            value={form.reagent_setup}
+            onChange={(e) => set('reagent_setup', e.target.value)}
+            rows={4}
+            placeholder="How to prepare master mixes, stocks, and working solutions before step 1 (concentrations, volumes, storage, expiry)…"
           />
         </Field>
       </FormSection>
@@ -228,41 +271,49 @@ const ProtocolForm: React.FC<Props> = ({
           label="Reagents / materials"
           values={form.materials}
           onChange={(v) => set('materials', v)}
-          placeholder="e.g. Taq polymerase, 10 µM primers"
-          hint="Include concentration or catalog notes when relevant"
+          placeholder="e.g. Taq polymerase (Cat# …), 10 µM primers"
+          hint="Include concentration, grade, or catalog notes when they affect outcome"
         />
         <TagListField
           label="Equipment"
           values={form.equipment}
           onChange={(v) => set('equipment', v)}
-          placeholder="e.g. Thermal cycler, ice bucket"
+          placeholder="e.g. Thermal cycler (model), refrigerated centrifuge"
         />
       </FormSection>
 
       <FormSection
-        title="Safety"
-        description="Hazards, PPE, and containment before anyone runs this"
+        title="Safety & quality controls"
+        description="Hazards before anyone starts; controls that prove the run worked"
       >
         <Field label="Safety notes">
           <TextArea
             value={form.safety_notes}
             onChange={(e) => set('safety_notes', e.target.value)}
             rows={3}
-            placeholder="Chemical/biological hazards, PPE, waste disposal, BSL…"
+            placeholder="PPE, chemical/biological hazards, BSL, waste disposal, engineering controls…"
+          />
+        </Field>
+        <Field label="Controls & acceptance criteria">
+          <TextArea
+            value={form.controls}
+            onChange={(e) => set('controls', e.target.value)}
+            rows={4}
+            placeholder={`Positive control: …\nNegative / no-template control: …\nAcceptance: e.g. Ct 25–30 for +Ctrl; NTC must show no amplification`}
           />
         </Field>
       </FormSection>
 
       <FormSection
         title="Procedure"
-        description="Numbered steps a trained operator can follow without ambiguity"
+        description="Numbered imperative steps — timing, temperature, and critical checks inline"
       >
         <Field label="Stepwise method" required>
           <TextArea
             value={form.procedure}
             onChange={(e) => set('procedure', e.target.value)}
             rows={10}
-            placeholder={`1. Thaw reagents on ice; vortex briefly.\n2. Prepare master mix for N+2 reactions.\n3. …\n\nInclude timing, temperature, and critical checks.`}
+            placeholder={`1. Thaw reagents on ice; vortex briefly (CRITICAL: keep RNase-free).\n2. Prepare master mix for N+2 reactions.\n3. Incubate at 37°C for 30 min (PAUSE POINT: can hold at 4°C overnight).\n4. …`}
             required
           />
         </Field>
@@ -271,7 +322,7 @@ const ProtocolForm: React.FC<Props> = ({
             value={form.expected_results}
             onChange={(e) => set('expected_results', e.target.value)}
             rows={3}
-            placeholder="What a successful run looks like (bands, Ct range, yield…)…"
+            placeholder="What a successful run looks like (bands, Ct range, yield, morphology…)…"
           />
         </Field>
         <Field label="Troubleshooting">
@@ -282,6 +333,22 @@ const ProtocolForm: React.FC<Props> = ({
             placeholder="Symptom → likely cause → corrective action…"
           />
         </Field>
+      </FormSection>
+
+      <FormSection
+        title="Method demo (YouTube)"
+        description="Optional — a unique walkthrough peers can watch before running the SOP"
+      >
+        <Field label="YouTube URL">
+          <Input
+            value={form.video_url}
+            onChange={(e) => set('video_url', e.target.value)}
+            placeholder="https://www.youtube.com/watch?v=… or youtu.be/…"
+          />
+        </Field>
+        <p className="text-[12px] text-slate-500 -mt-2">
+          Paste a watch or short link. It appears as an embedded demo on the protocol page.
+        </p>
       </FormSection>
 
       <FormSection title="Provenance & access">

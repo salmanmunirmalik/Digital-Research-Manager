@@ -18,21 +18,32 @@ interface GrantRecord {
   title: string;
   summary?: string | null;
   sponsor?: string | null;
+  programme?: string | null;
+  programme_period?: string | null;
+  pillar?: string | null;
   funding_type?: string | null;
+  action_type?: string | null;
   funding_min?: number | null;
   funding_max?: number | null;
   funding_currency?: string | null;
+  call_budget?: number | null;
   deadline_date?: string | null;
+  deadline_model?: string | null;
   published_date?: string | null;
+  opening_date?: string | null;
   status?: string | null;
   url?: string | null;
   region?: string | null;
   country?: string | null;
   disciplines?: string[] | null;
   keywords?: string[] | null;
+  call_identifier?: string | null;
+  topic_identifier?: string | null;
   eligibility?: Record<string, any>;
   requirements?: Record<string, any>;
   raw_payload?: Record<string, any>;
+  source_name?: string | null;
+  posted_by_name?: string | null;
 }
 
 const normalizeKeywords = (input: string[] = []) => {
@@ -65,24 +76,35 @@ const upsertGrant = async (sourceId: string, record: GrantRecord) => {
   const requirements = JSON.stringify(record.requirements || {});
   const rawPayload = JSON.stringify(record.raw_payload || {});
 
-  // MySQL upsert on unique (source_id, external_id)
   await pool.query(
     `INSERT INTO grants (
-      id, source_id, external_id, title, summary, sponsor, funding_type, funding_min, funding_max,
-      funding_currency, deadline_date, published_date, status, url, region, country, disciplines,
-      keywords, eligibility, requirements, raw_payload
+      id, source_id, source_name, external_id, call_identifier, topic_identifier,
+      title, summary, sponsor, programme, programme_period, pillar, funding_type, action_type,
+      funding_min, funding_max, funding_currency, call_budget, deadline_date, deadline_model,
+      published_date, opening_date, status, url, region, country, disciplines, keywords,
+      eligibility, requirements, raw_payload, posted_by_name
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
     ON DUPLICATE KEY UPDATE
+      source_name = VALUES(source_name),
+      call_identifier = VALUES(call_identifier),
+      topic_identifier = VALUES(topic_identifier),
       title = VALUES(title),
       summary = VALUES(summary),
       sponsor = VALUES(sponsor),
+      programme = VALUES(programme),
+      programme_period = VALUES(programme_period),
+      pillar = VALUES(pillar),
       funding_type = VALUES(funding_type),
+      action_type = VALUES(action_type),
       funding_min = VALUES(funding_min),
       funding_max = VALUES(funding_max),
       funding_currency = VALUES(funding_currency),
+      call_budget = VALUES(call_budget),
       deadline_date = VALUES(deadline_date),
+      deadline_model = VALUES(deadline_model),
       published_date = VALUES(published_date),
+      opening_date = VALUES(opening_date),
       status = VALUES(status),
       url = VALUES(url),
       region = VALUES(region),
@@ -92,20 +114,31 @@ const upsertGrant = async (sourceId: string, record: GrantRecord) => {
       eligibility = VALUES(eligibility),
       requirements = VALUES(requirements),
       raw_payload = VALUES(raw_payload),
+      posted_by_name = VALUES(posted_by_name),
       updated_at = CURRENT_TIMESTAMP`,
     [
       id,
       sourceId,
+      record.source_name || null,
       record.external_id || null,
+      record.call_identifier || null,
+      record.topic_identifier || record.external_id || null,
       record.title,
       record.summary || null,
       record.sponsor || null,
+      record.programme || null,
+      record.programme_period || null,
+      record.pillar || null,
       record.funding_type || null,
+      record.action_type || null,
       record.funding_min || null,
       record.funding_max || null,
       record.funding_currency || 'USD',
+      record.call_budget || null,
       record.deadline_date || null,
+      record.deadline_model || null,
       record.published_date || null,
+      record.opening_date || null,
       record.status || 'open',
       record.url || null,
       record.region || null,
@@ -115,6 +148,7 @@ const upsertGrant = async (sourceId: string, record: GrantRecord) => {
       eligibility,
       requirements,
       rawPayload,
+      record.posted_by_name || null,
     ]
   );
 };

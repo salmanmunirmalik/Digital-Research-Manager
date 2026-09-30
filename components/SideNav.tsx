@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   BookOpenIcon,
   BeakerIcon,
@@ -11,7 +11,7 @@ import {
   DatabaseIcon,
   PackageIcon,
   CogIcon,
-  HeartIcon,
+  DocumentTextIcon,
 } from './icons';
 
 interface SideNavProps {
@@ -23,6 +23,8 @@ interface NavItem {
   to: string;
   icon: React.FC<React.SVGProps<SVGSVGElement>>;
   description: string;
+  /** When set, clicking always navigates with this state (e.g. reset Writing Studio home). */
+  resetState?: Record<string, unknown>;
 }
 
 interface NavSection {
@@ -52,10 +54,17 @@ const navSections: NavSection[] = [
         description: 'Reusable methods, SOPs, and step execution',
       },
       {
-        name: 'My data & results',
+        name: 'Research evidence',
         to: '/data-results',
         icon: ChartBarIcon,
-        description: 'Your files, figures, and analysis artifacts',
+        description: 'Multi-format results: text, tables, sheets, figures, stats',
+      },
+      {
+        name: 'Writing studio',
+        to: '/writing-studio',
+        icon: DocumentTextIcon,
+        description: 'Draft, cite, check readiness, and export research manuscripts',
+        resetState: { studioHome: true },
       },
     ],
   },
@@ -102,20 +111,23 @@ const navSections: NavSection[] = [
 ];
 
 const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   return (
-    <div className="h-full flex flex-col bg-[#FAFBFC] border-r border-slate-200/80">
-      {/* Brand */}
-      <div className="px-5 py-5 border-b border-slate-200/80">
+    <div className="h-full flex flex-col bg-[#F8FAF9] border-r border-slate-200">
+      {/* Brand — same height as app header so chrome aligns */}
+      <div className="h-14 px-4 flex items-center border-b border-slate-200 flex-shrink-0">
         <Link
           to="/dashboard"
           onClick={onMobileLinkClick}
-          className="flex items-center gap-3 group"
+          className="flex items-center gap-2.5 group min-w-0"
         >
-          <div className="w-8 h-8 rounded-md bg-slate-900 flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-teal-800 flex items-center justify-center flex-shrink-0">
             <span className="text-white text-[11px] font-semibold tracking-wide">DR</span>
           </div>
           <div className="min-w-0">
-            <p className="text-[13px] font-semibold text-slate-900 leading-tight tracking-tight truncate group-hover:text-slate-700 transition-colors">
+            <p className="text-[13px] font-semibold text-slate-900 leading-tight tracking-tight truncate group-hover:text-teal-900 transition-colors">
               Digital Research
             </p>
             <p className="text-[11px] text-slate-500 leading-tight mt-0.5 truncate">
@@ -131,7 +143,7 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
           {navSections.map((section, sectionIndex) => (
             <div key={section.label ?? `primary-${sectionIndex}`}>
               {section.label && (
-                <p className="px-3 mb-1.5 text-[11px] font-medium text-slate-400 tracking-wide">
+                <p className="px-3 mb-1.5 text-[11px] font-medium text-slate-400 tracking-wide uppercase">
                   {section.label}
                 </p>
               )}
@@ -140,15 +152,32 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
                   <li key={item.to}>
                     <NavLink
                       to={item.to}
-                      onClick={onMobileLinkClick}
+                      end={item.to !== '/writing-studio'}
+                      onClick={(e) => {
+                        onMobileLinkClick?.();
+                        if (item.resetState) {
+                          e.preventDefault();
+                          // Always return to studio desk — even when already under /writing-studio/*
+                          navigate(
+                            { pathname: '/writing-studio', search: '' },
+                            {
+                              state: {
+                                ...item.resetState,
+                                studioHomeAt: Date.now(),
+                              },
+                              replace: location.pathname.startsWith('/writing-studio'),
+                            }
+                          );
+                        }
+                      }}
                       title={item.description}
                       data-testid={`nav-${item.to.replace(/^\//, '').replace(/\//g, '-')}`}
                       className={({ isActive }) =>
                         [
-                          'group relative flex items-center gap-2.5 px-3 py-[7px] rounded-md text-[13px] transition-colors duration-150',
+                          'group relative flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] transition-colors duration-150',
                           isActive
-                            ? 'bg-white text-slate-900 font-medium shadow-[0_1px_2px_rgba(15,23,42,0.06)] ring-1 ring-slate-200/80'
-                            : 'text-slate-600 font-normal hover:bg-white/70 hover:text-slate-900',
+                            ? 'bg-teal-800/[0.08] text-teal-950 font-medium'
+                            : 'text-slate-600 font-normal hover:bg-slate-900/[0.04] hover:text-slate-900',
                         ].join(' ')
                       }
                     >
@@ -156,7 +185,7 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
                         <>
                           {isActive && (
                             <span
-                              className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4 rounded-full bg-slate-900"
+                              className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4 rounded-full bg-teal-700"
                               aria-hidden="true"
                             />
                           )}
@@ -164,7 +193,7 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
                             className={[
                               'w-[15px] h-[15px] flex-shrink-0 transition-colors',
                               isActive
-                                ? 'text-slate-800'
+                                ? 'text-teal-700'
                                 : 'text-slate-400 group-hover:text-slate-600',
                             ].join(' ')}
                             aria-hidden="true"
@@ -182,19 +211,11 @@ const SideNav: React.FC<SideNavProps> = ({ onMobileLinkClick }) => {
       </nav>
 
       {/* Footer */}
-      <div className="px-3 py-3 border-t border-slate-200/80 flex-shrink-0 space-y-0.5">
-        <Link
-          to="/support"
-          onClick={onMobileLinkClick}
-          className="flex items-center gap-2.5 px-3 py-[7px] rounded-md text-[13px] text-slate-600 hover:bg-white/70 hover:text-slate-900 transition-colors"
-        >
-          <HeartIcon className="w-[15px] h-[15px] text-slate-400" aria-hidden="true" />
-          Support us
-        </Link>
+      <div className="px-3 py-3 border-t border-slate-200 flex-shrink-0 space-y-0.5">
         <Link
           to="/settings"
           onClick={onMobileLinkClick}
-          className="flex items-center gap-2.5 px-3 py-[7px] rounded-md text-[13px] text-slate-600 hover:bg-white/70 hover:text-slate-900 transition-colors"
+          className="flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] text-slate-600 hover:bg-slate-900/[0.04] hover:text-slate-900 transition-colors"
         >
           <CogIcon className="w-[15px] h-[15px] text-slate-400" aria-hidden="true" />
           Settings

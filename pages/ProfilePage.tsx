@@ -14,7 +14,12 @@ import {
   HeartIcon,
   UserPlusIcon,
   UserMinusIcon,
+  UserIcon,
+  MapPinIcon,
+  AcademicCapIcon,
+  UsersIcon,
 } from '../components/icons';
+import { PageHeader, PagePanel, PageStat } from '../components/PageHeader';
 
 type ProfileTab = 'about' | 'openness' | 'transparency';
 
@@ -174,7 +179,7 @@ const ProfilePage: React.FC = () => {
     }
 
     const [profileRes, availabilityRes, negativeRes, contributorRes] = await Promise.all([
-      axios.get('/api/researcher-portfolio/profiles', { headers }).catch(() => null),
+      axios.get('/api/scientist-passport/research-profile', { headers }).catch(() => null),
       axios.get('/api/scientist-passport/availability', { headers }).catch(() => null),
       axios.get('/api/negative-results/my/submissions', { headers }).catch(() => null),
       user?.id
@@ -220,7 +225,6 @@ const ProfilePage: React.FC = () => {
       estimatedMoneySaved: money,
     });
 
-    // Own social counts
     if (user?.id) {
       try {
         const rel = await axios.get('/api/networking/social/relationships', { headers });
@@ -279,7 +283,11 @@ const ProfilePage: React.FC = () => {
         await axios.delete(`/api/networking/social/connect/${viewingUserId}`, {
           headers: authHeaders(),
         });
-        setRelationship({ isFollowing: relationship.isFollowing, isConnected: false, connectionStatus: 'none' });
+        setRelationship({
+          isFollowing: relationship.isFollowing,
+          isConnected: false,
+          connectionStatus: 'none',
+        });
       }
     } catch (error) {
       console.error(`Social action ${action} failed:`, error);
@@ -289,14 +297,17 @@ const ProfilePage: React.FC = () => {
   };
 
   const saveAbout = async () => {
+    if (!isOwnProfile) return;
     try {
       setSaving(true);
-      await axios.post(
-        '/api/researcher-portfolio/profiles',
+      await axios.put(
+        '/api/scientist-passport/research-profile',
         {
           ...profile,
           research_interests: interests,
-          ...links,
+          orcid_id: links.orcid_id,
+          google_scholar_id: links.google_scholar_id,
+          linkedin_url: links.linkedin_url,
         },
         { headers: authHeaders() }
       );
@@ -309,6 +320,7 @@ const ProfilePage: React.FC = () => {
   };
 
   const saveAvailability = async (next: Availability) => {
+    if (!isOwnProfile) return;
     setAvailability(next);
     try {
       await axios.put('/api/scientist-passport/availability', next, {
@@ -320,23 +332,35 @@ const ProfilePage: React.FC = () => {
   };
 
   const addInterest = () => {
-    if (!newInterest.trim()) return;
+    if (!isOwnProfile || !newInterest.trim()) return;
     setInterests((prev) => [...prev, newInterest.trim()]);
     setNewInterest('');
   };
 
   const initials =
-    `${(isOwnProfile ? user?.first_name : viewedUser?.firstName)?.[0] || ''}${(isOwnProfile ? user?.last_name : viewedUser?.lastName)?.[0] || ''}`.toUpperCase() || 'DR';
+    `${(isOwnProfile ? user?.first_name : viewedUser?.firstName)?.[0] || ''}${(isOwnProfile ? user?.last_name : viewedUser?.lastName)?.[0] || ''}`.toUpperCase() ||
+    'DR';
   const displayName =
-    [isOwnProfile ? user?.first_name : viewedUser?.firstName, isOwnProfile ? user?.last_name : viewedUser?.lastName]
+    [
+      isOwnProfile ? user?.first_name : viewedUser?.firstName,
+      isOwnProfile ? user?.last_name : viewedUser?.lastName,
+    ]
       .filter(Boolean)
       .join(' ') || 'Researcher';
   const roleLabel = getRoleDisplayName((isOwnProfile ? user?.role : viewedUser?.role) || 'researcher');
+  const institutionLine = [
+    profile.institution ||
+      (isOwnProfile ? user?.current_institution : viewedUser?.institution),
+    profile.department || viewedUser?.department,
+  ]
+    .filter(Boolean)
+    .join(' · ');
   const focusLine =
     interests.slice(0, 3).join(' · ') ||
     profile.position ||
     viewedUser?.specialization ||
     (isOwnProfile ? 'Add research interests in About' : 'Researcher');
+  const locationLine = viewedUser?.location || '';
 
   const opennessFlags = useMemo(
     () => [
@@ -355,7 +379,7 @@ const ProfilePage: React.FC = () => {
       {
         key: 'available_as_service_provider',
         label: 'Offer lab services',
-        description: 'Intent to offer services - list them on Marketplace when ready',
+        description: 'Intent to offer services — list them on Marketplace when ready',
         value: Boolean(availability.available_as_service_provider),
       },
       {
@@ -374,204 +398,222 @@ const ProfilePage: React.FC = () => {
     { id: 'transparency', label: 'Transparency' },
   ];
 
+  const fieldClass = (editing: boolean) =>
+    `w-full px-3.5 py-2.5 rounded-lg text-[13px] transition-colors ${
+      editing
+        ? 'border border-sky-200 bg-white focus:outline-none focus:ring-2 focus:ring-sky-400/40'
+        : 'border border-transparent bg-slate-50/80 text-slate-700'
+    }`;
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="h-8 w-8 rounded-full border-2 border-slate-200 border-t-slate-800 animate-spin" />
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-sky-200 border-t-sky-700" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <section className="bg-white border border-slate-200/80 rounded-xl overflow-hidden">
-        <div className="px-6 sm:px-8 py-7">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
-            <div className="flex items-start gap-4 min-w-0">
-              <div className="w-16 h-16 rounded-full bg-slate-900 text-white flex items-center justify-center text-xl font-semibold tracking-wide flex-shrink-0">
-                {initials}
-              </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-tight">
-                    {displayName}
-                  </h1>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-[11px] font-medium text-slate-600">
-                    {roleLabel}
+    <div className="mx-auto max-w-5xl space-y-6">
+      <PageHeader
+        title={displayName}
+        accent="sky"
+        icon={<UserIcon />}
+        subtitle={
+          <span className="flex flex-col gap-1">
+            <span className="inline-flex flex-wrap items-center gap-2">
+              <span className="rounded-md border border-sky-100 bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-800">
+                {roleLabel}
+              </span>
+              {relationship.isConnected ? (
+                <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
+                  Connected
+                </span>
+              ) : null}
+              {availability.open_for_collaboration ? (
+                <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
+                  Open to collaborate
+                </span>
+              ) : null}
+            </span>
+            <span className="text-[13px] text-slate-600">{focusLine}</span>
+            {(institutionLine || locationLine) && (
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
+                {institutionLine ? (
+                  <span className="inline-flex items-center gap-1">
+                    <AcademicCapIcon className="h-3.5 w-3.5 text-sky-600" />
+                    {institutionLine}
                   </span>
-                </div>
-                <p className="text-[14px] text-slate-600 mt-1.5 leading-snug">{focusLine}</p>
-                <p className="text-[13px] text-slate-500 mt-2">
-                  {[
-                    profile.institution ||
-                      (isOwnProfile ? user?.current_institution : viewedUser?.institution),
-                    profile.department || viewedUser?.department,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ') ||
-                    (isOwnProfile ? 'Add your institution in About' : 'Institution not listed')}
-                </p>
-              </div>
-            </div>
-
-            {isOwnProfile ? (
-              <Link
-                to="/settings"
-                className="inline-flex items-center gap-1.5 self-start px-3.5 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
-              >
-                Account settings
-              </Link>
-            ) : (
-              <div className="flex flex-wrap gap-2 self-start">
-                {relationship.connectionStatus === 'pending' ? (
-                  <button
-                    type="button"
-                    onClick={() => runSocialAction('disconnect')}
-                    disabled={actionBusy}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    Cancel request
-                  </button>
-                ) : relationship.isConnected ? (
-                  <button
-                    type="button"
-                    onClick={() => runSocialAction('disconnect')}
-                    disabled={actionBusy}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    <UserMinusIcon className="w-4 h-4" />
-                    Disconnect
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => runSocialAction('connect')}
-                    disabled={actionBusy}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:opacity-50"
-                  >
-                    <UserPlusIcon className="w-4 h-4" />
-                    Connect
-                  </button>
-                )}
-                {relationship.isFollowing ? (
-                  <button
-                    type="button"
-                    onClick={() => runSocialAction('unfollow')}
-                    disabled={actionBusy}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    <HeartIcon className="w-4 h-4 text-red-500" />
-                    Following
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => runSocialAction('follow')}
-                    disabled={actionBusy}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    <HeartIcon className="w-4 h-4" />
-                    Follow
-                  </button>
-                )}
-                <Link
-                  to="/collaboration-networking"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50"
+                ) : null}
+                {locationLine ? (
+                  <span className="inline-flex items-center gap-1">
+                    <MapPinIcon className="h-3.5 w-3.5 text-sky-600" />
+                    {locationLine}
+                  </span>
+                ) : null}
+              </span>
+            )}
+          </span>
+        }
+        actions={
+          isOwnProfile ? (
+            <Link
+              to="/settings"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-white px-3.5 py-2 text-[13px] font-medium text-sky-900 shadow-sm hover:bg-sky-50"
+            >
+              Account settings
+            </Link>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {relationship.connectionStatus === 'pending' ? (
+                <button
+                  type="button"
+                  onClick={() => runSocialAction('disconnect')}
+                  disabled={actionBusy}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                 >
-                  Back to networking
-                </Link>
-              </div>
-            )}
+                  Cancel request
+                </button>
+              ) : relationship.isConnected ? (
+                <button
+                  type="button"
+                  onClick={() => runSocialAction('disconnect')}
+                  disabled={actionBusy}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  <UserMinusIcon className="h-4 w-4" />
+                  Disconnect
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => runSocialAction('connect')}
+                  disabled={actionBusy}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-sky-700 px-3.5 py-2 text-[13px] font-medium text-white shadow-sm hover:bg-sky-800 disabled:opacity-50"
+                >
+                  <UserPlusIcon className="h-4 w-4" />
+                  Connect
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => runSocialAction(relationship.isFollowing ? 'unfollow' : 'follow')}
+                disabled={actionBusy}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                <HeartIcon
+                  className={`h-4 w-4 ${relationship.isFollowing ? 'text-red-500' : ''}`}
+                />
+                {relationship.isFollowing ? 'Following' : 'Follow'}
+              </button>
+              <Link
+                to="/collaboration-networking"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3.5 py-2 text-[13px] font-medium text-sky-900 hover:bg-sky-100"
+              >
+                Networking
+              </Link>
+            </div>
+          )
+        }
+      >
+        <div className="mt-5 flex items-center gap-4 border-t border-sky-100/80 pt-5">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-sky-800 text-xl font-semibold tracking-wide text-white shadow-md shadow-sky-200/60">
+            {initials}
           </div>
-
-          {/* Identity-only reputation strip - not a sitemap */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-7 pt-6 border-t border-slate-100">
-            <div className="rounded-lg px-3 py-2.5">
-              <p className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">Connections</p>
-              <p className="text-xl font-semibold text-slate-900 tabular-nums mt-0.5">
-                {viewedUser?.connectionsCount ?? 0}
-              </p>
-            </div>
-            <div className="rounded-lg px-3 py-2.5">
-              <p className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">Followers</p>
-              <p className="text-xl font-semibold text-slate-900 tabular-nums mt-0.5">
-                {viewedUser?.followersCount ?? 0}
-              </p>
-            </div>
-            <div className="rounded-lg px-3 py-2.5">
-              <p className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">Following</p>
-              <p className="text-xl font-semibold text-slate-900 tabular-nums mt-0.5">
-                {viewedUser?.followingCount ?? 0}
-              </p>
-            </div>
-            {isOwnProfile && (
-              <div className="rounded-lg px-3 py-2.5">
-                <p className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">Failures shared</p>
-                <p className="text-xl font-semibold text-slate-900 tabular-nums mt-0.5">
-                  {transparency.shared}
-                </p>
-              </div>
-            )}
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] text-slate-500">
+              {isOwnProfile
+                ? 'Your researcher identity across Networking, grants, and collaboration.'
+                : 'Public researcher profile from Networking.'}
+            </p>
           </div>
         </div>
-      </section>
+      </PageHeader>
 
-      <nav className="flex gap-1 border-b border-slate-200 overflow-x-auto" aria-label="Profile sections">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`relative px-4 py-2.5 text-[13px] font-medium whitespace-nowrap transition-colors ${
-              activeTab === tab.id ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            {tab.label}
-            {activeTab === tab.id && (
-              <span className="absolute left-2 right-2 -bottom-px h-0.5 bg-slate-900 rounded-full" />
-            )}
-          </button>
-        ))}
-      </nav>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <PageStat
+          accent="sky"
+          label="Connections"
+          value={viewedUser?.connectionsCount ?? 0}
+        />
+        <PageStat accent="sky" label="Followers" value={viewedUser?.followersCount ?? 0} />
+        <PageStat accent="sky" label="Following" value={viewedUser?.followingCount ?? 0} />
+        {isOwnProfile ? (
+          <PageStat accent="amber" label="Failures shared" value={transparency.shared} />
+        ) : (
+          <PageStat
+            accent="emerald"
+            label="Network"
+            value={
+              <span className="inline-flex items-center gap-1 text-[15px]">
+                <UsersIcon className="h-4 w-4" />
+                Active
+              </span>
+            }
+          />
+        )}
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white/80 p-1 shadow-sm">
+        <nav className="flex gap-1" aria-label="Profile sections">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`relative flex-1 rounded-lg px-4 py-2.5 text-[13px] font-medium whitespace-nowrap transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-sky-50 text-sky-900 shadow-sm'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
 
       {activeTab === 'about' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-5">
-            <section className="bg-white border border-slate-200/80 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-[15px] font-semibold text-slate-900">About</h2>
-                {!editingAbout && isOwnProfile ? (
-                  <button
-                    type="button"
-                    onClick={() => setEditingAbout(true)}
-                    className="inline-flex items-center gap-1.5 text-[12px] font-medium text-slate-600 hover:text-slate-900"
-                  >
-                    <PencilIcon className="w-3.5 h-3.5" />
-                    Edit
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-2">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <div className="space-y-5 lg:col-span-2">
+            <PagePanel
+              accent="sky"
+              title="About"
+              action={
+                isOwnProfile ? (
+                  !editingAbout ? (
                     <button
                       type="button"
-                      onClick={() => setEditingAbout(false)}
-                      className="text-[12px] text-slate-500 hover:text-slate-800"
+                      onClick={() => setEditingAbout(true)}
+                      className="inline-flex items-center gap-1.5 text-[12px] font-medium text-sky-800 hover:text-sky-950"
                     >
-                      Cancel
+                      <PencilIcon className="h-3.5 w-3.5" />
+                      Edit
                     </button>
-                    <button
-                      type="button"
-                      onClick={saveAbout}
-                      disabled={saving}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:opacity-50"
-                    >
-                      <CheckCircleIcon className="w-3.5 h-3.5" />
-                      Save
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingAbout(false)}
+                        className="text-[12px] text-slate-500 hover:text-slate-800"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveAbout}
+                        disabled={saving}
+                        className="inline-flex items-center gap-1 rounded-md bg-sky-700 px-2.5 py-1.5 text-[12px] font-medium text-white hover:bg-sky-800 disabled:opacity-50"
+                      >
+                        <CheckCircleIcon className="h-3.5 w-3.5" />
+                        Save
+                      </button>
+                    </div>
+                  )
+                ) : null
+              }
+            >
+              <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {(
                   [
                     ['institution', 'Institution'],
@@ -580,110 +622,115 @@ const ProfilePage: React.FC = () => {
                   ] as const
                 ).map(([key, label]) => (
                   <div key={key}>
-                    <label className="block text-[12px] font-medium text-slate-500 mb-1.5">
+                    <label className="mb-1.5 block text-[12px] font-medium text-slate-500">
                       {label}
                     </label>
                     <input
                       type="text"
                       value={(profile as any)[key] || ''}
-                      disabled={!editingAbout}
+                      disabled={!editingAbout || !isOwnProfile}
                       onChange={(e) => setProfile({ ...profile, [key]: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 rounded-md text-[13px] ${
-                        editingAbout
-                          ? 'border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10'
-                          : 'border border-transparent bg-slate-50 text-slate-700'
-                      }`}
+                      className={fieldClass(editingAbout && isOwnProfile)}
                     />
                   </div>
                 ))}
               </div>
 
-              <label className="block text-[12px] font-medium text-slate-500 mb-1.5">
+              <label className="mb-1.5 block text-[12px] font-medium text-slate-500">
                 Research focus
               </label>
               <textarea
                 value={profile.research_philosophy || ''}
-                disabled={!editingAbout}
+                disabled={!editingAbout || !isOwnProfile}
                 onChange={(e) => setProfile({ ...profile, research_philosophy: e.target.value })}
                 rows={4}
-                className={`w-full px-3.5 py-2.5 rounded-md text-[13px] resize-y ${
-                  editingAbout
-                    ? 'border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10'
-                    : 'border border-transparent bg-slate-50 text-slate-700'
-                }`}
+                className={`${fieldClass(editingAbout && isOwnProfile)} resize-y`}
                 placeholder="One or two paragraphs on what you work on and how you approach problems."
               />
-            </section>
+            </PagePanel>
 
-            <section className="bg-white border border-slate-200/80 rounded-xl p-6">
-              <h2 className="text-[15px] font-semibold text-slate-900 mb-1">Research interests</h2>
-              <p className="text-[12px] text-slate-500 mb-4">
-                Used for matching grants, collaborators, and methods
+            <PagePanel
+              accent="sky"
+              title="Research interests"
+              action={
+                isOwnProfile && interests.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={saveAbout}
+                    disabled={saving}
+                    className="text-[12px] font-medium text-sky-800 underline-offset-2 hover:underline"
+                  >
+                    Save interests
+                  </button>
+                ) : null
+              }
+            >
+              <p className="mb-4 text-[12px] text-slate-500">
+                Used for matching grants, collaborators, and marketplace services
               </p>
 
-              <div className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  value={newInterest}
-                  onChange={(e) => setNewInterest(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addInterest()}
-                  className="flex-1 px-3.5 py-2.5 rounded-md text-[13px] border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-                  placeholder="e.g. single-cell transcriptomics"
-                />
-                <button
-                  type="button"
-                  onClick={addInterest}
-                  className="inline-flex items-center gap-1 px-3.5 py-2.5 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800"
-                >
-                  <PlusIcon className="w-4 h-4" />
-                  Add
-                </button>
-              </div>
+              {isOwnProfile ? (
+                <div className="mb-4 flex gap-2">
+                  <input
+                    type="text"
+                    value={newInterest}
+                    onChange={(e) => setNewInterest(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addInterest()}
+                    className="flex-1 rounded-lg border border-sky-200 px-3.5 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                    placeholder="e.g. single-cell transcriptomics"
+                  />
+                  <button
+                    type="button"
+                    onClick={addInterest}
+                    className="inline-flex items-center gap-1 rounded-lg bg-sky-700 px-3.5 py-2.5 text-[13px] font-medium text-white hover:bg-sky-800"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    Add
+                  </button>
+                </div>
+              ) : null}
 
               {interests.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {interests.map((interest, index) => (
                     <span
                       key={`${interest}-${index}`}
-                      className="inline-flex items-center gap-1 pl-3 pr-1.5 py-1.5 rounded-md bg-slate-100 text-[12px] text-slate-800"
+                      className="inline-flex items-center gap-1 rounded-md border border-sky-100 bg-sky-50/80 py-1.5 pl-3 pr-1.5 text-[12px] text-sky-900"
                     >
                       {interest}
-                      <button
-                        type="button"
-                        onClick={() => setInterests((prev) => prev.filter((_, i) => i !== index))}
-                        className="p-1 rounded hover:bg-slate-200 text-slate-500"
-                        aria-label={`Remove ${interest}`}
-                      >
-                        <TrashIcon className="w-3.5 h-3.5" />
-                      </button>
+                      {isOwnProfile ? (
+                        <button
+                          type="button"
+                          onClick={() => setInterests((prev) => prev.filter((_, i) => i !== index))}
+                          className="rounded p-1 text-sky-600 hover:bg-sky-100"
+                          aria-label={`Remove ${interest}`}
+                        >
+                          <TrashIcon className="h-3.5 w-3.5" />
+                        </button>
+                      ) : null}
                     </span>
                   ))}
                 </div>
               ) : (
-                <p className="text-[13px] text-slate-500">No interests yet.</p>
+                <div className="rounded-xl border border-dashed border-sky-200 bg-gradient-to-br from-sky-50/50 via-white to-cyan-50/30 px-4 py-8 text-center">
+                  <p className="text-[13px] text-slate-600">No interests yet.</p>
+                </div>
               )}
-
-              {interests.length > 0 && (
-                <button
-                  type="button"
-                  onClick={saveAbout}
-                  disabled={saving}
-                  className="mt-4 text-[12px] font-medium text-slate-700 hover:text-slate-900 underline-offset-2 hover:underline"
-                >
-                  Save interests
-                </button>
-              )}
-            </section>
+            </PagePanel>
           </div>
 
           <aside className="space-y-5">
-            <section className="bg-white border border-slate-200/80 rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <LinkIcon className="w-4 h-4 text-slate-400" />
-                <h2 className="text-[13px] font-semibold text-slate-900">External profiles</h2>
-              </div>
-              <p className="text-[12px] text-slate-500 mb-4">
-                Optional links to ORCID / Scholar - secondary to your identity here
+            <PagePanel
+              accent="sky"
+              title={
+                <span className="inline-flex items-center gap-2">
+                  <LinkIcon className="h-4 w-4 text-sky-600" />
+                  External profiles
+                </span>
+              }
+            >
+              <p className="mb-4 text-[12px] text-slate-500">
+                Optional links to ORCID / Scholar — secondary to your identity here
               </p>
               <div className="space-y-3">
                 {(
@@ -696,59 +743,66 @@ const ProfilePage: React.FC = () => {
                   ] as const
                 ).map(([key, label]) => (
                   <div key={key}>
-                    <label className="block text-[11px] font-medium text-slate-500 mb-1">
+                    <label className="mb-1 block text-[11px] font-medium text-slate-500">
                       {label}
                     </label>
                     <input
                       type="text"
                       value={links[key]}
+                      disabled={!isOwnProfile}
                       onChange={(e) => setLinks({ ...links, [key]: e.target.value })}
-                      onBlur={saveAbout}
-                      className="w-full px-3 py-2 rounded-md text-[12px] border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                      onBlur={() => {
+                        if (isOwnProfile) void saveAbout();
+                      }}
+                      className={fieldClass(isOwnProfile)}
                       placeholder={label}
                     />
                   </div>
                 ))}
               </div>
-            </section>
+            </PagePanel>
           </aside>
         </div>
       )}
 
       {activeTab === 'openness' && (
-        <div className="max-w-3xl space-y-5">
-          <section className="bg-white border border-slate-200/80 rounded-xl p-6">
-            <h2 className="text-[15px] font-semibold text-slate-900 mb-1">What you’re open to</h2>
-            <p className="text-[12px] text-slate-500 mb-5">
-              How others should approach you - collaboration, consulting, services, teaching
+        <div className="mx-auto max-w-3xl space-y-5">
+          <PagePanel accent="emerald" title="What you’re open to">
+            <p className="mb-5 text-[12px] text-slate-500">
+              How others should approach you — collaboration, consulting, services, teaching
             </p>
 
             <ul className="space-y-3">
               {opennessFlags.map((flag) => (
                 <li
                   key={flag.key}
-                  className="flex items-start justify-between gap-4 p-3.5 rounded-lg border border-slate-100"
+                  className={`flex items-start justify-between gap-4 rounded-xl border p-3.5 ${
+                    flag.value
+                      ? 'border-emerald-100 bg-gradient-to-br from-emerald-50/70 to-white'
+                      : 'border-slate-100 bg-white'
+                  }`}
                 >
                   <div>
                     <p className="text-[13px] font-medium text-slate-900">{flag.label}</p>
-                    <p className="text-[12px] text-slate-500 mt-0.5">{flag.description}</p>
+                    <p className="mt-0.5 text-[12px] text-slate-500">{flag.description}</p>
                   </div>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={flag.value}
+                    disabled={!isOwnProfile}
                     onClick={() =>
                       saveAvailability({
                         ...availability,
                         [flag.key]: !flag.value,
                       })
                     }
-                    className={`relative w-10 h-6 rounded-full transition-colors flex-shrink-0 ${
-                      flag.value ? 'bg-slate-900' : 'bg-slate-200'
+                    className={`relative h-6 w-10 flex-shrink-0 rounded-full transition-colors disabled:opacity-60 ${
+                      flag.value ? 'bg-emerald-600' : 'bg-slate-200'
                     }`}
                   >
                     <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
                         flag.value ? 'translate-x-4' : ''
                       }`}
                     />
@@ -756,36 +810,35 @@ const ProfilePage: React.FC = () => {
                 </li>
               ))}
             </ul>
-          </section>
+          </PagePanel>
 
-          <section className="bg-white border border-slate-200/80 rounded-xl p-6">
-            <label className="block text-[12px] font-medium text-slate-500 mb-1.5">
-              Availability notes
-            </label>
+          <PagePanel accent="emerald" title="Availability notes">
             <textarea
               value={availability.availability_notes || ''}
+              disabled={!isOwnProfile}
               onChange={(e) =>
                 setAvailability((prev) => ({ ...prev, availability_notes: e.target.value }))
               }
-              onBlur={() => saveAvailability(availability)}
+              onBlur={() => {
+                if (isOwnProfile) void saveAvailability(availability);
+              }}
               rows={3}
-              className="w-full px-3.5 py-2.5 rounded-md text-[13px] border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+              className={`${fieldClass(isOwnProfile)} resize-y`}
               placeholder="e.g. Available for method consulting in Q3; seeking CRISPR collaborators"
             />
-          </section>
+          </PagePanel>
         </div>
       )}
 
       {activeTab === 'transparency' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-5">
-            <section className="bg-white border border-slate-200/80 rounded-xl p-6">
-              <h2 className="text-[15px] font-semibold text-slate-900 mb-1">Transparency impact</h2>
-              <p className="text-[12px] text-slate-500 mb-5">
-                Credit for documenting what did not work - community standing, not a work queue
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <div className="space-y-5 lg:col-span-2">
+            <PagePanel accent="amber" title="Transparency impact">
+              <p className="mb-5 text-[12px] text-slate-500">
+                Credit for documenting what did not work — community standing, not a work queue
               </p>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
                   { label: 'Failures shared', value: transparency.shared },
                   { label: 'Marked helpful', value: transparency.helpfulVotes },
@@ -794,52 +847,59 @@ const ProfilePage: React.FC = () => {
                 ].map((stat) => (
                   <div
                     key={stat.label}
-                    className="rounded-lg border border-slate-100 bg-slate-50/70 px-3 py-3"
+                    className="rounded-xl border border-amber-100 bg-gradient-to-br from-amber-50/80 to-white px-3 py-3"
                   >
-                    <p className="text-xl font-semibold text-slate-900 tabular-nums">{stat.value}</p>
-                    <p className="text-[11px] text-slate-500 mt-1">{stat.label}</p>
+                    <p className="text-xl font-semibold tabular-nums text-slate-900">{stat.value}</p>
+                    <p className="mt-1 text-[11px] text-slate-500">{stat.label}</p>
                   </div>
                 ))}
               </div>
 
-              {transparency.estimatedMoneySaved > 0 && (
-                <p className="text-[13px] text-slate-600 mt-4">
+              {transparency.estimatedMoneySaved > 0 ? (
+                <p className="mt-4 text-[13px] text-slate-600">
                   Documented experimental cost:{' '}
                   <span className="font-semibold text-slate-900">
                     ${transparency.estimatedMoneySaved.toLocaleString()}
                   </span>
                 </p>
-              )}
-            </section>
+              ) : null}
+            </PagePanel>
 
-            <section className="bg-white border border-slate-200/80 rounded-xl p-6">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <h2 className="text-[15px] font-semibold text-slate-900">Negative results</h2>
+            <PagePanel
+              accent="amber"
+              title="Negative results"
+              action={
                 <Link
                   to="/negative-results"
-                  className="text-[12px] font-medium text-slate-600 hover:text-slate-900 inline-flex items-center gap-1"
+                  className="inline-flex items-center gap-1 text-[12px] font-medium text-amber-900 hover:text-amber-950"
                 >
                   Open database
-                  <ArrowRightIcon className="w-3.5 h-3.5" />
+                  <ArrowRightIcon className="h-3.5 w-3.5" />
                 </Link>
-              </div>
+              }
+            >
               {transparency.shared === 0 ? (
-                <div className="py-8 text-center border border-dashed border-slate-200 rounded-lg">
-                  <FireIcon className="w-7 h-7 text-slate-300 mx-auto mb-2" />
-                  <p className="text-[13px] text-slate-700 font-medium">No failures shared yet</p>
-                  <p className="text-[12px] text-slate-500 mt-1 mb-3">
+                <div className="rounded-xl border border-dashed border-amber-200 bg-gradient-to-br from-amber-50/60 via-white to-orange-50/40 px-4 py-10 text-center">
+                  <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                    <FireIcon className="h-5 w-5" />
+                  </div>
+                  <p className="text-[13px] font-medium text-slate-800">No failures shared yet</p>
+                  <p className="mx-auto mt-1 mb-4 max-w-sm text-[12px] text-slate-500">
                     Sharing a negative result builds trust and helps other labs avoid wasted work.
                   </p>
-                  <Link
-                    to="/negative-results"
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800"
-                  >
-                    Share a negative result
-                  </Link>
+                  {isOwnProfile ? (
+                    <Link
+                      to="/negative-results"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-amber-700 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-amber-800"
+                    >
+                      Share a negative result
+                    </Link>
+                  ) : null}
                 </div>
               ) : (
-                <p className="text-[13px] text-slate-600 leading-relaxed">
-                  You have contributed {transparency.shared} negative result
+                <p className="text-[13px] leading-relaxed text-slate-600">
+                  {isOwnProfile ? 'You have' : 'This researcher has'} contributed{' '}
+                  {transparency.shared} negative result
                   {transparency.shared === 1 ? '' : 's'} to the community database
                   {transparency.savedVotes > 0
                     ? `, helping peers ${transparency.savedVotes} time${
@@ -848,17 +908,17 @@ const ProfilePage: React.FC = () => {
                     : '.'}
                 </p>
               )}
-            </section>
+            </PagePanel>
           </div>
 
           <aside>
-            <section className="bg-slate-50 border border-slate-200/80 rounded-xl p-5">
+            <div className="rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50/90 via-white to-orange-50/40 p-5 shadow-sm">
               <p className="text-[13px] font-medium text-slate-800">Transparency as reputation</p>
-              <p className="text-[12px] text-slate-500 mt-1.5 leading-relaxed">
-                Documenting failed experiments is a first-class scientific contribution - not a career
+              <p className="mt-1.5 text-[12px] leading-relaxed text-slate-500">
+                Documenting failed experiments is a first-class scientific contribution — not a career
                 risk buried in a lab drawer.
               </p>
-            </section>
+            </div>
           </aside>
         </div>
       )}

@@ -48,7 +48,7 @@ const parseBody = <T extends z.ZodTypeAny>(schema: T) => {
     if (!result.success) {
       return res.status(400).json({
         error: 'Invalid request body',
-        details: result.error.errors.map(issue => issue.message)
+        details: result.error.issues.map((issue) => issue.message)
       });
     }
     req.body = result.data;
@@ -77,7 +77,10 @@ const resolveConsentMetadata = async (payload: {
   policyVersion?: string;
   purposes?: string[];
   type: 'essential' | 'functional' | 'analytics' | 'marketing' | 'third_party';
-}) => {
+}): Promise<
+  | { error: string }
+  | { policyType: 'cookies' | 'privacy'; policyVersion: string; purposes: string[] }
+> => {
   const purposes = payload.purposes && payload.purposes.length > 0
     ? payload.purposes
     : (defaultPurposes[payload.type] || ['unspecified']);
@@ -93,7 +96,7 @@ const resolveConsentMetadata = async (payload: {
 
   return {
     policyType: payload.policyType,
-    policyVersion,
+    policyVersion: policyVersion as string,
     purposes
   };
 };
@@ -543,7 +546,7 @@ router.post('/consent/batch', optionalAuth, async (req: any, res) => {
     if (!parsed.success) {
       return res.status(400).json({
         error: 'Invalid request body',
-        details: parsed.error.errors.map(issue => issue.message)
+        details: parsed.error.issues.map((issue) => issue.message)
       });
     }
 
@@ -611,7 +614,7 @@ router.post('/consent/withdraw', optionalAuth, async (req: any, res) => {
     if (!parsed.success) {
       return res.status(400).json({
         error: 'Invalid request body',
-        details: parsed.error.errors.map(issue => issue.message)
+        details: parsed.error.issues.map((issue) => issue.message)
       });
     }
 
@@ -915,7 +918,7 @@ router.put('/retention-policies/:id', authenticateToken, requireRole(['admin']),
       delete updates.dataType;
     }
 
-    const fields = [];
+    const fields: string[] = [];
     const values: any[] = [];
 
     const allowed = ['name', 'data_type', 'retention_period', 'action', 'legal_basis', 'description', 'is_active'];

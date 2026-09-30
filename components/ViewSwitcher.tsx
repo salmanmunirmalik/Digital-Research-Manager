@@ -3,7 +3,6 @@ import {
   ListBulletIcon, 
   Squares2X2Icon, 
   CalendarIcon,
-  TableCellsIcon
 } from './icons';
 
 export type ViewType = 'list' | 'board' | 'calendar' | 'table';
@@ -18,11 +17,10 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewChange }
     { type: 'list', icon: ListBulletIcon, label: 'List' },
     { type: 'board', icon: Squares2X2Icon, label: 'Board' },
     { type: 'calendar', icon: CalendarIcon, label: 'Calendar' },
-    { type: 'table', icon: TableCellsIcon, label: 'Table' }
   ];
 
   return (
-    <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+    <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
       {views.map((view) => {
         const Icon = view.icon;
         const isActive = currentView === view.type;
@@ -33,8 +31,8 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewChange }
             onClick={() => onViewChange(view.type)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
               isActive
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
             }`}
             title={view.label}
           >

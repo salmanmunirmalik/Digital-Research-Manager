@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { getAuthHeaders, getAuthToken, resolveApiBaseUrl, formatApiNetworkError } from '../utils/apiBase';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { BellIcon } from './icons';
@@ -12,9 +13,6 @@ export interface AppNotification {
   is_read: number | boolean;
   created_at: string;
 }
-
-const getAuthToken = () =>
-  localStorage.getItem('authToken') || localStorage.getItem('token') || '';
 
 const formatRelative = (value: string) => {
   const date = new Date(value);

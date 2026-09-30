@@ -29,6 +29,7 @@ const REASON_LABELS: Record<string, string> = {
   region_match: 'Region match',
   funding_type_match: 'Funding type match',
   career_stage_check: 'Career stage',
+  semantic_match: 'Semantic profile match',
 };
 
 const currencySymbol = (currency?: string | null) => {

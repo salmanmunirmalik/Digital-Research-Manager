@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { getAuthHeaders, getAuthToken, resolveApiBaseUrl, formatApiNetworkError } from '../utils/apiBase';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import Card, { CardContent, CardHeader, CardTitle } from './ui/Card';
@@ -28,7 +29,7 @@ export interface Recommendation {
 }
 
 interface RecommendationsWidgetProps {
-  itemType: 'protocols' | 'papers' | 'services';
+  itemType: 'protocols' | 'papers' | 'services' | 'collaborators' | 'negative-results' | 'databank';
   title?: string;
   limit?: number;
   showFeedback?: boolean;
@@ -59,7 +60,7 @@ const RecommendationsWidget: React.FC<RecommendationsWidgetProps> = ({
       setLoading(true);
       setError(null);
 
-      const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api';
+      const apiUrl = resolveApiBaseUrl();
       const response = await axios.get(
         `${apiUrl}/recommendations/${itemType}?limit=${limit}`,
         {
@@ -82,7 +83,7 @@ const RecommendationsWidget: React.FC<RecommendationsWidgetProps> = ({
     if (!recommendationId || feedbackGiven.has(recommendationId)) return;
 
     try {
-      const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api';
+      const apiUrl = resolveApiBaseUrl();
       await axios.post(
         `${apiUrl}/recommendations/feedback`,
         {
@@ -103,7 +104,7 @@ const RecommendationsWidget: React.FC<RecommendationsWidgetProps> = ({
       if (feedback === 'positive') {
         const rec = recommendations.find(r => r.recommendationId === recommendationId);
         if (rec) {
-          const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api';
+          const apiUrl = resolveApiBaseUrl();
           await axios.post(
             `${apiUrl}/recommendations/track`,
             {
@@ -127,7 +128,7 @@ const RecommendationsWidget: React.FC<RecommendationsWidgetProps> = ({
 
   const handleItemClick = (rec: Recommendation) => {
     // Track view event
-    const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api';
+    const apiUrl = resolveApiBaseUrl();
     axios.post(
       `${apiUrl}/recommendations/track`,
       {
@@ -209,12 +210,21 @@ const RecommendationsWidget: React.FC<RecommendationsWidgetProps> = ({
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <h4 className="font-semibold text-gray-900 group-hover:text-yellow-600 transition-colors line-clamp-2 mb-1">
-                    {rec.metadata?.title || rec.metadata?.name || 'Untitled'}
+                    {rec.metadata?.title ||
+                      rec.metadata?.name ||
+                      rec.metadata?.experiment_title ||
+                      'Untitled'}
                   </h4>
                   <p className="text-sm text-gray-600 line-clamp-2 mb-2">
                     {rec.reason}
                   </p>
                   <div className="flex items-center gap-3 text-xs text-gray-500">
+                    {rec.metadata?.institution && (
+                      <span className="truncate max-w-[40%]">{rec.metadata.institution}</span>
+                    )}
+                    {rec.metadata?.organization && (
+                      <span className="truncate max-w-[40%]">{rec.metadata.organization}</span>
+                    )}
                     {rec.metadata?.category && (
                       <span className="px-2 py-1 bg-gray-100 rounded">
                         {rec.metadata.category}

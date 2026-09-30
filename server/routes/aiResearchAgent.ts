@@ -9,6 +9,11 @@ import axios from 'axios';
 import pool from "../../database/config.js";
 import { getUserApiKey, getUserDefaultProvider, getApiKeyWithFallback, getPlatformGeminiKey } from './aiProviderKeys.js';
 import { getApiForTask } from './apiTaskAssignments.js';
+import {
+  consumePlatformQuota,
+  getAiAccessStatus,
+  tryPlatformAiAccess,
+} from '../services/platformAiAccess.js';
 import { AIProviderFactory } from '../services/AIProviderFactory.js';
 import { ChatMessage } from '../services/AIProvider.js';
 import { UserContextRetriever } from '../services/UserContextRetriever.js';
@@ -17,6 +22,7 @@ import { ContinuousLearningEngine } from '../services/ContinuousLearningEngine.j
 import { SmartToolSelector, TaskRequirements } from '../services/SmartToolSelector.js';
 import { TaskAnalysisEngine, TaskAnalysis } from '../services/TaskAnalysisEngine.js';
 import { AgentFactory } from '../services/AgentFactory.js';
+import { tryHandlePersonalAssistant } from '../services/personalAssistant/PersonalAssistantService.js';
 
 const router: Router = Router();
 
@@ -36,6 +42,10 @@ router.get('/', async (req: any, res) => {
       message: 'AI Research Agent is ready',
       capabilities: [
         'chat',
+        'personal_assistant',
+        'notes',
+        'reminders',
+        'calendar',
         'task_analysis',
         'context_retrieval',
         'tool_selection',
@@ -48,18 +58,84 @@ router.get('/', async (req: any, res) => {
   }
 });
 
+/** Platform vs BYO key status + daily free allowance */
+router.get('/access', async (req: any, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const access = await getAiAccessStatus(req.user.id);
+    res.json(access);
+  } catch (error: any) {
+    console.error('Error in AI Research Agent access:', error);
+    res.status(500).json({ error: 'Failed to load AI access status' });
+  }
+});
+
 // ==============================================
 // CHAT ENDPOINT - Main entry point
 // ==============================================
 
 router.post('/chat', async (req: any, res) => {
   try {
-    const { message, conversation_history = [], stream = false } = req.body;
+    const {
+      message,
+      conversation_history = [],
+      stream = false,
+      pageContext,
+      timeZone,
+      assistant = true,
+    } = req.body;
     const userId = req.user?.id;
 
     if (!message || !message.trim()) {
       return res.status(400).json({ error: 'Message is required' });
     }
+
+    // Internal first (protocols, notes, reminders…) — 0 tokens when heuristics hit
+    let libraryMissHint = '';
+    if (assistant !== false && !stream) {
+      try {
+        const pa = await tryHandlePersonalAssistant({
+          userId,
+          message: message.trim(),
+          conversationHistory: conversation_history,
+          timeZone: typeof timeZone === 'string' ? timeZone : undefined,
+        });
+        if (pa?.handled) {
+          const access = await getAiAccessStatus(userId);
+          return res.json({
+            content: pa.content,
+            actions: pa.actions,
+            mode: 'assistant',
+            source: pa.source || 'internal',
+            navigateTo: pa.navigateTo || null,
+            apiUsed: pa.apiUsed,
+            access,
+            timestamp: new Date().toISOString(),
+          });
+        }
+        if (pa?.libraryMiss) {
+          libraryMissHint = [
+            `[Internal library search: ${pa.libraryMiss.tool} for "${pa.libraryMiss.query}" returned no matches.`,
+            `Tell the user clearly that nothing matching was found in their library.`,
+            `Then you may help with AI (draft, suggest, or search general knowledge).`,
+            `Do not claim the answer came from their protocol library.]`,
+          ].join(' ');
+        }
+      } catch (paErr: any) {
+        console.warn('Personal assistant path skipped:', paErr?.message || paErr);
+      }
+    }
+
+    const contextualMessage =
+      typeof pageContext === 'string' && pageContext.trim()
+        ? `${message.trim()}\n\n--- Page context ---\n${pageContext.trim()}${
+            libraryMissHint ? `\n\n${libraryMissHint}` : ''
+          }`
+        : libraryMissHint
+          ? `${message.trim()}\n\n${libraryMissHint}`
+          : message;
 
     console.log(`🤖 AI Research Agent - User ${userId}: ${message.substring(0, 50)}...`);
 
@@ -71,7 +147,7 @@ router.post('/chat', async (req: any, res) => {
       res.setHeader('Connection', 'keep-alive');
       
       try {
-        await processMessageWithStreaming(message, userId, conversation_history, res);
+        await processMessageWithStreaming(contextualMessage, userId, conversation_history, res);
       } catch (streamError: any) {
         res.write(`data: ${JSON.stringify({ error: streamError.message })}\n\n`);
         res.end();
@@ -80,11 +156,15 @@ router.post('/chat', async (req: any, res) => {
     }
 
     // Standard non-streaming response
-    const { response: responseText, apiUsed } = await processMessage(message, userId, conversation_history);
+    const { response: responseText, apiUsed } = await processMessage(contextualMessage, userId, conversation_history);
+    const access = await getAiAccessStatus(userId);
 
     res.json({
       content: responseText,
+      actions: [],
+      mode: 'chat',
       apiUsed: apiUsed || null,
+      access,
       timestamp: new Date().toISOString()
     });
   } catch (error: any) {
@@ -116,6 +196,27 @@ async function processMessageWithStreaming(
   
   // Step 2: Get API assignment
   let apiAssignment = await getApiForTask(userId, taskAnalysis.taskType);
+
+  // Platform keys (empty apiKeyId) must count against the free daily allowance
+  if (apiAssignment && !apiAssignment.apiKeyId) {
+    const platformTry = await tryPlatformAiAccess(userId);
+    if (!platformTry.ok) {
+      res.write(`data: ${JSON.stringify({
+        type: 'error',
+        content: platformTry.message,
+        code: platformTry.reason === 'quota_exceeded' ? 'PLATFORM_QUOTA_EXCEEDED' : 'NO_PLATFORM_KEY',
+      })}\n\n`);
+      res.end();
+      return;
+    }
+    await consumePlatformQuota(userId);
+    apiAssignment = {
+      apiKeyId: '',
+      provider: platformTry.access.provider,
+      providerName: platformTry.access.providerName,
+      apiKey: platformTry.access.apiKey,
+    };
+  }
   
   if (!apiAssignment) {
     const availableProviders = await SmartToolSelector.getAvailableProviders(userId);
@@ -146,32 +247,55 @@ async function processMessageWithStreaming(
             `SELECT id FROM ai_provider_keys WHERE user_id = $1 AND provider = $2 AND is_active = true LIMIT 1`,
             [userId, recommendation.provider]
           );
-          
-          apiAssignment = {
-            apiKeyId: keyResult.rows[0]?.id || '',
-            provider: recommendation.provider,
-            providerName: recommendation.providerName,
-            apiKey: recommendedKey
-          };
+          const isUserKey = Boolean(keyResult.rows[0]?.id);
+
+          if (!isUserKey) {
+            const platformTry = await tryPlatformAiAccess(userId);
+            if (!platformTry.ok) {
+              res.write(`data: ${JSON.stringify({
+                type: 'error',
+                content: platformTry.message,
+                code: platformTry.reason === 'quota_exceeded' ? 'PLATFORM_QUOTA_EXCEEDED' : 'NO_PLATFORM_KEY',
+              })}\n\n`);
+              res.end();
+              return;
+            }
+            await consumePlatformQuota(userId);
+            apiAssignment = {
+              apiKeyId: '',
+              provider: platformTry.access.provider,
+              providerName: platformTry.access.providerName,
+              apiKey: platformTry.access.apiKey,
+            };
+          } else {
+            apiAssignment = {
+              apiKeyId: keyResult.rows[0].id,
+              provider: recommendation.provider,
+              providerName: recommendation.providerName,
+              apiKey: recommendedKey,
+            };
+          }
         }
       }
     }
   }
   
-  // If still no assignment, try platform Gemini key as fallback
+  // If still no assignment, try platform Gemini/OpenAI with daily free allowance
   if (!apiAssignment) {
-    const platformKey = getPlatformGeminiKey();
-    if (platformKey) {
+    const platformTry = await tryPlatformAiAccess(userId);
+    if (platformTry.ok) {
       apiAssignment = {
-        apiKeyId: '',
-        provider: 'google_gemini',
-        providerName: 'Google Gemini (Platform)',
-        apiKey: platformKey
+        apiKeyId: platformTry.access.apiKeyId,
+        provider: platformTry.access.provider,
+        providerName: platformTry.access.providerName,
+        apiKey: platformTry.access.apiKey,
       };
+      await consumePlatformQuota(userId);
     } else {
       res.write(`data: ${JSON.stringify({ 
         type: 'error', 
-        content: 'No API keys configured. Please configure GEMINI_API_KEY or add API keys in Settings.' 
+        content: platformTry.message,
+        code: platformTry.reason === 'quota_exceeded' ? 'PLATFORM_QUOTA_EXCEEDED' : 'NO_PLATFORM_KEY',
       })}\n\n`);
       res.end();
       return;
@@ -265,6 +389,22 @@ async function processMessage(
   
   // Step 2: Get user's API assignment for this task (user preference)
   let apiAssignment = await getApiForTask(userId, taskAnalysis.taskType);
+
+  // Platform keys (empty apiKeyId) must count against the free daily allowance
+  if (apiAssignment && !apiAssignment.apiKeyId) {
+    const platformTry = await tryPlatformAiAccess(userId);
+    if (!platformTry.ok) {
+      return { response: platformTry.message, apiUsed: null };
+    }
+    await consumePlatformQuota(userId);
+    apiAssignment = {
+      apiKeyId: '',
+      provider: platformTry.access.provider,
+      providerName: platformTry.access.providerName,
+      apiKey: platformTry.access.apiKey,
+    };
+    console.log(`✨ Platform key (${platformTry.quota.remaining - 1} free msgs left today)`);
+  }
   
   // Step 3: If no user assignment, use Smart Tool Selector to recommend best provider
   if (!apiAssignment) {
@@ -300,38 +440,53 @@ async function processMessage(
             `SELECT id FROM ai_provider_keys WHERE user_id = $1 AND provider = $2 AND is_active = true LIMIT 1`,
             [userId, recommendation.provider]
           );
-          
-          apiAssignment = {
-            apiKeyId: keyResult.rows[0]?.id || '',
-            provider: recommendation.provider,
-            providerName: recommendation.providerName,
-            apiKey: recommendedKey
-          };
-          console.log(`✨ Smart selection: ${recommendation.providerName} (score: ${recommendation.score.toFixed(1)})`);
-          console.log(`   Reasons: ${recommendation.reasons.join(', ')}`);
+          const isUserKey = Boolean(keyResult.rows[0]?.id);
+
+          if (!isUserKey) {
+            const platformTry = await tryPlatformAiAccess(userId);
+            if (!platformTry.ok) {
+              return { response: platformTry.message, apiUsed: null };
+            }
+            await consumePlatformQuota(userId);
+            apiAssignment = {
+              apiKeyId: '',
+              provider: platformTry.access.provider,
+              providerName: platformTry.access.providerName,
+              apiKey: platformTry.access.apiKey,
+            };
+            console.log(`✨ Platform key via smart select (${platformTry.quota.remaining - 1} free left today)`);
+          } else {
+            apiAssignment = {
+              apiKeyId: keyResult.rows[0].id,
+              provider: recommendation.provider,
+              providerName: recommendation.providerName,
+              apiKey: recommendedKey,
+            };
+            console.log(`✨ Smart selection: ${recommendation.providerName} (score: ${recommendation.score.toFixed(1)})`);
+            console.log(`   Reasons: ${recommendation.reasons.join(', ')}`);
+          }
         }
       }
     }
   }
   
-  // If still no assignment, try platform Gemini key as fallback
+  // If still no assignment, try platform Gemini/OpenAI with daily free allowance
   if (!apiAssignment) {
-    const platformKey = getPlatformGeminiKey();
-    if (platformKey) {
+    const platformTry = await tryPlatformAiAccess(userId);
+    if (platformTry.ok) {
       apiAssignment = {
-        apiKeyId: '',
-        provider: 'google_gemini',
-        providerName: 'Google Gemini (Platform)',
-        apiKey: platformKey
+        apiKeyId: platformTry.access.apiKeyId,
+        provider: platformTry.access.provider,
+        providerName: platformTry.access.providerName,
+        apiKey: platformTry.access.apiKey,
       };
-      console.log('✨ Using platform Gemini API key for basic features');
+      await consumePlatformQuota(userId);
+      console.log(`✨ Using ${platformTry.access.providerName} (${platformTry.quota.remaining - 1} free msgs left today)`);
+      (apiAssignment as any).__source = 'platform';
     } else {
-      // No API available - return helpful message
       return {
-        response: `I understand you want me to help with "${taskAnalysis.taskType}", but you haven't configured any API keys yet.\n\n` +
-                 `Please go to Settings → API Management and add your API keys (e.g., OpenAI, Google Gemini, Anthropic Claude) to get started.\n\n` +
-                 `Once configured, I'll automatically select the best API for each task!`,
-        apiUsed: null
+        response: platformTry.message,
+        apiUsed: null,
       };
     }
   }
@@ -867,21 +1022,40 @@ async function callOpenAI(apiKey: string, systemPrompt: string, userPrompt: stri
  * Call Google Gemini API
  */
 async function callGoogleGemini(apiKey: string, systemPrompt: string, userPrompt: string, conversationHistory: any[]): Promise<string> {
-  const response = await axios.post(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
-    {
-      contents: [{
-        parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }]
-      }]
-    },
-    {
-      headers: {
-        'Content-Type': 'application/json'
+  const { resolveGeminiChatModels } = await import('../services/providers/GoogleGeminiProvider.js');
+  const models = resolveGeminiChatModels();
+  const body = {
+    contents: [{
+      parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }]
+    }]
+  };
+
+  let lastError = 'Unknown error';
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i];
+    try {
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        body,
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+      return response.data.candidates[0].content.parts[0].text;
+    } catch (error: any) {
+      lastError = String(error.response?.data?.error?.message || error.message || 'Unknown error')
+        .replace(/AIza[0-9A-Za-z_-]{10,}/g, 'AIza***')
+        .replace(/AQ\.[A-Za-z0-9_-]{10,}/g, 'AQ.***');
+      const retryable =
+        /high demand|try again later|temporarily|overloaded|unavailable|no longer available|not found|429|503|500/i.test(
+          lastError
+        );
+      if (!retryable || i === models.length - 1) {
+        throw new Error(`Google Gemini API error: ${lastError}`);
       }
+      console.warn(`[Gemini] ${model} failed; trying ${models[i + 1]}`);
     }
-  );
-  
-  return response.data.candidates[0].content.parts[0].text;
+  }
+
+  throw new Error(`Google Gemini API error: ${lastError}`);
 }
 
 /**

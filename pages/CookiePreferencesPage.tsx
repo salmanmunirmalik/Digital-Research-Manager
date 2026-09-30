@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { getAuthHeaders, getAuthToken, resolveApiBaseUrl, formatApiNetworkError } from '../utils/apiBase';
 
 interface ConsentPreferences {
   essential: boolean;
@@ -7,23 +8,6 @@ interface ConsentPreferences {
   marketing: boolean;
 }
 
-const resolveApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL.replace(/\/$/, '');
-  }
-
-  if (typeof window !== 'undefined') {
-    const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-    if (isLocalhost) {
-      const port = import.meta.env.VITE_API_PORT || '5002';
-      return `http://localhost:${port}/api`;
-    }
-
-    return `${window.location.origin}/api`;
-  }
-
-  return 'http://localhost:5002/api';
-};
 
 const CookiePreferencesPage: React.FC = () => {
   const [preferences, setPreferences] = useState<ConsentPreferences>({

@@ -16,6 +16,8 @@ import {
   BeakerIcon
 } from '@heroicons/react/24/outline';
 import AdvancedPresentationEditor from '../components/AdvancedPresentationEditor';
+import AIPresentationModal from '../components/AIPresentationModal';
+import { Link } from 'react-router-dom';
 
 interface Presentation {
   id: string;
@@ -29,7 +31,7 @@ interface Presentation {
   status: 'draft' | 'published' | 'archived';
 }
 
-const AIPresentationsPage: React.FC = () => {
+const AIPresentationsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const [presentations, setPresentations] = useState<Presentation[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedPresentation, setSelectedPresentation] = useState<Presentation | null>(null);
@@ -37,6 +39,7 @@ const AIPresentationsPage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'draft' | 'published' | 'archived'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [showAdvancedEditor, setShowAdvancedEditor] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
 
   useEffect(() => {
     setPresentations([]);
@@ -51,7 +54,7 @@ const AIPresentationsPage: React.FC = () => {
   });
 
   const handleCreatePresentation = () => {
-    setShowAdvancedEditor(true);
+    setShowAIModal(true);
   };
 
   const handleEditPresentation = (presentation: Presentation) => {
@@ -94,21 +97,29 @@ const AIPresentationsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={embedded ? 'bg-transparent' : 'min-h-screen bg-gray-50'}>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className={embedded ? 'border-b border-slate-200 bg-white' : 'bg-white border-b border-gray-200'}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
-              <PresentationChartLineIcon className="w-8 h-8 text-blue-600" />
+              {!embedded && <PresentationChartLineIcon className="w-8 h-8 text-blue-600" />}
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">AI Presentations</h1>
-                <p className="text-sm text-gray-600">Create intelligent presentations with AI assistance</p>
+                {!embedded && (
+                  <h1 className="text-2xl font-bold text-gray-900">AI Presentations</h1>
+                )}
+                <p className={`text-sm text-gray-600 ${embedded ? '' : ''}`}>
+                  Create slides via AI — or use{' '}
+                  <Link to="/writing-studio/tools/generate" className="text-teal-800 hover:underline">
+                    Draft from research
+                  </Link>{' '}
+                  for idea/evidence paths
+                </p>
               </div>
             </div>
             <button
               onClick={handleCreatePresentation}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="bg-teal-800 hover:bg-teal-900 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm"
             >
               <SparklesIcon className="w-5 h-5" />
               Create with AI
@@ -328,6 +339,13 @@ const AIPresentationsPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showAIModal && (
+        <AIPresentationModal
+          dataEntries={[]}
+          onClose={() => setShowAIModal(false)}
+        />
       )}
     </div>
   );

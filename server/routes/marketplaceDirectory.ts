@@ -4,6 +4,11 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import pool from '../../database/config.js';
+import {
+  parseInterestList,
+  softMatchScore,
+  buildInterestMatchReasons,
+} from '../utils/interestOverlap.js';
 
 const router: Router = Router();
 
@@ -51,6 +56,24 @@ const mapOffering = (row: any) => ({
   is_active: Boolean(row.is_active),
 });
 
+const formatDeadline = (value: unknown): string | null => {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  const s = String(value);
+  return s.length >= 10 ? s.slice(0, 10) : s;
+};
+
+const mapTender = (row: any) => ({
+  ...row,
+  requirements: parseList(row.requirements),
+  deadline: formatDeadline(row.deadline),
+  is_active: Boolean(row.is_active),
+  postedByName:
+    (row.owner_name && String(row.owner_name).trim()) ||
+    row.username ||
+    null,
+});
+
 const requireUser = (req: any, res: any) => {
   if (!req.user?.id) {
     res.status(401).json({ error: 'Authentication required' });
@@ -66,6 +89,7 @@ router.get('/', async (_req, res) => {
     endpoints: {
       suppliers: '/api/marketplace/suppliers',
       serviceProviders: '/api/marketplace/service-providers',
+      tenders: '/api/marketplace/tenders',
     },
   });
 });
@@ -415,7 +439,7 @@ router.delete('/suppliers/me/catalog/:itemId', async (req: any, res) => {
 
 // ─── Service providers (public browse) ───────────────────────────────────────
 
-router.get('/service-providers', async (req, res) => {
+router.get('/service-providers', async (req: any, res) => {
   try {
     const { search, expertise } = req.query;
     let query = `
@@ -448,7 +472,50 @@ router.get('/service-providers', async (req, res) => {
 
     query += ` ORDER BY p.verified DESC, p.display_name ASC`;
     const result = await pool.query(query, params);
-    res.json({ providers: result.rows.map(mapProvider) });
+
+    let viewerInterests: string[] = [];
+    if (req.user?.id) {
+      try {
+        const me = await pool.query(
+          `SELECT research_interests, expertise, specialization FROM users WHERE id = $1 LIMIT 1`,
+          [req.user.id]
+        );
+        const row = me.rows[0];
+        if (row) {
+          viewerInterests = [
+            ...parseInterestList(row.research_interests),
+            ...parseInterestList(row.expertise),
+            ...(row.specialization ? [String(row.specialization)] : []),
+          ];
+        }
+      } catch {
+        viewerInterests = [];
+      }
+    }
+
+    const providers = result.rows.map((row: any) => {
+      const mapped = mapProvider(row);
+      const tags = [...(mapped.expertise_areas || []), ...(mapped.techniques || [])];
+      const matchScore = softMatchScore(viewerInterests, tags);
+      return {
+        ...mapped,
+        matchScore,
+        matchReasons: buildInterestMatchReasons(viewerInterests, tags),
+      };
+    });
+
+    providers.sort((a, b) => {
+      if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
+      if (Number(b.verified) !== Number(a.verified)) return Number(b.verified) - Number(a.verified);
+      return String(a.display_name || '').localeCompare(String(b.display_name || ''), undefined, {
+        sensitivity: 'base',
+      });
+    });
+
+    res.json({
+      providers,
+      viewerHasInterests: viewerInterests.length > 0,
+    });
   } catch (error: any) {
     console.error('List service providers error:', error);
     res.status(500).json({ error: error.message || 'Failed to list service providers' });
@@ -541,6 +608,24 @@ router.post('/service-providers/register', async (req: any, res) => {
     }
 
     const id = crypto.randomUUID();
+    let expertiseList = parseList(expertise_areas);
+    if (expertiseList.length === 0) {
+      const me = await pool.query(
+        `SELECT research_interests, expertise FROM users WHERE id = $1 LIMIT 1`,
+        [user.id]
+      );
+      expertiseList = [
+        ...new Set(
+          [
+            ...parseInterestList(me.rows[0]?.research_interests),
+            ...parseInterestList(me.rows[0]?.expertise),
+          ]
+            .map((s) => s.trim())
+            .filter(Boolean)
+        ),
+      ];
+    }
+
     await pool.query(
       `INSERT INTO marketplace_service_providers (
         id, user_id, display_name, contact_email, contact_phone, website,
@@ -556,7 +641,7 @@ router.post('/service-providers/register', async (req: any, res) => {
         institution || null,
         location || null,
         bio || null,
-        toJsonList(expertise_areas),
+        toJsonList(expertiseList),
         toJsonList(techniques),
         pricing_note || null,
       ]
@@ -773,6 +858,230 @@ router.delete('/service-providers/me/offerings/:offeringId', async (req: any, re
   } catch (error: any) {
     console.error('Delete offering error:', error);
     res.status(500).json({ error: error.message || 'Failed to delete offering' });
+  }
+});
+
+// ─── Tenders / RFPs (public browse) ──────────────────────────────────────────
+
+router.get('/tenders', async (req, res) => {
+  try {
+    const { search, category } = req.query;
+    let query = `
+      SELECT t.*,
+        COALESCE(NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), ''), u.username, '') AS owner_name,
+        u.username
+      FROM marketplace_tenders t
+      LEFT JOIN users u ON u.id = t.user_id
+      WHERE t.is_active = 1
+    `;
+    const params: unknown[] = [];
+
+    if (search) {
+      params.push(`%${search}%`);
+      query += ` AND (
+        t.title LIKE $${params.length}
+        OR t.description LIKE $${params.length}
+        OR t.organization LIKE $${params.length}
+        OR t.location LIKE $${params.length}
+        OR t.category LIKE $${params.length}
+        OR t.requirements LIKE $${params.length}
+      )`;
+    }
+    if (category && category !== 'all') {
+      params.push(`%${category}%`);
+      query += ` AND t.category LIKE $${params.length}`;
+    }
+
+    query += ` ORDER BY
+      CASE WHEN t.deadline IS NULL THEN 1 ELSE 0 END,
+      t.deadline ASC,
+      t.created_at DESC`;
+    const result = await pool.query(query, params);
+    res.json({ tenders: result.rows.map(mapTender) });
+  } catch (error: any) {
+    console.error('List tenders error:', error);
+    res.status(500).json({ error: error.message || 'Failed to list tenders' });
+  }
+});
+
+router.get('/tenders/mine', async (req: any, res) => {
+  try {
+    const user = requireUser(req, res);
+    if (!user) return;
+
+    const result = await pool.query(
+      `SELECT t.*,
+        COALESCE(NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), ''), u.username, '') AS owner_name,
+        u.username
+       FROM marketplace_tenders t
+       LEFT JOIN users u ON u.id = t.user_id
+       WHERE t.user_id = $1
+       ORDER BY t.created_at DESC`,
+      [user.id]
+    );
+    res.json({ tenders: result.rows.map(mapTender) });
+  } catch (error: any) {
+    console.error('Get my tenders error:', error);
+    res.status(500).json({ error: error.message || 'Failed to load your tenders' });
+  }
+});
+
+router.get('/tenders/:id', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT t.*,
+        COALESCE(NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), ''), u.username, '') AS owner_name,
+        u.username
+       FROM marketplace_tenders t
+       LEFT JOIN users u ON u.id = t.user_id
+       WHERE t.id = $1 AND t.is_active = 1`,
+      [req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Tender not found' });
+    }
+    res.json({ tender: mapTender(result.rows[0]) });
+  } catch (error: any) {
+    console.error('Get tender error:', error);
+    res.status(500).json({ error: error.message || 'Failed to load tender' });
+  }
+});
+
+router.post('/tenders', async (req: any, res) => {
+  try {
+    const user = requireUser(req, res);
+    if (!user) return;
+
+    const {
+      title,
+      organization,
+      contact_email,
+      contact_phone,
+      location,
+      country,
+      description,
+      category,
+      budget_note,
+      deadline,
+      requirements,
+    } = req.body || {};
+
+    if (!title?.trim() || !contact_email?.trim()) {
+      return res.status(400).json({ error: 'Title and contact email are required' });
+    }
+
+    const id = crypto.randomUUID();
+    await pool.query(
+      `INSERT INTO marketplace_tenders (
+        id, user_id, title, organization, contact_email, contact_phone,
+        location, country, description, category, budget_note, deadline,
+        requirements, is_active
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,1)`,
+      [
+        id,
+        user.id,
+        title.trim(),
+        organization || null,
+        contact_email.trim().toLowerCase(),
+        contact_phone || null,
+        location || null,
+        country || null,
+        description || null,
+        category || null,
+        budget_note || null,
+        deadline || null,
+        toJsonList(requirements),
+      ]
+    );
+
+    const created = await pool.query(`SELECT * FROM marketplace_tenders WHERE id = $1`, [id]);
+    res.status(201).json({
+      message: 'Tender posted',
+      tender: mapTender(created.rows[0]),
+    });
+  } catch (error: any) {
+    console.error('Create tender error:', error);
+    res.status(500).json({ error: error.message || 'Failed to post tender' });
+  }
+});
+
+router.put('/tenders/:id', async (req: any, res) => {
+  try {
+    const user = requireUser(req, res);
+    if (!user) return;
+
+    const current = await pool.query(
+      `SELECT * FROM marketplace_tenders WHERE id = $1 AND user_id = $2`,
+      [req.params.id, user.id]
+    );
+    if (current.rows.length === 0) {
+      return res.status(404).json({ error: 'Tender not found' });
+    }
+
+    const row = current.rows[0];
+    const b = req.body || {};
+    await pool.query(
+      `UPDATE marketplace_tenders SET
+        title = $1,
+        organization = $2,
+        contact_email = $3,
+        contact_phone = $4,
+        location = $5,
+        country = $6,
+        description = $7,
+        category = $8,
+        budget_note = $9,
+        deadline = $10,
+        requirements = $11,
+        is_active = $12,
+        updated_at = CURRENT_TIMESTAMP
+       WHERE id = $13 AND user_id = $14`,
+      [
+        (b.title ?? row.title).trim(),
+        b.organization !== undefined ? b.organization : row.organization,
+        (b.contact_email ?? row.contact_email).trim().toLowerCase(),
+        b.contact_phone !== undefined ? b.contact_phone : row.contact_phone,
+        b.location !== undefined ? b.location : row.location,
+        b.country !== undefined ? b.country : row.country,
+        b.description !== undefined ? b.description : row.description,
+        b.category !== undefined ? b.category : row.category,
+        b.budget_note !== undefined ? b.budget_note : row.budget_note,
+        b.deadline !== undefined ? b.deadline || null : row.deadline,
+        b.requirements !== undefined ? toJsonList(b.requirements) : row.requirements,
+        b.is_active === undefined ? row.is_active : b.is_active ? 1 : 0,
+        req.params.id,
+        user.id,
+      ]
+    );
+
+    const updated = await pool.query(`SELECT * FROM marketplace_tenders WHERE id = $1`, [
+      req.params.id,
+    ]);
+    res.json({ tender: mapTender(updated.rows[0]) });
+  } catch (error: any) {
+    console.error('Update tender error:', error);
+    res.status(500).json({ error: error.message || 'Failed to update tender' });
+  }
+});
+
+router.delete('/tenders/:id', async (req: any, res) => {
+  try {
+    const user = requireUser(req, res);
+    if (!user) return;
+
+    const existing = await pool.query(
+      `SELECT id FROM marketplace_tenders WHERE id = $1 AND user_id = $2`,
+      [req.params.id, user.id]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Tender not found' });
+    }
+
+    await pool.query(`DELETE FROM marketplace_tenders WHERE id = $1`, [req.params.id]);
+    res.json({ message: 'Tender deleted' });
+  } catch (error: any) {
+    console.error('Delete tender error:', error);
+    res.status(500).json({ error: error.message || 'Failed to delete tender' });
   }
 });
 

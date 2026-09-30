@@ -15,6 +15,7 @@ interface ExperimentFormData {
   title: string;
   startDate: string;
   startTime: string;
+  objective: string;
   description: string;
   protocolId: string;
   experimentId: string;
@@ -22,6 +23,7 @@ interface ExperimentFormData {
   problems: string;
   troubleshooting: string;
   resultsLink: string;
+  conditions: string;
 }
 
 interface Protocol {
@@ -65,8 +67,9 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<ExperimentFormData>({
     title: '',
-    startDate: '',
+    startDate: new Date().toISOString().slice(0, 10),
     startTime: '',
+    objective: '',
     description: '',
     protocolId: '',
     experimentId: '',
@@ -74,6 +77,7 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
     problems: '',
     troubleshooting: '',
     resultsLink: '',
+    conditions: '',
     ...initialData,
   });
 
@@ -96,19 +100,12 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
     }
   }, [initialData?.protocolId, protocolOptions, protocols]);
 
-  const steps = isNotebook
-    ? [
-        { id: 1, title: 'Basics' },
-        { id: 2, title: 'Method' },
-        { id: 3, title: 'Issues' },
-        { id: 4, title: 'Findings' },
-      ]
-    : [
-        { id: 1, title: 'Basics' },
-        { id: 2, title: 'Protocol' },
-        { id: 3, title: 'Risks' },
-        { id: 4, title: 'Review' },
-      ];
+  const steps = [
+    { id: 1, title: 'Basics' },
+    { id: 2, title: 'Protocol' },
+    { id: 3, title: 'Risks' },
+    { id: 4, title: 'Review' },
+  ];
 
   const handleProtocolSelect = (protocolId: string) => {
     if (!protocolId) {
@@ -146,7 +143,7 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
       : 'New experiment';
 
   const subtitle = isNotebook
-    ? 'Document a procedure and what you observed - this stays in your notebook'
+    ? 'Record a run: purpose, what you did, and what you observed'
     : 'Plan and track a run in Experiments';
 
   // Notebook: single scrollable form (professional documentation UX)
@@ -166,16 +163,16 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
           </div>
         )}
 
-        <FormSection title="Note" description="What you did and when">
+        <FormSection title="Run" description="Identity and purpose of this attempt">
           <Field label="Title" required>
             <Input
               value={formData.title}
               onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-              placeholder="e.g. PCR attempt #3 - gel observations"
+              placeholder="e.g. PCR attempt #3 — annealing gradient"
               required
             />
           </Field>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Date" required>
               <Input
                 type="date"
@@ -184,111 +181,105 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
                 required
               />
             </Field>
-            <Field label="Time" required>
+            <Field label="Time" hint="Optional">
               <Input
                 type="time"
                 value={formData.startTime}
                 onChange={(e) => setFormData((prev) => ({ ...prev, startTime: e.target.value }))}
-                required
               />
             </Field>
           </div>
-          <Field label="Procedure & observations" hint="What you ran, conditions, and what you saw">
+          <Field label="Objective" required hint="Why this run — question or intended outcome">
             <TextArea
-              value={formData.description}
-              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-              rows={5}
-              placeholder="Describe the procedure and your observations…"
+              value={formData.objective}
+              onChange={(e) => setFormData((prev) => ({ ...prev, objective: e.target.value }))}
+              rows={2}
+              placeholder="e.g. Test whether 58°C annealing reduces non-specific bands"
+              required
             />
           </Field>
         </FormSection>
 
-        <FormSection
-          title="Linked method"
-          description="Reference a protocol - full SOPs live in Protocol library"
-        >
+        <FormSection title="Method" description="What you ran and any deviations">
           <Field label="Protocol">
             <EntityLinkSelect
               value={formData.protocolId}
               options={protocolOptions}
               onChange={handleProtocolSelect}
-              placeholder="None - choose a protocol"
+              placeholder="None — choose a protocol"
             />
             {protocolOptions.length === 0 && (
               <p className="mt-1.5 text-[12px] text-slate-500">
                 No protocols loaded.{' '}
-                <a href="/protocols" className="text-slate-800 font-medium underline-offset-2 hover:underline">
+                <a
+                  href="/protocols"
+                  className="font-medium text-slate-800 underline-offset-2 hover:underline"
+                >
                   Open Protocol library
                 </a>
               </p>
             )}
           </Field>
-          {isNotebook && (
-            <Field label="Linked experiment" hint="Optional - tie this note to a tracked experiment">
-              <EntityLinkSelect
-                value={formData.experimentId}
-                options={loadedExperiments}
-                onChange={(id) => setFormData((prev) => ({ ...prev, experimentId: id }))}
-                placeholder="None - choose an experiment"
-              />
-            </Field>
-          )}
           {selectedProtocol && (
             <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3">
               <p className="text-[13px] font-medium text-slate-900">{selectedProtocol.title}</p>
               {selectedProtocol.description && (
-                <p className="mt-1 text-[12px] text-slate-600 line-clamp-2">
+                <p className="mt-1 line-clamp-2 text-[12px] text-slate-600">
                   {selectedProtocol.description}
                 </p>
               )}
-              <a
-                href={`/protocols`}
-                className="inline-block mt-2 text-[12px] font-medium text-slate-800 underline-offset-2 hover:underline"
-              >
-                Open Protocol library
-              </a>
             </div>
           )}
-          <Field label="Deviations from protocol">
+          <Field label="Deviations from protocol" hint="Changed steps, reagents, or skipped sections">
             <TextArea
               value={formData.protocolModifications}
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, protocolModifications: e.target.value }))
               }
-              rows={3}
-              placeholder="Any modifications or skipped steps…"
+              rows={2}
+              placeholder="e.g. Used Taq instead of Q5; 30 cycles instead of 35"
+            />
+          </Field>
+          <Field
+            label="Conditions"
+            hint="Sample, concentrations, instrument settings, lot numbers"
+          >
+            <TextArea
+              value={formData.conditions}
+              onChange={(e) => setFormData((prev) => ({ ...prev, conditions: e.target.value }))}
+              rows={2}
+              placeholder="e.g. 50 ng template, BioRad T100, lot #A291"
+            />
+          </Field>
+          <Field label="Linked experiment" hint="Optional — tie this note to Experiment tracker">
+            <EntityLinkSelect
+              value={formData.experimentId}
+              options={loadedExperiments}
+              onChange={(id) => setFormData((prev) => ({ ...prev, experimentId: id }))}
+              placeholder="None — choose an experiment"
             />
           </Field>
         </FormSection>
 
-        <FormSection title="Issues" description="Optional - detailed problem logs use Problem notes">
-          <Field label="Problems encountered">
+        <FormSection title="Observations" description="What you did and what you saw">
+          <Field label="Procedure & observations" required>
             <TextArea
-              value={formData.problems}
-              onChange={(e) => setFormData((prev) => ({ ...prev, problems: e.target.value }))}
-              rows={3}
-              placeholder="What went wrong…"
+              value={formData.description}
+              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+              rows={6}
+              placeholder="Step narrative and raw observations (gel bands, OD, instrument readings)…"
+              required
             />
           </Field>
-          <Field label="How you resolved them">
-            <TextArea
-              value={formData.troubleshooting}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, troubleshooting: e.target.value }))
-              }
-              rows={3}
-              placeholder="Troubleshooting steps…"
-            />
-          </Field>
-        </FormSection>
-
-        <FormSection title="Findings" description="Summary here; files belong in My data & results">
-          <Field label="Results summary">
+          <Field
+            label="Outcome"
+            hint="Brief takeaway. Use a Results note for full analysis; a Problem note for deep troubleshooting."
+          >
             <TextArea
               value={formData.resultsLink}
               onChange={(e) => setFormData((prev) => ({ ...prev, resultsLink: e.target.value }))}
               rows={3}
-              placeholder="Key findings or a link to detailed results…"
+              placeholder="e.g. Clear 250 bp band at 58–60°C; smear below 56°C"
             />
           </Field>
           <div className="flex flex-wrap gap-2 pt-1">
@@ -296,10 +287,10 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
               type="button"
               variant="outline"
               onClick={() => window.open('/data-results', '_blank')}
-              className="border-slate-300 text-slate-700 text-[13px]"
+              className="border-slate-300 text-[13px] text-slate-700"
             >
-              <ChartBarIcon className="h-4 w-4 mr-1.5" />
-              My data & results
+              <ChartBarIcon className="mr-1.5 h-4 w-4" />
+              Attach data later
             </Button>
             <Button
               type="button"
@@ -310,9 +301,9 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
                 if (formData.protocolId) params.set('protocolId', formData.protocolId);
                 window.open(`/experiment-tracker?${params.toString()}`, '_blank');
               }}
-              className="border-slate-300 text-slate-700 text-[13px]"
+              className="border-slate-300 text-[13px] text-slate-700"
             >
-              <BeakerIcon className="h-4 w-4 mr-1.5" />
+              <BeakerIcon className="mr-1.5 h-4 w-4" />
               Track in Experiments
             </Button>
           </div>
@@ -321,40 +312,38 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
     );
   }
 
-  // Tracker mode: stepped wizard
+  // Tracker mode: stepped wizard (unchanged structure, tighter copy)
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[92vh] overflow-hidden border border-slate-200 my-6 flex flex-col">
-        <div className="px-6 py-5 border-b border-slate-200 shrink-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4">
+      <div className="my-6 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="shrink-0 border-b border-slate-200 px-6 py-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900 tracking-tight">{title}</h2>
+              <h2 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h2>
               <p className="mt-1 text-[13px] text-slate-600">{subtitle}</p>
             </div>
             <button
               type="button"
               onClick={onCancel}
-              className="text-slate-400 hover:text-slate-600 p-1"
+              className="p-1 text-slate-400 hover:text-slate-600"
               aria-label="Close"
             >
-              <XMarkIcon className="w-5 h-5" />
+              <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
           <div className="mt-5 flex items-center gap-1">
             {steps.map((s, i) => (
               <React.Fragment key={s.id}>
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex min-w-0 items-center gap-2">
                   <span
                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold ${
-                      step >= s.id
-                        ? 'bg-slate-900 text-white'
-                        : 'bg-slate-100 text-slate-500'
+                      step >= s.id ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500'
                     }`}
                   >
                     {s.id}
                   </span>
                   <span
-                    className={`hidden sm:block text-[12px] font-medium truncate ${
+                    className={`hidden truncate text-[12px] font-medium sm:block ${
                       step >= s.id ? 'text-slate-900' : 'text-slate-400'
                     }`}
                   >
@@ -363,9 +352,7 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
                 </div>
                 {i < steps.length - 1 && (
                   <div
-                    className={`h-px flex-1 mx-2 ${
-                      step > s.id ? 'bg-slate-900' : 'bg-slate-200'
-                    }`}
+                    className={`mx-2 h-px flex-1 ${step > s.id ? 'bg-slate-900' : 'bg-slate-200'}`}
                   />
                 )}
               </React.Fragment>
@@ -373,8 +360,8 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
-          <div className="px-6 py-5 overflow-y-auto flex-1 space-y-5">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
             {banner && (
               <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-700">
                 {banner}
@@ -391,7 +378,7 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
                     required
                   />
                 </Field>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Start date" required>
                     <Input
                       type="date"
@@ -402,24 +389,33 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
                       required
                     />
                   </Field>
-                  <Field label="Start time" required>
+                  <Field label="Start time">
                     <Input
                       type="time"
                       value={formData.startTime}
                       onChange={(e) =>
                         setFormData((prev) => ({ ...prev, startTime: e.target.value }))
                       }
-                      required
                     />
                   </Field>
                 </div>
+                <Field label="Objective">
+                  <TextArea
+                    value={formData.objective}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, objective: e.target.value }))
+                    }
+                    rows={2}
+                    placeholder="What question does this run answer?"
+                  />
+                </Field>
                 <Field label="Description">
                   <TextArea
                     value={formData.description}
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, description: e.target.value }))
                     }
-                    rows={4}
+                    rows={3}
                     placeholder="Brief description of the experiment…"
                   />
                 </Field>
@@ -444,15 +440,7 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
                     <p className="text-[13px] font-medium text-slate-900">
                       {selectedProtocol.title}
                     </p>
-                    <p className="mt-1 text-[12px] text-slate-600">
-                      {selectedProtocol.description}
-                    </p>
-                    <a
-                      href="/protocols"
-                      className="inline-block mt-2 text-[12px] font-medium text-slate-800 underline-offset-2 hover:underline"
-                    >
-                      Open Protocol library
-                    </a>
+                    <p className="mt-1 text-[12px] text-slate-600">{selectedProtocol.description}</p>
                   </div>
                 )}
                 <Field label="Protocol modifications">
@@ -473,13 +461,13 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
 
             {step === 3 && (
               <>
-                <Field label="Known risks / problems">
+                <Field label="Known risks">
                   <TextArea
                     value={formData.problems}
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, problems: e.target.value }))
                     }
-                    rows={4}
+                    rows={3}
                     placeholder="Risks or expected issues…"
                   />
                 </Field>
@@ -489,7 +477,7 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, troubleshooting: e.target.value }))
                     }
-                    rows={4}
+                    rows={3}
                     placeholder="How you will address them…"
                   />
                 </Field>
@@ -500,31 +488,20 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
               <>
                 <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-700">
                   <div className="flex gap-2">
-                    <CheckCircleIcon className="h-5 w-5 text-slate-600 shrink-0 mt-0.5" />
+                    <CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0 text-slate-600" />
                     <p>
                       This creates an experiment in the tracker. Upload outputs later in My data
                       &amp; results.
                     </p>
                   </div>
                 </div>
-                <Field label="Results notes (optional)">
-                  <TextArea
-                    value={formData.resultsLink}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, resultsLink: e.target.value }))
-                    }
-                    rows={3}
-                    placeholder="Expected outputs or notes…"
-                  />
-                </Field>
-                <div className="rounded-md border border-slate-200 px-4 py-4 space-y-2 text-[13px] text-slate-700">
+                <div className="space-y-2 rounded-md border border-slate-200 px-4 py-4 text-[13px] text-slate-700">
                   <p className="font-semibold text-slate-900">Summary</p>
                   <p>
-                    <span className="text-slate-500">Title:</span> {formData.title || '-'}
+                    <span className="text-slate-500">Title:</span> {formData.title || '—'}
                   </p>
                   <p>
-                    <span className="text-slate-500">When:</span>{' '}
-                    {formData.startDate || '-'}
+                    <span className="text-slate-500">When:</span> {formData.startDate || '—'}
                     {formData.startTime ? ` · ${formData.startTime}` : ''}
                   </p>
                   <p>
@@ -536,7 +513,7 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
             )}
           </div>
 
-          <div className="px-6 py-4 border-t border-slate-200 bg-slate-50/80 flex justify-between gap-2.5 shrink-0">
+          <div className="flex shrink-0 justify-between gap-2.5 border-t border-slate-200 bg-slate-50/80 px-6 py-4">
             <div>
               {step > 1 && (
                 <Button
@@ -562,7 +539,7 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
                 <Button
                   type="button"
                   onClick={() => setStep((s) => s + 1)}
-                  className="bg-slate-900 hover:bg-slate-800 text-white shadow-none bg-none"
+                  className="bg-none bg-slate-900 text-white shadow-none hover:bg-slate-800"
                 >
                   Continue
                 </Button>
@@ -570,7 +547,7 @@ const ExperimentForm: React.FC<ExperimentFormProps> = ({
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="bg-slate-900 hover:bg-slate-800 text-white shadow-none bg-none"
+                  className="bg-none bg-slate-900 text-white shadow-none hover:bg-slate-800"
                 >
                   {isLoading ? 'Saving…' : 'Create experiment'}
                 </Button>

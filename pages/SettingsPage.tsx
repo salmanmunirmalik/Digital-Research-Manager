@@ -13,8 +13,9 @@ import {
   PlusIcon,
   CheckCircleIcon,
   XMarkIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
 } from '@heroicons/react/24/outline';
+import { PageHeader, PagePanel, PageStat } from '../components/PageHeader';
 
 interface ApiKey {
   id: string;
@@ -34,6 +35,51 @@ interface Provider {
   chat_price_per_million: number;
   max_context_length: number;
 }
+
+const fieldClass =
+  'w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400/40 focus:border-sky-300 disabled:bg-slate-50 disabled:text-slate-500';
+const labelClass = 'mb-1.5 block text-[12px] font-medium text-slate-600';
+const btnPrimary =
+  'inline-flex items-center justify-center gap-1.5 rounded-lg bg-sky-700 px-4 py-2 text-[13px] font-medium text-white shadow-sm hover:bg-sky-800 transition-colors disabled:opacity-50';
+const btnSecondary =
+  'inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-colors';
+
+const ToggleRow: React.FC<{
+  title: string;
+  description: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled?: boolean;
+}> = ({ title, description, checked, onChange, disabled }) => (
+  <div
+    className={`flex items-start justify-between gap-4 rounded-xl border p-4 ${
+      checked
+        ? 'border-sky-100 bg-gradient-to-br from-sky-50/70 to-white'
+        : 'border-slate-100 bg-white'
+    }`}
+  >
+    <div className="min-w-0">
+      <p className="text-[13px] font-medium text-slate-900">{title}</p>
+      <p className="mt-0.5 text-[12px] text-slate-500">{description}</p>
+    </div>
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative h-6 w-10 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+        checked ? 'bg-sky-700' : 'bg-slate-200'
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+          checked ? 'translate-x-4' : ''
+        }`}
+      />
+    </button>
+  </div>
+);
 
 const SettingsPage: React.FC = () => {
   const { user, logout } = useAuth();
@@ -525,13 +571,14 @@ const SettingsPage: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Please log in to access settings</h2>
-          <button
-            onClick={() => navigate('/login')}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
+      <div className="flex min-h-[60vh] items-center justify-center px-4">
+        <div className="max-w-md text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-sky-700 text-white shadow-md shadow-sky-200/60">
+            <CogIcon className="h-6 w-6" />
+          </div>
+          <h2 className="text-xl font-semibold text-slate-900">Sign in to manage settings</h2>
+          <p className="mt-2 text-[13px] text-slate-500">Account preferences, privacy, and API keys need an active session.</p>
+          <button type="button" onClick={() => navigate('/login')} className={`${btnPrimary} mt-5`}>
             Go to Login
           </button>
         </div>
@@ -539,705 +586,604 @@ const SettingsPage: React.FC = () => {
     );
   }
 
+  const tabs = [
+    { id: 'profile' as const, label: 'Profile', icon: UserIcon },
+    { id: 'notifications' as const, label: 'Notifications', icon: BellIcon },
+    { id: 'privacy' as const, label: 'Privacy', icon: GlobeAltIcon },
+    { id: 'security' as const, label: 'Security', icon: ShieldCheckIcon },
+    { id: 'api-management' as const, label: 'API keys', icon: KeyIcon },
+    { id: 'data' as const, label: 'Data', icon: CogIcon },
+  ];
+
+  const tabLabel = tabs.find((t) => t.id === activeTab)?.label ?? 'Settings';
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-600 mt-2">Manage your account preferences and security settings</p>
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <PageHeader
+        title="Settings"
+        subtitle="Account, privacy, security, and AI provider keys — in one place."
+        accent="sky"
+        icon={<CogIcon />}
+        actions={
+          <Link to="/profile" className={btnSecondary}>
+            View profile
+          </Link>
+        }
+      >
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <PageStat label="Active tab" value={tabLabel} accent="sky" />
+          <PageStat
+            label="API keys"
+            value={apiKeys.length}
+            accent="sky"
+            action={
+              <span className="text-[11px] text-slate-500">
+                {apiKeys.filter((k) => k.is_active).length} on
+              </span>
+            }
+          />
+          <PageStat
+            label="Notifications"
+            value={Object.values(notifications).filter(Boolean).length}
+            accent="teal"
+          />
+          <PageStat
+            label="Visibility"
+            value={privacy.profileVisibility === 'lab-only' ? 'Lab' : privacy.profileVisibility}
+            accent="amber"
+          />
         </div>
+      </PageHeader>
 
-          {/* Message */}
-          {message && (
-          <div className={`mb-6 p-4 rounded-lg flex items-center space-x-2 ${
-              message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
-            }`}>
-            {message.type === 'success' ? (
-              <CheckCircleIcon className="w-5 h-5" />
-            ) : (
-              <XCircleIcon className="w-5 h-5" />
-            )}
-            <span>{message.text}</span>
-            <button onClick={() => setMessage(null)} className="ml-auto">
-              <XCircleIcon className="w-5 h-5" />
-            </button>
-            </div>
+      {message && (
+        <div
+          className={`mt-4 flex items-center gap-2 rounded-xl border px-4 py-3 text-[13px] ${
+            message.type === 'success'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+              : 'border-rose-200 bg-rose-50 text-rose-800'
+          }`}
+        >
+          {message.type === 'success' ? (
+            <CheckCircleIcon className="h-5 w-5 shrink-0" />
+          ) : (
+            <XMarkIcon className="h-5 w-5 shrink-0" />
           )}
+          <span className="flex-1">{message.text}</span>
+          <button type="button" onClick={() => setMessage(null)} className="rounded-lg p-1 hover:bg-black/5" aria-label="Dismiss">
+            <XMarkIcon className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <nav className="space-y-2">
-                {[
-                  { id: 'profile', label: 'Profile', icon: UserIcon },
-                  { id: 'notifications', label: 'Notifications', icon: BellIcon },
-                  { id: 'privacy', label: 'Privacy', icon: GlobeAltIcon },
-                  { id: 'security', label: 'Security', icon: ShieldCheckIcon },
-                  { id: 'api-management', label: 'API Management', icon: KeyIcon },
-                  { id: 'data', label: 'Data Management', icon: CogIcon }
-                ].map((tab) => (
+      <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <aside className="lg:col-span-3">
+          <PagePanel className="sticky top-4 p-2 sm:p-2" accent="sky">
+            <nav className="space-y-0.5" aria-label="Settings sections">
+              {tabs.map((tab) => {
+                const active = activeTab === tab.id;
+                return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                      activeTab === tab.id
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-50'
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium transition-colors ${
+                      active
+                        ? 'bg-sky-700 text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                     }`}
                   >
-                    <tab.icon className="w-5 h-5" />
+                    <tab.icon className={`h-4 w-4 ${active ? 'text-sky-100' : 'text-slate-400'}`} />
                     <span>{tab.label}</span>
                   </button>
-                ))}
-              </nav>
-            </div>
-          </div>
+                );
+              })}
+            </nav>
+          </PagePanel>
+        </aside>
 
-          {/* Content */}
-          <div className="lg:col-span-3">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              {/* Profile Tab */}
-              {activeTab === 'profile' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Profile Settings</h2>
-                  
-                  {loading ? (
-                    <div className="text-center py-12">
-                      <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-                      <p className="text-gray-600 mt-4">Loading profile...</p>
+        <div className="lg:col-span-9 space-y-4">
+          {activeTab === 'profile' && (
+            <PagePanel
+              accent="sky"
+              title="Profile"
+              action={
+                <button type="button" onClick={handleSaveProfile} className={btnPrimary} disabled={loading}>
+                  Save changes
+                </button>
+              }
+            >
+              {loading ? (
+                <div className="py-12 text-center">
+                  <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-sky-500 border-t-transparent" />
+                  <p className="mt-3 text-[13px] text-slate-500">Loading profile…</p>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className={labelClass}>First name</label>
+                      <input
+                        type="text"
+                        value={profileForm.first_name}
+                        onChange={(e) => setProfileForm({ ...profileForm, first_name: e.target.value })}
+                        className={fieldClass}
+                      />
                     </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                          <input
-                            type="text"
-                            value={profileForm.first_name}
-                            onChange={(e) => setProfileForm({ ...profileForm, first_name: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                          <input
-                            type="text"
-                            value={profileForm.last_name}
-                            onChange={(e) => setProfileForm({ ...profileForm, last_name: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                          <input
-                            type="email"
-                            value={user.email}
-                            disabled
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                          <input
-                            type="tel"
-                            value={profileForm.phone}
-                            onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
-                          <input
-                            type="text"
-                            value={profileForm.department}
-                            onChange={(e) => setProfileForm({ ...profileForm, department: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Specialization</label>
-                          <input
-                            type="text"
-                            value={profileForm.specialization}
-                            onChange={(e) => setProfileForm({ ...profileForm, specialization: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                          <input
-                            type="text"
-                            value={profileForm.location}
-                            onChange={(e) => setProfileForm({ ...profileForm, location: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
-                          <select
-                            value={profileForm.timezone}
-                            onChange={(e) => setProfileForm({ ...profileForm, timezone: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          >
-                            <option value="UTC">UTC</option>
-                            <option value="America/New_York">Eastern Time</option>
-                            <option value="America/Los_Angeles">Pacific Time</option>
-                            <option value="Europe/London">GMT</option>
-                          </select>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
-                        <textarea
-                          value={profileForm.bio}
-                          onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
-                          rows={4}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Tell us about yourself..."
-                        />
-                      </div>
-
-                      <div className="flex justify-end">
-                        <button
-                          onClick={handleSaveProfile}
-                          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          Save Changes
-                        </button>
-                      </div>
-                    </>
-                  )}
+                    <div>
+                      <label className={labelClass}>Last name</label>
+                      <input
+                        type="text"
+                        value={profileForm.last_name}
+                        onChange={(e) => setProfileForm({ ...profileForm, last_name: e.target.value })}
+                        className={fieldClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Email</label>
+                      <input type="email" value={user.email} disabled className={fieldClass} />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Phone</label>
+                      <input
+                        type="tel"
+                        value={profileForm.phone}
+                        onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                        className={fieldClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Department</label>
+                      <input
+                        type="text"
+                        value={profileForm.department}
+                        onChange={(e) => setProfileForm({ ...profileForm, department: e.target.value })}
+                        className={fieldClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Specialization</label>
+                      <input
+                        type="text"
+                        value={profileForm.specialization}
+                        onChange={(e) => setProfileForm({ ...profileForm, specialization: e.target.value })}
+                        className={fieldClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Location</label>
+                      <input
+                        type="text"
+                        value={profileForm.location}
+                        onChange={(e) => setProfileForm({ ...profileForm, location: e.target.value })}
+                        className={fieldClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Timezone</label>
+                      <select
+                        value={profileForm.timezone}
+                        onChange={(e) => setProfileForm({ ...profileForm, timezone: e.target.value })}
+                        className={fieldClass}
+                      >
+                        <option value="UTC">UTC</option>
+                        <option value="America/New_York">Eastern Time</option>
+                        <option value="America/Los_Angeles">Pacific Time</option>
+                        <option value="Europe/London">GMT</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Bio</label>
+                    <textarea
+                      value={profileForm.bio}
+                      onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                      rows={4}
+                      className={fieldClass}
+                      placeholder="A short note about your research focus…"
+                    />
+                  </div>
                 </div>
               )}
+            </PagePanel>
+          )}
 
-              {/* API Management Tab - Complete */}
-              {activeTab === 'api-management' && (
-                <div className="space-y-6">
-                  {/* Header */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-xl font-semibold text-gray-900">API Management</h2>
-                      <p className="text-sm text-gray-600 mt-1">Manage your AI provider keys and task assignments</p>
-                    </div>
-                    <button
-                      onClick={() => setShowAddKeyModal(true)}
-                      className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      <PlusIcon className="w-5 h-5" />
-                      <span>Add API Key</span>
+          {activeTab === 'api-management' && (
+            <>
+              <PagePanel
+                accent="sky"
+                title="API management"
+                action={
+                  <button type="button" onClick={() => setShowAddKeyModal(true)} className={btnPrimary}>
+                    <PlusIcon className="h-4 w-4" />
+                    Add API key
+                  </button>
+                }
+              >
+                <div className="mb-4 flex items-start gap-3 rounded-xl border border-sky-100 bg-gradient-to-br from-sky-50/80 to-white p-4">
+                  <InformationCircleIcon className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" />
+                  <div className="text-[13px] text-slate-700">
+                    <p className="font-medium text-slate-900">Bring your own keys</p>
+                    <p className="mt-1 text-slate-500">
+                      Use your preferred provider, keep rate limits under your account, and reduce platform AI costs.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <PageStat
+                    label="Keys"
+                    value={apiKeys.length}
+                    accent="sky"
+                    action={<span className="text-[11px] text-slate-500">{apiKeys.filter((k) => k.is_active).length} active</span>}
+                  />
+                  <PageStat
+                    label="Assignments"
+                    value={taskAssignments.length}
+                    accent="teal"
+                    action={
+                      <span className="text-[11px] text-slate-500">
+                        {taskAssignments.filter((a) => a.is_active).length} active
+                      </span>
+                    }
+                  />
+                </div>
+              </PagePanel>
+
+              <PagePanel accent="sky" title="Your API keys">
+                {loadingApiKeys ? (
+                  <div className="py-10 text-center">
+                    <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-sky-500 border-t-transparent" />
+                    <p className="mt-3 text-[13px] text-slate-500">Loading keys…</p>
+                  </div>
+                ) : apiKeys.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 py-10 text-center">
+                    <KeyIcon className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+                    <p className="text-[14px] font-medium text-slate-900">No API keys yet</p>
+                    <p className="mt-1 text-[12px] text-slate-500">Add a provider key to power AI features.</p>
+                    <button type="button" onClick={() => setShowAddKeyModal(true)} className={`${btnPrimary} mt-4`}>
+                      Add API key
                     </button>
                   </div>
-
-                  {/* Benefits Info */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start space-x-3">
-                    <InformationCircleIcon className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm text-blue-800">
-                      <p className="font-medium mb-1">Why add your own API keys?</p>
-                      <ul className="list-disc list-inside space-y-1 text-blue-700">
-                        <li>Reduce platform costs for AI features</li>
-                        <li>Use your preferred AI provider (OpenAI, Gemini, Claude, etc.)</li>
-                        <li>Access premium models with your own account</li>
-                        <li>Better rate limits with higher-tier accounts</li>
-                        <li>Enhanced privacy and control</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  {/* Quick Stats */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                      <p className="text-sm text-gray-600 mb-1">API Keys</p>
-                      <p className="text-2xl font-bold text-gray-900">{apiKeys.length}</p>
-                      <p className="text-xs text-gray-500 mt-1">{apiKeys.filter(k => k.is_active).length} active</p>
-                    </div>
-                    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                      <p className="text-sm text-gray-600 mb-1">Task Assignments</p>
-                      <p className="text-2xl font-bold text-gray-900">{taskAssignments.length}</p>
-                      <p className="text-xs text-gray-500 mt-1">{taskAssignments.filter(a => a.is_active).length} active</p>
-                    </div>
-                  </div>
-
-                  {/* API Keys Section */}
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">Your API Keys</h3>
-                      <button
-                        onClick={() => setShowAddKeyModal(true)}
-                        className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                      >
-                        <PlusIcon className="w-4 h-4" />
-                        <span>Add Key</span>
-                      </button>
-                    </div>
-                    {loadingApiKeys ? (
-                      <div className="text-center py-12">
-                        <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-                        <p className="text-gray-600 mt-4">Loading API keys...</p>
-                      </div>
-                    ) : apiKeys.length === 0 ? (
-                      <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-                        <KeyIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No API keys added</h3>
-                        <p className="text-gray-600 mb-4">Add your first API key to get started with AI features</p>
-                        <button
-                          onClick={() => setShowAddKeyModal(true)}
-                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {apiKeys.map((key) => {
+                      const keyAssignments = taskAssignments.filter((a) => a.api_key_id === key.id);
+                      return (
+                        <div
+                          key={key.id}
+                          className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/60 p-4 shadow-sm"
                         >
-                          Add API Key
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {apiKeys.map((key) => {
-                          const keyAssignments = taskAssignments.filter(a => a.api_key_id === key.id);
-                          return (
-                            <div key={key.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-sm transition-all">
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center space-x-3 flex-1">
-                                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                    key.is_active ? 'bg-blue-100' : 'bg-gray-100'
-                                  }`}>
-                                    <KeyIcon className={`w-6 h-6 ${key.is_active ? 'text-blue-600' : 'text-gray-400'}`} />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium text-gray-900 truncate">{key.provider_name}</h4>
-                                    <div className="flex items-center space-x-2 mt-1">
-                                      <span className={`px-2 py-0.5 rounded text-xs ${
-                                        key.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                                      }`}>
-                                        {key.is_active ? 'Active' : 'Inactive'}
-                                      </span>
-                                      {key.last_used_at && (
-                                        <span className="text-xs text-gray-500">
-                                          Used {new Date(key.last_used_at).toLocaleDateString()}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                              {/* Show assigned tasks */}
-                              {keyAssignments.length > 0 ? (
-                                <div className="mt-3 pt-3 border-t border-gray-200">
-                                  <p className="text-xs font-medium text-gray-700 mb-2">Assigned Tasks:</p>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {keyAssignments.slice(0, 3).map((assignment) => (
-                                      <span
-                                        key={assignment.id}
-                                        className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs"
-                                      >
-                                        {assignment.task_name}
-                                      </span>
-                                    ))}
-                                    {keyAssignments.length > 3 && (
-                                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
-                                        +{keyAssignments.length - 3} more
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="mt-3 pt-3 border-t border-gray-200">
-                                  <p className="text-xs text-gray-500 italic">No tasks assigned</p>
-                                </div>
-                              )}
-                              <div className="flex items-center space-x-2 mt-4 pt-4 border-t border-gray-200">
-                                <button
-                                  onClick={() => handleToggleApiKey(key.id, key.is_active)}
-                                  className={`flex-1 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                                    key.is_active 
-                                      ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
-                                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                          <div className="flex items-start gap-3">
+                            <div
+                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                                key.is_active ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-400'
+                              }`}
+                            >
+                              <KeyIcon className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="truncate text-[13px] font-semibold text-slate-900">{key.provider_name}</h4>
+                              <div className="mt-1 flex flex-wrap items-center gap-2">
+                                <span
+                                  className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
+                                    key.is_active
+                                      ? 'bg-emerald-50 text-emerald-700'
+                                      : 'bg-slate-100 text-slate-600'
                                   }`}
                                 >
-                                  {key.is_active ? 'Disable' : 'Enable'}
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteApiKey(key.id)}
-                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                  title="Delete API key"
-                                >
-                                  <TrashIcon className="w-5 h-5" />
-                                </button>
+                                  {key.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                                {key.last_used_at && (
+                                  <span className="text-[11px] text-slate-400">
+                                    Used {new Date(key.last_used_at).toLocaleDateString()}
+                                  </span>
+                                )}
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Task Assignments Section */}
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Task Assignments</h3>
-                    {taskAssignments.length === 0 ? (
-                      <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
-                        <p className="text-gray-600 mb-2">No task assignments configured</p>
-                        <p className="text-sm text-gray-500">Assign tasks to your API keys when adding them</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {taskAssignments.map((assignment) => {
-                          const apiKey = apiKeys.find(k => k.id === assignment.api_key_id);
-                          return (
-                            <div key={assignment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                              <div className="flex-1">
-                                <p className="font-medium text-gray-900">{assignment.task_name}</p>
-                                <p className="text-sm text-gray-600">
-                                  API: {apiKey?.provider_name || 'Unknown'} • Priority: {assignment.priority}
-                                </p>
+                          </div>
+                          <div className="mt-3 border-t border-slate-100 pt-3">
+                            {keyAssignments.length > 0 ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                {keyAssignments.slice(0, 3).map((assignment) => (
+                                  <span
+                                    key={assignment.id}
+                                    className="rounded-md bg-sky-50 px-2 py-0.5 text-[11px] text-sky-800"
+                                  >
+                                    {assignment.task_name}
+                                  </span>
+                                ))}
+                                {keyAssignments.length > 3 && (
+                                  <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
+                                    +{keyAssignments.length - 3}
+                                  </span>
+                                )}
                               </div>
-                              <span className={`px-2 py-1 rounded text-xs ${
-                                assignment.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                              }`}>
-                                {assignment.is_active ? 'Active' : 'Inactive'}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Notifications Tab */}
-              {activeTab === 'notifications' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Notification Preferences</h2>
-                  
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <h3 className="font-medium text-gray-900">Email Notifications</h3>
-                  <p className="text-sm text-gray-600">Receive notifications via email</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                          checked={notifications.email}
-                          onChange={(e) => setNotifications({ ...notifications, email: e.target.checked })}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                      </label>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div>
-                        <h3 className="font-medium text-gray-900">Push Notifications</h3>
-                        <p className="text-sm text-gray-600">Receive browser push notifications</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={notifications.push}
-                          onChange={(e) => setNotifications({ ...notifications, push: e.target.checked })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <h3 className="font-medium text-gray-900">Research Updates</h3>
-                  <p className="text-sm text-gray-600">Get notified about research progress and updates</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                          checked={notifications.researchUpdates}
-                          onChange={(e) => setNotifications({ ...notifications, researchUpdates: e.target.checked })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <h3 className="font-medium text-gray-900">Lab Updates</h3>
-                  <p className="text-sm text-gray-600">Receive notifications about lab activities</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                          checked={notifications.labUpdates}
-                          onChange={(e) => setNotifications({ ...notifications, labUpdates: e.target.checked })}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                      </label>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div>
-                        <h3 className="font-medium text-gray-900">Conference Updates</h3>
-                        <p className="text-sm text-gray-600">Get notified about conferences and events</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={notifications.conferenceUpdates}
-                          onChange={(e) => setNotifications({ ...notifications, conferenceUpdates: e.target.checked })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-            </div>
-
-                  <div className="flex justify-end">
-                    <button
-                      onClick={handleSaveNotifications}
-                      className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Save Preferences
-                    </button>
-            </div>
-          </div>
-              )}
-
-              {/* Privacy Tab */}
-              {activeTab === 'privacy' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Privacy Settings</h2>
-                  
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Profile Visibility</label>
-                <select
-                        value={privacy.profileVisibility}
-                        onChange={(e) => setPrivacy({ ...privacy, profileVisibility: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="public">Public</option>
-                  <option value="lab-only">Lab Members Only</option>
-                  <option value="private">Private</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <h3 className="font-medium text-gray-900">Show Email</h3>
-                  <p className="text-sm text-gray-600">Display email address on profile</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                          checked={privacy.showEmail}
-                          onChange={(e) => setPrivacy({ ...privacy, showEmail: e.target.checked })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-          </div>
-
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div>
-                        <h3 className="font-medium text-gray-900">Show Phone</h3>
-                        <p className="text-sm text-gray-600">Display phone number on profile</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                          checked={privacy.showPhone}
-                          onChange={(e) => setPrivacy({ ...privacy, showPhone: e.target.checked })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div>
-                        <h3 className="font-medium text-gray-900">Show Location</h3>
-                        <p className="text-sm text-gray-600">Display location on profile</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={privacy.showLocation}
-                          onChange={(e) => setPrivacy({ ...privacy, showLocation: e.target.checked })}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <h3 className="font-medium text-gray-900">Cookie Preferences</h3>
-                    <p className="text-sm text-gray-600">
-                      Review and update your consent choices at any time.
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-3 text-sm">
-                      <Link to="/cookie-preferences" className="text-blue-600 hover:underline">
-                        Manage cookies
-                      </Link>
-                      <Link to="/privacy" className="text-blue-600 hover:underline">
-                        Privacy
-                      </Link>
-                      <Link to="/privacy-rights" className="text-blue-600 hover:underline">
-                        Privacy rights
-                      </Link>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <h3 className="font-medium text-gray-900">Privacy Policy Consent</h3>
-                      <p className="text-sm text-gray-600">
-                        Record or withdraw your consent to the privacy policy.
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={privacyPolicyConsent ?? false}
-                        onChange={(e) => handlePrivacyPolicyConsent(e.target.checked)}
-                        disabled={privacyConsentLoading}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
-                    </label>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <button
-                      onClick={handleSavePrivacy}
-                      className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Save Privacy Settings
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Security Tab */}
-              {activeTab === 'security' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Security Settings</h2>
-                  
-                  <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                      <h3 className="font-medium text-gray-900 mb-2">Change Password</h3>
-                      <p className="text-sm text-gray-600 mb-4">Update your password to keep your account secure</p>
-                      
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                          <input
-                            type="password"
-                            value={passwordForm.current_password}
-                            onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
+                            ) : (
+                              <p className="text-[12px] italic text-slate-400">No tasks assigned</p>
+                            )}
+                          </div>
+                          <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleApiKey(key.id, key.is_active)}
+                              className={`flex-1 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                                key.is_active
+                                  ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                  : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                              }`}
+                            >
+                              {key.is_active ? 'Disable' : 'Enable'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteApiKey(key.id)}
+                              className="rounded-lg p-1.5 text-rose-600 hover:bg-rose-50"
+                              title="Delete API key"
+                            >
+                              <TrashIcon className="h-5 w-5" />
+                            </button>
+                          </div>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                          <input
-                            type="password"
-                            value={passwordForm.new_password}
-                            onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-                <input
-                            type="password"
-                            value={passwordForm.confirm_password}
-                            onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        <button
-                          onClick={handleChangePassword}
-                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                      );
+                    })}
+                  </div>
+                )}
+              </PagePanel>
+
+              <PagePanel accent="teal" title="Task assignments">
+                {taskAssignments.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 py-8 text-center">
+                    <p className="text-[13px] text-slate-600">No assignments yet</p>
+                    <p className="mt-1 text-[12px] text-slate-400">Assign tasks when you add a key.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {taskAssignments.map((assignment) => {
+                      const apiKey = apiKeys.find((k) => k.id === assignment.api_key_id);
+                      return (
+                        <div
+                          key={assignment.id}
+                          className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/50 px-3.5 py-3"
                         >
-                          Change Password
-                        </button>
-                      </div>
-              </div>
-            </div>
-          </div>
-              )}
+                          <div className="min-w-0">
+                            <p className="truncate text-[13px] font-medium text-slate-900">{assignment.task_name}</p>
+                            <p className="text-[12px] text-slate-500">
+                              {apiKey?.provider_name || 'Unknown'} · Priority {assignment.priority}
+                            </p>
+                          </div>
+                          <span
+                            className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-medium ${
+                              assignment.is_active
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            {assignment.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </PagePanel>
+            </>
+          )}
 
-              {/* Data Management Tab */}
-              {activeTab === 'data' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Data Management</h2>
-                  
+          {activeTab === 'notifications' && (
+            <PagePanel
+              accent="sky"
+              title="Notifications"
+              action={
+                <button type="button" onClick={handleSaveNotifications} className={btnPrimary}>
+                  Save preferences
+                </button>
+              }
+            >
+              <div className="space-y-2.5">
+                <ToggleRow
+                  title="Email notifications"
+                  description="Receive notifications via email"
+                  checked={notifications.email}
+                  onChange={(next) => setNotifications({ ...notifications, email: next })}
+                />
+                <ToggleRow
+                  title="Push notifications"
+                  description="Browser push alerts"
+                  checked={notifications.push}
+                  onChange={(next) => setNotifications({ ...notifications, push: next })}
+                />
+                <ToggleRow
+                  title="Research updates"
+                  description="Progress and research activity"
+                  checked={notifications.researchUpdates}
+                  onChange={(next) => setNotifications({ ...notifications, researchUpdates: next })}
+                />
+                <ToggleRow
+                  title="Lab updates"
+                  description="Lab activity and membership changes"
+                  checked={notifications.labUpdates}
+                  onChange={(next) => setNotifications({ ...notifications, labUpdates: next })}
+                />
+                <ToggleRow
+                  title="Conference updates"
+                  description="Conferences and events"
+                  checked={notifications.conferenceUpdates}
+                  onChange={(next) => setNotifications({ ...notifications, conferenceUpdates: next })}
+                />
+              </div>
+            </PagePanel>
+          )}
+
+          {activeTab === 'privacy' && (
+            <PagePanel
+              accent="sky"
+              title="Privacy"
+              action={
+                <button type="button" onClick={handleSavePrivacy} className={btnPrimary}>
+                  Save privacy
+                </button>
+              }
+            >
+              <div className="space-y-3">
+                <div className="rounded-xl border border-slate-100 bg-white p-4">
+                  <label className={labelClass}>Profile visibility</label>
+                  <select
+                    value={privacy.profileVisibility}
+                    onChange={(e) => setPrivacy({ ...privacy, profileVisibility: e.target.value })}
+                    className={fieldClass}
+                  >
+                    <option value="public">Public</option>
+                    <option value="lab-only">Lab members only</option>
+                    <option value="private">Private</option>
+                  </select>
+                </div>
+                <ToggleRow
+                  title="Show email"
+                  description="Display email on your profile"
+                  checked={privacy.showEmail}
+                  onChange={(next) => setPrivacy({ ...privacy, showEmail: next })}
+                />
+                <ToggleRow
+                  title="Show phone"
+                  description="Display phone on your profile"
+                  checked={privacy.showPhone}
+                  onChange={(next) => setPrivacy({ ...privacy, showPhone: next })}
+                />
+                <ToggleRow
+                  title="Show location"
+                  description="Display location on your profile"
+                  checked={privacy.showLocation}
+                  onChange={(next) => setPrivacy({ ...privacy, showLocation: next })}
+                />
+                <div className="rounded-xl border border-slate-100 bg-white p-4">
+                  <p className="text-[13px] font-medium text-slate-900">Cookie & privacy links</p>
+                  <p className="mt-0.5 text-[12px] text-slate-500">Review consent and rights anytime.</p>
+                  <div className="mt-3 flex flex-wrap gap-3 text-[13px]">
+                    <Link to="/cookie-preferences" className="font-medium text-sky-700 hover:text-sky-800">
+                      Manage cookies
+                    </Link>
+                    <Link to="/privacy" className="font-medium text-sky-700 hover:text-sky-800">
+                      Privacy policy
+                    </Link>
+                    <Link to="/privacy-rights" className="font-medium text-sky-700 hover:text-sky-800">
+                      Privacy rights
+                    </Link>
+                  </div>
+                </div>
+                <ToggleRow
+                  title="Privacy policy consent"
+                  description="Record or withdraw consent to the privacy policy"
+                  checked={privacyPolicyConsent ?? false}
+                  onChange={(next) => handlePrivacyPolicyConsent(next)}
+                  disabled={privacyConsentLoading}
+                />
+              </div>
+            </PagePanel>
+          )}
+
+          {activeTab === 'security' && (
+            <PagePanel accent="sky" title="Security">
+              <div className="max-w-md space-y-4">
+                <p className="text-[13px] text-slate-500">Update your password to keep the account secure.</p>
+                <div>
+                  <label className={labelClass}>Current password</label>
+                  <input
+                    type="password"
+                    value={passwordForm.current_password}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
+                    className={fieldClass}
+                    autoComplete="current-password"
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>New password</label>
+                  <input
+                    type="password"
+                    value={passwordForm.new_password}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
+                    className={fieldClass}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Confirm new password</label>
+                  <input
+                    type="password"
+                    value={passwordForm.confirm_password}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })}
+                    className={fieldClass}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <button type="button" onClick={handleChangePassword} className={btnPrimary}>
+                  Change password
+                </button>
+              </div>
+            </PagePanel>
+          )}
+
+          {activeTab === 'data' && (
             <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-medium text-gray-900 mb-2">Export Data</h3>
-                <p className="text-sm text-gray-600 mb-4">Download a copy of your data</p>
-                <button
-                  onClick={handleExportData}
-                  className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors"
-                >
-                  Export Data
+              <PagePanel accent="amber" title="Export data">
+                <p className="text-[13px] text-slate-500">Download a copy of your account data.</p>
+                <button type="button" onClick={handleExportData} className={`${btnSecondary} mt-4 border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100`}>
+                  Export data
                 </button>
-              </div>
-
-              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                <h3 className="font-medium text-red-900 mb-2">Delete Account</h3>
-                <p className="text-sm text-red-700 mb-4">Permanently delete your account and all data</p>
+              </PagePanel>
+              <PagePanel accent="rose" title="Delete account">
+                <p className="text-[13px] text-slate-500">
+                  Permanently delete your account and associated data. This cannot be undone.
+                </p>
                 <button
+                  type="button"
                   onClick={handleDeleteAccount}
-                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                  className="mt-4 inline-flex items-center justify-center rounded-lg bg-rose-600 px-4 py-2 text-[13px] font-medium text-white shadow-sm hover:bg-rose-700 transition-colors"
                 >
-                  Delete Account
+                  Delete account
                 </button>
-              </div>
+              </PagePanel>
             </div>
-          </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Add API Key Modal */}
       {showAddKeyModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Add API Key</h3>
-              <button 
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-[2px]">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-xl sm:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-[16px] font-semibold text-slate-900">Add API key</h3>
+                <p className="mt-0.5 text-[12px] text-slate-500">Encrypted at rest · never stored in plain text</p>
+              </div>
+              <button
+                type="button"
                 onClick={() => {
                   setShowAddKeyModal(false);
                   setFormData({ provider: '', providerName: '', apiKey: '', selectedTasks: [] });
-                }} 
-                className="text-gray-400 hover:text-gray-600"
+                }}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-600"
               >
-                <XMarkIcon className="w-6 h-6" />
+                <XMarkIcon className="h-5 w-5" />
               </button>
-              </div>
+            </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  AI Provider <span className="text-red-500">*</span>
+                <label className={labelClass}>
+                  AI provider <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={formData.provider}
                   onChange={(e) => {
-                    const selected = topProviders.find(p => p.provider === e.target.value);
-                    setFormData({ 
-                      ...formData, 
+                    const selected = topProviders.find((p) => p.provider === e.target.value);
+                    setFormData({
+                      ...formData,
                       provider: e.target.value,
-                      providerName: selected?.name || ''
+                      providerName: selected?.name || '',
                     });
                   }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={fieldClass}
                 >
-                  <option value="">Select a provider...</option>
+                  <option value="">Select a provider…</option>
                   {Object.entries(
                     topProviders.reduce((acc, p) => {
                       if (!acc[p.category]) acc[p.category] = [];
@@ -1254,109 +1200,94 @@ const SettingsPage: React.FC = () => {
                     </optgroup>
                   ))}
                 </select>
-                {formData.provider && formData.provider === 'custom' && (
+                {formData.provider === 'custom' && (
                   <input
                     type="text"
                     value={formData.providerName}
                     onChange={(e) => setFormData({ ...formData, providerName: e.target.value })}
-                    placeholder="Enter custom provider name"
-                    className="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Custom provider name"
+                    className={`${fieldClass} mt-2`}
                   />
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  API Key <span className="text-red-500">*</span>
+                <label className={labelClass}>
+                  API key <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="password"
                   value={formData.apiKey}
                   onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                  placeholder="Enter your API key"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Paste your API key"
+                  className={fieldClass}
                 />
-                <p className="text-xs text-gray-500 mt-2">
-                  Your API key is encrypted and stored securely. We never store it in plain text.
-                </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Assign Tasks (Optional)
-                </label>
-                <p className="text-xs text-gray-500 mb-3">
-                  Select which tasks this API should handle. You can change this later.
-                </p>
-                <div className="relative">
-                  <select
-                    multiple
-                    value={formData.selectedTasks}
-                    onChange={(e) => {
-                      const selected = Array.from(e.target.selectedOptions, option => option.value);
-                      setFormData({ ...formData, selectedTasks: selected });
-                    }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[200px]"
-                    size={tasks.length > 0 ? Math.min(tasks.length, 8) : 4}
-                  >
-                    {tasks.map((task) => (
-                      <option key={task.type} value={task.type}>
-                        {task.name} - {task.description}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Hold Ctrl/Cmd to select multiple tasks
-                  </p>
-                </div>
+                <label className={labelClass}>Assign tasks (optional)</label>
+                <p className="mb-2 text-[12px] text-slate-500">Hold Ctrl/Cmd to select multiple.</p>
+                <select
+                  multiple
+                  value={formData.selectedTasks}
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.selectedOptions, (option) => option.value);
+                    setFormData({ ...formData, selectedTasks: selected });
+                  }}
+                  className={`${fieldClass} min-h-[160px]`}
+                  size={tasks.length > 0 ? Math.min(tasks.length, 8) : 4}
+                >
+                  {tasks.map((task) => (
+                    <option key={task.type} value={task.type}>
+                      {task.name} — {task.description}
+                    </option>
+                  ))}
+                </select>
                 {formData.selectedTasks.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-sm font-medium text-gray-700 mb-2">
-                      Selected Tasks ({formData.selectedTasks.length}):
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {formData.selectedTasks.map((taskType) => {
-                        const task = tasks.find(t => t.type === taskType);
-                        return (
-                          <span
-                            key={taskType}
-                            className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs flex items-center space-x-1"
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {formData.selectedTasks.map((taskType) => {
+                      const task = tasks.find((t) => t.type === taskType);
+                      return (
+                        <span
+                          key={taskType}
+                          className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-1 text-[11px] text-sky-800"
+                        >
+                          {task?.name || taskType}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                selectedTasks: formData.selectedTasks.filter((t) => t !== taskType),
+                              })
+                            }
+                            className="hover:text-sky-950"
                           >
-                            <span>{task?.name || taskType}</span>
-                            <button
-                              onClick={() => {
-                                setFormData({
-                                  ...formData,
-                                  selectedTasks: formData.selectedTasks.filter(t => t !== taskType)
-                                });
-                              }}
-                              className="ml-1 hover:text-blue-900"
-                            >
-                              <XMarkIcon className="w-3 h-3" />
-                            </button>
-                          </span>
-                        );
-                      })}
-                    </div>
+                            <XMarkIcon className="h-3 w-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
                   </div>
                 )}
               </div>
 
-              <div className="flex space-x-3 pt-4 border-t border-gray-200">
+              <div className="flex gap-3 border-t border-slate-100 pt-4">
                 <button
+                  type="button"
                   onClick={() => {
                     setShowAddKeyModal(false);
                     setFormData({ provider: '', providerName: '', apiKey: '', selectedTasks: [] });
                   }}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                  className={`flex-1 ${btnSecondary}`}
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={handleAddApiKey}
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                >
-                  Add API Key{formData.selectedTasks.length > 0 ? ` & Assign ${formData.selectedTasks.length} Task(s)` : ''}
+                <button type="button" onClick={handleAddApiKey} className={`flex-1 ${btnPrimary}`}>
+                  Add key
+                  {formData.selectedTasks.length > 0
+                    ? ` · ${formData.selectedTasks.length} task${formData.selectedTasks.length === 1 ? '' : 's'}`
+                    : ''}
                 </button>
               </div>
             </div>
@@ -1366,5 +1297,6 @@ const SettingsPage: React.FC = () => {
     </div>
   );
 };
+
 
 export default SettingsPage;

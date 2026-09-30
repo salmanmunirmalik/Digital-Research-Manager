@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authAPI } from '../services/apiService';
+import { clearAuthToken, formatApiNetworkError, resolveApiBaseUrl } from '../utils/apiBase';
 
 interface User {
   id: string;
@@ -41,8 +42,7 @@ interface AuthProviderProps {
 }
 
 const clearLocalSession = () => {
-  localStorage.removeItem('authToken');
-  localStorage.removeItem('user');
+  clearAuthToken();
 };
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const sessionId = localStorage.getItem('consent_session_id');
         if (sessionId && data.token) {
-          const apiBase = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || 'http://localhost:5002/api';
+          const apiBase = resolveApiBaseUrl();
           await fetch(`${apiBase}/compliance/consent/link-session`, {
             method: 'POST',
             headers: {
@@ -102,8 +102,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.error('Failed to link consent session:', linkError);
       }
     } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
+      console.error('Login failed:', formatApiNetworkError(error));
+      throw error instanceof Error
+        ? new Error(formatApiNetworkError(error))
+        : error;
     } finally {
       setLoading(false);
     }

@@ -27,6 +27,11 @@ export interface ProposalWritingInput {
   grantType?: 'research' | 'fellowship' | 'equipment' | 'travel' | 'conference';
   fundingAgency?: string; // Target funding agency
   wordLimit?: number; // Proposal word limit
+  /** Optional funder template id: horizon_europe | erc | nih | nsf | generic */
+  templateId?: string;
+  templateName?: string;
+  evaluationCriteria?: string[];
+  fullMarkdown?: string;
 }
 
 export interface ProposalResult {
@@ -165,9 +170,32 @@ export class ProposalWritingAgent extends BaseAgent implements Agent {
       prompt += `Target Funding Agency: ${input.fundingAgency}\n`;
       prompt += `Ensure the proposal aligns with this agency's priorities and requirements.\n\n`;
     }
+
+    if (input.templateName || input.templateId) {
+      prompt += `Proposal template format: ${input.templateName || input.templateId}\n`;
+      prompt += `Adapt tone and emphasis to this funder's conventions while still returning the standard section headings below.\n`;
+      if (input.evaluationCriteria && input.evaluationCriteria.length > 0) {
+        prompt += `Primary evaluation criteria to address: ${input.evaluationCriteria.join('; ')}.\n`;
+      }
+      prompt += `\n`;
+      if (input.templateId === 'horizon_europe') {
+        prompt += `Horizon Europe emphasis: Excellence (objectives, ambition, methodology), Impact pathways, and Implementation feasibility.\n\n`;
+      } else if (input.templateId === 'erc') {
+        prompt += `ERC emphasis: ground-breaking ambition, originality, and a high-risk/high-gain scientific vision with a credible approach.\n\n`;
+      } else if (input.templateId === 'nih') {
+        prompt += `NIH emphasis: Specific Aims clarity, Significance, Innovation, and rigorous Approach with pitfalls/alternatives.\n\n`;
+      } else if (input.templateId === 'nsf') {
+        prompt += `NSF emphasis: both Intellectual Merit and Broader Impacts must be substantive and specific.\n\n`;
+      }
+    }
     
     if (input.wordLimit) {
       prompt += `Word Limit: ${input.wordLimit} words (strictly adhere to this limit)\n\n`;
+    }
+
+    if (input.fullMarkdown && input.fullMarkdown.trim().length > 0) {
+      prompt += `Existing draft notes (use to fill gaps; do not discard user content):\n`;
+      prompt += `${input.fullMarkdown.slice(0, 6000)}\n\n`;
     }
     
     prompt += `Required Sections:\n\n`;

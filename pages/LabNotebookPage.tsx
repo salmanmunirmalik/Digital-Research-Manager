@@ -74,6 +74,7 @@ import {
   TrendingUpIcon,
   FireIcon
 } from '../components/icons';
+import { PageHeader, PagePanel } from '../components/PageHeader';
 
 // Simplified Personal NoteBook Entry Interface
 interface LabNotebookEntry {
@@ -367,19 +368,79 @@ const LabNotebookPage: React.FC = () => {
         console.error('No auth token found');
         return;
       }
-      
-      // Convert form data to Personal NoteBook entry format
+
+      const joinList = (value: unknown) =>
+        Array.isArray(value)
+          ? value.filter(Boolean).join('\n')
+          : typeof value === 'string'
+            ? value
+            : '';
+
+      const contentParts: string[] = [];
+      if (type === 'experiment') {
+        if (data.objective) contentParts.push(`Objective\n${data.objective}`);
+        if (data.conditions) contentParts.push(`Conditions\n${data.conditions}`);
+        if (data.description) contentParts.push(`Procedure & observations\n${data.description}`);
+        if (data.protocolModifications) {
+          contentParts.push(`Protocol deviations\n${data.protocolModifications}`);
+        }
+        if (data.resultsLink) contentParts.push(`Outcome\n${data.resultsLink}`);
+      } else if (type === 'idea') {
+        if (data.description) contentParts.push(data.description);
+        if (data.rationale) contentParts.push(`Why it matters\n${data.rationale}`);
+        if (data.next_check || data.timeline) {
+          contentParts.push(`Next check\n${data.next_check || data.timeline}`);
+        }
+      } else if (type === 'results') {
+        if (data.description) contentParts.push(data.description);
+        if (data.key_findings?.length) {
+          contentParts.push(`Key findings\n${joinList(data.key_findings)}`);
+        }
+        if (data.statistical_analysis) {
+          contentParts.push(`Statistics\n${data.statistical_analysis}`);
+        }
+        if (data.conclusions) contentParts.push(`Conclusion\n${data.conclusions}`);
+        if (data.caveats || data.limitations?.length) {
+          contentParts.push(
+            `Caveats\n${data.caveats || joinList(data.limitations)}`
+          );
+        }
+        if (data.next_steps?.length) {
+          contentParts.push(`Next experiments\n${joinList(data.next_steps)}`);
+        }
+      } else if (type === 'problem') {
+        if (data.description) contentParts.push(data.description);
+        if (data.likely_cause) contentParts.push(`Likely cause\n${data.likely_cause}`);
+        if (data.current_solution) contentParts.push(`What was tried\n${data.current_solution}`);
+        if (data.resolution) contentParts.push(`Resolution\n${data.resolution}`);
+        if (data.lessons_learned) {
+          contentParts.push(`Prevention / lesson\n${data.lessons_learned}`);
+        }
+      } else if (data.description || data.content) {
+        contentParts.push(data.description || data.content);
+      }
+
       const entryData = {
         title: data.title,
-        content: data.description || data.content || '',
+        content: contentParts.filter(Boolean).join('\n\n') || data.description || data.content || '',
         entry_type: type,
         status: data.status || 'completed',
-        priority: data.priority || 'medium',
-        objectives: data.objectives || '',
-        methodology: data.methodology || data.protocolModifications || '',
-        results: data.results || data.conclusions || '',
-        conclusions: data.conclusions || '',
-        next_steps: data.next_steps || '',
+        priority: data.priority || data.severity || 'medium',
+        objectives: data.objective || data.objectives || data.rationale || '',
+        methodology:
+          data.methodology ||
+          data.protocolModifications ||
+          data.conditions ||
+          data.current_solution ||
+          '',
+        results:
+          data.results ||
+          data.resultsLink ||
+          joinList(data.key_findings) ||
+          data.resolution ||
+          '',
+        conclusions: data.conclusions || data.lessons_learned || data.caveats || '',
+        next_steps: joinList(data.next_steps) || data.next_check || data.timeline || '',
         lab_id: data.lab_id,
         protocolId: data.protocolId || data.protocol_id || null,
         experimentId: data.experimentId || data.experiment_id || null,
@@ -388,31 +449,27 @@ const LabNotebookPage: React.FC = () => {
         estimated_duration: data.estimated_duration || 0,
         actual_duration: data.actual_duration || 0,
         cost: data.cost || 0,
-        equipment_used: data.equipment || data.equipment_used || [],
+        equipment_used: data.equipment || data.equipment_used || data.affected_equipment || [],
         materials_used: data.materials || data.materials_used || [],
         safety_notes: data.safety_notes || '',
-        references: data.references || [],
-        collaborators: data.collaborators || []
+        references: data.references || data.data_files || [],
+        collaborators: data.collaborators || [],
       };
 
-      // #region agent log
       const apiUrlCreate = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5002/api';
-      fetch('http://127.0.0.1:7243/ingest/d8d74533-e1f5-4bba-aa87-ed01b5b636d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LabNotebookPage.tsx:554',message:'createEntry API call',data:{apiUrl:apiUrlCreate},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
       const response = await fetch(`${apiUrlCreate}/lab-notebooks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(entryData)
+        body: JSON.stringify(entryData),
       });
 
       if (response.ok) {
         const newEntry = await response.json();
         console.log('✅ Entry created successfully:', newEntry);
-        
-        // Close the form
+
         switch (type) {
           case 'experiment':
             setShowExperimentForm(false);
@@ -424,13 +481,11 @@ const LabNotebookPage: React.FC = () => {
             setShowResultsForm(false);
             break;
           case 'progress_review':
-            // Handled by navigation
             break;
           case 'problem':
             setShowProblemForm(false);
             break;
         }
-        // Refresh entries and activity
         fetchEntries();
         fetchRecentActivity();
         notifyDashboardSync('lab-notebook');
@@ -847,31 +902,57 @@ const LabNotebookPage: React.FC = () => {
   };
 
     return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto space-y-6">
+      <PageHeader
+        title="Personal notebook"
+        accent="sky"
+        icon={<BookOpenIcon />}
+        subtitle={
+          <>
+            Document experiments, ideas, results, and problems. For inventory, equipment, and tasks,
+            use{' '}
+            <Link
+              to="/lab-workspace"
+              className="font-medium text-sky-900 hover:text-sky-950 underline-offset-2 hover:underline"
+            >
+              Lab workspace
+            </Link>
+            .
+          </>
+        }
+        actions={
+          <>
+            <Link
+              to="/writing-studio/tools/generate"
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-teal-900 bg-white/90 border border-teal-200 rounded-md hover:bg-teal-50 transition-colors"
+            >
+              <SparklesIcon className="w-4 h-4" />
+              Start journey
+            </Link>
+            <button
+              type="button"
+              onClick={() => setShowImportModal(true)}
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-sky-900 bg-white/90 border border-sky-200 rounded-md hover:bg-sky-50 transition-colors"
+            >
+              <DocumentArrowUpIcon className="w-4 h-4" />
+              Import Word / paste
+            </button>
+          </>
+        }
+      />
 
         {/* New entry types */}
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <CardTitle className="flex items-center gap-2">
-                <SparklesIcon className="h-5 w-5 text-slate-600" />
-                New notebook entry
-              </CardTitle>
-              <button
-                type="button"
-                onClick={() => setShowImportModal(true)}
-                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-slate-800 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors self-start"
-              >
-                <DocumentArrowUpIcon className="w-4 h-4" />
-                Import Word / paste
-              </button>
+        <PagePanel accent="sky" className="!p-0 overflow-hidden">
+          <div className="px-4 sm:px-5 py-4 border-b border-sky-100/80 bg-gradient-to-r from-sky-50/60 to-transparent">
+            <div className="flex items-center gap-2">
+              <SparklesIcon className="h-5 w-5 text-sky-700" />
+              <h2 className="text-[15px] font-semibold text-slate-900">New notebook entry</h2>
             </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-slate-500 mb-4">
-              Document experiments, ideas, results, and problems — or import a Word note and we’ll draft the form. For inventory, equipment, and tasks, use Lab ops.
+            <p className="text-[13px] text-slate-500 mt-1">
+              Pick a type to start writing — or import a Word note and we’ll draft the form.
             </p>
+          </div>
+          <div className="p-4 sm:p-5">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {entryTypes.map((type) => {
                 const IconComponent = type.icon;
@@ -879,7 +960,7 @@ const LabNotebookPage: React.FC = () => {
                   <div
                     key={type.id}
                     onClick={() => handleEntryTypeSelect(type.id)}
-                    className={`p-4 border border-slate-200 rounded-lg cursor-pointer hover:border-slate-300 hover:shadow-sm transition-all duration-200 ${type.bgColor} group`}
+                    className={`p-4 border border-slate-200 rounded-lg cursor-pointer hover:border-sky-300 hover:shadow-sm transition-all duration-200 ${type.bgColor} group`}
                   >
                     <div className="flex items-center mb-2">
                       <IconComponent className={`w-5 h-5 ${type.color} mr-2`} />
@@ -889,24 +970,24 @@ const LabNotebookPage: React.FC = () => {
                   </div>
                 );
               })}
-                </div>
-              </CardContent>
-            </Card>
+            </div>
+          </div>
+        </PagePanel>
 
         {/* Personal notebook entries */}
           <div className="space-y-6">
           {/* Header with Summary Buttons */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold text-slate-900" data-testid="lab-notebook-heading">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-sky-100/80 bg-gradient-to-br from-sky-50/70 via-white to-white px-4 py-3 shadow-sm">
+            <h2 className="text-[16px] font-semibold text-slate-900 tracking-tight" data-testid="lab-notebook-heading">
               Notebook entries
             </h2>
             
             {/* Summary Generation Buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 onClick={() => generateSummary('daily')}
                 disabled={generatingSummary}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 title="Generate daily summary"
               >
                 {generatingSummary && summaryType === 'daily' ? (
@@ -924,7 +1005,7 @@ const LabNotebookPage: React.FC = () => {
               <Button
                 onClick={() => generateSummary('weekly')}
                 disabled={generatingSummary}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
+                className="bg-sky-700 hover:bg-sky-800 text-white"
                 title="Generate weekly summary"
               >
                 {generatingSummary && summaryType === 'weekly' ? (
@@ -943,8 +1024,7 @@ const LabNotebookPage: React.FC = () => {
           </div>
 
             {/* Search and Filters */}
-            <Card>
-              <CardContent className="pt-6">
+            <PagePanel accent="sky">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="md:col-span-2">
                     <Input
@@ -980,8 +1060,7 @@ const LabNotebookPage: React.FC = () => {
                     <option value="failed">Failed</option>
                   </Select>
                 </div>
-              </CardContent>
-            </Card>
+            </PagePanel>
 
             {/* Entries List */}
             <div className="space-y-4">
@@ -990,7 +1069,7 @@ const LabNotebookPage: React.FC = () => {
                   key={entry.id}
                   data-entity-id={entry.id}
                   className={`hover:shadow-md transition-shadow ${
-                    focusedId === entry.id ? 'ring-2 ring-amber-300 border-amber-400' : ''
+                    focusedId === entry.id ? 'ring-2 ring-sky-300 border-sky-400' : ''
                   }`}
                 >
                   <CardContent className="pt-6">
@@ -1633,7 +1712,6 @@ const LabNotebookPage: React.FC = () => {
           setSummaryGeneratedAt(null);
         }}
       />
-      </div>
     </div>
   );
 };

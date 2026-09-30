@@ -1,24 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { getAuthHeaders, getAuthToken, resolveApiBaseUrl, formatApiNetworkError } from '../utils/apiBase';
 import { Link, useSearchParams } from 'react-router-dom';
 
 const SUGGESTED_AMOUNTS = [10, 25, 50, 100] as const;
 
-const resolveApiBaseUrl = (): string => {
-  if (import.meta.env.VITE_API_URL) {
-    return String(import.meta.env.VITE_API_URL).replace(/\/$/, '');
-  }
-
-  if (typeof window !== 'undefined') {
-    const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-    if (isLocalhost) {
-      const port = import.meta.env.VITE_API_PORT || '5002';
-      return `http://localhost:${port}/api`;
-    }
-    return `${window.location.origin}/api`;
-  }
-
-  return 'http://localhost:5002/api';
-};
 
 interface SupportConfig {
   stripeEnabled: boolean;

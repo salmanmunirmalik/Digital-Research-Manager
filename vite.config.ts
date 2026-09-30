@@ -42,10 +42,11 @@ export default defineConfig(({ mode }) => {
       },
       
       build: {
-        // Preserve the server directory during build
-        emptyOutDir: false,
+        // Keep compiled API under dist/server; SPA goes to dist/client
+        outDir: 'dist/client',
+        emptyOutDir: true,
         
-        // Copy public files to dist
+        // Copy public files to dist/client
         copyPublicDir: true,
         
         // Performance optimizations
@@ -90,14 +91,23 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 5173,
         host: true,
-        // Enable HMR optimization
         hmr: {
           overlay: true
         },
-        // Serve static files
         fs: {
           allow: ['..']
-        }
+        },
+        // Same-origin /api in the browser → Express on 5002 (avoids port mismatch / CORS)
+        proxy: {
+          '/api': {
+            target: env.VITE_DEV_API_PROXY || 'http://127.0.0.1:5002',
+            changeOrigin: true,
+          },
+          '/health': {
+            target: env.VITE_DEV_API_PROXY || 'http://127.0.0.1:5002',
+            changeOrigin: true,
+          },
+        },
       },
       
       // CSS optimization

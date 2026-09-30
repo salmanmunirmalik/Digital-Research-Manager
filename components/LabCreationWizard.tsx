@@ -18,7 +18,7 @@ import {
   UsersIcon,
   ClipboardDocumentListIcon
 } from '../components/icons';
-import UniversityEmailValidator from '../server/services/universityEmailValidator';
+import UniversityEmailValidator from '../utils/universityEmailValidator';
 
 interface LabCreationForm {
   // Basic Information

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { getAuthToken } from '../utils/apiBase';
 import { canManageResource } from '../utils/ownership';
 import {
   NewspaperIcon,
@@ -91,10 +92,7 @@ const FILTERS: Array<{ id: 'all' | PostType; label: string }> = [
   { id: 'opportunity', label: 'Opportunities' },
 ];
 
-const getAuthToken = () =>
-  localStorage.getItem('authToken') || localStorage.getItem('token') || '';
-
-const authHeaders = () => ({ Authorization: `Bearer ${getAuthToken()}` });
+const authHeaders = () => ({ Authorization: `Bearer ${getAuthToken() || ''}` });
 
 const formatWhen = (value: string) => {
   const date = new Date(value);

@@ -13,8 +13,70 @@ import { WorkflowTemplateSystem } from '../services/workflows/WorkflowTemplateSy
 import { AutonomousLiteratureSynthesisWorkflow } from '../services/workflows/AutonomousLiteratureSynthesisWorkflow.js';
 import { AutonomousExperimentDesignWorkflow } from '../services/workflows/AutonomousExperimentDesignWorkflow.js';
 import { AutonomousDataAnalysisWorkflow } from '../services/workflows/AutonomousDataAnalysisWorkflow.js';
+import {
+  ResearchJourneyService,
+  JOURNEY_CATALOG,
+} from '../services/workflows/ResearchJourneyService.js';
+import { gateAgentExecution } from '../services/safety/agentSafetyGate.js';
 
 const router: Router = Router();
+
+/**
+ * List research journey templates
+ * GET /api/orchestrator/journeys
+ */
+router.get('/journeys', authenticateToken, async (_req, res) => {
+  res.json({
+    success: true,
+    journeys: JOURNEY_CATALOG,
+  });
+});
+
+/**
+ * Run a productized research journey (idea/evidence → paper/slides/experiment)
+ * POST /api/orchestrator/journey
+ */
+router.post('/journey', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const body = req.body || {};
+
+    const gate = await gateAgentExecution({
+      userId,
+      agentType: 'paper_writing',
+      input: {
+        journeyType: body.journeyType,
+        researchQuestion: body.researchQuestion || body.idea,
+      },
+      userRole: req.user?.role,
+    });
+    if (!gate.allowed) {
+      return res.status(403).json({
+        success: false,
+        error: gate.blockedReason || 'Journey blocked by AI safety policy',
+        safety: gate.precheck,
+        warnings: gate.warnings,
+      });
+    }
+
+    const result = await ResearchJourneyService.run(userId, body);
+    const status = result.success ? 200 : result.error?.includes('required') ? 400 : 500;
+    res.status(status).json({
+      success: result.success,
+      result,
+      safety: {
+        warnings: gate.warnings,
+        requiresApproval: gate.requiresApproval,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error executing research journey:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to execute research journey',
+    });
+  }
+});
 
 /**
  * Paper Generation Pipeline

@@ -223,42 +223,54 @@ export async function getApiForTask(userId: string, taskType: string): Promise<{
       [userId, taskType]
     );
     
-    if (result.rows.length === 0) {
-      return null;
+    if (result.rows.length > 0) {
+      const row = result.rows[0];
+    
+      // Decrypt API key - need to access the decrypt function
+      // Since decryptApiKey is not exported, we'll need to decrypt here
+      // For now, import the crypto functions
+      const crypto = await import('crypto');
+      const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '';
+      const ALGORITHM = 'aes-256-gcm';
+    
+      function decryptApiKey(encryptedData: string): string {
+        const parts = encryptedData.split(':');
+        const iv = Buffer.from(parts[0], 'hex');
+        const authTag = Buffer.from(parts[1], 'hex');
+        const encrypted = parts[2];
+      
+        const decipher = crypto.createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
+        decipher.setAuthTag(authTag);
+      
+        let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+        decrypted += decipher.final('utf8');
+      
+        return decrypted;
+      }
+    
+      const apiKey = decryptApiKey(row.encrypted_api_key);
+    
+      return {
+        apiKeyId: row.api_key_id,
+        provider: row.provider,
+        providerName: row.provider_name,
+        apiKey
+      };
     }
-    
-    const row = result.rows[0];
-    
-    // Decrypt API key - need to access the decrypt function
-    // Since decryptApiKey is not exported, we'll need to decrypt here
-    // For now, import the crypto functions
-    const crypto = await import('crypto');
-    const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '';
-    const ALGORITHM = 'aes-256-gcm';
-    
-    function decryptApiKey(encryptedData: string): string {
-      const parts = encryptedData.split(':');
-      const iv = Buffer.from(parts[0], 'hex');
-      const authTag = Buffer.from(parts[1], 'hex');
-      const encrypted = parts[2];
-      
-      const decipher = crypto.createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
-      decipher.setAuthTag(authTag);
-      
-      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
-      
-      return decrypted;
+
+    // No user assignment — fall back to platform Gemini/OpenAI (quota enforced at chat entry)
+    const { resolvePlatformProvider } = await import('../services/platformAiAccess.js');
+    const platform = resolvePlatformProvider();
+    if (platform) {
+      return {
+        apiKeyId: platform.apiKeyId,
+        provider: platform.provider,
+        providerName: platform.providerName,
+        apiKey: platform.apiKey,
+      };
     }
-    
-    const apiKey = decryptApiKey(row.encrypted_api_key);
-    
-    return {
-      apiKeyId: row.api_key_id,
-      provider: row.provider,
-      providerName: row.provider_name,
-      apiKey
-    };
+
+    return null;
   } catch (error) {
     console.error('Error getting API for task:', error);
     return null;

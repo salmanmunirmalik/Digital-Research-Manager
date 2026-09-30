@@ -1,32 +1,23 @@
 import axios from 'axios';
+import {
+  formatApiNetworkError,
+  getAuthToken,
+  resolveApiBaseUrl,
+} from '../utils/apiBase';
 
 let initialized = false;
-
-const resolveBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    const port = import.meta.env.VITE_API_PORT || '5002';
-    return `http://localhost:${port}/api`;
-  }
-
-  return `${window.location.origin}/api`;
-};
 
 export const setupAxios = () => {
   if (initialized) return;
 
-  const baseURL = resolveBaseUrl();
-  axios.defaults.baseURL = baseURL;
+  axios.defaults.baseURL = resolveApiBaseUrl();
 
   axios.interceptors.request.use((config) => {
-    const token = localStorage.getItem('authToken');
+    const token = getAuthToken();
     if (token && !config.headers?.Authorization) {
       config.headers = {
         ...config.headers,
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       };
     }
 
@@ -42,6 +33,23 @@ export const setupAxios = () => {
     return config;
   });
 
+  axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (!error.response && isNetworkError(error)) {
+        error.message = formatApiNetworkError(error);
+      }
+      return Promise.reject(error);
+    }
+  );
+
   initialized = true;
 };
 
+function isNetworkError(error: unknown): boolean {
+  const err = error as { code?: string; message?: string };
+  return (
+    err?.code === 'ERR_NETWORK' ||
+    /failed to fetch|network error|err_connection_refused/i.test(err?.message || '')
+  );
+}

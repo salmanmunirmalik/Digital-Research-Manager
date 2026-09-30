@@ -1,7 +1,6 @@
 import React from 'react';
 import TaskCard from './TaskCard';
 import { PlusIcon } from './icons';
-import StatusBadge from './StatusBadge';
 
 interface Task {
   id: string;
@@ -28,71 +27,65 @@ interface TaskBoardViewProps {
   loading?: boolean;
 }
 
+const columns = [
+  { id: 'to_do', label: 'To do', accent: 'bg-slate-400' },
+  { id: 'in_progress', label: 'In progress', accent: 'bg-sky-500' },
+  { id: 'in_review', label: 'In review', accent: 'bg-amber-500' },
+  { id: 'done', label: 'Done', accent: 'bg-emerald-500' },
+] as const;
+
 const TaskBoardView: React.FC<TaskBoardViewProps> = ({
   tasks,
   onTaskClick,
   onCreateTask,
-  onTaskMove,
-  loading = false
+  loading = false,
 }) => {
-  const columns = [
-    { id: 'to_do', label: 'To Do', color: 'bg-gray-100' },
-    { id: 'in_progress', label: 'In Progress', color: 'bg-blue-100' },
-    { id: 'in_review', label: 'In Review', color: 'bg-yellow-100' },
-    { id: 'done', label: 'Done', color: 'bg-green-100' }
-  ];
-
-  const tasksByStatus = columns.reduce((acc, column) => {
-    acc[column.id] = tasks.filter(task => task.status === column.id);
-    return acc;
-  }, {} as { [key: string]: Task[] });
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-7 w-7 border-2 border-slate-200 border-t-sky-600" />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-x-auto p-4">
-      <div className="flex gap-4 min-w-max">
+    <div className="flex-1 overflow-x-auto px-4 sm:px-6 py-4">
+      <div className="flex gap-3 min-w-max h-full">
         {columns.map((column) => {
-          const columnTasks = tasksByStatus[column.id] || [];
-          
+          const columnTasks = tasks.filter((task) => task.status === column.id);
+
           return (
             <div
               key={column.id}
-              className="flex-shrink-0 w-80 bg-gray-50 rounded-lg p-3"
+              className="flex-shrink-0 w-[17.5rem] flex flex-col rounded-xl border border-slate-200/80 bg-white/70 backdrop-blur-sm"
             >
-              {/* Column Header */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={column.id as any} />
-                  <span className="text-sm text-gray-500">({columnTasks.length})</span>
+              <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-100">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`w-1.5 h-1.5 rounded-full ${column.accent}`} />
+                  <span className="text-[13px] font-semibold text-slate-800">{column.label}</span>
+                  <span className="text-[11px] tabular-nums text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">
+                    {columnTasks.length}
+                  </span>
                 </div>
                 <button
+                  type="button"
                   onClick={() => onCreateTask(column.id)}
-                  className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-200"
+                  className="p-1 text-slate-400 hover:text-sky-700 hover:bg-sky-50 rounded-md transition-colors"
                   title="Add task"
                 >
                   <PlusIcon className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Tasks */}
-              <div className="space-y-2 min-h-[200px]">
+              <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-[14rem] max-h-[calc(100vh-16rem)]">
                 {columnTasks.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-lg">
-                    <p className="mb-2">No tasks</p>
-                    <button
-                      onClick={() => onCreateTask(column.id)}
-                      className="text-blue-600 hover:text-blue-700 text-xs font-medium"
-                    >
-                      + Add task
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onCreateTask(column.id)}
+                    className="w-full py-8 text-center rounded-lg border border-dashed border-slate-200 text-[12px] text-slate-400 hover:border-sky-200 hover:text-sky-700 hover:bg-sky-50/50 transition-colors"
+                  >
+                    Add task
+                  </button>
                 ) : (
                   columnTasks.map((task) => (
                     <TaskCard
@@ -113,4 +106,3 @@ const TaskBoardView: React.FC<TaskBoardViewProps> = ({
 };
 
 export default TaskBoardView;
-

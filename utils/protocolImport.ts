@@ -4,9 +4,14 @@ const SECTION_ALIASES: Record<keyof Pick<
   ProtocolFormValues,
   | 'objective'
   | 'background'
+  | 'scope'
+  | 'sample_requirements'
+  | 'experimental_conditions'
+  | 'reagent_setup'
   | 'materials'
   | 'equipment'
   | 'safety_notes'
+  | 'controls'
   | 'procedure'
   | 'expected_results'
   | 'troubleshooting'
@@ -14,6 +19,28 @@ const SECTION_ALIASES: Record<keyof Pick<
 >, string[]> = {
   objective: ['objective', 'aim', 'purpose', 'goal', 'overview'],
   background: ['background', 'introduction', 'context', 'rationale'],
+  scope: ['scope', 'applicability', 'applies to'],
+  sample_requirements: [
+    'sample requirements',
+    'sample / starting material',
+    'starting material',
+    'samples',
+    'specimen',
+  ],
+  experimental_conditions: [
+    'experimental conditions',
+    'conditions',
+    'conditions & parameters',
+    'parameters',
+    'run conditions',
+  ],
+  reagent_setup: [
+    'reagent setup',
+    'reagent & buffer setup',
+    'buffer setup',
+    'preparation',
+    'reagent preparation',
+  ],
   materials: [
     'materials',
     'reagents',
@@ -24,6 +51,13 @@ const SECTION_ALIASES: Record<keyof Pick<
   ],
   equipment: ['equipment', 'instruments', 'apparatus', 'tools'],
   safety_notes: ['safety', 'safety notes', 'hazards', 'ppe', 'precautions', 'warnings'],
+  controls: [
+    'controls',
+    'controls & acceptance criteria',
+    'acceptance criteria',
+    'quality control',
+    'qc',
+  ],
   procedure: [
     'procedure',
     'method',
@@ -171,9 +205,14 @@ export function smartParseProtocolText(
     estimated_duration: Math.max(30, Math.min(480, Math.round(procedure.split(/\n/).length * 3))),
     objective: join('objective') || description,
     background: join('background'),
+    scope: join('scope'),
+    sample_requirements: join('sample_requirements'),
+    experimental_conditions: join('experimental_conditions'),
+    reagent_setup: join('reagent_setup'),
     materials,
     equipment,
     safety_notes: join('safety_notes'),
+    controls: join('controls'),
     procedure: procedure || raw,
     expected_results: join('expected_results'),
     troubleshooting: join('troubleshooting'),
@@ -181,6 +220,7 @@ export function smartParseProtocolText(
     tags,
     privacy_level: 'lab',
     version: '1.0',
+    video_url: '',
     rawPreview: raw,
     detectedSections: Array.from(detected),
   };
@@ -205,6 +245,7 @@ export function protocolToFormValues(protocol: {
   equipment?: unknown;
   references?: unknown;
   procedure?: unknown;
+  video_url?: string;
 }): Partial<ProtocolFormValues> {
   const content =
     typeof protocol.content === 'string' && protocol.content.trim()
@@ -258,6 +299,10 @@ export function protocolToFormValues(protocol: {
     estimated_duration: Number(protocol.estimated_duration) || fromContent.estimated_duration || 60,
     objective: protocol.objective || fromContent.objective || '',
     background: protocol.background || fromContent.background || '',
+    scope: fromContent.scope || '',
+    sample_requirements: fromContent.sample_requirements || '',
+    experimental_conditions: fromContent.experimental_conditions || '',
+    reagent_setup: fromContent.reagent_setup || '',
     materials: asStringArray(protocol.materials).length
       ? asStringArray(protocol.materials)
       : fromContent.materials || [],
@@ -265,6 +310,7 @@ export function protocolToFormValues(protocol: {
       ? asStringArray(protocol.equipment)
       : fromContent.equipment || [],
     safety_notes: safety,
+    controls: fromContent.controls || '',
     procedure: procedureText,
     expected_results: protocol.expected_results || fromContent.expected_results || '',
     troubleshooting: fromContent.troubleshooting || '',
@@ -276,6 +322,7 @@ export function protocolToFormValues(protocol: {
       : fromContent.tags || [],
     privacy_level: (protocol.privacy_level as ProtocolFormValues['privacy_level']) || 'lab',
     version: protocol.version || '1.0',
+    video_url: protocol.video_url || '',
   };
 }
 

@@ -10,7 +10,7 @@ export type LinkedEntity = {
 };
 
 const ROUTES: Record<LinkedEntityKind, (id: string) => string> = {
-  protocol: (id) => `/protocols?highlight=${encodeURIComponent(id)}`,
+  protocol: (id) => `/protocols/${encodeURIComponent(id)}`,
   experiment: (id) =>
     `/experiment-tracker?highlight=${encodeURIComponent(id)}`,
   notebook: (id) => `/lab-notebook?highlight=${encodeURIComponent(id)}`,

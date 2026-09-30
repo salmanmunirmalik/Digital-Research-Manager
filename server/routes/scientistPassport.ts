@@ -5,8 +5,157 @@
 
 import { Router } from 'express';
 import pool from "../../database/config.js";
+import {
+  parseInterestList,
+  toInterestJson,
+} from '../utils/interestOverlap.js';
 
 const router: Router = Router();
+
+const syncMarketplaceExpertiseFromInterests = async (
+  userId: string,
+  interests: string[]
+) => {
+  if (!interests.length) return;
+  try {
+    const existing = await pool.query(
+      `SELECT id, expertise_areas FROM marketplace_service_providers WHERE user_id = $1 LIMIT 1`,
+      [userId]
+    );
+    if (existing.rows.length === 0) return;
+
+    const current = parseInterestList(existing.rows[0].expertise_areas);
+    const merged = [...new Set([...current, ...interests.map((s) => s.trim()).filter(Boolean)])];
+    await pool.query(
+      `UPDATE marketplace_service_providers
+       SET expertise_areas = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE user_id = $2`,
+      [toInterestJson(merged), userId]
+    );
+  } catch (err) {
+    console.warn('Marketplace expertise sync skipped:', (err as Error)?.message || err);
+  }
+};
+
+// ==============================================
+// RESEARCH PROFILE (canonical interests for matching)
+// ==============================================
+
+router.get('/research-profile', async (req: any, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const userId = req.user.id;
+    const result = await pool.query(
+      `SELECT current_institution, department, current_position, bio,
+              research_interests, expertise, orcid, google_scholar_url, linkedin_url
+       FROM users WHERE id = $1 LIMIT 1`,
+      [userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const row = result.rows[0];
+    const interests = parseInterestList(row.research_interests);
+    const expertise = parseInterestList(row.expertise);
+    res.json({
+      profile: {
+        institution: row.current_institution || '',
+        department: row.department || '',
+        position: row.current_position || '',
+        research_philosophy: row.bio || '',
+        research_interests: interests.length ? interests : expertise,
+        orcid_id: row.orcid || '',
+        google_scholar_id: row.google_scholar_url || '',
+        linkedin_url: row.linkedin_url || '',
+        researchgate_id: '',
+        lab_website: '',
+      },
+    });
+  } catch (error: any) {
+    console.error('Error fetching research profile:', error);
+    res.status(500).json({ error: 'Failed to fetch research profile' });
+  }
+});
+
+router.put('/research-profile', async (req: any, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const userId = req.user.id;
+    const {
+      institution,
+      department,
+      position,
+      research_philosophy,
+      research_interests,
+      orcid_id,
+      google_scholar_id,
+      linkedin_url,
+    } = req.body || {};
+
+    const interests = parseInterestList(research_interests);
+    const interestsJson = toInterestJson(interests);
+
+    await pool.query(
+      `UPDATE users SET
+        current_institution = COALESCE($1, current_institution),
+        department = COALESCE($2, department),
+        current_position = COALESCE($3, current_position),
+        bio = COALESCE($4, bio),
+        research_interests = $5,
+        expertise = $5,
+        orcid = COALESCE($6, orcid),
+        google_scholar_url = COALESCE($7, google_scholar_url),
+        linkedin_url = COALESCE($8, linkedin_url),
+        updated_at = CURRENT_TIMESTAMP
+       WHERE id = $9`,
+      [
+        institution ?? null,
+        department ?? null,
+        position ?? null,
+        research_philosophy ?? null,
+        interestsJson,
+        orcid_id || null,
+        google_scholar_id || null,
+        linkedin_url || null,
+        userId,
+      ]
+    );
+
+    // Keep marketplace provider expertise in sync when listing exists
+    const avail = await pool.query(
+      `SELECT available_as_service_provider FROM user_availability WHERE user_id = $1 LIMIT 1`,
+      [userId]
+    );
+    const asProvider =
+      avail.rows[0] &&
+      (avail.rows[0].available_as_service_provider == null ||
+        Boolean(Number(avail.rows[0].available_as_service_provider)));
+    if (asProvider || interests.length > 0) {
+      await syncMarketplaceExpertiseFromInterests(userId, interests);
+    }
+
+    res.json({
+      success: true,
+      profile: {
+        institution: institution || '',
+        department: department || '',
+        position: position || '',
+        research_philosophy: research_philosophy || '',
+        research_interests: interests,
+        orcid_id: orcid_id || '',
+        google_scholar_id: google_scholar_id || '',
+        linkedin_url: linkedin_url || '',
+      },
+    });
+  } catch (error: any) {
+    console.error('Error saving research profile:', error);
+    res.status(500).json({ error: 'Failed to save research profile' });
+  }
+});
 
 // ==============================================
 // TECHNICAL SKILLS
@@ -363,6 +512,20 @@ router.put('/availability', async (req: any, res) => {
         available_for_workshops, available_as_service_provider, service_types,
         available_as_consultant, consulting_domains, hourly_rate, rate_currency,
         travel_willingness, currently_available, availability_notes]);
+
+    if (available_as_service_provider) {
+      const userRow = await pool.query(
+        `SELECT research_interests, expertise FROM users WHERE id = $1 LIMIT 1`,
+        [userId]
+      );
+      const interests = [
+        ...parseInterestList(userRow.rows[0]?.research_interests),
+        ...parseInterestList(userRow.rows[0]?.expertise),
+      ];
+      await syncMarketplaceExpertiseFromInterests(userId, [
+        ...new Set(interests.map((s) => s.trim()).filter(Boolean)),
+      ]);
+    }
 
     res.json(result.rows[0]);
   } catch (error: any) {

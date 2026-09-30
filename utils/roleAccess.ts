@@ -105,6 +105,7 @@ export const ROUTE_ACCESS = {
   '/data-results': { minRole: 'student' },
   '/presentations': { minRole: 'student' },
   '/ai-presentations': { minRole: 'student' },
+  '/writing-studio': { minRole: 'student' },
   '/data-sharing': { minRole: 'student' },
   '/conferences': { minRole: 'student' },
   '/data-analytics': { minRole: 'student' },

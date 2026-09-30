@@ -1,106 +1,45 @@
 /**
- * Protocol Semantic Search API Routes
- * Advanced semantic search using embeddings and vector similarity
+ * Protocol Semantic Search — vector hybrid + MySQL-safe fallbacks
  */
 
 import { Router } from 'express';
 import pool from '../../database/config.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { ProtocolVectorSearch } from '../services/ProtocolVectorSearch.js';
 
 const router: Router = Router();
 
 /**
- * Semantic search for protocols
+ * Semantic / hybrid search for protocols
  * POST /api/protocol-search/semantic
  */
 router.post('/semantic', authenticateToken, async (req: any, res) => {
   try {
     const { query, limit = 20, filters } = req.body;
 
-    if (!query || !query.trim()) {
+    if (!query || !String(query).trim()) {
       return res.status(400).json({ error: 'Search query is required' });
     }
 
-    // For now, use MySQL text search with semantic hints
-    // In production, integrate with vector database (Pinecone, Weaviate, etc.)
-    
-    // Enhanced search using multiple strategies
-    let searchQuery = `
-      SELECT 
-        p.*,
-        u.first_name,
-        u.last_name,
-        u.username as creator_name,
-        l.name as lab_name,
-        (
-          -- Title match (highest weight)
-          CASE WHEN p.title ILIKE $1 THEN 10 ELSE 0 END +
-          -- Description match
-          CASE WHEN p.description ILIKE $1 THEN 5 ELSE 0 END +
-          -- Tags match
-          CASE WHEN EXISTS (
-            SELECT 1 FROM unnest(p.tags) tag 
-            WHERE tag ILIKE $1
-          ) THEN 3 ELSE 0 END +
-          -- Full-text search vector
-          ts_rank(p.search_vector, plainto_tsquery('english', $2)) * 2
-        ) as relevance_score
-      FROM protocols p
-      JOIN users u ON p.author_id = u.id
-      LEFT JOIN labs l ON p.lab_id = l.id
-      WHERE p.is_approved = true
-        AND (
-          p.title ILIKE $1
-          OR p.description ILIKE $1
-          OR EXISTS (SELECT 1 FROM unnest(p.tags) tag WHERE tag ILIKE $1)
-          OR p.search_vector @@ plainto_tsquery('english', $2)
-        )
-    `;
+    const search = await ProtocolVectorSearch.search({
+      query: String(query).trim(),
+      userId: req.user.id,
+      role: req.user.role,
+      limit: Number(limit) || 20,
+      filters: filters || {},
+    });
 
-    const params: any[] = [`%${query}%`, query];
-    let paramCount = 2;
-
-    // Apply filters
-    if (filters?.category) {
-      paramCount++;
-      searchQuery += ` AND p.category = $${paramCount}`;
-      params.push(filters.category);
-    }
-
-    if (filters?.difficulty) {
-      paramCount++;
-      searchQuery += ` AND p.difficulty_level = $${paramCount}`;
-      params.push(filters.difficulty);
-    }
-
-    if (filters?.minSuccessRate) {
-      paramCount++;
-      searchQuery += ` AND p.success_rate >= $${paramCount}`;
-      params.push(filters.minSuccessRate);
-    }
-
-    // Privacy filter
-    if (req.user.role !== 'admin') {
-      paramCount++;
-      searchQuery += ` AND (p.privacy_level = 'public' OR p.lab_id IN (
-        SELECT lab_id FROM lab_members WHERE user_id = $${paramCount}
-      ))`;
-      params.push(req.user.id);
-    }
-
-    searchQuery += ` ORDER BY relevance_score DESC, p.usage_count DESC LIMIT $${paramCount + 1}`;
-    params.push(limit);
-
-    const result = await pool.query(searchQuery, params);
-
-    // Get similar protocols (recommendations)
-    const recommendations = await getSimilarProtocols(result.rows[0]?.id, limit);
+    const topId = search.results[0]?.id;
+    const recommendations = topId
+      ? await ProtocolVectorSearch.similar(topId, req.user.id, 5)
+      : [];
 
     res.json({
-      results: result.rows,
-      recommendations: recommendations,
-      query: query,
-      total: result.rows.length
+      results: search.results,
+      recommendations,
+      query: search.query,
+      total: search.total,
+      mode: search.mode,
     });
   } catch (error: any) {
     console.error('Error in semantic search:', error);
@@ -109,41 +48,34 @@ router.post('/semantic', authenticateToken, async (req: any, res) => {
 });
 
 /**
- * Get similar protocols
+ * Search by intent (what the user wants to achieve)
+ * POST /api/protocol-search/intent
  */
-async function getSimilarProtocols(protocolId: string | undefined, limit: number = 5) {
-  if (!protocolId) return [];
-
+router.post('/intent', authenticateToken, async (req: any, res) => {
   try {
-    const result = await pool.query(
-      `SELECT 
-        p.*,
-        u.first_name,
-        u.last_name,
-        u.username as creator_name,
-        -- Similarity based on category, tags, and success rate
-        (
-          CASE WHEN p2.category = p.category THEN 3 ELSE 0 END +
-          CASE WHEN p2.difficulty_level = p.difficulty_level THEN 2 ELSE 0 END +
-          (SELECT COUNT(*) FROM unnest(p.tags) tag 
-           WHERE tag = ANY(p2.tags)) * 1
-        ) as similarity_score
-       FROM protocols p
-       JOIN protocols p2 ON p2.id = $1
-       JOIN users u ON p.author_id = u.id
-       WHERE p.id != $1
-         AND p.is_approved = true
-       ORDER BY similarity_score DESC
-       LIMIT $2`,
-      [protocolId, limit]
-    );
+    const { intent } = req.body;
 
-    return result.rows;
-  } catch (error) {
-    console.error('Error getting similar protocols:', error);
-    return [];
+    if (!intent) {
+      return res.status(400).json({ error: 'Intent description is required' });
+    }
+
+    const search = await ProtocolVectorSearch.search({
+      query: String(intent),
+      userId: req.user.id,
+      role: req.user.role,
+      limit: 20,
+    });
+
+    res.json({
+      results: search.results,
+      intent,
+      mode: search.mode,
+    });
+  } catch (error: any) {
+    console.error('Error in intent search:', error);
+    res.status(500).json({ error: 'Intent search failed', details: error.message });
   }
-}
+});
 
 /**
  * Get protocol recommendations based on user history
@@ -153,7 +85,6 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
   try {
     const { limit = 10 } = req.query;
 
-    // Get user's most used protocol categories
     const userCategories = await pool.query(
       `SELECT p.category, COUNT(*) as usage_count
        FROM protocol_executions e
@@ -165,49 +96,46 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
       [req.user.id]
     );
 
-    const categories = userCategories.rows.map((r: any) => r.category);
+    const categories = userCategories.rows.map((r: any) => r.category).filter(Boolean);
 
     if (categories.length === 0) {
-      // If no history, recommend popular protocols
       const popular = await pool.query(
         `SELECT p.*, u.first_name, u.last_name, u.username as creator_name
          FROM protocols p
          JOIN users u ON p.author_id = u.id
-         WHERE p.is_approved = true
-           AND p.privacy_level = 'public'
-         ORDER BY p.usage_count DESC, p.success_rate DESC
-         LIMIT $1`,
-        [limit]
+         WHERE COALESCE(p.is_approved, 1) = 1
+           AND (p.privacy_level = 'public' OR p.author_id = $1)
+         ORDER BY COALESCE(p.usage_count, 0) DESC, COALESCE(p.success_rate, 0) DESC
+         LIMIT $2`,
+        [req.user.id, Number(limit) || 10]
       );
       return res.json({ recommendations: popular.rows });
     }
 
-    // Recommend protocols in user's preferred categories
+    const placeholders = categories.map((_: string, i: number) => `$${i + 2}`).join(', ');
     const recommendations = await pool.query(
       `SELECT 
         p.*,
         u.first_name,
         u.last_name,
-        u.username as creator_name,
-        p.success_rate,
-        p.usage_count
+        u.username as creator_name
        FROM protocols p
        JOIN users u ON p.author_id = u.id
-       WHERE p.is_approved = true
-         AND p.category = ANY($1)
+       WHERE COALESCE(p.is_approved, 1) = 1
+         AND p.category IN (${placeholders})
          AND p.id NOT IN (
            SELECT DISTINCT protocol_id 
            FROM protocol_executions 
-           WHERE user_id = $2
+           WHERE user_id = $1 AND protocol_id IS NOT NULL
          )
-       ORDER BY p.success_rate DESC, p.usage_count DESC
-       LIMIT $3`,
-      [categories, req.user.id, limit]
+       ORDER BY COALESCE(p.success_rate, 0) DESC, COALESCE(p.usage_count, 0) DESC
+       LIMIT $${categories.length + 2}`,
+      [req.user.id, ...categories, Number(limit) || 10]
     );
 
     res.json({
       recommendations: recommendations.rows,
-      basedOn: 'Your usage history'
+      basedOn: 'Your usage history',
     });
   } catch (error: any) {
     console.error('Error getting recommendations:', error);
@@ -216,76 +144,35 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
 });
 
 /**
- * Search by intent (what the user wants to achieve)
- * POST /api/protocol-search/intent
+ * Similar protocols by vector similarity
+ * GET /api/protocol-search/:id/similar
  */
-router.post('/intent', authenticateToken, async (req: any, res) => {
+router.get('/:id/similar', authenticateToken, async (req: any, res) => {
   try {
-    const { intent, context } = req.body;
-
-    if (!intent) {
-      return res.status(400).json({ error: 'Intent description is required' });
-    }
-
-    // Map common intents to protocol characteristics
-    const intentKeywords: { [key: string]: string[] } = {
-      'detect': ['detection', 'detect', 'identify', 'measure'],
-      'amplify': ['amplification', 'amplify', 'pcr', 'polymerase'],
-      'separate': ['separation', 'electrophoresis', 'chromatography', 'purify'],
-      'culture': ['culture', 'grow', 'incubate', 'cell'],
-      'extract': ['extraction', 'extract', 'isolate', 'purify'],
-      'quantify': ['quantification', 'quantify', 'measure', 'count']
-    };
-
-    // Find matching keywords
-    const matchingKeywords: string[] = [];
-    Object.entries(intentKeywords).forEach(([intentKey, keywords]) => {
-      if (intent.toLowerCase().includes(intentKey)) {
-        matchingKeywords.push(...keywords);
-      }
-    });
-
-    // Search using intent keywords
-    let query = `
-      SELECT 
-        p.*,
-        u.first_name,
-        u.last_name,
-        u.username as creator_name,
-        (
-          ts_rank(p.search_vector, plainto_tsquery('english', $1)) * 3 +
-          CASE WHEN p.title ILIKE ANY($2::text[]) THEN 5 ELSE 0 END +
-          CASE WHEN p.description ILIKE ANY($2::text[]) THEN 3 ELSE 0 END
-        ) as relevance_score
-      FROM protocols p
-      JOIN users u ON p.author_id = u.id
-      WHERE p.is_approved = true
-        AND (
-          p.search_vector @@ plainto_tsquery('english', $1)
-          OR p.title ILIKE ANY($2::text[])
-          OR p.description ILIKE ANY($2::text[])
-        )
-      ORDER BY relevance_score DESC
-      LIMIT 20
-    `;
-
-    const keywordPatterns = matchingKeywords.length > 0
-      ? matchingKeywords.map(k => `%${k}%`)
-      : [`%${intent}%`];
-
-    const result = await pool.query(query, [intent, keywordPatterns]);
-
-    res.json({
-      results: result.rows,
-      intent: intent,
-      matchedKeywords: matchingKeywords,
-      total: result.rows.length
-    });
+    const similar = await ProtocolVectorSearch.similar(
+      req.params.id,
+      req.user.id,
+      Number(req.query.limit) || 5
+    );
+    res.json({ similarProtocols: similar });
   } catch (error: any) {
-    console.error('Error in intent search:', error);
-    res.status(500).json({ error: 'Intent search failed', details: error.message });
+    console.error('Error getting similar protocols:', error);
+    res.status(500).json({ error: 'Failed to get similar protocols' });
+  }
+});
+
+/**
+ * Re-index a protocol embedding
+ * POST /api/protocol-search/:id/index
+ */
+router.post('/:id/index', authenticateToken, async (req: any, res) => {
+  try {
+    const ok = await ProtocolVectorSearch.indexProtocol(req.params.id, req.user.id);
+    res.json({ success: ok });
+  } catch (error: any) {
+    console.error('Error indexing protocol:', error);
+    res.status(500).json({ error: 'Failed to index protocol' });
   }
 });
 
 export default router;
-

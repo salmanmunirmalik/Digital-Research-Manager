@@ -12,6 +12,7 @@ import { UserContext } from '../UserContextRetriever.js';
 import { getApiForTask } from '../../routes/apiTaskAssignments.js';
 import { getUserApiKey } from '../../routes/aiProviderKeys.js';
 import { AIProviderFactory } from '../AIProviderFactory.js';
+import pool from '../../../database/config.js';
 
 export interface DataReadingInput {
   dataSource: string; // 'lab_notebook', 'file', 'experiment', 'research_data'
@@ -219,11 +220,44 @@ export class DataReadingAgent extends BaseAgent implements Agent {
     entryId: string,
     context: AgentContext
   ): Promise<{ raw: string; parsed?: any; format: string } | null> {
-    // This would query the database for Personal NoteBook entry
-    // For now, return a placeholder
+    const userId = context.additionalData?.userId;
+    if (!userId) return null;
+
+    const result = await pool.query(
+      `SELECT id, title, content, methodology, results, conclusions, entry_type, tags, created_at, updated_at
+       FROM lab_notebook_entries
+       WHERE id = $1 AND user_id = $2
+       LIMIT 1`,
+      [entryId, userId]
+    );
+
+    const row = result.rows[0];
+    if (!row) return null;
+
+    const raw = [
+      `Notebook entry: ${row.title || entryId}`,
+      row.entry_type ? `Type: ${row.entry_type}` : '',
+      row.content ? `Content:\n${row.content}` : '',
+      row.methodology ? `Methodology:\n${row.methodology}` : '',
+      row.results ? `Results:\n${row.results}` : '',
+      row.conclusions ? `Conclusions:\n${row.conclusions}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
     return {
-      raw: 'Personal NoteBook data',
-      format: 'unstructured'
+      raw,
+      parsed: {
+        id: row.id,
+        title: row.title,
+        entry_type: row.entry_type,
+        content: row.content,
+        methodology: row.methodology,
+        results: row.results,
+        conclusions: row.conclusions,
+        tags: row.tags,
+      },
+      format: 'unstructured',
     };
   }
   
@@ -234,24 +268,156 @@ export class DataReadingAgent extends BaseAgent implements Agent {
     experimentId: string,
     context: AgentContext
   ): Promise<{ raw: string; parsed?: any; format: string } | null> {
-    // This would query the database for experiment data
+    const userId = context.additionalData?.userId;
+    if (!userId) return null;
+
+    const result = await pool.query(
+      `SELECT id, title, description, status, hypothesis, objectives, methodology,
+              expected_outcomes, notes, researcher_id, tags, created_at, updated_at
+       FROM experiments
+       WHERE id = $1 AND researcher_id = $2
+       LIMIT 1`,
+      [experimentId, userId]
+    );
+
+    const row = result.rows[0];
+    if (!row) return null;
+
+    const raw = [
+      `Experiment: ${row.title || experimentId}`,
+      row.status ? `Status: ${row.status}` : '',
+      row.hypothesis ? `Hypothesis:\n${row.hypothesis}` : '',
+      row.objectives ? `Objectives:\n${row.objectives}` : '',
+      row.description ? `Description:\n${row.description}` : '',
+      row.methodology ? `Methodology:\n${row.methodology}` : '',
+      row.expected_outcomes ? `Expected outcomes:\n${row.expected_outcomes}` : '',
+      row.notes ? `Notes:\n${row.notes}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
     return {
-      raw: 'Experiment data',
-      format: 'structured'
+      raw,
+      parsed: row,
+      format: 'structured',
     };
   }
   
   /**
-   * Read data from research data entry
+   * Read data from research data entry (evidence packs)
    */
   private async readFromResearchData(
     dataId: string,
     context: AgentContext
   ): Promise<{ raw: string; parsed?: any; format: string } | null> {
-    // This would query the database for research data
+    const userId = context.additionalData?.userId;
+    if (!userId) return null;
+
+    const result = await pool.query(
+      `SELECT r.id, r.title, r.summary, r.methodology, r.conclusions, r.type, r.category,
+              r.status, r.metadata, r.tags, r.created_at, r.updated_at, r.user_id, r.lab_id
+       FROM research_data r
+       WHERE r.id = $1
+         AND (
+           r.user_id = $2
+           OR r.privacy_level = 'global'
+           OR (
+             r.privacy_level IN ('lab', 'institution')
+             AND r.lab_id IS NOT NULL
+             AND r.lab_id IN (
+               SELECT lab_id FROM lab_members WHERE user_id = $2 AND COALESCE(is_active, 1) = 1
+             )
+           )
+         )
+       LIMIT 1`,
+      [dataId, userId]
+    );
+
+    const row = result.rows[0];
+    if (!row) return null;
+
+    let metadata = row.metadata;
+    if (typeof metadata === 'string') {
+      try {
+        metadata = JSON.parse(metadata);
+      } catch {
+        metadata = {};
+      }
+    }
+
+    const pack = metadata?.pack;
+    const packLines: string[] = [];
+    if (pack?.artifacts && Array.isArray(pack.artifacts)) {
+      for (const a of pack.artifacts.slice(0, 40)) {
+        packLines.push(`[${a.kind}] ${a.name || a.id}`);
+        if (a.kind === 'text') {
+          if (a.finding) packLines.push(`  Finding: ${a.finding}`);
+          if (a.evidence) packLines.push(`  Evidence: ${String(a.evidence).slice(0, 500)}`);
+          if (a.caveats) packLines.push(`  Caveats: ${a.caveats}`);
+        } else if (a.kind === 'table') {
+          const headers = (a.columns || []).map((c: any) => c.header || c.id).join(' | ');
+          packLines.push(`  Columns: ${headers}`);
+          (a.rows || []).slice(0, 15).forEach((r: string[], i: number) => {
+            packLines.push(`  R${i + 1}: ${(r || []).join(' | ')}`);
+          });
+        } else if (a.kind === 'sheet') {
+          packLines.push(`  Headers: ${(a.headers || []).join(' | ')}`);
+          (a.rows || []).slice(0, 15).forEach((r: string[], i: number) => {
+            packLines.push(`  R${i + 1}: ${(r || []).slice(0, 15).join(' | ')}`);
+          });
+        } else if (a.kind === 'image') {
+          packLines.push(`  ${[a.modality, a.title, a.legend].filter(Boolean).join(' · ')}`);
+        }
+      }
+    }
+
+    const raw = [
+      `Research data / evidence pack: ${row.title || dataId}`,
+      row.type ? `Type: ${row.type}` : '',
+      row.summary ? `Summary:\n${row.summary}` : '',
+      row.methodology ? `Methodology:\n${row.methodology}` : '',
+      row.conclusions ? `Conclusions:\n${row.conclusions}` : '',
+      packLines.length ? `Pack artifacts:\n${packLines.join('\n')}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    // Prefer tabular parse from first sheet/table for structure analysis
+    let parsed: any = { id: row.id, title: row.title, metadata };
+    const sheet = pack?.artifacts?.find((a: any) => a.kind === 'sheet' && a.headers?.length);
+    const table = pack?.artifacts?.find((a: any) => a.kind === 'table' && a.columns?.length);
+    if (sheet) {
+      const headers = sheet.headers as string[];
+      parsed = {
+        headers,
+        rows: (sheet.rows || []).map((r: string[]) => {
+          const obj: Record<string, string> = {};
+          headers.forEach((h: string, i: number) => {
+            obj[h] = r?.[i] ?? '';
+          });
+          return obj;
+        }),
+        rowCount: (sheet.rows || []).length,
+      };
+    } else if (table) {
+      const headers = (table.columns as any[]).map((c) => c.header || c.id);
+      parsed = {
+        headers,
+        rows: (table.rows || []).map((r: string[]) => {
+          const obj: Record<string, string> = {};
+          headers.forEach((h: string, i: number) => {
+            obj[h] = r?.[i] ?? '';
+          });
+          return obj;
+        }),
+        rowCount: (table.rows || []).length,
+      };
+    }
+
     return {
-      raw: 'Research data',
-      format: 'structured'
+      raw,
+      parsed,
+      format: sheet || table ? 'structured' : 'unstructured',
     };
   }
   

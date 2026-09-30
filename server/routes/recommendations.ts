@@ -10,6 +10,10 @@ import pool from '../../database/config.js';
 import { ProtocolRecommender } from '../services/recommendations/ProtocolRecommender.js';
 import { PaperRecommender } from '../services/recommendations/PaperRecommender.js';
 import { ServiceRecommender } from '../services/recommendations/ServiceRecommender.js';
+import { CollaboratorRecommender } from '../services/recommendations/CollaboratorRecommender.js';
+import { NegativeResultRecommender } from '../services/recommendations/NegativeResultRecommender.js';
+import { DatabankRecommender } from '../services/recommendations/DatabankRecommender.js';
+import { ProjectCollaboratorMatcher } from '../services/recommendations/ProjectCollaboratorMatcher.js';
 
 const router = Router();
 
@@ -342,6 +346,170 @@ router.get('/services', async (req: Request, res: Response) => {
       error: process.env.NODE_ENV === 'production'
         ? 'Internal server error'
         : error.message || 'Internal server error'
+    });
+  }
+});
+
+const storeAndRespond = async (
+  userId: string,
+  recommendations: Recommendation[],
+  itemType: string,
+  res: Response
+) => {
+  const storedRecs = await Promise.all(
+    recommendations.map((rec, index) =>
+      RecommendationEngine.storeRecommendation(userId, rec, index + 1)
+    )
+  );
+  const response = recommendations.map((rec, index) => ({
+    ...rec,
+    recommendationId: storedRecs[index],
+  }));
+  res.json({
+    recommendations: response,
+    count: response.length,
+    itemType,
+  });
+};
+
+/**
+ * GET /api/recommendations/collaborators
+ */
+router.get('/collaborators', async (req: Request, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+    const limit = parseInt(req.query.limit as string) || 10;
+    const recommendations = await CollaboratorRecommender.getRecommendations(req.user.id, {
+      limit,
+    });
+    await storeAndRespond(req.user.id, recommendations, 'collaborator', res);
+  } catch (error: any) {
+    console.error('Error getting collaborator recommendations:', error);
+    res.status(500).json({
+      error:
+        process.env.NODE_ENV === 'production'
+          ? 'Internal server error'
+          : error.message || 'Internal server error',
+    });
+  }
+});
+
+/**
+ * POST /api/recommendations/collaborators/match
+ * Project-scoped collaborator matching via CollaborationMatchingAgent
+ */
+router.post('/collaborators/match', async (req: Request, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+
+    const {
+      title,
+      description,
+      researchArea,
+      requiredExpertise,
+      requiredSkills,
+      collaborationType,
+      maxCollaborators,
+    } = req.body || {};
+
+    if (!title || !description || !researchArea) {
+      return res.status(400).json({
+        error: 'title, description, and researchArea are required',
+      });
+    }
+
+    const expertise = Array.isArray(requiredExpertise)
+      ? requiredExpertise.map((e: unknown) => String(e).trim()).filter(Boolean)
+      : String(requiredExpertise || '')
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+    if (expertise.length === 0) {
+      return res.status(400).json({
+        error: 'At least one requiredExpertise value is required',
+      });
+    }
+
+    const result = await ProjectCollaboratorMatcher.match(
+      req.user.id,
+      {
+        title: String(title),
+        description: String(description),
+        researchArea: String(researchArea),
+        requiredExpertise: expertise,
+        requiredSkills: Array.isArray(requiredSkills)
+          ? requiredSkills.map((s: unknown) => String(s).trim()).filter(Boolean)
+          : undefined,
+        collaborationType,
+        maxCollaborators: maxCollaborators ? Number(maxCollaborators) : undefined,
+      },
+      req.user.role
+    );
+
+    await Promise.all(
+      result.matches.map((rec, index) =>
+        RecommendationEngine.storeRecommendation(req.user!.id, rec, index + 1)
+      )
+    );
+
+    res.json({
+      recommendations: result.matches,
+      agentRecommendations: result.agentRecommendations,
+      count: result.matches.length,
+      itemType: 'collaborator',
+      metadata: result.metadata,
+    });
+  } catch (error: any) {
+    console.error('Error matching project collaborators:', error);
+    const message = error?.message || 'Internal server error';
+    const status = /blocked by safety|Invalid project/i.test(message) ? 400 : 500;
+    res.status(status).json({
+      error: process.env.NODE_ENV === 'production' && status === 500 ? 'Internal server error' : message,
+    });
+  }
+});
+
+/**
+ * GET /api/recommendations/negative-results
+ */
+router.get('/negative-results', async (req: Request, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+    const limit = parseInt(req.query.limit as string) || 10;
+    const recommendations = await NegativeResultRecommender.getRecommendations(req.user.id, {
+      limit,
+    });
+    await storeAndRespond(req.user.id, recommendations, 'negative_result', res);
+  } catch (error: any) {
+    console.error('Error getting negative-result recommendations:', error);
+    res.status(500).json({
+      error:
+        process.env.NODE_ENV === 'production'
+          ? 'Internal server error'
+          : error.message || 'Internal server error',
+    });
+  }
+});
+
+/**
+ * GET /api/recommendations/databank
+ */
+router.get('/databank', async (req: Request, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+    const limit = parseInt(req.query.limit as string) || 10;
+    const recommendations = await DatabankRecommender.getRecommendations(req.user.id, {
+      limit,
+    });
+    await storeAndRespond(req.user.id, recommendations, 'databank_offer', res);
+  } catch (error: any) {
+    console.error('Error getting databank recommendations:', error);
+    res.status(500).json({
+      error:
+        process.env.NODE_ENV === 'production'
+          ? 'Internal server error'
+          : error.message || 'Internal server error',
     });
   }
 });

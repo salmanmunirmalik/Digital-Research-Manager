@@ -11,6 +11,7 @@ import {
   BookOpenIcon,
   UsersIcon,
   ClockIcon,
+  CubeIcon,
 } from './icons';
 
 export interface LabInventoryItem {
@@ -60,6 +61,7 @@ interface LabResourcesViewProps {
   onScheduleMaintenance?: (instrument: LabInstrument) => void;
   onViewRoster?: (instrument: LabInstrument) => void;
   loading?: boolean;
+  hideCreateMenu?: boolean;
 }
 
 function consumableAttention(item: LabInventoryItem): { attention: string | null; stockStatus: string } {
@@ -102,6 +104,7 @@ const LabResourcesView: React.FC<LabResourcesViewProps> = ({
   onScheduleMaintenance,
   onViewRoster,
   loading = false,
+  hideCreateMenu = false,
 }) => {
   const [focus, setFocus] = useState<FocusFilter>('all');
   const [search, setSearch] = useState('');
@@ -157,129 +160,131 @@ const LabResourcesView: React.FC<LabResourcesViewProps> = ({
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-800" />
+        <div className="animate-spin rounded-full h-7 w-7 border-2 border-slate-200 border-t-sky-600" />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
-      <div className="bg-white border-b border-slate-200/80 px-6 py-4 shrink-0">
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <div>
-            <h1 className="text-lg font-semibold text-slate-900 tracking-tight">Lab resources</h1>
-            <p className="text-[13px] text-slate-500 mt-0.5">
-              Consumables and instruments in one place - stock, bookings, and what needs attention.
-            </p>
+    <div className="flex-1 flex flex-col h-full overflow-hidden min-h-0">
+      <div className="px-4 sm:px-6 py-3 border-b border-slate-200/80 bg-white/80 backdrop-blur-sm shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="relative flex-1 min-w-[12rem] max-w-md">
+            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search name, location, model…"
+              className="w-full pl-8 pr-3 py-1.5 text-[13px] border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-300"
+            />
           </div>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setCreateMenuOpen((o) => !o)}
-              className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800"
-            >
-              <PlusIcon className="w-4 h-4" />
-              Add resource
-            </button>
-            {createMenuOpen && (
-              <>
-                <button
-                  type="button"
-                  className="fixed inset-0 z-10"
-                  aria-label="Close menu"
-                  onClick={() => setCreateMenuOpen(false)}
-                />
-                <div className="absolute right-0 mt-1.5 z-20 w-52 bg-white border border-slate-200 rounded-lg shadow-lg py-1 overflow-hidden">
+          <div className="flex flex-wrap gap-1">
+            {(
+              [
+                { id: 'all' as const, label: 'All', count: resources.length },
+                { id: 'attention' as const, label: 'Attention', count: attentionCount },
+                { id: 'consumables' as const, label: 'Consumables', count: inventory.length },
+                { id: 'equipment' as const, label: 'Equipment', count: instruments.length },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setFocus(tab.id)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-medium rounded-md transition-colors ${
+                  focus === tab.id
+                    ? 'bg-slate-900 text-white'
+                    : tab.id === 'attention' && attentionCount > 0
+                      ? 'bg-amber-50 text-amber-900 hover:bg-amber-100'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {tab.id === 'attention' && attentionCount > 0 && focus !== tab.id && (
+                  <ExclamationTriangleIcon className="w-3.5 h-3.5" />
+                )}
+                {tab.label}
+                <span
+                  className={`tabular-nums text-[11px] ${
+                    focus === tab.id ? 'text-white/70' : 'text-slate-400'
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+          {!hideCreateMenu && (
+            <div className="relative ml-auto">
+              <button
+                type="button"
+                onClick={() => setCreateMenuOpen((o) => !o)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-white bg-sky-700 rounded-md hover:bg-sky-800"
+              >
+                <PlusIcon className="w-4 h-4" />
+                Add
+              </button>
+              {createMenuOpen && (
+                <>
                   <button
                     type="button"
-                    className="w-full px-3 py-2.5 text-left text-[13px] hover:bg-slate-50 flex items-center gap-2"
-                    onClick={() => {
-                      setCreateMenuOpen(false);
-                      onCreateConsumable();
-                    }}
-                  >
-                    <PackageIcon className="w-4 h-4 text-slate-500" />
-                    Consumable / stock
-                  </button>
-                  <button
-                    type="button"
-                    className="w-full px-3 py-2.5 text-left text-[13px] hover:bg-slate-50 flex items-center gap-2"
-                    onClick={() => {
-                      setCreateMenuOpen(false);
-                      onCreateEquipment();
-                    }}
-                  >
-                    <WrenchScrewdriverIcon className="w-4 h-4 text-slate-500" />
-                    Instrument / equipment
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="relative mb-3">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, location, category, model…"
-            className="w-full pl-9 pr-3 py-2 text-[13px] border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-1.5">
-          {(
-            [
-              { id: 'all' as const, label: `All (${resources.length})` },
-              {
-                id: 'attention' as const,
-                label: `Needs attention (${attentionCount})`,
-                warn: attentionCount > 0,
-              },
-              { id: 'consumables' as const, label: `Consumables (${inventory.length})` },
-              { id: 'equipment' as const, label: `Equipment (${instruments.length})` },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setFocus(tab.id)}
-              className={`px-3 py-1.5 text-[12px] font-medium rounded-full transition-colors ${
-                focus === tab.id
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              } ${'warn' in tab && tab.warn && focus !== tab.id ? 'text-amber-800 bg-amber-50' : ''}`}
-            >
-              {tab.id === 'attention' && attentionCount > 0 && focus !== tab.id && (
-                <ExclamationTriangleIcon className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />
+                    className="fixed inset-0 z-10"
+                    aria-label="Close menu"
+                    onClick={() => setCreateMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-1.5 z-20 w-52 bg-white border border-slate-200 rounded-xl shadow-lg shadow-slate-200/50 py-1 overflow-hidden">
+                    <button
+                      type="button"
+                      className="w-full px-3 py-2.5 text-left text-[13px] hover:bg-sky-50 flex items-center gap-2"
+                      onClick={() => {
+                        setCreateMenuOpen(false);
+                        onCreateConsumable();
+                      }}
+                    >
+                      <PackageIcon className="w-4 h-4 text-emerald-600" />
+                      Consumable / stock
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full px-3 py-2.5 text-left text-[13px] hover:bg-sky-50 flex items-center gap-2"
+                      onClick={() => {
+                        setCreateMenuOpen(false);
+                        onCreateEquipment();
+                      }}
+                    >
+                      <WrenchScrewdriverIcon className="w-4 h-4 text-sky-600" />
+                      Instrument / equipment
+                    </button>
+                  </div>
+                </>
               )}
-              {tab.label}
-            </button>
-          ))}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5">
         {filtered.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-[14px] font-medium text-slate-800 mb-1">No resources match</p>
-            <p className="text-[13px] text-slate-500 mb-4">
-              Add consumables or instruments to build your lab resource map.
+          <div className="flex flex-col items-center justify-center min-h-[18rem] text-center">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500 to-sky-700 text-white shadow-md shadow-sky-200/60 flex items-center justify-center mb-4">
+              <CubeIcon className="w-6 h-6" />
+            </div>
+            <h3 className="text-[15px] font-semibold text-slate-900 mb-1">No resources match</h3>
+            <p className="text-[13px] text-slate-500 max-w-sm mb-5">
+              Add consumables and instruments to track stock levels, bookings, and maintenance.
             </p>
             <div className="flex justify-center gap-2">
               <button
                 type="button"
                 onClick={onCreateConsumable}
-                className="px-3 py-2 text-[13px] font-medium bg-white border border-slate-200 rounded-md hover:bg-slate-50"
+                className="px-3.5 py-2 text-[13px] font-medium bg-white border border-sky-200 text-sky-900 rounded-md hover:bg-sky-50"
               >
                 Add consumable
               </button>
               <button
                 type="button"
                 onClick={onCreateEquipment}
-                className="px-3 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800"
+                className="px-3.5 py-2 text-[13px] font-medium text-white bg-sky-700 rounded-md hover:bg-sky-800"
               >
                 Add instrument
               </button>
@@ -296,9 +301,7 @@ const LabResourcesView: React.FC<LabResourcesViewProps> = ({
                     else onEquipmentClick?.(r);
                   }}
                   onTransaction={
-                    r.kind === 'consumable' && onTransaction
-                      ? () => onTransaction(r)
-                      : undefined
+                    r.kind === 'consumable' && onTransaction ? () => onTransaction(r) : undefined
                   }
                   onBook={
                     r.kind === 'equipment' && onBookInstrument
@@ -342,8 +345,10 @@ function ResourceRow({
 
   return (
     <div
-      className={`group bg-white border rounded-xl px-4 py-3.5 transition-colors hover:border-slate-300 ${
-        resource.attention ? 'border-amber-200/80 bg-amber-50/30' : 'border-slate-200/80'
+      className={`group bg-white border rounded-xl px-4 py-3.5 transition-all hover:shadow-sm hover:shadow-sky-100/40 ${
+        resource.attention
+          ? 'border-amber-200/90 bg-amber-50/20'
+          : 'border-slate-200/80 hover:border-sky-200'
       }`}
     >
       <div className="flex items-start gap-3">
@@ -353,7 +358,7 @@ function ResourceRow({
           }`}
         >
           {isConsumable ? (
-            <PackageIcon className="w-4.5 h-4.5 w-4 h-4" />
+            <PackageIcon className="w-4 h-4" />
           ) : (
             <WrenchScrewdriverIcon className="w-4 h-4" />
           )}
@@ -362,11 +367,11 @@ function ResourceRow({
         <button type="button" onClick={onOpen} className="flex-1 min-w-0 text-left">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[14px] font-medium text-slate-900">{resource.name}</span>
-            <span className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
+            <span className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">
               {isConsumable ? 'Consumable' : 'Equipment'}
             </span>
             {resource.attention && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded-md">
                 <ExclamationTriangleIcon className="w-3 h-3" />
                 {resource.attention}
               </span>
@@ -405,7 +410,8 @@ function ResourceRow({
             {isConsumable && resource.expiry_date ? (
               <span className="inline-flex items-center gap-1">
                 <CalendarIcon className="w-3 h-3" />
-                Exp {new Date(resource.expiry_date).toLocaleDateString(undefined, {
+                Exp{' '}
+                {new Date(resource.expiry_date).toLocaleDateString(undefined, {
                   month: 'short',
                   day: 'numeric',
                   year: 'numeric',
@@ -450,7 +456,7 @@ function ActionChip({
         e.stopPropagation();
         onClick();
       }}
-      className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md"
+      className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-slate-700 bg-slate-50 border border-slate-200 hover:bg-sky-50 hover:border-sky-200 hover:text-sky-900 rounded-md transition-colors"
     >
       {icon}
       {label}

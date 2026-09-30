@@ -17,14 +17,30 @@ export const createRateLimit = (windowMs: number, max: number, message: string) 
   });
 };
 
-// General API rate limiting (strict in production; high ceiling locally so Playwright/E2E can run)
-export const apiRateLimit = createRateLimit(
-  15 * 60 * 1000, // 15 minutes
-  process.env.NODE_ENV === 'production'
-    ? Number(process.env.API_RATE_LIMIT_MAX || 100)
-    : Number(process.env.API_RATE_LIMIT_MAX || 2000),
-  'Too many requests from this IP, please try again later.'
-);
+// Writing Studio polls collab-state/presence often — exclude from the shared budget
+const isHighFrequencyCollabPath = (path: string) =>
+  /\/writing\/documents\/[^/]+\/(collab-state|presence|locks)\b/.test(path) ||
+  /\/writing\/documents\/[^/]+\/locks\//.test(path);
+
+// General API rate limiting (higher ceiling; collab poll paths are skipped)
+export const apiRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max:
+    process.env.NODE_ENV === 'production'
+      ? Number(process.env.API_RATE_LIMIT_MAX || 600)
+      : Number(process.env.API_RATE_LIMIT_MAX || 5000),
+  message: { error: 'Too many requests from this IP, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => isHighFrequencyCollabPath(req.path || req.originalUrl || ''),
+  handler: (req: Request, res: Response) => {
+    console.log(`🚨 Rate limit exceeded for IP: ${req.ip}`);
+    res.status(429).json({
+      error: 'Too many requests from this IP, please try again later.',
+      retryAfterSec: 60,
+    });
+  },
+});
 
 // Helmet security configuration (API server - CSP less critical than HSTS/frame guards)
 export const securityHeaders = helmet({

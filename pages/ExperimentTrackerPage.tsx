@@ -56,6 +56,7 @@ import {
   QuestionMarkCircleIcon,
   TrendingUpIcon
 } from '../components/icons';
+import { PageHeader } from '../components/PageHeader';
 
 interface ExperimentTrackerPageProps {
   embedded?: boolean;
@@ -345,36 +346,40 @@ const ExperimentTrackerPage = ({ embedded = false }: ExperimentTrackerPageProps)
     <div className={embedded ? '' : 'max-w-7xl mx-auto'}>
         {/* Header - hidden when embedded in Lab workspace */}
         {!embedded && (
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
-                Experiments
-              </h1>
-              <p className="mt-1.5 text-[14px] text-slate-600">
+        <div className="mb-8">
+          <PageHeader
+            title="Experiments"
+            accent="orange"
+            icon={<BeakerIcon />}
+            subtitle={
+              <>
                 Plan and track experiment lifecycle from hypothesis to completion.{' '}
                 <Link to="/protocols" className="font-medium text-slate-800 hover:text-slate-950 underline-offset-2 hover:underline">
                   Methods live in Protocol library
                 </Link>
-              </p>
-            </div>
-            <div className="flex gap-2 flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowTemplateModal(true)}
-                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
-              >
-                <DocumentTextIcon className="h-4 w-4" />
-                Templates
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowNewExperimentModal(true)}
-                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
-              >
-                <PlusIcon className="h-4 w-4" />
-                New experiment
-              </button>
-            </div>
+              </>
+            }
+            actions={
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowTemplateModal(true)}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-orange-900 bg-white/90 border border-orange-200 rounded-md hover:bg-orange-50 transition-colors"
+                >
+                  <DocumentTextIcon className="h-4 w-4" />
+                  Templates
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowNewExperimentModal(true)}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-orange-700 rounded-md hover:bg-orange-800 transition-colors"
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  New experiment
+                </button>
+              </>
+            }
+          />
         </div>
         )}
         {embedded && (

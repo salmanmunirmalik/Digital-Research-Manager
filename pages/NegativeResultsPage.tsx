@@ -32,6 +32,8 @@ import {
   DocumentTextIcon,
   BookOpenIcon
 } from '../components/icons';
+import { PageHeader } from '../components/PageHeader';
+import RecommendationsWidget from '../components/RecommendationsWidget';
 
 interface NegativeResult {
   id: string;
@@ -268,18 +270,35 @@ const NegativeResultsPage: React.FC = () => {
         
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Negative Results Database</h1>
-              <p className="text-gray-600 mt-1">Get credit for failed experiments & save others time and money</p>
-            </div>
-            <button
-              onClick={() => setShowSubmitForm(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <PlusIcon className="w-5 h-5" />
-              <span>Share a Failed Experiment</span>
-            </button>
+          <PageHeader
+            title="Negative Results Database"
+            accent="rose"
+            icon={<BeakerIcon />}
+            subtitle="Get credit for failed experiments & save others time and money"
+            actions={
+              <button
+                type="button"
+                onClick={() => setShowSubmitForm(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-rose-700 text-white rounded-lg hover:bg-rose-800 transition-colors"
+              >
+                <PlusIcon className="w-5 h-5" />
+                <span>Share a Failed Experiment</span>
+              </button>
+            }
+          />
+
+          <div className="mt-6">
+            <RecommendationsWidget
+              itemType="negative-results"
+              title="Similar failures to review"
+              limit={5}
+              showFeedback={true}
+              onItemClick={(itemId) => {
+                window.location.hash = itemId;
+                const el = document.getElementById(`nr-${itemId}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+            />
           </div>
 
           {/* View Tabs */}
@@ -391,6 +410,7 @@ const NegativeResultsPage: React.FC = () => {
               {negativeResults.map((result) => (
                 <div
                   key={result.id}
+                  id={`nr-${result.id}`}
                   className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden"
                 >
                   <div className="p-6">
@@ -531,6 +551,7 @@ const NegativeResultsPage: React.FC = () => {
               {negativeResults.map((result) => (
                 <div
                   key={result.id}
+                  id={`nr-${result.id}`}
                   className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden"
                 >
                   <div className="p-6">

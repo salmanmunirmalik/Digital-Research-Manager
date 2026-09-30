@@ -291,7 +291,13 @@ router.put('/preferences', authenticateToken, async (req: any, res) => {
  * This is used for basic features when users don't have their own keys
  */
 export function getPlatformGeminiKey(): string | null {
-  return process.env.GEMINI_API_KEY || null;
+  const key = (process.env.GEMINI_API_KEY || '').trim();
+  return key || null;
+}
+
+export function getPlatformOpenAiKey(): string | null {
+  const key = (process.env.OPENAI_API_KEY || '').trim();
+  return key || null;
 }
 
 /**
@@ -353,12 +359,21 @@ export async function getApiKeyWithFallback(
     return userKey;
   }
   
-  // For basic features, fallback to platform Gemini key
-  if (usePlatformDefaultForBasic && provider === 'google_gemini') {
-    const platformKey = getPlatformGeminiKey();
-    if (platformKey) {
-      return platformKey;
+  // For basic features, fallback to platform Gemini (or OpenAI) key
+  if (usePlatformDefaultForBasic) {
+    if (provider === 'google_gemini' || provider === 'gemini') {
+      const platformKey = getPlatformGeminiKey();
+      if (platformKey) return platformKey;
     }
+    if (provider === 'openai') {
+      const openaiKey = getPlatformOpenAiKey();
+      if (openaiKey) return openaiKey;
+    }
+    // Last resort: any platform key when requested provider has none
+    const gemini = getPlatformGeminiKey();
+    if (gemini) return gemini;
+    const openai = getPlatformOpenAiKey();
+    if (openai) return openai;
   }
   
   return null;

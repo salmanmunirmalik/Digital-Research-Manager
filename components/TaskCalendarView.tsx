@@ -1,5 +1,4 @@
 import React from 'react';
-import TaskCard from './TaskCard';
 import { ChevronLeftIcon, ChevronRightIcon } from './icons';
 
 interface Task {
@@ -30,8 +29,7 @@ interface TaskCalendarViewProps {
 const TaskCalendarView: React.FC<TaskCalendarViewProps> = ({
   tasks,
   onTaskClick,
-  onCreateTask,
-  loading = false
+  loading = false,
 }) => {
   const [currentDate, setCurrentDate] = React.useState(new Date());
 
@@ -45,7 +43,7 @@ const TaskCalendarView: React.FC<TaskCalendarViewProps> = ({
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'July', 'August', 'September', 'October', 'November', 'December',
   ];
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -56,9 +54,11 @@ const TaskCalendarView: React.FC<TaskCalendarViewProps> = ({
 
   const getTasksForDate = (date: Date): Task[] => {
     const dateStr = date.toISOString().split('T')[0];
-    return tasks.filter(task => {
+    return tasks.filter((task) => {
       const dueDate = task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : null;
-      const startDate = task.start_date ? new Date(task.start_date).toISOString().split('T')[0] : null;
+      const startDate = task.start_date
+        ? new Date(task.start_date).toISOString().split('T')[0]
+        : null;
       return dueDate === dateStr || startDate === dateStr;
     });
   };
@@ -66,101 +66,105 @@ const TaskCalendarView: React.FC<TaskCalendarViewProps> = ({
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-7 w-7 border-2 border-slate-200 border-t-sky-600" />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-4">
-      {/* Calendar Header */}
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={() => navigateMonth('prev')}
-          className="p-2 hover:bg-gray-100 rounded-lg"
-        >
-          <ChevronLeftIcon className="w-5 h-5" />
-        </button>
-        <h2 className="text-xl font-semibold text-gray-900">
-          {monthNames[month]} {year}
-        </h2>
-        <button
-          onClick={() => navigateMonth('next')}
-          className="p-2 hover:bg-gray-100 rounded-lg"
-        >
-          <ChevronRightIcon className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Calendar Grid */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        {/* Week Day Headers */}
-        <div className="grid grid-cols-7 border-b border-gray-200">
-          {weekDays.map((day) => (
-            <div
-              key={day}
-              className="p-2 text-center text-sm font-medium text-gray-700 bg-gray-50"
-            >
-              {day}
-            </div>
-          ))}
+    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
+      <div className="max-w-5xl mx-auto">
+        <div className="flex items-center justify-between mb-4">
+          <button
+            type="button"
+            onClick={() => navigateMonth('prev')}
+            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <ChevronLeftIcon className="w-5 h-5" />
+          </button>
+          <h2 className="text-[15px] font-semibold text-slate-900">
+            {monthNames[month]} {year}
+          </h2>
+          <button
+            type="button"
+            onClick={() => navigateMonth('next')}
+            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <ChevronRightIcon className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Calendar Days */}
-        <div className="grid grid-cols-7">
-          {/* Empty cells for days before month starts */}
-          {Array.from({ length: startingDayOfWeek }).map((_, index) => (
-            <div key={`empty-${index}`} className="min-h-[120px] border-r border-b border-gray-200 bg-gray-50" />
-          ))}
-
-          {/* Days of the month */}
-          {Array.from({ length: daysInMonth }).map((_, index) => {
-            const day = index + 1;
-            const date = new Date(year, month, day);
-            const isToday = date.toDateString() === new Date().toDateString();
-            const dayTasks = getTasksForDate(date);
-
-            return (
+        <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden shadow-sm shadow-slate-100/50">
+          <div className="grid grid-cols-7 border-b border-slate-100">
+            {weekDays.map((day) => (
               <div
                 key={day}
-                className={`min-h-[120px] border-r border-b border-gray-200 p-2 ${
-                  isToday ? 'bg-blue-50' : 'bg-white'
-                } hover:bg-gray-50 transition-colors`}
+                className="p-2 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-400 bg-slate-50/80"
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span
-                    className={`text-sm font-medium ${
-                      isToday ? 'text-blue-600' : 'text-gray-900'
-                    }`}
-                  >
-                    {day}
-                  </span>
-                  {dayTasks.length > 0 && (
-                    <span className="text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">
-                      {dayTasks.length}
-                    </span>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  {dayTasks.slice(0, 3).map((task) => (
-                    <div
-                      key={task.id}
-                      onClick={() => onTaskClick(task)}
-                      className="text-xs p-1 bg-blue-100 text-blue-700 rounded cursor-pointer hover:bg-blue-200 truncate"
-                      title={task.title}
-                    >
-                      {task.title}
-                    </div>
-                  ))}
-                  {dayTasks.length > 3 && (
-                    <div className="text-xs text-gray-500 px-1">
-                      +{dayTasks.length - 3} more
-                    </div>
-                  )}
-                </div>
+                {day}
               </div>
-            );
-          })}
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7">
+            {Array.from({ length: startingDayOfWeek }).map((_, index) => (
+              <div
+                key={`empty-${index}`}
+                className="min-h-[6.5rem] border-r border-b border-slate-100 bg-slate-50/40"
+              />
+            ))}
+
+            {Array.from({ length: daysInMonth }).map((_, index) => {
+              const day = index + 1;
+              const date = new Date(year, month, day);
+              const isToday = date.toDateString() === new Date().toDateString();
+              const dayTasks = getTasksForDate(date);
+
+              return (
+                <div
+                  key={day}
+                  className={`min-h-[6.5rem] border-r border-b border-slate-100 p-1.5 transition-colors ${
+                    isToday ? 'bg-sky-50/60' : 'bg-white hover:bg-slate-50/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1 px-0.5">
+                    <span
+                      className={`text-[12px] font-medium tabular-nums ${
+                        isToday
+                          ? 'w-6 h-6 rounded-full bg-sky-700 text-white flex items-center justify-center'
+                          : 'text-slate-700'
+                      }`}
+                    >
+                      {day}
+                    </span>
+                    {dayTasks.length > 0 && (
+                      <span className="text-[10px] tabular-nums text-slate-400">
+                        {dayTasks.length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-0.5">
+                    {dayTasks.slice(0, 3).map((task) => (
+                      <button
+                        key={task.id}
+                        type="button"
+                        onClick={() => onTaskClick(task)}
+                        className="w-full text-left text-[11px] px-1.5 py-0.5 bg-sky-50 text-sky-900 border border-sky-100 rounded-md hover:bg-sky-100 truncate"
+                        title={task.title}
+                      >
+                        {task.title}
+                      </button>
+                    ))}
+                    {dayTasks.length > 3 && (
+                      <div className="text-[10px] text-slate-400 px-1">
+                        +{dayTasks.length - 3} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -168,5 +172,3 @@ const TaskCalendarView: React.FC<TaskCalendarViewProps> = ({
 };
 
 export default TaskCalendarView;
-
-

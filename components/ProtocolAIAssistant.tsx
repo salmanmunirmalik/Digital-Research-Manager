@@ -16,6 +16,7 @@ import {
 import Button from './ui/Button';
 import Card, { CardContent, CardHeader, CardTitle } from './ui/Card';
 import axios from 'axios';
+import { getAuthHeaders } from '../utils/apiBase';
 
 interface ProtocolAIAssistantProps {
   protocol?: {
@@ -27,7 +28,7 @@ interface ProtocolAIAssistantProps {
       title: string;
       description: string;
       duration: number;
-      materials_needed?: Array<{ name: string; quantity: string; unit: string }>;
+      materials_needed?: Array<{ name: string; quantity?: string; unit?: string }>;
     }>;
     materials?: any[];
     equipment?: any[];
@@ -56,7 +57,21 @@ const ProtocolAIAssistant: React.FC<ProtocolAIAssistantProps> = ({
     setError(null);
     
     try {
-      const token = localStorage.getItem('token');
+      const steps = (protocol.steps || []).map((step, index) => ({
+        step: Number(step.id) || index + 1,
+        description: [step.title, step.description].filter(Boolean).join(': '),
+        duration: `${step.duration || 0}m`,
+        resources: step.materials_needed?.map((m) => m.name) || [],
+        equipment: [] as string[],
+      }));
+
+      const materials = (protocol.materials || []).map((m: any) =>
+        typeof m === 'string' ? m : m?.name || String(m)
+      );
+      const equipment = (protocol.equipment || []).map((e: any) =>
+        typeof e === 'string' ? e : e?.name || String(e)
+      );
+
       const response = await axios.post(
         '/api/agents/protocol_optimization/execute',
         {
@@ -64,27 +79,22 @@ const ProtocolAIAssistant: React.FC<ProtocolAIAssistantProps> = ({
             protocol: {
               title: protocol.title,
               description: protocol.description,
-              steps: protocol.procedure.map((step: any) => ({
-                step: step.id,
-                description: step.description,
-                duration: `${step.duration}m`,
-                resources: step.materials_needed?.map((m: any) => m.name) || [],
-                equipment: []
-              })),
-              materials: protocol.materials?.map((m: any) => m.name) || [],
-              equipment: protocol.equipment?.map((e: any) => e.name) || []
+              steps,
+              materials,
+              equipment,
             },
-            optimizationGoals: ['efficiency', 'accuracy', 'cost', 'safety']
+            optimizationGoals: ['efficiency', 'accuracy', 'cost', 'safety'],
           },
-          config: {}
+          config: {},
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: getAuthHeaders() }
       );
 
-      if (response.data.success && response.data.result?.content) {
-        setResult(response.data.result.content);
+      const payload = response.data.result?.content || response.data.result;
+      if (response.data.success && payload) {
+        setResult(payload);
         if (onOptimized) {
-          onOptimized(response.data.result.content);
+          onOptimized(payload);
         }
       } else {
         throw new Error(response.data.error || 'Optimization failed');
@@ -226,7 +236,7 @@ const ProtocolAIAssistant: React.FC<ProtocolAIAssistantProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">
       <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
           <div className="flex items-center justify-between">

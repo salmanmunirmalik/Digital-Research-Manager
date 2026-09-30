@@ -3,8 +3,10 @@ import crypto from 'crypto';
 import pool from '../../database/config.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
 import { ingestGrantSources } from '../services/grants/ingestionService.js';
+import { fetchHorizonEuropeTopics } from '../services/grants/horizonEuropeService.js';
 import { matchGrantsForUser, matchAllUsers } from '../services/grants/matchingService.js';
 import { notifyMatchesForUser } from '../services/grants/notificationService.js';
+import { analyzeGrantFitGap } from '../services/grants/fitGapService.js';
 import { POSTED_BY_SQL, userDisplayName, nameFromAuthUser } from '../utils/postedBy.js';
 
 const router: Router = express.Router();
@@ -43,6 +45,16 @@ const mapGrant = (row: any) => ({
   requirements: parseJson(row.requirements, {}),
   deadline_date: toDateOnly(row.deadline_date),
   published_date: toDateOnly(row.published_date),
+  opening_date: toDateOnly(row.opening_date),
+  programme: row.programme || null,
+  programme_period: row.programme_period || null,
+  pillar: row.pillar || null,
+  call_identifier: row.call_identifier || null,
+  topic_identifier: row.topic_identifier || row.external_id || null,
+  action_type: row.action_type || null,
+  deadline_model: row.deadline_model || null,
+  call_budget: row.call_budget != null ? Number(row.call_budget) : null,
+  source_name: row.source_name || null,
   createdBy: row.created_by || null,
   postedByName: row.created_by
     ? userDisplayName({
@@ -51,7 +63,7 @@ const mapGrant = (row: any) => ({
         last_name: row.last_name,
         username: row.username,
       })
-    : row.sponsor || 'ResearchLab directory',
+    : row.posted_by_name || row.sponsor || 'ResearchLab directory',
 });
 
 const toJson = (value: unknown) => JSON.stringify(value ?? null);
@@ -78,8 +90,12 @@ router.get('/', authenticateToken, async (req, res) => {
     const params: any[] = [];
 
     if (status) {
-      params.push(status);
-      filters.push(`g.status = $${params.length}`);
+      if (status === 'open') {
+        filters.push(`g.status IN ('open', 'forthcoming')`);
+      } else {
+        params.push(status);
+        filters.push(`g.status = $${params.length}`);
+      }
     }
     if (region) {
       params.push(region);
@@ -116,7 +132,7 @@ router.get('/', authenticateToken, async (req, res) => {
     if (search) {
       params.push(`%${search}%`);
       filters.push(
-        `(g.title LIKE $${params.length} OR g.summary LIKE $${params.length} OR g.sponsor LIKE $${params.length})`
+        `(g.title LIKE $${params.length} OR g.summary LIKE $${params.length} OR g.sponsor LIKE $${params.length} OR g.programme LIKE $${params.length} OR g.call_identifier LIKE $${params.length} OR g.topic_identifier LIKE $${params.length} OR g.external_id LIKE $${params.length})`
       );
     }
 
@@ -354,6 +370,165 @@ router.post('/', authenticateToken, async (req: any, res) => {
   }
 });
 
+const mapWriteup = (row: any) => ({
+  ...row,
+  content: parseJson(row.content, {}),
+  metadata: parseJson(row.metadata, {}),
+  status: row.status || 'draft',
+});
+
+// Grant writing drafts (must be before /:id)
+router.get('/writeups', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const result = await pool.query(
+      `SELECT id, user_id, grant_id, title, template_type, status, content, metadata, created_at, updated_at
+       FROM grant_writeups
+       WHERE user_id = $1
+       ORDER BY updated_at DESC
+       LIMIT 100`,
+      [userId]
+    );
+    res.json({ success: true, writeups: result.rows.map(mapWriteup) });
+  } catch (error: any) {
+    console.error('Error listing grant writeups:', error);
+    const missing = String(error?.message || '').includes("doesn't exist") || error?.code === 'ER_NO_SUCH_TABLE';
+    res.status(500).json({
+      success: false,
+      error: missing
+        ? 'Draft storage is not installed. Run database/migrations/mysql_grant_writeups.sql'
+        : 'Failed to list grant drafts',
+    });
+  }
+});
+
+router.get('/writeups/:writeupId', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const { writeupId } = req.params;
+    const result = await pool.query(
+      `SELECT id, user_id, grant_id, title, template_type, status, content, metadata, created_at, updated_at
+       FROM grant_writeups WHERE id = $1 AND user_id = $2`,
+      [writeupId, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Draft not found' });
+    }
+    res.json({ success: true, writeup: mapWriteup(result.rows[0]) });
+  } catch (error) {
+    console.error('Error fetching grant writeup:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch grant draft' });
+  }
+});
+
+router.post('/writeups', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const { title, templateType, grantId, content, metadata, status } = req.body || {};
+    if (!title || typeof title !== 'string' || !title.trim()) {
+      return res.status(400).json({ success: false, error: 'Title is required' });
+    }
+    const id = crypto.randomUUID();
+    await pool.query(
+      `INSERT INTO grant_writeups
+        (id, user_id, grant_id, title, template_type, status, content, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        id,
+        userId,
+        grantId || null,
+        title.trim().slice(0, 500),
+        templateType || 'generic',
+        status || 'draft',
+        toJson(content ?? {}),
+        toJson(metadata ?? {}),
+      ]
+    );
+    const result = await pool.query(
+      `SELECT id, user_id, grant_id, title, template_type, status, content, metadata, created_at, updated_at
+       FROM grant_writeups WHERE id = $1`,
+      [id]
+    );
+    res.status(201).json({ success: true, writeup: mapWriteup(result.rows[0]) });
+  } catch (error: any) {
+    console.error('Error creating grant writeup:', error);
+    const missing = String(error?.message || '').includes("doesn't exist") || error?.code === 'ER_NO_SUCH_TABLE';
+    res.status(500).json({
+      success: false,
+      error: missing
+        ? 'Draft storage is not installed. Run database/migrations/mysql_grant_writeups.sql'
+        : 'Failed to create grant draft',
+    });
+  }
+});
+
+router.put('/writeups/:writeupId', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const { writeupId } = req.params;
+    const existing = await pool.query(
+      `SELECT id FROM grant_writeups WHERE id = $1 AND user_id = $2`,
+      [writeupId, userId]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Draft not found' });
+    }
+    const { title, templateType, grantId, content, metadata, status } = req.body || {};
+    await pool.query(
+      `UPDATE grant_writeups SET
+        title = COALESCE($1, title),
+        template_type = COALESCE($2, template_type),
+        grant_id = COALESCE($3, grant_id),
+        content = COALESCE($4, content),
+        metadata = COALESCE($5, metadata),
+        status = COALESCE($6, status),
+        updated_at = CURRENT_TIMESTAMP
+       WHERE id = $7 AND user_id = $8`,
+      [
+        title != null ? String(title).trim().slice(0, 500) : null,
+        templateType ?? null,
+        grantId === undefined ? null : grantId,
+        content != null ? toJson(content) : null,
+        metadata != null ? toJson(metadata) : null,
+        status ?? null,
+        writeupId,
+        userId,
+      ]
+    );
+    const result = await pool.query(
+      `SELECT id, user_id, grant_id, title, template_type, status, content, metadata, created_at, updated_at
+       FROM grant_writeups WHERE id = $1`,
+      [writeupId]
+    );
+    res.json({ success: true, writeup: mapWriteup(result.rows[0]) });
+  } catch (error) {
+    console.error('Error updating grant writeup:', error);
+    res.status(500).json({ success: false, error: 'Failed to update grant draft' });
+  }
+});
+
+router.delete('/writeups/:writeupId', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const { writeupId } = req.params;
+    const existing = await pool.query(
+      `SELECT id FROM grant_writeups WHERE id = $1 AND user_id = $2`,
+      [writeupId, userId]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Draft not found' });
+    }
+    await pool.query(`DELETE FROM grant_writeups WHERE id = $1 AND user_id = $2`, [
+      writeupId,
+      userId,
+    ]);
+    res.json({ success: true, message: 'Draft deleted' });
+  } catch (error) {
+    console.error('Error deleting grant writeup:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete grant draft' });
+  }
+});
+
 router.put('/:id', authenticateToken, async (req: any, res) => {
   try {
     const userId = req.user.id;
@@ -433,11 +608,30 @@ router.delete('/:id', authenticateToken, async (req: any, res) => {
     }
     await pool.query(`DELETE FROM grant_matches WHERE grant_id = $1`, [id]);
     await pool.query(`DELETE FROM grant_writeups WHERE grant_id = $1`, [id]);
+    await pool.query(`DELETE FROM grant_embeddings WHERE grant_id = $1`, [id]);
     await pool.query(`DELETE FROM grants WHERE id = $1`, [id]);
     res.json({ success: true, message: 'Grant deleted' });
   } catch (error) {
     console.error('Error deleting grant:', error);
     res.status(500).json({ success: false, error: 'Failed to delete grant' });
+  }
+});
+
+/**
+ * Fit-gap analysis for a grant vs researcher profile
+ * POST /api/grants/:id/fit-gap
+ */
+router.post('/:id/fit-gap', authenticateToken, async (req: any, res) => {
+  try {
+    const analysis = await analyzeGrantFitGap(req.user.id, req.params.id);
+    res.json({ success: true, analysis });
+  } catch (error: any) {
+    console.error('Fit-gap analysis error:', error);
+    const status = /not found/i.test(error?.message || '') ? 404 : 500;
+    res.status(status).json({
+      success: false,
+      error: error?.message || 'Failed to analyze fit gap',
+    });
   }
 });
 
@@ -465,12 +659,101 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
 router.post('/ingest', authenticateToken, requireRole(['admin']), async (_req, res) => {
   try {
+    const SOURCE_ID = 'src-horizon-europe-sedia';
+    const { totalReported, topics } = await fetchHorizonEuropeTopics({ maxPages: 12 });
+
+    for (const topic of topics) {
+      await pool.query(
+        `INSERT INTO grants (
+          id, created_by, source_id, source_name, external_id, call_identifier, topic_identifier,
+          title, summary, sponsor, programme, programme_period, pillar, funding_type, action_type,
+          funding_min, funding_max, funding_currency, call_budget, deadline_date, deadline_model,
+          published_date, opening_date, status, url, region, country, disciplines, keywords,
+          eligibility, requirements, raw_payload, posted_by_name
+        ) VALUES (
+          $1, NULL, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+          $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32
+        )
+        ON DUPLICATE KEY UPDATE
+          source_name = VALUES(source_name),
+          call_identifier = VALUES(call_identifier),
+          topic_identifier = VALUES(topic_identifier),
+          title = VALUES(title),
+          summary = VALUES(summary),
+          sponsor = VALUES(sponsor),
+          programme = VALUES(programme),
+          programme_period = VALUES(programme_period),
+          pillar = VALUES(pillar),
+          funding_type = VALUES(funding_type),
+          action_type = VALUES(action_type),
+          funding_currency = VALUES(funding_currency),
+          deadline_date = VALUES(deadline_date),
+          deadline_model = VALUES(deadline_model),
+          published_date = VALUES(published_date),
+          opening_date = VALUES(opening_date),
+          status = VALUES(status),
+          url = VALUES(url),
+          region = VALUES(region),
+          disciplines = VALUES(disciplines),
+          keywords = VALUES(keywords),
+          eligibility = VALUES(eligibility),
+          requirements = VALUES(requirements),
+          raw_payload = VALUES(raw_payload),
+          posted_by_name = VALUES(posted_by_name),
+          updated_at = CURRENT_TIMESTAMP`,
+        [
+          crypto.randomUUID(),
+          SOURCE_ID,
+          topic.source_name,
+          topic.external_id,
+          topic.call_identifier,
+          topic.topic_identifier,
+          topic.title,
+          topic.summary,
+          topic.sponsor,
+          topic.programme,
+          topic.programme_period,
+          topic.pillar,
+          topic.funding_type,
+          topic.action_type,
+          topic.funding_min,
+          topic.funding_max,
+          topic.funding_currency,
+          topic.call_budget,
+          topic.deadline_date,
+          topic.deadline_model,
+          topic.published_date,
+          topic.opening_date,
+          topic.status,
+          topic.url,
+          topic.region,
+          topic.country,
+          JSON.stringify(topic.disciplines),
+          JSON.stringify(topic.keywords),
+          JSON.stringify(topic.eligibility),
+          JSON.stringify(topic.requirements),
+          JSON.stringify(topic.raw_payload),
+          topic.posted_by_name,
+        ]
+      );
+    }
+
+    await pool.query(
+      `UPDATE grant_sources SET last_run_at = CURRENT_TIMESTAMP, last_status = $1, last_error = NULL WHERE id = $2`,
+      [`ok:${topics.length}/${totalReported}`, SOURCE_ID]
+    );
+
     const ingested = await ingestGrantSources();
     const matched = await matchAllUsers();
     for (const entry of matched) {
       await notifyMatchesForUser(entry.userId);
     }
-    res.json({ success: true, ingested, matched });
+    res.json({
+      success: true,
+      horizon: { totalReported, upserted: topics.length },
+      ingested,
+      matched,
+    });
   } catch (error) {
     console.error('Error ingesting grants:', error);
     res.status(500).json({ success: false, error: 'Failed to ingest grants' });

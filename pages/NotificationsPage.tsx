@@ -1,11 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { getAuthHeaders, getAuthToken, resolveApiBaseUrl, formatApiNetworkError } from '../utils/apiBase';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { BellIcon } from '../components/icons';
 import type { AppNotification } from '../components/NotificationBell';
-
-const getAuthToken = () =>
-  localStorage.getItem('authToken') || localStorage.getItem('token') || '';
 
 const formatWhen = (value: string) => {
   const date = new Date(value);

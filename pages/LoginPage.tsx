@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import LegalFooterLinks from '../components/LegalFooterLinks';
 
 const inputClassName =
   'w-full border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-colors focus:border-teal-700 focus:ring-1 focus:ring-teal-700';
+
+function safeNextPath(raw: string | null): string {
+  if (!raw) return '/dashboard';
+  try {
+    const decoded = decodeURIComponent(raw);
+    if (decoded.startsWith('/') && !decoded.startsWith('//')) return decoded;
+  } catch {
+    /* ignore */
+  }
+  return '/dashboard';
+}
 
 function LoginPage(): React.ReactElement {
   const [email, setEmail] = useState('');
@@ -16,6 +27,7 @@ function LoginPage(): React.ReactElement {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -36,7 +48,7 @@ function LoginPage(): React.ReactElement {
 
     try {
       await login(email, password);
-      navigate('/dashboard', { replace: true });
+      navigate(safeNextPath(searchParams.get('next')), { replace: true });
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : 'Login failed. Please check your credentials.';

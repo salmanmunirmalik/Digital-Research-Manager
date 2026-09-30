@@ -61,7 +61,7 @@ const TeamMessagingWidget: React.FC<TeamMessagingWidgetProps> = ({ className = '
                 <ChatBubbleLeftRightIcon className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                 <p className="text-sm text-gray-600 mb-3">No messages yet</p>
                 <Link
-                  to="/lab-workspace?section=teams&tab=messages"
+                  to="/lab-workspace?section=messages"
                   onClick={() => setIsOpen(false)}
                   className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                 >
@@ -90,7 +90,7 @@ const TeamMessagingWidget: React.FC<TeamMessagingWidgetProps> = ({ className = '
 
           <div className="border-t border-gray-200 p-3">
             <Link
-              to="/lab-workspace?section=teams&tab=messages"
+              to="/lab-workspace?section=messages"
               onClick={() => setIsOpen(false)}
               className="block w-full text-center py-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
             >

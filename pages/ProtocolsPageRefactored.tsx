@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import ProtocolExecutionMode from '../components/ProtocolExecutionMode';
 import ProtocolExecutionModeMobile from '../components/ProtocolExecutionModeMobile';
@@ -13,12 +13,9 @@ import RecommendationsWidget from '../components/RecommendationsWidget';
 import ProtocolForm, { ProtocolFormValues } from '../components/ProtocolForm';
 import ProtocolImportModal from '../components/ProtocolImportModal';
 import Input from '../components/ui/Input';
-import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card';
-import Button from '../components/ui/Button';
 import {
   MagnifyingGlassIcon,
   PlusIcon,
-  RocketLaunchIcon,
   UserGroupIcon,
   ClockIcon,
   StarIcon,
@@ -27,13 +24,17 @@ import {
   BeakerIcon,
   BookOpenIcon,
   DocumentArrowUpIcon,
-  PencilSquareIcon,
-  TrashIcon,
+  Squares2X2Icon,
+  ListBulletIcon,
+  FilmIcon,
+  ArrowRightIcon,
 } from '@heroicons/react/24/outline';
-import { XMarkIcon } from '../components/icons';
 import axios from 'axios';
 import { useEntityDeepLink } from '../hooks/useEntityDeepLink';
 import { protocolToFormValues } from '../utils/protocolImport';
+import { PageHeader, PagePanel } from '../components/PageHeader';
+import ProtocolDetailView from '../components/ProtocolDetailView';
+import { formatDurationMinutes, protocolRefCode, youtubeEmbedUrl } from '../utils/protocolShare';
 
 const API_BASE = (
   import.meta.env.VITE_API_URL || 'http://localhost:5002/api'
@@ -87,6 +88,7 @@ interface ProtocolStep {
 const ProtocolsPageRefactored: React.FC = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
+  const { protocolId: routeProtocolId } = useParams<{ protocolId?: string }>();
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [selectedProtocol, setSelectedProtocol] = useState<Protocol | null>(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -110,8 +112,32 @@ const ProtocolsPageRefactored: React.FC = () => {
   const openHighlightedProtocol = useCallback((protocol: Protocol) => {
     setSelectedProtocol(protocol);
     setShowDetails(true);
-  }, []);
+    navigate(`/protocols/${protocol.id}`, { replace: true });
+  }, [navigate]);
+
+  const closeProtocolDetails = useCallback(() => {
+    setShowDetails(false);
+    navigate('/protocols', { replace: true });
+  }, [navigate]);
+
   const { focusedId } = useEntityDeepLink(protocols, openHighlightedProtocol);
+
+  useEffect(() => {
+    if (!routeProtocolId || protocols.length === 0) return;
+    if (showExecutionMode || showCollaboration || showComparison || showProtocolForm) return;
+    const match = protocols.find((p) => p.id === routeProtocolId);
+    if (match) {
+      setSelectedProtocol(match);
+      setShowDetails(true);
+    }
+  }, [
+    routeProtocolId,
+    protocols,
+    showExecutionMode,
+    showCollaboration,
+    showComparison,
+    showProtocolForm,
+  ]);
 
   useEffect(() => {
     fetchProtocols();
@@ -235,6 +261,7 @@ const ProtocolsPageRefactored: React.FC = () => {
         tags: form.tags,
         privacy_level: form.privacy_level,
         version: form.version,
+        video_url: form.video_url || null,
       };
 
       let saved: any;
@@ -277,6 +304,7 @@ const ProtocolsPageRefactored: React.FC = () => {
           background: form.background,
           expected_results: form.expected_results,
           content: form.content,
+          video_url: form.video_url || base.video_url,
           author: base.creator_name || user?.username || 'You',
           author_id: base.author_id || user?.id,
           usage_count: base.usage_count || 0,
@@ -285,6 +313,7 @@ const ProtocolsPageRefactored: React.FC = () => {
           total_ratings: base.total_ratings || 0,
           version: form.version || '1.0',
         });
+        navigate(`/protocols/${id}`, { replace: true });
         setShowDetails(true);
       }
     } catch (error: any) {
@@ -310,6 +339,7 @@ const ProtocolsPageRefactored: React.FC = () => {
       });
       setShowDetails(false);
       setSelectedProtocol(null);
+      navigate('/protocols', { replace: true });
       await fetchProtocols();
     } catch (error: any) {
       console.error('Error deleting protocol:', error);
@@ -409,47 +439,41 @@ const ProtocolsPageRefactored: React.FC = () => {
             showFeedback={true}
             onItemClick={(itemId) => {
               const protocol = protocols.find(p => p.id === itemId);
-              if (protocol) {
-                setSelectedProtocol(protocol);
-                setShowDetails(true);
-              }
+              if (protocol) openHighlightedProtocol(protocol);
             }}
             className="mb-6"
           />
         </div>
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
-                Protocol library
-              </h1>
-              <p className="mt-1.5 text-[14px] text-slate-600">
-                Reusable methods and SOPs - write, search, compare, and execute
-              </p>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-              <button
-                type="button"
-                onClick={openImportProtocol}
-                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-slate-800 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
-              >
-                <DocumentArrowUpIcon className="w-4 h-4" />
-                Import
-              </button>
-              <button
-                type="button"
-                onClick={openWriteProtocol}
-                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
-              >
-                <PlusIcon className="w-4 h-4" />
-                Write protocol
-              </button>
-            </div>
-          </div>
+        <div className="mb-8 space-y-4">
+          <PageHeader
+            title="Protocol library"
+            accent="teal"
+            icon={<BeakerIcon />}
+            subtitle="Reusable methods and SOPs — write, search, compare, and execute"
+            actions={
+              <>
+                <button
+                  type="button"
+                  onClick={openImportProtocol}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-teal-900 bg-white/90 border border-teal-200 rounded-md hover:bg-teal-50 transition-colors"
+                >
+                  <DocumentArrowUpIcon className="w-4 h-4" />
+                  Import
+                </button>
+                <button
+                  type="button"
+                  onClick={openWriteProtocol}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-teal-700 rounded-md hover:bg-teal-800 transition-colors"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  Write protocol
+                </button>
+              </>
+            }
+          />
 
-          {/* Search */}
-          <div className="bg-white rounded-xl border border-slate-200/80 p-4 sm:p-5">
+          <PagePanel accent="teal">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="flex-1 relative">
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -465,7 +489,7 @@ const ProtocolsPageRefactored: React.FC = () => {
                 type="button"
                 onClick={handleSearch}
                 disabled={isSearching}
-                className="inline-flex items-center justify-center px-3.5 py-2.5 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors disabled:opacity-60"
+                className="inline-flex items-center justify-center px-3.5 py-2.5 text-[13px] font-medium text-white bg-teal-700 rounded-md hover:bg-teal-800 transition-colors disabled:opacity-60"
               >
                 {isSearching ? 'Searching…' : 'Search'}
               </button>
@@ -473,113 +497,215 @@ const ProtocolsPageRefactored: React.FC = () => {
             <p className="text-[12px] text-slate-500 mt-3">
               Try: “PCR amplification”, “protein purification”, or “cell culture protocol”
             </p>
-          </div>
+          </PagePanel>
         </div>
 
-        {/* Protocol Cards */}
-        {filteredProtocols.length > 0 ? (
-          <div className={`grid gap-4 ${
-            viewMode === 'grid' 
-              ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' 
-              : 'grid-cols-1'
-          }`}>
-            {filteredProtocols.map((protocol) => (
-              <Card
-                key={protocol.id}
-                data-entity-id={protocol.id}
-                className={`hover:border-slate-300 transition-colors cursor-pointer group border bg-white rounded-xl shadow-none ${
-                  focusedId === protocol.id
-                    ? 'border-sky-400 ring-2 ring-sky-200'
-                    : 'border-slate-200/80'
+        {/* Results — below search only */}
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-[15px] font-semibold text-slate-900 tracking-tight">
+                {filteredProtocols.length}{' '}
+                {filteredProtocols.length === 1 ? 'protocol' : 'protocols'}
+              </h2>
+              <p className="text-[12px] text-slate-500 mt-0.5">
+                Open a method to review conditions, run it, or share its SOP ID
+              </p>
+            </div>
+            <div className="inline-flex items-center rounded-lg border border-teal-100 bg-white p-0.5 shadow-sm self-start">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] font-medium transition-colors ${
+                  viewMode === 'grid'
+                    ? 'bg-teal-700 text-white'
+                    : 'text-slate-600 hover:bg-teal-50'
                 }`}
-                onClick={() => {
-                  setSelectedProtocol(protocol);
-                  setShowDetails(true);
-                }}
+                aria-pressed={viewMode === 'grid'}
               >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between mb-2 gap-3">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-[15px] font-semibold text-slate-900 line-clamp-2 group-hover:text-slate-700 transition-colors mb-1.5">
-                        {protocol.title}
-                      </CardTitle>
-                      <p className="text-[13px] text-slate-500 line-clamp-2">
-                        {protocol.description}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-1.5">
-                    <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md text-[11px] font-medium">
-                      {protocol.category}
-                    </span>
-                    <span className="px-2 py-0.5 bg-slate-50 text-slate-600 rounded-md text-[11px] font-medium inline-flex items-center gap-1">
-                      <ShieldCheckIcon className="w-3 h-3" />
-                      {protocol.success_rate}% success
-                    </span>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="pt-0">
-                  <div className="flex items-center justify-between text-[12px] text-slate-500 mb-3">
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex items-center gap-1">
-                        <ClockIcon className="w-3.5 h-3.5" />
-                        {protocol.procedure?.reduce((acc, s) => acc + s.duration, 0) || 0}m
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <UserGroupIcon className="w-3.5 h-3.5" />
-                        {protocol.usage_count} uses
-                      </span>
-                    </div>
-                    <div className="inline-flex items-center gap-1">
-                      <StarIcon className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                      <span>{protocol.rating?.toFixed(1) || 'N/A'}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      className="flex-1 inline-flex items-center justify-center px-3 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedProtocol(protocol);
-                        setShowDetails(true);
-                      }}
-                    >
-                      Open
-                    </button>
-                    <button
-                      type="button"
-                      className="inline-flex items-center justify-center px-3 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedProtocol(protocol);
-                        setShowExecutionMode(true);
-                      }}
-                    >
-                      <PlayIcon className="w-4 h-4" />
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                <Squares2X2Icon className="w-3.5 h-3.5" />
+                Grid
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] font-medium transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-teal-700 text-white'
+                    : 'text-slate-600 hover:bg-teal-50'
+                }`}
+                aria-pressed={viewMode === 'list'}
+              >
+                <ListBulletIcon className="w-3.5 h-3.5" />
+                List
+              </button>
+            </div>
           </div>
-        ) : (
-          <div className="bg-white rounded-xl border border-slate-200/80 text-center py-12 px-6">
-              <BookOpenIcon className="w-10 h-10 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-[15px] font-semibold text-slate-900 mb-1">
-                No protocols found
+
+          {filteredProtocols.length > 0 ? (
+            <div
+              className={`grid gap-3.5 ${
+                viewMode === 'grid'
+                  ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'
+                  : 'grid-cols-1'
+              }`}
+            >
+              {filteredProtocols.map((protocol) => {
+                const stepMins =
+                  protocol.procedure?.reduce((acc, s) => acc + (Number(s.duration) || 0), 0) ||
+                  Number(protocol.estimated_duration) ||
+                  0;
+                const stepCount = protocol.procedure?.length || 0;
+                const hasVideo = !!youtubeEmbedUrl(protocol.video_url);
+                const isList = viewMode === 'list';
+
+                return (
+                  <article
+                    key={protocol.id}
+                    data-entity-id={protocol.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openHighlightedProtocol(protocol)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openHighlightedProtocol(protocol);
+                      }
+                    }}
+                    className={`group relative overflow-hidden rounded-2xl border bg-gradient-to-br from-white via-white to-teal-50/30 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-teal-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 ${
+                      focusedId === protocol.id
+                        ? 'border-teal-400 ring-2 ring-teal-200'
+                        : 'border-slate-200/90'
+                    } ${isList ? 'sm:flex sm:items-stretch' : 'flex flex-col'}`}
+                  >
+                    <div
+                      className={`absolute ${isList ? 'left-0 top-0 bottom-0 w-1' : 'inset-x-0 top-0 h-1'} bg-gradient-to-r from-teal-600 to-cyan-500`}
+                      aria-hidden="true"
+                    />
+
+                    <div className={`flex-1 min-w-0 p-4 sm:p-5 ${isList ? 'sm:pr-4' : ''}`}>
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                            <span className="inline-flex items-center rounded-md bg-teal-50 text-teal-800 border border-teal-100 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide">
+                              {protocolRefCode(protocol.id)}
+                            </span>
+                            {protocol.version ? (
+                              <span className="text-[10px] text-slate-500">v{protocol.version}</span>
+                            ) : null}
+                            {hasVideo ? (
+                              <span className="inline-flex items-center gap-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-100 px-1.5 py-0.5 text-[10px] font-medium">
+                                <FilmIcon className="w-3 h-3" />
+                                Demo
+                              </span>
+                            ) : null}
+                          </div>
+                          <h3 className="text-[15px] font-semibold text-slate-900 tracking-tight line-clamp-2 group-hover:text-teal-900 transition-colors">
+                            {protocol.title}
+                          </h3>
+                        </div>
+                        {protocol.rating && protocol.rating > 0 ? (
+                          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                            <StarIcon className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                            {protocol.rating.toFixed(1)}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <p
+                        className={`text-[13px] text-slate-600 leading-relaxed ${
+                          isList ? 'line-clamp-2 max-w-3xl' : 'line-clamp-2'
+                        }`}
+                      >
+                        {protocol.description || protocol.objective || 'No summary yet'}
+                      </p>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-medium capitalize">
+                          {String(protocol.category || 'other').replace(/_/g, ' ')}
+                        </span>
+                        {protocol.author ? (
+                          <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 text-[11px]">
+                            {protocol.author}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div className="mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
+                        <span className="inline-flex items-center gap-1">
+                          <ClockIcon className="w-3.5 h-3.5 text-teal-600" />
+                          {formatDurationMinutes(stepMins)}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <BeakerIcon className="w-3.5 h-3.5 text-teal-600" />
+                          {stepCount || '—'} steps
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <UserGroupIcon className="w-3.5 h-3.5 text-teal-600" />
+                          {protocol.usage_count || 0} uses
+                        </span>
+                        {protocol.success_rate ? (
+                          <span className="inline-flex items-center gap-1">
+                            <ShieldCheckIcon className="w-3.5 h-3.5 text-emerald-600" />
+                            {protocol.success_rate}% success
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div
+                      className={`flex gap-2 p-4 sm:p-5 pt-0 ${
+                        isList
+                          ? 'sm:pt-5 sm:border-l sm:border-slate-100 sm:items-center sm:shrink-0 sm:w-44 sm:flex-col'
+                          : 'mt-auto border-t border-slate-100/80'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-[13px] font-medium text-white bg-teal-700 rounded-lg hover:bg-teal-800 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openHighlightedProtocol(protocol);
+                        }}
+                      >
+                        Open
+                        <ArrowRightIcon className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-[13px] font-medium text-teal-900 bg-teal-50 border border-teal-100 rounded-lg hover:bg-teal-100 transition-colors"
+                        title="Start execution"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedProtocol(protocol);
+                          setShowExecutionMode(true);
+                        }}
+                      >
+                        <PlayIcon className="w-4 h-4" />
+                        {isList ? 'Run' : null}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-teal-200 bg-gradient-to-br from-teal-50/60 via-white to-sky-50/40 text-center py-14 px-6">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-100 text-teal-700">
+                <BookOpenIcon className="w-6 h-6" />
+              </div>
+              <h3 className="text-[16px] font-semibold text-slate-900 mb-1 tracking-tight">
+                No protocols in this view
               </h3>
-              <p className="text-[13px] text-slate-500 mb-5 max-w-md mx-auto">
-                Write a structured SOP to build your protocol library.
+              <p className="text-[13px] text-slate-500 mb-5 max-w-md mx-auto leading-relaxed">
+                Write a structured SOP with experimental conditions, or import a Word document to seed
+                your library.
               </p>
               <div className="flex items-center justify-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={openImportProtocol}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-slate-800 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-teal-900 bg-white border border-teal-200 rounded-lg hover:bg-teal-50 transition-colors"
                 >
                   <DocumentArrowUpIcon className="w-4 h-4" />
                   Import Word / paste
@@ -587,239 +713,42 @@ const ProtocolsPageRefactored: React.FC = () => {
                 <button
                   type="button"
                   onClick={openWriteProtocol}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-teal-700 rounded-lg hover:bg-teal-800 transition-colors"
                 >
                   <PlusIcon className="w-4 h-4" />
                   Write protocol
                 </button>
               </div>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Protocol Detail Modal */}
-      {showDetails && selectedProtocol && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[95vh] overflow-hidden border border-slate-200 my-8">
-            <div className="bg-slate-900 p-6 text-white">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 pr-8">
-                  <h2 className="text-2xl font-semibold mb-2 tracking-tight">{selectedProtocol.title}</h2>
-                  <div className="flex items-center gap-2 text-[13px] text-slate-300">
-                    <span>{selectedProtocol.category}</span>
-                    <span>·</span>
-                    <span>{selectedProtocol.success_rate}% success</span>
-                    <span>·</span>
-                    <span>{selectedProtocol.usage_count} uses</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowDetails(false)}
-                  className="text-white hover:text-gray-200 transition-colors"
-                >
-                  <XMarkIcon className="w-6 h-6" />
-                </button>
-              </div>
-            </div>
-
-            {/* Simplified Content */}
-            <div className="p-6 overflow-y-auto max-h-[calc(95vh-200px)]">
-              <div className="space-y-6">
-                {/* Objective & Background */}
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">Objective</h3>
-                  <p className="text-gray-700">{selectedProtocol.objective}</p>
-                </div>
-
-                {/* Quick Info Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <div className="text-sm text-gray-600 mb-1">Duration</div>
-                    <div className="text-2xl font-bold text-blue-600">
-                      {selectedProtocol.procedure?.reduce((acc, s) => acc + s.duration, 0) || 0}m
-                    </div>
-                  </div>
-                  <div className="p-4 bg-emerald-50 rounded-lg">
-                    <div className="text-sm text-gray-600 mb-1">Success Rate</div>
-                    <div className="text-2xl font-bold text-emerald-600">
-                      {selectedProtocol.success_rate}%
-                    </div>
-                  </div>
-                  <div className="p-4 bg-purple-50 rounded-lg">
-                    <div className="text-sm text-gray-600 mb-1">Steps</div>
-                    <div className="text-2xl font-bold text-purple-600">
-                      {selectedProtocol.procedure?.length || 0}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Procedure */}
-                <div>
-                  <h3 className="text-[13px] font-semibold text-slate-900 uppercase tracking-wide mb-3">
-                    Method
-                  </h3>
-                  {selectedProtocol.procedure?.length > 0 ? (
-                    <div className="space-y-2.5">
-                      {selectedProtocol.procedure.map((step) => (
-                        <div
-                          key={step.id}
-                          className="p-4 bg-slate-50 rounded-lg border border-slate-200"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="w-7 h-7 bg-slate-900 text-white rounded-md flex items-center justify-center text-[12px] font-semibold flex-shrink-0">
-                              {step.id}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-slate-900 text-[14px] mb-1">
-                                {step.title}
-                              </h4>
-                              <p className="text-slate-600 text-[13px] leading-relaxed">
-                                {step.description}
-                              </p>
-                              {step.duration ? (
-                                <div className="mt-2 text-[12px] text-slate-500">
-                                  {step.duration} min
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : selectedProtocol.content ? (
-                    <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
-                      <pre className="whitespace-pre-wrap text-[13px] text-slate-700 leading-relaxed font-sans">
-                        {selectedProtocol.content}
-                      </pre>
-                    </div>
-                  ) : (
-                    <p className="text-[13px] text-slate-500">No procedure documented yet.</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Similar Protocols for Comparison - Always Visible */}
-              <div className="p-6 border-t border-gray-200 bg-gray-50">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                  <MagnifyingGlassIcon className="w-5 h-5 mr-2 text-blue-600" />
-                  Compare Protocol
-                </h3>
-                {similarProtocols.length > 0 ? (
-                  <div className="space-y-2 mb-4">
-                    <p className="text-sm text-gray-600 mb-3">Compare with similar protocols:</p>
-                    {similarProtocols.slice(0, 3).map((similar) => (
-                      <div
-                        key={similar.id}
-                        className="p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition-colors cursor-pointer"
-                        onClick={() => handleCompareProtocol(similar.id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="font-semibold text-gray-900">{similar.title}</div>
-                            <div className="text-sm text-gray-600">
-                              {similar.success_rate}% success • {similar.usage_count} uses
-                            </div>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCompareProtocol(similar.id);
-                            }}
-                          >
-                            Compare
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-sm text-gray-700 mb-2">
-                      No similar protocols found. You can still compare by searching for another protocol.
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const protocolId = prompt('Enter the ID of the protocol you want to compare with:');
-                        if (protocolId) {
-                          handleCompareProtocol(protocolId);
-                        }
-                      }}
-                    >
-                      Compare with Protocol ID
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Simplified Footer */}
-            <div className="bg-gray-50 border-t border-gray-200 p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <StarIcon className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                  <span className="text-gray-700">
-                    {selectedProtocol.rating?.toFixed(1) || 'N/A'} ({selectedProtocol.total_ratings || 0} reviews)
-                  </span>
-                </div>
-                <div className="flex space-x-3 flex-wrap justify-end gap-y-2">
-                  {canManageProtocol(selectedProtocol) ? (
-                    <>
-                      <Button
-                        variant="outline"
-                        onClick={() => openEditProtocol(selectedProtocol)}
-                      >
-                        <PencilSquareIcon className="w-4 h-4 mr-2" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => void handleDeleteProtocol(selectedProtocol)}
-                        className="text-red-700 border-red-200 hover:bg-red-50"
-                      >
-                        <TrashIcon className="w-4 h-4 mr-2" />
-                        Delete
-                      </Button>
-                    </>
-                  ) : null}
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowDetails(false);
-                      setShowCollaboration(true);
-                    }}
-                  >
-                    <UserGroupIcon className="w-4 h-4 mr-2" />
-                    Collaborate
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      navigate(`/experiment-tracker?protocolId=${encodeURIComponent(selectedProtocol.id)}&title=${encodeURIComponent(selectedProtocol.title)}`);
-                    }}
-                  >
-                    <BeakerIcon className="w-4 h-4 mr-2" />
-                    Track experiment
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setShowDetails(false);
-                      setShowExecutionMode(true);
-                    }}
-                    className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700"
-                  >
-                    <RocketLaunchIcon className="w-4 h-4 mr-2" />
-                    Start Execution
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Protocol Detail */}
+      {showDetails && selectedProtocol ? (
+        <ProtocolDetailView
+          protocol={selectedProtocol}
+          similarProtocols={similarProtocols}
+          canManage={canManageProtocol(selectedProtocol)}
+          onClose={closeProtocolDetails}
+          onEdit={() => openEditProtocol(selectedProtocol)}
+          onDelete={() => void handleDeleteProtocol(selectedProtocol)}
+          onCollaborate={() => {
+            setShowDetails(false);
+            setShowCollaboration(true);
+          }}
+          onTrackExperiment={() => {
+            navigate(
+              `/experiment-tracker?protocolId=${encodeURIComponent(selectedProtocol.id)}&title=${encodeURIComponent(selectedProtocol.title)}`
+            );
+          }}
+          onExecute={() => {
+            setShowDetails(false);
+            setShowExecutionMode(true);
+          }}
+          onCompare={(id) => handleCompareProtocol(id)}
+        />
+      ) : null}
 
       {/* Execution Mode */}
       {showExecutionMode && selectedProtocol && (

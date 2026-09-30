@@ -10,7 +10,7 @@
  */
 
 import pool from '../../../database/config.js';
-import { RecommendationEngine, Recommendation, RecommendationContext } from './RecommendationEngine';
+import { RecommendationEngine, Recommendation, RecommendationContext } from './RecommendationEngine.js';
 
 export class PaperRecommender {
   /**

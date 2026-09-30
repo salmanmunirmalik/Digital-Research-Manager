@@ -111,7 +111,8 @@ export function notebookPayloadToFormInitial(payload: NotebookImportPayload) {
         entry_type: 'idea' as const,
         title: payload.title,
         description: payload.description || payload.objectives,
-        notes: payload.content,
+        rationale: '',
+        next_check: '',
         tags: payload.tags,
       };
     case 'results':
@@ -122,6 +123,8 @@ export function notebookPayloadToFormInitial(payload: NotebookImportPayload) {
         methodology: payload.methodology,
         conclusions: payload.conclusions,
         key_findings: lines(payload.results),
+        caveats: '',
+        result_date: new Date().toISOString().slice(0, 10),
         tags: payload.tags,
       };
     case 'problem':
@@ -129,7 +132,10 @@ export function notebookPayloadToFormInitial(payload: NotebookImportPayload) {
         entry_type: 'problem' as const,
         title: payload.title,
         description: payload.description || payload.content,
-        symptoms: lines(payload.results || payload.content),
+        likely_cause: '',
+        current_solution: '',
+        resolution: payload.conclusions || '',
+        lessons_learned: '',
         tags: payload.tags,
       };
     case 'experiment':
@@ -137,18 +143,12 @@ export function notebookPayloadToFormInitial(payload: NotebookImportPayload) {
       return {
         entry_type: 'experiment' as const,
         title: payload.title,
-        description: [
-          payload.description,
-          payload.objectives && `Objectives:\n${payload.objectives}`,
-          payload.methodology && `Methodology:\n${payload.methodology}`,
-          payload.results && `Results:\n${payload.results}`,
-          payload.conclusions && `Conclusions:\n${payload.conclusions}`,
-        ]
-          .filter(Boolean)
-          .join('\n\n'),
-        protocolModifications: payload.methodology,
-        troubleshooting: payload.conclusions,
-        resultsLink: payload.results,
+        objective: payload.objectives || '',
+        description: payload.description || payload.content || '',
+        conditions: '',
+        protocolModifications: payload.methodology || '',
+        resultsLink: payload.results || payload.conclusions || '',
+        startDate: new Date().toISOString().slice(0, 10),
       };
   }
 }

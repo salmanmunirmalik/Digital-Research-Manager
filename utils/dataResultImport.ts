@@ -41,6 +41,7 @@ export function smartParseDataResultText(
     tags: ['imported', ...(opts?.filename?.toLowerCase().endsWith('.docx') ? ['word'] : [])],
     privacy_level: 'lab',
     fileNames: opts?.filename ? [opts.filename] : [],
+    evidenceFormats: ['narrative'],
     metadata: {},
   };
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getAuthHeaders, getAuthToken, resolveApiBaseUrl, formatApiNetworkError } from '../utils/apiBase';
 import { Link, useNavigate } from 'react-router-dom';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
@@ -22,12 +23,14 @@ import {
   MapPinIcon,
   ScaleIcon,
 } from '../components/icons';
+import { PageHeader } from '../components/PageHeader';
+import RecommendationsWidget from '../components/RecommendationsWidget';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
+const API_BASE = resolveApiBaseUrl();
 
 const authHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
-  Authorization: `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token') || ''}`,
+  Authorization: `Bearer ${getAuthToken() || ''}`,
 });
 
 interface EthicalGuidelines {
@@ -297,12 +300,13 @@ const ResearchDataBankPage: React.FC = () => {
     <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
-              Data bank
-            </h1>
-            <p className="mt-1.5 text-[14px] text-slate-600 max-w-2xl">
+        <PageHeader
+          className="mb-6"
+          title="Data bank"
+          accent="teal"
+          icon={<ScaleIcon />}
+          subtitle={
+            <span className="max-w-2xl inline-block">
               Cross-organization ethical dataset exchange - not personal files.{' '}
               <Link
                 to="/data-results"
@@ -317,27 +321,37 @@ const ResearchDataBankPage: React.FC = () => {
               >
                 Networking
               </Link>
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setShowEthicsModal(true)}
-              className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
-            >
-              <ScaleIcon className="w-4 h-4" />
-              Ethics framework
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowRegistrationForm(true)}
-              className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
-            >
-              <PlusIcon className="w-4 h-4" />
-              Register organization
-            </button>
-          </div>
-        </div>
+            </span>
+          }
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={() => setShowEthicsModal(true)}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-teal-900 bg-white/90 border border-teal-200 rounded-md hover:bg-teal-50 transition-colors"
+              >
+                <ScaleIcon className="w-4 h-4" />
+                Ethics framework
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowRegistrationForm(true)}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium text-white bg-teal-700 rounded-md hover:bg-teal-800 transition-colors"
+              >
+                <PlusIcon className="w-4 h-4" />
+                Register organization
+              </button>
+            </>
+          }
+        />
+
+        <RecommendationsWidget
+          itemType="databank"
+          title="Datasets matching your research"
+          limit={5}
+          showFeedback={true}
+          className="mb-6"
+        />
 
         {/* Compact principles */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">

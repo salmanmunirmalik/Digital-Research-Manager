@@ -7,7 +7,6 @@ import {
   Field,
   TextArea,
   TagListField,
-  SegmentedChoice,
 } from './notebook/NotebookFormPrimitives';
 import { useEntityOptions } from '../hooks/useEntityOptions';
 import EntityLinkSelect from './EntityLinkSelect';
@@ -42,6 +41,8 @@ interface ResultsData {
   tags: string[];
   lab_id: string;
   privacy_level: 'personal' | 'team' | 'lab' | 'institution' | 'global';
+  result_date: string;
+  caveats: string;
 }
 
 const ResultsForm: React.FC<ResultsFormProps> = ({ onSubmit, onCancel, initialData }) => {
@@ -70,6 +71,8 @@ const ResultsForm: React.FC<ResultsFormProps> = ({ onSubmit, onCancel, initialDa
     tags: [],
     lab_id: '',
     privacy_level: 'lab',
+    result_date: new Date().toISOString().slice(0, 10),
+    caveats: '',
     ...initialData,
   });
 
@@ -79,71 +82,58 @@ const ResultsForm: React.FC<ResultsFormProps> = ({ onSubmit, onCancel, initialDa
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Keep caveats mirrored into limitations for save mapping compatibility
+    const caveats = formData.caveats?.trim();
+    onSubmit({
+      ...formData,
+      limitations: caveats
+        ? Array.from(new Set([...(formData.limitations || []), caveats]))
+        : formData.limitations,
+    });
   };
 
   return (
     <NotebookFormModal
       title="Results note"
-      subtitle="Record findings and analysis in your notebook - store files in My data & results"
+      subtitle="Interpret findings here — store raw files in My data & results"
       onCancel={onCancel}
       onSubmit={handleSubmit}
       submitLabel="Save results note"
       maxWidth="max-w-2xl"
     >
-      <FormSection title="Overview">
+      <FormSection title="Result" description="What was measured and when">
         <Field label="Title" required>
           <Input
             value={formData.title}
             onChange={(e) => set('title', e.target.value)}
-            placeholder="e.g. Week 12 Western blot - densitometry"
+            placeholder="e.g. Week 12 Western — densitometry summary"
             required
           />
         </Field>
-        <Field label="Summary" required>
+        <Field label="Date" required>
+          <Input
+            type="date"
+            value={formData.result_date}
+            onChange={(e) => set('result_date', e.target.value)}
+            required
+          />
+        </Field>
+        <Field label="What you measured / analyzed" required>
           <TextArea
             value={formData.description}
             onChange={(e) => set('description', e.target.value)}
-            rows={4}
-            placeholder="What you measured or analyzed, in narrative form…"
+            rows={3}
+            placeholder="Assay, samples, and what this result covers…"
             required
           />
         </Field>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Note type">
-            <Select
-              value={formData.result_type}
-              onChange={(e) => set('result_type', e.target.value as ResultsData['result_type'])}
-              options={[
-                { value: 'summary', label: 'Results summary' },
-                { value: 'analysis', label: 'Analysis' },
-                { value: 'data', label: 'Data notes' },
-                { value: 'visualization', label: 'Figure notes' },
-                { value: 'processed_data', label: 'Processed data' },
-              ]}
-            />
-          </Field>
-          <Field label="Data source">
-            <Select
-              value={formData.data_source}
-              onChange={(e) => set('data_source', e.target.value as ResultsData['data_source'])}
-              options={[
-                { value: 'manual', label: 'Manual entry' },
-                { value: 'instrument', label: 'Instrument' },
-                { value: 'software', label: 'Software' },
-                { value: 'calculation', label: 'Calculation' },
-                { value: 'simulation', label: 'Simulation' },
-              ]}
-            />
-          </Field>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Linked experiment">
             <EntityLinkSelect
               value={formData.experiment_id}
               options={experiments}
               onChange={(id) => set('experiment_id', id)}
-              placeholder="None - choose an experiment"
+              placeholder="None — choose an experiment"
             />
           </Field>
           <Field label="Linked protocol">
@@ -151,104 +141,62 @@ const ResultsForm: React.FC<ResultsFormProps> = ({ onSubmit, onCancel, initialDa
               value={formData.protocol_id}
               options={protocols}
               onChange={(id) => set('protocol_id', id)}
-              placeholder="None - choose a protocol"
+              placeholder="None — choose a protocol"
             />
           </Field>
         </div>
-        <Field label="Analysis method">
+        <Field label="Analysis method" hint="Software, stats test, or quantification approach">
           <Input
             value={formData.methodology}
             onChange={(e) => set('methodology', e.target.value)}
-            placeholder="e.g. GraphPad, ImageJ"
+            placeholder="e.g. ImageJ densitometry; unpaired t-test in GraphPad"
           />
         </Field>
       </FormSection>
 
-      <FormSection title="Findings" description="What stood out">
+      <FormSection title="Findings" description="Facts first, then interpretation">
         <TagListField
           label="Key findings"
           values={formData.key_findings}
           onChange={(v) => set('key_findings', v)}
           placeholder="One finding, then Enter"
         />
-        <Field label="Statistics">
+        <Field label="Statistics" hint="Optional — tests, n, p-values, effect sizes">
           <TextArea
             value={formData.statistical_analysis}
             onChange={(e) => set('statistical_analysis', e.target.value)}
-            rows={3}
-            placeholder="Tests, p-values, effect sizes…"
+            rows={2}
+            placeholder="e.g. n=3; p=0.02 vs control; Cohen’s d=0.8"
           />
         </Field>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <SegmentedChoice
-            label="Confidence"
-            value={formData.confidence_level}
-            onChange={(v) => set('confidence_level', v)}
-            options={[
-              { value: 'low', label: 'Low' },
-              { value: 'medium', label: 'Medium' },
-              { value: 'high', label: 'High' },
-            ]}
-          />
-          <Field label="Significance">
-            <Select
-              value={formData.significance}
-              onChange={(e) =>
-                set('significance', e.target.value as ResultsData['significance'])
-              }
-              options={[
-                { value: 'not_significant', label: 'Not significant' },
-                { value: 'marginally_significant', label: 'Marginal' },
-                { value: 'significant', label: 'Significant' },
-                { value: 'highly_significant', label: 'Highly significant' },
-              ]}
-            />
-          </Field>
-        </div>
-      </FormSection>
-
-      <FormSection title="Interpretation">
-        <Field label="Conclusions">
+        <Field label="Conclusion" required>
           <TextArea
             value={formData.conclusions}
             onChange={(e) => set('conclusions', e.target.value)}
             rows={3}
-            placeholder="What you conclude from these results…"
+            placeholder="What you conclude from these results for the project…"
+            required
           />
         </Field>
-        <Field label="Implications">
+        <Field label="Caveats / limitations">
           <TextArea
-            value={formData.implications}
-            onChange={(e) => set('implications', e.target.value)}
+            value={formData.caveats}
+            onChange={(e) => set('caveats', e.target.value)}
             rows={2}
-            placeholder="Broader meaning for the project…"
+            placeholder="Sample size, batch effects, controls missing…"
           />
         </Field>
         <TagListField
-          label="Limitations"
-          values={formData.limitations}
-          onChange={(v) => set('limitations', v)}
-          placeholder="Caveat"
-        />
-        <TagListField
-          label="Next steps"
+          label="Next experiments"
           values={formData.next_steps}
           onChange={(v) => set('next_steps', v)}
           placeholder="Follow-up action"
         />
-        <Field label="Reproducibility notes">
-          <TextArea
-            value={formData.reproducibility_notes}
-            onChange={(e) => set('reproducibility_notes', e.target.value)}
-            rows={2}
-            placeholder="What someone would need to reproduce this…"
-          />
-        </Field>
       </FormSection>
 
       <FormSection title="References & access">
         <TagListField
-          label="Data / figure references"
+          label="Data / figure links"
           values={[...formData.data_files, ...formData.figures].filter(Boolean)}
           onChange={(v) => {
             set('data_files', v);
@@ -266,14 +214,10 @@ const ResultsForm: React.FC<ResultsFormProps> = ({ onSubmit, onCancel, initialDa
         <Field label="Visibility">
           <Select
             value={formData.privacy_level}
-            onChange={(e) =>
-              set('privacy_level', e.target.value as ResultsData['privacy_level'])
-            }
+            onChange={(e) => set('privacy_level', e.target.value as ResultsData['privacy_level'])}
             options={[
               { value: 'personal', label: 'Only me' },
-              { value: 'team', label: 'My team' },
               { value: 'lab', label: 'My lab' },
-              { value: 'institution', label: 'Institution' },
               { value: 'global', label: 'Public' },
             ]}
           />

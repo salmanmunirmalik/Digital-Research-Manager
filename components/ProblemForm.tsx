@@ -39,6 +39,7 @@ interface ProblemData {
   tags: string[];
   lab_id: string;
   privacy_level: 'personal' | 'team' | 'lab' | 'institution' | 'global';
+  likely_cause: string;
 }
 
 interface SolutionAttempt {
@@ -73,6 +74,7 @@ const ProblemForm: React.FC<ProblemFormProps> = ({ onSubmit, onCancel, initialDa
     tags: [],
     lab_id: '',
     privacy_level: 'lab',
+    likely_cause: '',
     ...initialData,
   });
 
@@ -82,24 +84,40 @@ const ProblemForm: React.FC<ProblemFormProps> = ({ onSubmit, onCancel, initialDa
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    const cause = formData.likely_cause?.trim();
+    onSubmit({
+      ...formData,
+      // Keep severity as the single urgency signal; mirror into priority for legacy mapping
+      priority:
+        formData.severity === 'critical'
+          ? 'urgent'
+          : formData.severity === 'high'
+            ? 'high'
+            : formData.severity === 'low'
+              ? 'low'
+              : 'medium',
+      possible_causes: cause
+        ? Array.from(new Set([...(formData.possible_causes || []), cause]))
+        : formData.possible_causes,
+      lessons_learned: formData.lessons_learned || formData.prevention_measures.join('; '),
+    });
   };
 
   return (
     <NotebookFormModal
       title="Problem note"
-      subtitle="Log what broke, what you tried, and how you resolved it"
+      subtitle="Log what broke, what you tried, and what fixed it"
       onCancel={onCancel}
       onSubmit={handleSubmit}
       submitLabel="Save problem note"
-      maxWidth="max-w-2xl"
+      maxWidth="max-w-xl"
     >
-      <FormSection title="Problem" description="Enough detail that a future you can reconstruct it">
+      <FormSection title="Problem" description="Enough detail that a colleague could reconstruct it">
         <Field label="Title" required>
           <Input
             value={formData.title}
             onChange={(e) => set('title', e.target.value)}
-            placeholder="e.g. Contaminated PCR master mix - batch 14"
+            placeholder="e.g. Contaminated PCR master mix — batch 14"
             required
           />
         </Field>
@@ -108,24 +126,21 @@ const ProblemForm: React.FC<ProblemFormProps> = ({ onSubmit, onCancel, initialDa
             value={formData.description}
             onChange={(e) => set('description', e.target.value)}
             rows={4}
-            placeholder="Context, when it appeared, and impact on work…"
+            placeholder="When it appeared, symptoms, and impact on the work…"
             required
           />
         </Field>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Type">
             <Select
               value={formData.problem_type}
-              onChange={(e) =>
-                set('problem_type', e.target.value as ProblemData['problem_type'])
-              }
+              onChange={(e) => set('problem_type', e.target.value as ProblemData['problem_type'])}
               options={[
-                { value: 'protocol', label: 'Protocol' },
+                { value: 'protocol', label: 'Protocol / method' },
                 { value: 'equipment', label: 'Equipment' },
-                { value: 'data', label: 'Data' },
+                { value: 'data', label: 'Data / analysis' },
                 { value: 'safety', label: 'Safety' },
-                { value: 'resource', label: 'Resource' },
-                { value: 'collaboration', label: 'Collaboration' },
+                { value: 'resource', label: 'Reagent / resource' },
                 { value: 'other', label: 'Other' },
               ]}
             />
@@ -137,57 +152,26 @@ const ProblemForm: React.FC<ProblemFormProps> = ({ onSubmit, onCancel, initialDa
               options={[
                 { value: 'reported', label: 'Open' },
                 { value: 'investigating', label: 'Investigating' },
-                { value: 'in_progress', label: 'In progress' },
+                { value: 'in_progress', label: 'Fix in progress' },
                 { value: 'resolved', label: 'Resolved' },
-                { value: 'closed', label: 'Closed' },
               ]}
             />
           </Field>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <SegmentedChoice
-            label="Severity"
-            value={formData.severity}
-            onChange={(v) => set('severity', v)}
-            options={[
-              { value: 'low', label: 'Low' },
-              { value: 'medium', label: 'Medium' },
-              { value: 'high', label: 'High' },
-              { value: 'critical', label: 'Critical' },
-            ]}
-          />
-          <SegmentedChoice
-            label="Priority"
-            value={formData.priority}
-            onChange={(v) => set('priority', v)}
-            options={[
-              { value: 'low', label: 'Low' },
-              { value: 'medium', label: 'Medium' },
-              { value: 'high', label: 'High' },
-              { value: 'urgent', label: 'Urgent' },
-            ]}
-          />
-        </div>
-      </FormSection>
-
-      <FormSection title="Diagnosis">
-        <TagListField
-          label="Symptoms"
-          values={formData.symptoms}
-          onChange={(v) => set('symptoms', v)}
-          placeholder="Observed symptom"
-        />
-        <TagListField
-          label="Likely causes"
-          values={formData.possible_causes}
-          onChange={(v) => set('possible_causes', v)}
-          placeholder="Hypothesis"
+        <SegmentedChoice
+          label="Severity"
+          value={formData.severity}
+          onChange={(v) => set('severity', v)}
+          options={[
+            { value: 'low', label: 'Low' },
+            { value: 'medium', label: 'Med' },
+            { value: 'high', label: 'High' },
+            { value: 'critical', label: 'Critical' },
+          ]}
         />
         <TagListField
           label="Affected work"
-          values={[...formData.affected_experiments, ...formData.affected_equipment].filter(
-            Boolean
-          )}
+          values={[...formData.affected_experiments, ...formData.affected_equipment].filter(Boolean)}
           onChange={(v) => {
             set('affected_experiments', v);
             set('affected_equipment', []);
@@ -196,53 +180,38 @@ const ProblemForm: React.FC<ProblemFormProps> = ({ onSubmit, onCancel, initialDa
         />
       </FormSection>
 
-      <FormSection title="Resolution" description="What you tried and what worked">
+      <FormSection title="Troubleshooting" description="Diagnosis and fix">
+        <Field label="Likely cause">
+          <Input
+            value={formData.likely_cause}
+            onChange={(e) => set('likely_cause', e.target.value)}
+            placeholder="Best current hypothesis"
+          />
+        </Field>
         <Field label="What you tried">
           <TextArea
             value={formData.current_solution}
             onChange={(e) => set('current_solution', e.target.value)}
             rows={3}
-            placeholder="Attempts so far…"
+            placeholder="Attempts so far, in order…"
           />
         </Field>
-        <Field label="Resolution">
+        <Field label="Resolution" hint="Final fix — leave blank if still open">
           <TextArea
             value={formData.resolution}
             onChange={(e) => set('resolution', e.target.value)}
             rows={3}
-            placeholder="Final fix, if known…"
+            placeholder="What actually fixed it…"
           />
         </Field>
-        <TagListField
-          label="Prevention"
-          values={formData.prevention_measures}
-          onChange={(v) => set('prevention_measures', v)}
-          placeholder="How to avoid this next time"
-        />
-        <Field label="Lessons learned">
+        <Field label="Prevention / lesson">
           <TextArea
             value={formData.lessons_learned}
             onChange={(e) => set('lessons_learned', e.target.value)}
             rows={2}
-            placeholder="What you would tell a colleague…"
+            placeholder="What you would tell a colleague to avoid this…"
           />
         </Field>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Owner">
-            <Input
-              value={formData.assigned_to}
-              onChange={(e) => set('assigned_to', e.target.value)}
-              placeholder="Who is following up"
-            />
-          </Field>
-          <Field label="Follow-up date">
-            <Input
-              type="date"
-              value={formData.follow_up_date}
-              onChange={(e) => set('follow_up_date', e.target.value)}
-            />
-          </Field>
-        </div>
         <TagListField
           label="Tags"
           values={formData.tags}
@@ -252,14 +221,10 @@ const ProblemForm: React.FC<ProblemFormProps> = ({ onSubmit, onCancel, initialDa
         <Field label="Visibility">
           <Select
             value={formData.privacy_level}
-            onChange={(e) =>
-              set('privacy_level', e.target.value as ProblemData['privacy_level'])
-            }
+            onChange={(e) => set('privacy_level', e.target.value as ProblemData['privacy_level'])}
             options={[
               { value: 'personal', label: 'Only me' },
-              { value: 'team', label: 'My team' },
               { value: 'lab', label: 'My lab' },
-              { value: 'institution', label: 'Institution' },
               { value: 'global', label: 'Public' },
             ]}
           />
