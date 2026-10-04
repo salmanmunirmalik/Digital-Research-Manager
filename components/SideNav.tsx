@@ -12,6 +12,7 @@ import {
   PackageIcon,
   CogIcon,
   DocumentTextIcon,
+  AcademicCapIcon,
 } from './icons';
 
 interface SideNavProps {
@@ -76,6 +77,12 @@ const navSections: NavSection[] = [
         to: '/lab-workspace',
         icon: Squares2X2Icon,
         description: 'Tasks, projects, lab resources, team, and messaging',
+      },
+      {
+        name: 'Lab Floors',
+        to: '/lab-floors',
+        icon: AcademicCapIcon,
+        description: 'Practice starting in research through short branching scenarios',
       },
     ],
   },

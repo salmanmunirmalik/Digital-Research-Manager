@@ -47,6 +47,7 @@ import CurrentTrendsPage from './pages/CurrentTrendsPage';
 import LabPublicPage from './pages/LabPublicPage';
 import WritingStudioPage from './pages/WritingStudioPage';
 import ExperimentTrackerPage from './pages/ExperimentTrackerPage';
+import LabFloorsPage from './pages/LabFloorsPage';
 import ContextualResearchCopilot from './components/ContextualResearchCopilot';
 import { RedirectToWritingStudio } from './components/RedirectToWritingStudio';
 import { HeartIcon } from './components/icons';
@@ -448,6 +449,14 @@ const AppContent: React.FC = () => {
         element={
           <ProtectedRoute>
             <AppLayout><LabWorkspacePage /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/lab-floors"
+        element={
+          <ProtectedRoute>
+            <AppLayout><LabFloorsPage /></AppLayout>
           </ProtectedRoute>
         }
       />

@@ -13,6 +13,7 @@ describe('UI Navigation Tests', () => {
       { name: 'Protocol library', path: '/protocols' },
       { name: 'My data & results', path: '/data-results' },
       { name: 'Lab workspace', path: '/lab-workspace' },
+      { name: 'Lab Floors', path: '/lab-floors' },
       { name: 'Research Tools', path: '/research-tools' },
       { name: 'Marketplace', path: '/marketplace' },
       { name: 'Journals Directory', path: '/journals-directory' },
